@@ -1,0 +1,16 @@
+[package]
+name = "solang"
+version = "0.1.0"
+authors = ["Sean Young <sean@mess.org>"]
+build = "build.rs"
+
+[build-dependencies]
+lalrpop = "0.16.1"
+
+[dependencies]
+lalrpop = "0.16.1"
+lalrpop-util = "0.16.1"
+regex = "0.2.1"
+llvm-sys = "70.0.1"
+num-bigint = "0.2"
+num-traits = "0.2.6"

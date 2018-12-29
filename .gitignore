@@ -1,0 +1,11 @@
+
+Cargo.lock
+/target
+**/*.rs.bk
+/src/solidity.rs
+
+/llvm
+/llvm-src
+/llvm-build
+
+*.wasm

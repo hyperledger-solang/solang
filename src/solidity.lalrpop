@@ -1,0 +1,479 @@
+
+use std::str::FromStr;
+use num_bigint::BigInt;
+use ast::*;
+
+grammar;
+
+pub SourceUnit: SourceUnit = {
+    <u:SourceUnitPart+> => SourceUnit("".to_string(), u)
+}
+
+SourceUnitPart: SourceUnitPart = {
+    ContractDefinition => SourceUnitPart::ContractDefinition(<>),
+    PragmaDirective => SourceUnitPart::PragmaDirective(<>.0, <>.1),
+    ImportDirective => SourceUnitPart::ImportDirective(<>),
+}
+
+ImportDirective: String = {
+    "import" <s:StringLiteral> ";" => s
+}
+
+PragmaDirective: (String, String) = {
+    "pragma" <i:Identifier> <s:PragmaValue> ";" => (i, s)
+}
+
+// This is actually defined as [^;]*, however that causes ambiguity for the lexer. So define it
+// in a much more restricted way. Hopefully lalrpop will restrict the lexer to only those tokens
+// possible during parsing.
+PragmaValue: String = {
+    r"\^0\.\d+\.\d+" => <>.to_string()
+}
+
+ElementaryTypeName: ElementaryTypeName = {
+    "bool" => ElementaryTypeName::Bool,
+    "address" => ElementaryTypeName::Address,
+    "string" => ElementaryTypeName::String,
+    "uint" => ElementaryTypeName::Uint(256),
+    "uint8" => ElementaryTypeName::Uint(8),
+    // for i in $(seq 8 8 256); do printf '    "uint%d" => ElementaryTypeName::Uint(%d),\n' $i $i; done
+    "uint16" => ElementaryTypeName::Uint(16),
+    "uint24" => ElementaryTypeName::Uint(24),
+    "uint32" => ElementaryTypeName::Uint(32),
+    "uint40" => ElementaryTypeName::Uint(40),
+    "uint48" => ElementaryTypeName::Uint(48),
+    "uint56" => ElementaryTypeName::Uint(56),
+    "uint64" => ElementaryTypeName::Uint(64),
+    "uint72" => ElementaryTypeName::Uint(72),
+    "uint80" => ElementaryTypeName::Uint(80),
+    "uint88" => ElementaryTypeName::Uint(88),
+    "uint96" => ElementaryTypeName::Uint(96),
+    "uint104" => ElementaryTypeName::Uint(104),
+    "uint112" => ElementaryTypeName::Uint(112),
+    "uint120" => ElementaryTypeName::Uint(120),
+    "uint128" => ElementaryTypeName::Uint(128),
+    "uint136" => ElementaryTypeName::Uint(136),
+    "uint144" => ElementaryTypeName::Uint(144),
+    "uint152" => ElementaryTypeName::Uint(152),
+    "uint160" => ElementaryTypeName::Uint(160),
+    "uint168" => ElementaryTypeName::Uint(168),
+    "uint176" => ElementaryTypeName::Uint(176),
+    "uint184" => ElementaryTypeName::Uint(184),
+    "uint192" => ElementaryTypeName::Uint(192),
+    "uint200" => ElementaryTypeName::Uint(200),
+    "uint208" => ElementaryTypeName::Uint(208),
+    "uint216" => ElementaryTypeName::Uint(216),
+    "uint224" => ElementaryTypeName::Uint(224),
+    "uint232" => ElementaryTypeName::Uint(232),
+    "uint240" => ElementaryTypeName::Uint(240),
+    "uint248" => ElementaryTypeName::Uint(248),
+    "uint256" => ElementaryTypeName::Uint(256),
+    "int" => ElementaryTypeName::Int(256),
+    "int8" => ElementaryTypeName::Int(8),
+    "int16" => ElementaryTypeName::Int(16),
+    "int24" => ElementaryTypeName::Int(24),
+    "int32" => ElementaryTypeName::Int(32),
+    "int40" => ElementaryTypeName::Int(40),
+    "int48" => ElementaryTypeName::Int(48),
+    "int56" => ElementaryTypeName::Int(56),
+    "int64" => ElementaryTypeName::Int(64),
+    "int72" => ElementaryTypeName::Int(72),
+    "int80" => ElementaryTypeName::Int(80),
+    "int88" => ElementaryTypeName::Int(88),
+    "int96" => ElementaryTypeName::Int(96),
+    "int104" => ElementaryTypeName::Int(104),
+    "int112" => ElementaryTypeName::Int(112),
+    "int120" => ElementaryTypeName::Int(120),
+    "int128" => ElementaryTypeName::Int(128),
+    "int136" => ElementaryTypeName::Int(136),
+    "int144" => ElementaryTypeName::Int(144),
+    "int152" => ElementaryTypeName::Int(152),
+    "int160" => ElementaryTypeName::Int(160),
+    "int168" => ElementaryTypeName::Int(168),
+    "int176" => ElementaryTypeName::Int(176),
+    "int184" => ElementaryTypeName::Int(184),
+    "int192" => ElementaryTypeName::Int(192),
+    "int200" => ElementaryTypeName::Int(200),
+    "int208" => ElementaryTypeName::Int(208),
+    "int216" => ElementaryTypeName::Int(216),
+    "int224" => ElementaryTypeName::Int(224),
+    "int232" => ElementaryTypeName::Int(232),
+    "int240" => ElementaryTypeName::Int(240),
+    "int248" => ElementaryTypeName::Int(248),
+    "int256" => ElementaryTypeName::Int(256),
+    "byte" => ElementaryTypeName::Bytes(1),
+    "bytes" => ElementaryTypeName::DynamicBytes,
+    "bytes1" => ElementaryTypeName::Bytes(1),
+    "bytes2" => ElementaryTypeName::Bytes(2),
+    "bytes3" => ElementaryTypeName::Bytes(3),
+    "bytes4" => ElementaryTypeName::Bytes(4),
+    "bytes5" => ElementaryTypeName::Bytes(5),
+    "bytes6" => ElementaryTypeName::Bytes(6),
+    "bytes7" => ElementaryTypeName::Bytes(7),
+    "bytes8" => ElementaryTypeName::Bytes(8),
+    "bytes9" => ElementaryTypeName::Bytes(9),
+    "bytes10" => ElementaryTypeName::Bytes(10),
+    "bytes11" => ElementaryTypeName::Bytes(11),
+    "bytes12" => ElementaryTypeName::Bytes(12),
+    "bytes13" => ElementaryTypeName::Bytes(13),
+    "bytes14" => ElementaryTypeName::Bytes(14),
+    "bytes15" => ElementaryTypeName::Bytes(15),
+    "bytes16" => ElementaryTypeName::Bytes(16),
+    "bytes17" => ElementaryTypeName::Bytes(17),
+    "bytes18" => ElementaryTypeName::Bytes(18),
+    "bytes19" => ElementaryTypeName::Bytes(19),
+    "bytes20" => ElementaryTypeName::Bytes(20),
+    "bytes21" => ElementaryTypeName::Bytes(21),
+    "bytes22" => ElementaryTypeName::Bytes(22),
+    "bytes23" => ElementaryTypeName::Bytes(23),
+    "bytes24" => ElementaryTypeName::Bytes(24),
+    "bytes25" => ElementaryTypeName::Bytes(25),
+    "bytes26" => ElementaryTypeName::Bytes(26),
+    "bytes27" => ElementaryTypeName::Bytes(27),
+    "bytes28" => ElementaryTypeName::Bytes(28),
+    "bytes29" => ElementaryTypeName::Bytes(29),
+    "bytes30" => ElementaryTypeName::Bytes(30),
+    "bytes31" => ElementaryTypeName::Bytes(31),
+    "bytes32" => ElementaryTypeName::Bytes(32),
+}
+
+StorageLocation: StorageLocation = {
+    "memory" => StorageLocation::Memory,
+    "storage" => StorageLocation::Storage,
+    "calldata" => StorageLocation::Calldata,
+}
+
+Identifier: String = {
+    r"[a-zA-Z_$][a-zA-Z_$0-9]*" => <>.to_string()
+}
+
+VariableDeclaration: Box<VariableDeclaration> = {
+    ElementaryTypeName StorageLocation Identifier => Box::new(VariableDeclaration(<>)),
+    <t:ElementaryTypeName> <i:Identifier> => Box::new(VariableDeclaration(t, StorageLocation::Default, i))
+}
+
+StructDefinition: Box<StructDefinition> = {
+    "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")+> "}" => {
+        Box::new(StructDefinition::new(n, v))
+    }
+}
+
+ContractType: ContractType = {
+    "contract" => ContractType::Contract,
+    "interface" => ContractType::Interface,
+    "library" => ContractType::Library,
+}
+
+ContractPart: ContractPart = {
+    StructDefinition => ContractPart::StructDefinition(<>),
+    EventDefinition => ContractPart::EventDefinition(<>),
+    EnumDefinition => ContractPart::EnumDefinition(<>),
+    StateVariableDeclaration => ContractPart::StateVariableDeclaration(<>),
+    FunctionDefinition => ContractPart::FunctionDefinition(<>),
+}
+
+ContractDefinition: Box<ContractDefinition> = {
+    <t:ContractType> <n:Identifier> "{" <p:(<ContractPart>)+> "}" => {
+        Box::new(ContractDefinition(t, n, p))
+    }
+}
+
+EventParameter: EventParameter = {
+    <t:ElementaryTypeName>  <i:"indexed"?> <n:Identifier?> => EventParameter::new(t, match i { Some(_) => true, _ => false }, n)
+}
+
+EventDefinition: Box<EventDefinition> = {
+    "event" <n:Identifier> "(" <v:(<EventParameter> ",")*> <e:EventParameter> ")" <a:"anonymous"?> ";" => {
+        let mut v = v;
+        v.push(e);
+        Box::new(EventDefinition::new(n, v, match a { Some(_) => true, _ => false}))
+    },
+}
+
+EnumDefinition: Box<EnumDefinition> = {
+    "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
+        let mut v = v;
+        v.push(e);
+        Box::new(EnumDefinition::new(n, v))
+    }
+}
+
+StateVariableDeclaration: Box<StateVariableDeclaration> = {
+    <t:ElementaryTypeName> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> ";" => {
+        Box::new(StateVariableDeclaration::new(t, a, i, e))
+    }
+}
+
+VariableAttribute: VariableAttribute = {
+    "public" => VariableAttribute::Public,
+    "internal" => VariableAttribute::Internal,
+    "private" => VariableAttribute::Private,
+    "constant" => VariableAttribute::Constant
+}
+
+Expression: Expression = {
+    <e:Expression> "++" => Expression::PostIncrement(Box::new(e)),
+    <e:Expression> "--" => Expression::PostDecrement(Box::new(e)),
+    "new" <t:ElementaryTypeName> => Expression::New(t),
+    <e:Expression> "[" <i:Expression?> "]" => Expression::IndexAccess(Box::new(e), Box::new(i)),
+    <e:Expression> "." <i:Identifier> => Expression::MemberAccess(Box::new(e), i),
+    <i:Identifier> "(" ")" => {
+        Expression::FunctionCall(i, Vec::new())
+    },
+    <i:Identifier> "(" <v:(<Expression> ",")+> <e:Expression> ")" => {
+        let mut v = v;
+        v.push(e);
+        Expression::FunctionCall(i, v)
+    },
+    Precedence2,
+}
+
+Precedence2: Expression = {
+    "!" <e:Precedence3> => Expression::Not(Box::new(e)),
+    "~" <e:Precedence3> => Expression::Complement(Box::new(e)),
+    "delete" <e:Precedence3> => Expression::Delete(Box::new(e)),
+    "++" <e:Precedence3> => Expression::PreIncrement(Box::new(e)),
+    "--" <e:Precedence3> => Expression::PreDecrement(Box::new(e)),
+    "+" <e:Precedence3> => Expression::UnaryPlus(Box::new(e)),
+    "-" <e:Precedence3> => Expression::UnaryMinus(Box::new(e)),
+    Precedence3,
+}
+
+Precedence3: Expression = {
+    <l:Precedence4> "**" <r:Precedence4> => Expression::Power(Box::new(l), Box::new(r)),
+    Precedence4,
+}
+
+Precedence4: Expression = {
+    <l:Precedence5> "*" <r:Precedence5> => Expression::Multiply(Box::new(l), Box::new(r)),
+    <l:Precedence5> "/" <r:Precedence5> => Expression::Divide(Box::new(l), Box::new(r)),
+    <l:Precedence5> "%" <r:Precedence5> => Expression::Modulo(Box::new(l), Box::new(r)),
+    Precedence5,
+}
+
+Precedence5: Expression = {
+    <l:Precedence6> "+" <r:Precedence6> => Expression::Add(Box::new(l), Box::new(r)),
+    <l:Precedence6> "-" <r:Precedence6> => Expression::Subtract(Box::new(l), Box::new(r)),
+    Precedence6,
+}
+
+Precedence6: Expression = {
+    <l:Precedence6> "<<" <r:Precedence7> => Expression::ShiftLeft(Box::new(l), Box::new(r)),
+    <l:Precedence6> ">>" <r:Precedence7> => Expression::ShiftRight(Box::new(l), Box::new(r)),
+    Precedence7,
+}
+
+Precedence7: Expression = {
+    <l:Precedence7> "&" <r:Precedence8> => Expression::BitwiseAnd(Box::new(l), Box::new(r)),
+    Precedence8,
+}
+
+Precedence8: Expression = {
+    <l:Precedence8> "^" <r:Precedence9> => Expression::BitwiseXor(Box::new(l), Box::new(r)),
+    Precedence9,
+}
+
+Precedence9: Expression = {
+    <l:Precedence10> "|" <r:Precedence11> => Expression::BitwiseOr(Box::new(l), Box::new(r)),
+    Precedence10,
+}
+
+Precedence10: Expression = {
+    <l:Precedence10> "<" <r:Precedence11> => Expression::Less(Box::new(l), Box::new(r)),
+    <l:Precedence10> ">" <r:Precedence11> => Expression::More(Box::new(l), Box::new(r)),
+    <l:Precedence10> "<=" <r:Precedence11> => Expression::LessEqual(Box::new(l), Box::new(r)),
+    <l:Precedence10> ">=" <r:Precedence11> => Expression::MoreEqual(Box::new(l), Box::new(r)),
+    Precedence11,
+}
+
+Precedence11: Expression = {
+    <l:Precedence11> "==" <r:Precedence12> => Expression::Equal(Box::new(l), Box::new(r)),
+    <l:Precedence11> "!=" <r:Precedence12> => Expression::NotEqual(Box::new(l), Box::new(r)),
+    Precedence12,
+}
+
+Precedence12: Expression = {
+    <l:Precedence12> "&&" <r:Precedence13> => Expression::And(Box::new(l), Box::new(r)),
+    Precedence13,
+}
+
+Precedence13: Expression = {
+    <l:Precedence13> "||" <r:Precedence14> => Expression::Or(Box::new(l), Box::new(r)),
+    Precedence14,
+}
+
+Precedence14: Expression = {
+    <c:Precedence14> "?" <l:Precedence15> ":" <r:Precedence15> => Expression::Ternary(Box::new(c), Box::new(l), Box::new(r)),
+    Precedence15,
+}
+
+Precedence15: Expression = {
+    <l:Precedence15> "=" <r:Precedence16> => Expression::Assign(Box::new(l), Box::new(r)),
+    <l:Precedence15> "|=" <r:Precedence16> => Expression::AssignOr(Box::new(l), Box::new(r)),
+    <l:Precedence15> "^=" <r:Precedence16> => Expression::AssignXor(Box::new(l), Box::new(r)),
+    <l:Precedence15> "&=" <r:Precedence16> => Expression::AssignAnd(Box::new(l), Box::new(r)),
+    <l:Precedence15> "<<=" <r:Precedence16> => Expression::AssignShiftLeft(Box::new(l), Box::new(r)),
+    <l:Precedence15> ">>=" <r:Precedence16> => Expression::AssignShiftRight(Box::new(l), Box::new(r)),
+    <l:Precedence15> "+=" <r:Precedence16> => Expression::AssignAdd(Box::new(l), Box::new(r)),
+    <l:Precedence15> "-=" <r:Precedence16> => Expression::AssignSubtract(Box::new(l), Box::new(r)),
+    <l:Precedence15> "*=" <r:Precedence16> => Expression::AssignMultiply(Box::new(l), Box::new(r)),
+    <l:Precedence15> "/=" <r:Precedence16> => Expression::AssignDivide(Box::new(l), Box::new(r)),
+    <l:Precedence15> "%=" <r:Precedence16> => Expression::AssignModulo(Box::new(l), Box::new(r)),
+    Precedence16,
+}
+
+Precedence16: Expression = {
+    "true" => Expression::BoolLiteral(true),
+    "false" => Expression::BoolLiteral(false),
+    StringLiteral => Expression::StringLiteral(<>.to_string()),
+    <i:Identifier> => Expression::Variable(i),
+    "(" <e:Expression> ")" => e,
+    r#"-?[0-9]+"# => Expression::NumberLiteral(BigInt::from_str(<>).unwrap())
+}
+
+StringLiteral: String = {
+    r#""([^"\r\n\\]|'\\'.)*""# => <>.to_string()
+}
+
+Parameter: Parameter = {
+    <e:ElementaryTypeName> <s:StorageLocation?> <i:Identifier?> => {
+        Parameter::new(e, s, i)
+    }
+}
+
+ParameterList: Vec<Parameter> = {
+    "(" ")" => Vec::new(),
+    "(" <v:(<Parameter> ",")*> <e:Parameter> ")" => {
+        let mut v = v;
+        v.push(e);
+        v
+    }
+}
+
+StateMutability: StateMutability = {
+    "pure" => StateMutability::Pure,
+    "view" => StateMutability::View,
+    "payable" => StateMutability::Payable
+}
+
+FunctionAttribute: FunctionAttribute = {
+    StateMutability => FunctionAttribute::StateMutability(<>),
+    "external" => FunctionAttribute::External,
+    "public" => FunctionAttribute::Public,
+    "internal" => FunctionAttribute::Internal,
+    "private" => FunctionAttribute::Private
+}
+
+FunctionDefinition: Box<FunctionDefinition> = {
+    "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" => {
+        let returns = match r {
+            None => vec!(),
+            Some(v) => v,
+        };
+        
+        Box::new(FunctionDefinition{
+            name: n,
+            params: a,
+            attributes: t,
+            returns: returns,
+            body: Statement::Empty,
+            vartable: None,
+        })
+    },
+    "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> => {
+        let returns = match r {
+            None => vec!(),
+            Some(v) => v,
+        };
+        
+        Box::new(FunctionDefinition{
+            name: n,
+            params: a,
+            attributes: t,
+            returns: returns,
+            body: Statement::BlockStatement(b),
+            vartable: None,
+        })
+    }
+}
+
+BlockStatement: BlockStatement = {
+    "{" <s:Statement*> "}" => {
+        BlockStatement(s)
+    },
+}
+
+OpenStatement: Statement = {
+    "if" "(" <cond:Expression> ")" <body:Statement> => {
+        Statement::If(cond, Box::new(body), Box::new(None))
+    },
+    "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> => {
+        Statement::If(cond, Box::new(body), Box::new(Some(o)))
+    },
+    "while" "(" <e:Expression> ")" <b:OpenStatement> => {
+        Statement::While(e, Box::new(b))
+    }
+}
+
+ClosedStatement: Statement = {
+    NonIfStatement,
+    "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> => {
+        Statement::If(cond, Box::new(body), Box::new(Some(o)))
+    },
+    "while" "(" <e:Expression> ")" <b:ClosedStatement> => {
+        Statement::While(e, Box::new(b))
+    },
+    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Statement?> ")" <block:ClosedStatement> => {
+        Statement::For(Box::new(b), Box::new(c), Box::new(n), Box::new(Some(block)))
+    },
+    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Statement?> ")" ";" => {
+        Statement::For(Box::new(b), Box::new(c), Box::new(n), Box::new(None))
+    }
+}
+
+Statement: Statement = {
+    OpenStatement,
+    ClosedStatement
+}
+
+SimpleStatement: Statement = {
+    <v:VariableDeclaration> <e:("=" <Expression>)?> => {
+        Statement::VariableDefinition(v, e)
+    },
+    <e:Expression> => {
+        Statement::Expression(e)
+    }
+}
+
+NonIfStatement: Statement = {
+    BlockStatement => {
+        Statement::BlockStatement(<>)
+    },
+    <b:SimpleStatement> ";" => b,
+    "_" ";" => {
+        Statement::PlaceHolder
+    },
+    "do" <b:Statement> "while" "(" <e:Expression> ")" => {
+        Statement::DoWhile(Box::new(b), e)
+    },
+    "continue" ";" => {
+        Statement::Continue
+    },
+    "break" ";" => {
+        Statement::Break
+    },
+    "return" <e:Expression?> ";" => {
+        Statement::Return(e)
+    },
+    "throw" ";" => {
+        Statement::Throw
+    },
+    "emit" <n:Identifier> "(" ")" ";" => {
+        Statement::Emit(n, Vec::new())
+    },
+    "emit" <n:Identifier> "(" <v:(<Expression> ",")+> <e:Expression> ")" ";" => {
+        let mut v = v;
+        v.push(e);
+        Statement::Emit(n, v)
+    }
+}
