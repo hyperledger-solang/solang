@@ -55,10 +55,13 @@ fn main() {
             }
         }
 
-        past.0 = filename;
+        past.0 = filename.clone();
 
         // resolve phase
-        resolve::resolve(&mut past);
+        if let Err(s) = resolve::resolve(&mut past) {
+            println!("{}: {}", filename, s);
+            break;
+        }
 
         // emit phase
         emit::emit(past);

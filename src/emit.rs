@@ -21,26 +21,19 @@ fn target_machine() -> LLVMTargetMachineRef {
         if LLVMGetTargetFromTriple(TRIPLE.as_ptr() as *const _, &mut target, &mut err_msg_ptr) == LLVM_TRUE {
             let err_msg_cstr = CStr::from_ptr(err_msg_ptr as *const _);
             let err_msg = str::from_utf8(err_msg_cstr.to_bytes()).unwrap();
-            println!("failed to create target: {}", err_msg);
+            panic!("failed to create llvm target: {}", err_msg);
         }
     }
 
-    let cpu = CString::new("generic").unwrap();
-    let features = CString::new("").unwrap();
-
-    let target_machine;
     unsafe {
-        target_machine =
-            LLVMCreateTargetMachine(target,
-                                    TRIPLE.as_ptr() as *const _,
-                                    cpu.as_ptr() as *const _,
-                                    features.as_ptr() as *const _,
-                                    LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
-                                    LLVMRelocMode::LLVMRelocDefault,
-                                    LLVMCodeModel::LLVMCodeModelDefault);
+        LLVMCreateTargetMachine(target,
+                                TRIPLE.as_ptr() as *const _,
+                                b"generic\0".as_ptr() as *const _,
+                                b"\0".as_ptr() as *const _,
+                                LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
+                                LLVMRelocMode::LLVMRelocDefault,
+                                LLVMCodeModel::LLVMCodeModelDefault)
     }
-
-    target_machine
 }
 
 pub fn emit(s: SourceUnit) {
@@ -122,14 +115,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     if f.returns.len() == 0 {
         ret = LLVMVoidType();
     } else {
-        ret = match f.returns[0].0 {
-            ElementaryTypeName::Bool => LLVMInt1Type(),
-            ElementaryTypeName::Uint(n) => LLVMIntType(n as u32),
-            ElementaryTypeName::Int(n) => LLVMIntType(n as u32),
-            _ => {
-                return Err(format!("{:?} not supported", f.returns[0].0));
-            }
-        };
+        ret = f.returns[0].0.LLVMType();
     }
 
     let mut args = vec!();
@@ -142,74 +128,81 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
 
     LLVMPositionBuilderAtEnd(builder, bb);
 
-    f.body.emit(builder)
+    let emitter = FunctionEmitter{builder: builder, function: &f};
+
+    emitter.statement(&f.body)
 }
 
-impl Statement {
-    fn emit(&self, builder: LLVMBuilderRef) -> Result<(), String> {
+impl ElementaryTypeName {
+    #[allow(non_snake_case)]
+    fn LLVMType(&self) -> LLVMTypeRef {
         match self {
+            ElementaryTypeName::Bool => unsafe { LLVMInt1Type() },
+            ElementaryTypeName::Int(n) => unsafe { LLVMIntType(*n as _) },
+            ElementaryTypeName::Uint(n) => unsafe { LLVMIntType(*n as _) },
+            _ => {
+                panic!("llvm type for {:?} not implemented", self);
+            }
+        }
+    }
+}
+
+struct FunctionEmitter<'a> {
+    builder: LLVMBuilderRef,
+    function: &'a FunctionDefinition
+}
+
+impl<'a> FunctionEmitter<'a> {
+    fn statement(&self, stmt: &Statement) -> Result<(), String> {
+        match stmt {
             Statement::BlockStatement(block) => {
                 for st in &block.0 {
-                    if let Err(s) = st.emit(builder) {
-                        return Err(s);
-                    }
+                    self.statement(st)?;
                 }
             },
             Statement::Return(None) => {
                 unsafe {
-                    LLVMBuildRetVoid(builder);
+                    LLVMBuildRetVoid(self.builder);
                 }
             }
             Statement::Return(Some(expr)) => {
-                match expr.emit(builder) {
-                    Err(s) => return Err(s),
-                    Ok(e) => unsafe {
-                        LLVMBuildRet(builder, e);
-                    }
+                let v = self.expression(expr, self.function.returns[0].0)?;
+
+                unsafe {
+                    LLVMBuildRet(self.builder, v);
                 }
             },
             Statement::Empty => {
                 // nop
             },
             _ => {
-                return Err(format!("statement not implement: {:?}", self));
+                return Err(format!("statement not implement: {:?}", stmt)); 
             }
         }
         
         Ok(())
     }
-}
 
-impl Expression {
-    fn emit(&self, builder: LLVMBuilderRef) -> Result<LLVMValueRef, String> {
-        match self {
+    fn expression(&self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {
+        match e {
             Expression::NumberLiteral(n) => {
                 match n.to_u64() {
                     None => Err(format!("failed to convert {}", n)),
                     Some(n) =>  unsafe {
-                        Ok(LLVMConstInt(LLVMInt32Type(), n, LLVM_FALSE))
+                        Ok(LLVMConstInt(t.LLVMType(), n, LLVM_FALSE))
                     }
                 }
             },
             Expression::Add(l, r) => {
-                let left;
-                let right;
-
-                match l.emit(builder) {
-                    Err(s) => return Err(s),
-                    Ok(l) => left = l
-                }
-                match r.emit(builder) {
-                    Err(s) => return Err(s),
-                    Ok(r) => right = r
-                }
+                let left = self.expression(l, t)?;
+                let right = self.expression(r, t)?;
 
                 unsafe {
-                    Ok(LLVMBuildAdd(builder, left, right, b"\0".as_ptr() as *const _))
+                    Ok(LLVMBuildAdd(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
             },
             _ => {
-                Err(format!("expression not implemented: {:?}", self))
+                Err(format!("expression not implemented: {:?}", e))
             }
         }       
     }
