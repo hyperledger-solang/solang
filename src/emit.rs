@@ -2,7 +2,10 @@ use ast::*;
 use std::ptr::null_mut;
 use std::ffi::{CString, CStr};
 use std::str;
+use std::collections::HashMap;
+use num_bigint::Sign;
 use num_traits::cast::ToPrimitive;
+use resolve::*;
 
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
@@ -92,9 +95,17 @@ pub fn emit(s: SourceUnit) {
     }
 }
 
+#[derive(Debug)]
+struct Variable {
+    typ: ElementaryTypeName,
+    value: LLVMValueRef
+}
+
 unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLVMModuleRef, builder: LLVMBuilderRef) -> Result<(), String> {
-    if !f.params.is_empty() {
-        return Err("functions with arguments not implemented yet".to_string());
+    let mut args = vec!();
+
+    for p in &f.params {
+        args.push(p.0.LLVMType(context));
     }
 
     let fname = match f.name {
@@ -115,12 +126,10 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     if f.returns.len() == 0 {
         ret = LLVMVoidType();
     } else {
-        ret = f.returns[0].0.LLVMType();
+        ret = f.returns[0].0.LLVMType(context);
     }
 
-    let mut args = vec!();
-
-    let ftype = LLVMFunctionType(ret, args.as_mut_ptr(), 0, 0);
+    let ftype = LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0);
 
     let function = LLVMAddFunction(module, fname.as_ptr(), ftype);
 
@@ -128,18 +137,46 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
 
     LLVMPositionBuilderAtEnd(builder, bb);
 
-    let emitter = FunctionEmitter{builder: builder, function: &f};
+    let mut emitter = FunctionEmitter{
+        context: context,
+        builder: builder, 
+        vartable: HashMap::new(),
+        function: &f
+    };
+
+    // create variable table
+    let mut i = 0;
+    for p in &f.params {
+        if let Some(ref argname) = p.2 {
+            emitter.vartable.insert(argname.to_string(), Variable{typ: p.0, value: LLVMGetParam(function, i)});
+            i += 1;
+        }
+    }
+
+    visit_statement(&f.body, &mut |s| {
+        if let Statement::VariableDefinition(v, e) = s {
+            let name = &v.2;
+
+            let value = match e {
+                None => LLVMConstInt(v.0.LLVMType(context), 0, LLVM_FALSE),
+                Some(e) => emitter.expression(e, v.0)?
+            };
+
+            emitter.vartable.insert(name.to_string(), Variable{typ: v.0, value: value});
+        }
+        Ok(())
+    })?;
 
     emitter.statement(&f.body)
 }
 
 impl ElementaryTypeName {
     #[allow(non_snake_case)]
-    fn LLVMType(&self) -> LLVMTypeRef {
+    fn LLVMType(&self, context: LLVMContextRef) -> LLVMTypeRef {
         match self {
-            ElementaryTypeName::Bool => unsafe { LLVMInt1Type() },
-            ElementaryTypeName::Int(n) => unsafe { LLVMIntType(*n as _) },
-            ElementaryTypeName::Uint(n) => unsafe { LLVMIntType(*n as _) },
+            ElementaryTypeName::Bool => unsafe { LLVMInt1TypeInContext(context) },
+            ElementaryTypeName::Int(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
+            ElementaryTypeName::Uint(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
@@ -148,13 +185,18 @@ impl ElementaryTypeName {
 }
 
 struct FunctionEmitter<'a> {
+    context: LLVMContextRef,
     builder: LLVMBuilderRef,
-    function: &'a FunctionDefinition
+    function: &'a FunctionDefinition,
+    vartable: HashMap<String, Variable>
 }
 
 impl<'a> FunctionEmitter<'a> {
     fn statement(&self, stmt: &Statement) -> Result<(), String> {
         match stmt {
+            Statement::VariableDefinition(_, _) => {
+                // variables   
+            },
             Statement::BlockStatement(block) => {
                 for st in &block.0 {
                     self.statement(st)?;
@@ -186,10 +228,11 @@ impl<'a> FunctionEmitter<'a> {
     fn expression(&self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {
         match e {
             Expression::NumberLiteral(n) => {
+                let sign = n.sign() == Sign::Minus;
                 match n.to_u64() {
                     None => Err(format!("failed to convert {}", n)),
                     Some(n) =>  unsafe {
-                        Ok(LLVMConstInt(t.LLVMType(), n, LLVM_FALSE))
+                        Ok(LLVMConstInt(t.LLVMType(self.context), n, sign as _))
                     }
                 }
             },
@@ -199,6 +242,22 @@ impl<'a> FunctionEmitter<'a> {
 
                 unsafe {
                     Ok(LLVMBuildAdd(self.builder, left, right, b"\0".as_ptr() as *const _))
+                }
+            },
+            Expression::Variable(s) => {
+                let var = &self.vartable.get(s).unwrap();
+                if var.typ == t {
+                    Ok(var.value)
+                } else {
+                    Ok(match t {
+                        ElementaryTypeName::Uint(_) => unsafe {
+                            LLVMBuildZExtOrBitCast(self.builder, var.value, t.LLVMType(self.context), "\0".as_ptr() as *const _)
+                        },
+                        ElementaryTypeName::Int(_) => unsafe {
+                            LLVMBuildSExtOrBitCast(self.builder, var.value, t.LLVMType(self.context), "\0".as_ptr() as *const _)
+                        },
+                        _ => panic!("implement implicit casting for {:?} to {:?}", var.typ, t)
+                    })
                 }
             },
             _ => {

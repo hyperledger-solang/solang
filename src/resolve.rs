@@ -20,7 +20,7 @@ pub fn resolve(s: &mut SourceUnit) -> Result<(), String> {
     Ok(())
 }
 
-fn visit_statement(s: &Statement, f: &mut FnMut(&Statement) -> Result<(), String>) -> Result<(), String> {
+pub fn visit_statement(s: &Statement, f: &mut FnMut(&Statement) -> Result<(), String>) -> Result<(), String> {
     f(s)?;
     
     match s {
@@ -58,6 +58,12 @@ fn visit_statement(s: &Statement, f: &mut FnMut(&Statement) -> Result<(), String
 fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
     // find all the variables
     let mut vartable = HashMap::new();
+
+    for p in &f.params {
+        if let Some(ref n) = p.2 {
+            vartable.insert(n.to_string(), p.0);
+        }
+    }
 
     visit_statement(&f.body, &mut |s| {
         if let Statement::VariableDefinition(v, _) = s {
