@@ -244,6 +244,30 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMBuildAdd(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
             },
+            Expression::Subtract(l, r) => {
+                let left = self.expression(l, t)?;
+                let right = self.expression(r, t)?;
+
+                unsafe {
+                    Ok(LLVMBuildSub(self.builder, left, right, b"\0".as_ptr() as *const _))
+                }
+            },
+            Expression::Multiply(l, r) => {
+                let left = self.expression(l, t)?;
+                let right = self.expression(r, t)?;
+
+                unsafe {
+                    Ok(LLVMBuildMul(self.builder, left, right, b"\0".as_ptr() as *const _))
+                }
+            },
+            Expression::Divide(l, r) => {
+                let left = self.expression(l, t)?;
+                let right = self.expression(r, t)?;
+
+                unsafe {
+                    Ok(LLVMBuildUDiv(self.builder, left, right, b"\0".as_ptr() as *const _))
+                }
+            },
             Expression::Variable(s) => {
                 let var = &self.vartable.get(s).unwrap();
                 if var.typ == t {

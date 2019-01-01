@@ -24,10 +24,12 @@ solidity contract:
 
 ```solidity
 contract test3 {
-	function foo() returns (uint32) {
-		return 2 + 2;
+	function foo(uint32 a) returns (uint64) {
+		uint32 b = 2;
+		return a * 100 + b;
 	}
 }
+
 ```
 
 The parser is fairly complete. The resolve/annotate stage and LLVM IR conversion
@@ -81,10 +83,12 @@ This compiles this contract:
 
 ```solidity
 contract test3 {
-	function foo() returns (uint32) {
-		return 2 + 2;
+	function foo(uint32 a) returns (uint64) {
+		uint32 b = 2;
+		return a * 100 + b;
 	}
 }
+
 ```
 
 And you will have a test3.wasm file generated for the test3 contract in this
@@ -97,9 +101,12 @@ test3.wasm:	file format wasm 0x1
 
 Code Disassembly:
 
-000063 <foo>:
- 000064: 41 04                      | i32.const 4
- 000066: 0b                         | end
+000064 <foo>:
+ 000065: 20 00                      | local.get 0
+ 000067: ad                         | i64.extend_i32_u
+ 000068: 42 e6 00                   | i64.const 102
+ 00006b: 7e                         | i64.mul
+ 00006c: 0b                         | end
 ```
 Note the optimising compiler at work here.
 
