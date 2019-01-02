@@ -24,9 +24,11 @@ solidity contract:
 
 ```solidity
 contract test3 {
-	function foo(uint32 a) returns (uint64) {
-		uint32 b = 2;
-		return a * 100 + b;
+	function foo(uint32 a) returns (uint32) {
+		uint32 b = 50 - a;
+		uint32 c;
+		c = 100 * b;
+		return a * 1000 + c;
 	}
 }
 
@@ -83,9 +85,11 @@ This compiles this contract:
 
 ```solidity
 contract test3 {
-	function foo(uint32 a) returns (uint64) {
-		uint32 b = 2;
-		return a * 100 + b;
+	function foo(uint32 a) returns (uint32) {
+		uint32 b = 50 - a;
+		uint32 c;
+		c = 100 * b;
+		return a * 1000 + c;
 	}
 }
 
@@ -103,10 +107,15 @@ Code Disassembly:
 
 000064 <foo>:
  000065: 20 00                      | local.get 0
- 000067: ad                         | i64.extend_i32_u
- 000068: 42 e6 00                   | i64.const 102
- 00006b: 7e                         | i64.mul
- 00006c: 0b                         | end
+ 000067: 41 e8 07                   | i32.const 1000
+ 00006a: 6c                         | i32.mul
+ 00006b: 41 32                      | i32.const 50
+ 00006d: 20 00                      | local.get 0
+ 00006f: 6b                         | i32.sub
+ 000070: 41 e4 00                   | i32.const 100
+ 000073: 6c                         | i32.mul
+ 000074: 6a                         | i32.add
+ 000075: 0b                         | end
 ```
 Note the optimising compiler at work here.
 
