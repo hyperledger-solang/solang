@@ -119,6 +119,16 @@ Code Disassembly:
 ```
 Note the optimising compiler at work here.
 
+## Compatibility with existing Solidity code
+
+ * It would be very hard to be compatible with existing EVM `assembly {}` statements,
+   these will most likely never be implemented. llvm does support inline assembly,
+   so we can (in theory) support wasm inline assembly.
+ * WASM does not support 256 bits registers natively, but llvm can generate code
+   that implements this. This is much less efficient, and for most uses 32 bit is
+   more than enough; I propose we change the default width to 32 bits (possibly
+   64 bits since that is also natively supported by wasm?).
+
 ## How to contribute/get in touch
 
 Have a look at our [TODO](TODO.md) or find us on the burrow channel on
