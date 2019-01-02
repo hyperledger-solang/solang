@@ -35,8 +35,6 @@ using llvm, for example [bfc](https://github.com/Wilfred/bfc).
  * We really need something which can load and test wasm files
 
 ## Steps
- - Verify expressions (without assignments or functions calls)
- - Make assignment to variable work
- - Make re-assignment work with pi-nodes
- - Make full control-flow work
+ - Make re-assignment work
+ - Make full control-flow work with pi-nodes
  - Make scoped variables work

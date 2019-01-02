@@ -23,6 +23,7 @@ pub enum ElementaryTypeName {
     Uint(u16),
     Bytes(u8),
     DynamicBytes,
+    Any,
 }
 
 #[derive(Debug,PartialEq)]

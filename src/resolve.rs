@@ -86,6 +86,15 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
             Statement::VariableDefinition(decl, Some(expr)) => {
                 check_expression(f, expr, decl.0)
             },
+            Statement::VariableDefinition(_, None) => {
+                Ok(())
+            },
+            Statement::Expression(expr) => {
+                match get_expression_type(f, expr) {
+                    Ok(_) => Ok(()),
+                    Err(s) => Err(s)
+                }
+            }
             Statement::If(expr, _, _) => {
                 check_expression(f, expr, ElementaryTypeName::Bool)
             },
@@ -205,6 +214,9 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
         Expression::Subtract(l, r) => binary_expression(f, l, r),
         Expression::Multiply(l, r) => binary_expression(f, l, r),
         Expression::Modulo(l, r) => binary_expression(f, l, r),
+        Expression::Assign(l, r) |
+        Expression::AssignAdd(l, r) |
+        Expression::AssignSubtract(l, r) => binary_expression(f, l, r),
         _ => Err(format!("resolve of expression {:?} not implemented yet", e))
     }
 }

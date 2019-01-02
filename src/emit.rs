@@ -192,7 +192,7 @@ struct FunctionEmitter<'a> {
 }
 
 impl<'a> FunctionEmitter<'a> {
-    fn statement(&self, stmt: &Statement) -> Result<(), String> {
+    fn statement(&mut self, stmt: &Statement) -> Result<(), String> {
         match stmt {
             Statement::VariableDefinition(_, _) => {
                 // variables   
@@ -214,6 +214,9 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildRet(self.builder, v);
                 }
             },
+            Statement::Expression(expr) => {
+                self.expression(expr, ElementaryTypeName::Any)?;
+            }
             Statement::Empty => {
                 // nop
             },
@@ -225,14 +228,22 @@ impl<'a> FunctionEmitter<'a> {
         Ok(())
     }
 
-    fn expression(&self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {
+    fn expression(&mut self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {
         match e {
             Expression::NumberLiteral(n) => {
                 let sign = n.sign() == Sign::Minus;
+                let ltype;
+                if t == ElementaryTypeName::Any {
+                    unsafe {
+                        ltype = LLVMIntTypeInContext(self.context, n.bits() as u32);
+                    }
+                } else {
+                    ltype = t.LLVMType(self.context);
+                }
                 match n.to_u64() {
                     None => Err(format!("failed to convert {}", n)),
                     Some(n) =>  unsafe {
-                        Ok(LLVMConstInt(t.LLVMType(self.context), n, sign as _))
+                        Ok(LLVMConstInt(ltype, n, sign as _))
                     }
                 }
             },
@@ -256,6 +267,12 @@ impl<'a> FunctionEmitter<'a> {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
+                if left.is_null() {
+                    panic!("left is null");
+                }
+                if right.is_null() {
+                    panic!("right is null");
+                }
                 unsafe {
                     Ok(LLVMBuildMul(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
@@ -269,8 +286,11 @@ impl<'a> FunctionEmitter<'a> {
                 }
             },
             Expression::Variable(s) => {
-                let var = &self.vartable.get(s).unwrap();
-                if var.typ == t {
+                let var = self.vartable.get(s).unwrap();
+                if var.value.is_null() {
+                    panic!("var value is null");
+                }
+                if var.typ == t || t == ElementaryTypeName::Any {
                     Ok(var.value)
                 } else {
                     Ok(match t {
@@ -282,6 +302,17 @@ impl<'a> FunctionEmitter<'a> {
                         },
                         _ => panic!("implement implicit casting for {:?} to {:?}", var.typ, t)
                     })
+                }
+            },
+            Expression::Assign(l, r) => {
+                match l {
+                    box Expression::Variable(s) => {
+                        let typ = self.vartable.get(s).unwrap().typ;
+                        let value = self.expression(r, typ)?;
+                        self.vartable.get_mut(s).unwrap().value = value;
+                        Ok(0 as LLVMValueRef)
+                    },
+                    _ => panic!("cannot assign to non-lvalue")
                 }
             },
             _ => {
