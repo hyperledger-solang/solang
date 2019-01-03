@@ -105,7 +105,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     let mut args = vec!();
 
     for p in &f.params {
-        args.push(p.0.LLVMType(context));
+        args.push(p.typ.LLVMType(context));
     }
 
     let fname = match f.name {
@@ -126,7 +126,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     if f.returns.len() == 0 {
         ret = LLVMVoidType();
     } else {
-        ret = f.returns[0].0.LLVMType(context);
+        ret = f.returns[0].typ.LLVMType(context);
     }
 
     let ftype = LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0);
@@ -147,22 +147,23 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     // create variable table
     let mut i = 0;
     for p in &f.params {
-        if let Some(ref argname) = p.2 {
-            emitter.vartable.insert(argname.to_string(), Variable{typ: p.0, value: LLVMGetParam(function, i)});
+        // Unnamed function arguments are not accessible
+        if let Some(ref argname) = p.name {
+            emitter.vartable.insert(argname.to_string(), Variable{typ: p.typ, value: LLVMGetParam(function, i)});
             i += 1;
         }
     }
 
     visit_statement(&f.body, &mut |s| {
         if let Statement::VariableDefinition(v, e) = s {
-            let name = &v.2;
+            let name = &v.name;
 
             let value = match e {
-                None => LLVMConstInt(v.0.LLVMType(context), 0, LLVM_FALSE),
-                Some(e) => emitter.expression(e, v.0)?
+                None => LLVMConstInt(v.typ.LLVMType(context), 0, LLVM_FALSE),
+                Some(e) => emitter.expression(e, v.typ)?
             };
 
-            emitter.vartable.insert(name.to_string(), Variable{typ: v.0, value: value});
+            emitter.vartable.insert(name.to_string(), Variable{typ: v.typ, value: value});
         }
         Ok(())
     })?;
@@ -208,7 +209,7 @@ impl<'a> FunctionEmitter<'a> {
                 }
             }
             Statement::Return(Some(expr)) => {
-                let v = self.expression(expr, self.function.returns[0].0)?;
+                let v = self.expression(expr, self.function.returns[0].typ)?;
 
                 unsafe {
                     LLVMBuildRet(self.builder, v);

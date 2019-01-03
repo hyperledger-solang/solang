@@ -35,22 +35,16 @@ pub enum StorageLocation {
 }
 
 #[derive(Debug,PartialEq)]
-pub struct VariableDeclaration(
-    pub ElementaryTypeName, 
-    pub StorageLocation,
-    pub String
-);
+pub struct VariableDeclaration {
+    pub typ: ElementaryTypeName,
+    pub storage: StorageLocation,
+    pub name: String
+}
 
 #[derive(Debug,PartialEq)]
-pub struct StructDefinition(
-    String,
-    Vec<Box<VariableDeclaration>>
-);
-
-impl StructDefinition {
-    pub fn new(n: String, v: Vec<Box<VariableDeclaration>>) -> StructDefinition {
-        StructDefinition(n, v)
-    }
+pub struct StructDefinition {
+    pub name: String,
+    pub fields: Vec<Box<VariableDeclaration>>
 }
 
 #[derive(Debug,PartialEq)]
@@ -77,41 +71,23 @@ pub struct ContractDefinition(
 );
 
 #[derive(Debug,PartialEq)]
-pub struct EventParameter(
-    ElementaryTypeName,
-    bool,
-    Option<String>,
-);
-
-impl EventParameter {
-    pub fn new(t: ElementaryTypeName, indexed: bool, n: Option<String>) -> EventParameter {
-        EventParameter(t, indexed, n)
-    }
+pub struct EventParameter {
+    pub typ: ElementaryTypeName,
+    pub indexed: bool,
+    pub name: Option<String>,
 }
 
 #[derive(Debug,PartialEq)]
-pub struct EventDefinition(
-    String,
-    Vec<EventParameter>,
-    bool,
-);
-
-impl EventDefinition {
-    pub fn new(n: String, v: Vec<EventParameter>, anonymous: bool) -> EventDefinition {
-        EventDefinition(n, v, anonymous)
-    }
+pub struct EventDefinition {
+    pub name: String,
+    pub fields: Vec<EventParameter>,
+    pub anonymous: bool,
 }
 
 #[derive(Debug,PartialEq)]
-pub struct EnumDefinition(
-    String,
-    Vec<String>,
-);
-
-impl EnumDefinition {
-    pub fn new(n: String, v: Vec<String>) -> EnumDefinition {
-        EnumDefinition(n, v)
-    }
+pub struct EnumDefinition {
+    pub name: String,
+    pub values: Vec<String>,
 }
 
 #[derive(Debug,PartialEq)]
@@ -123,17 +99,11 @@ pub enum VariableAttribute {
 }
 
 #[derive(Debug,PartialEq)]
-pub struct StateVariableDeclaration(
-    ElementaryTypeName,
-    Vec<VariableAttribute>,
-    String,
-    Option<Expression>
-);
-
-impl StateVariableDeclaration {
-    pub fn new(e: ElementaryTypeName, a: Vec<VariableAttribute>, i: String, n: Option<Expression>) -> StateVariableDeclaration {
-        StateVariableDeclaration(e, a, i, n)
-    }
+pub struct StateVariableDeclaration {
+    pub typ: ElementaryTypeName,
+    pub attrs: Vec<VariableAttribute>,
+    pub name: String,
+    pub initializer: Option<Expression>,
 }
 
 #[derive(Debug,PartialEq)]
@@ -189,16 +159,10 @@ pub enum Expression {
 }
 
 #[derive(Debug,PartialEq)]
-pub struct Parameter(
-    pub ElementaryTypeName,
-    pub Option<StorageLocation>,
-    pub Option<String>
-);
-
-impl Parameter {
-    pub fn new(e: ElementaryTypeName, s: Option<StorageLocation>, i: Option<String>) -> Parameter {
-        Parameter(e, s, i)
-    }
+pub struct Parameter {
+    pub typ: ElementaryTypeName,
+    pub storage: Option<StorageLocation>,
+    pub name: Option<String>
 }
 
 #[derive(Debug,PartialEq)]
@@ -274,14 +238,26 @@ mod test {
         let a = SourceUnit("".to_string(), vec![
             SourceUnitPart::ContractDefinition(
                 Box::new(ContractDefinition(ContractType::Contract, "foo".to_string(), vec![
-                    ContractPart::StructDefinition(Box::new(StructDefinition("Jurisdiction".to_string(), vec![
-                        Box::new(VariableDeclaration(ElementaryTypeName::Bool, StorageLocation::Default, "exists".to_string())),
-                        Box::new(VariableDeclaration(ElementaryTypeName::Uint(256), StorageLocation::Default, "keyIdx".to_string())),
-                        Box::new(VariableDeclaration(ElementaryTypeName::Bytes(2), StorageLocation::Default, "country".to_string())),
-                        Box::new(VariableDeclaration(ElementaryTypeName::Bytes(32), StorageLocation::Default, "region".to_string()))
-                    ]))),
-                    ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration(ElementaryTypeName::String, vec![], "__abba_$".to_string(), None))),
-                    ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration(ElementaryTypeName::Int(64), vec![], "$thing_102".to_string(), None)))
+                    ContractPart::StructDefinition(Box::new(StructDefinition{name: "Jurisdiction".to_string(), fields: vec![
+                        Box::new(VariableDeclaration{
+                            typ: ElementaryTypeName::Bool, storage: StorageLocation::Default, name: "exists".to_string()
+                        }),
+                        Box::new(VariableDeclaration{
+                            typ: ElementaryTypeName::Uint(256), storage: StorageLocation::Default, name: "keyIdx".to_string()
+                        }),
+                        Box::new(VariableDeclaration{
+                            typ: ElementaryTypeName::Bytes(2), storage: StorageLocation::Default, name: "country".to_string()
+                        }),
+                        Box::new(VariableDeclaration{
+                            typ: ElementaryTypeName::Bytes(32), storage: StorageLocation::Default, name: "region".to_string()
+                        })
+                    ]})),
+                    ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
+                        typ: ElementaryTypeName::String, attrs: vec![], name: "__abba_$".to_string(), initializer: None
+                    })),
+                    ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
+                        typ: ElementaryTypeName::Int(64), attrs: vec![], name: "$thing_102".to_string(), initializer: None
+                    }))
             ])))
         ]);
 

@@ -60,19 +60,25 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
     let mut vartable = HashMap::new();
 
     for p in &f.params {
-        if let Some(ref n) = p.2 {
-            vartable.insert(n.to_string(), p.0);
+        if let Some(ref n) = p.name {
+            vartable.insert(n.to_string(), p.typ);
+        }
+    }
+
+    for r in &f.returns {
+        if let Some(_) = r.name {
+            return Err(format!("named return values not allowed"));
         }
     }
 
     visit_statement(&f.body, &mut |s| {
         if let Statement::VariableDefinition(v, _) = s {
-            let name = &v.2;
+            let name = &v.name;
 
             if vartable.contains_key(name) {
                 return Err(format!("variable {} redeclared", name));
             } else {
-                vartable.insert(name.to_string(), v.0);
+                vartable.insert(name.to_string(), v.typ);
             }
         }
         Ok(())
@@ -84,7 +90,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
     visit_statement(&f.body, &mut |s| {
         match s {
             Statement::VariableDefinition(decl, Some(expr)) => {
-                check_expression(f, expr, decl.0)
+                check_expression(f, expr, decl.typ)
             },
             Statement::VariableDefinition(_, None) => {
                 Ok(())
@@ -116,7 +122,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
                 if f.returns.len() == 0 {
                     Err(format!("this function has no return value"))
                 } else if f.returns.len() == 1 {
-                    check_expression(f, expr, f.returns[0].0)
+                    check_expression(f, expr, f.returns[0].typ)
                 } else {
                     Ok(())
                 }

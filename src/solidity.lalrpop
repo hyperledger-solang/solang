@@ -148,13 +148,17 @@ Identifier: String = {
 }
 
 VariableDeclaration: Box<VariableDeclaration> = {
-    ElementaryTypeName StorageLocation Identifier => Box::new(VariableDeclaration(<>)),
-    <t:ElementaryTypeName> <i:Identifier> => Box::new(VariableDeclaration(t, StorageLocation::Default, i))
+    <t:ElementaryTypeName> <s:StorageLocation> <i:Identifier> => Box::new(VariableDeclaration{
+        typ: t, storage: s, name: i
+    }),
+    <t:ElementaryTypeName> <i:Identifier> => Box::new(VariableDeclaration{ 
+        typ: t, storage: StorageLocation::Default, name: i
+    })
 }
 
 StructDefinition: Box<StructDefinition> = {
     "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")+> "}" => {
-        Box::new(StructDefinition::new(n, v))
+        Box::new(StructDefinition{name: n, fields: v})
     }
 }
 
@@ -179,14 +183,18 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <t:ElementaryTypeName>  <i:"indexed"?> <n:Identifier?> => EventParameter::new(t, match i { Some(_) => true, _ => false }, n)
+    <t:ElementaryTypeName>  <i:"indexed"?> <n:Identifier?> => EventParameter{
+        typ: t, indexed: match i { Some(_) => true, _ => false }, name:n
+    }
 }
 
 EventDefinition: Box<EventDefinition> = {
     "event" <n:Identifier> "(" <v:(<EventParameter> ",")*> <e:EventParameter> ")" <a:"anonymous"?> ";" => {
         let mut v = v;
         v.push(e);
-        Box::new(EventDefinition::new(n, v, match a { Some(_) => true, _ => false}))
+        Box::new(EventDefinition{
+            name: n, fields: v, anonymous: match a { Some(_) => true, _ => false}
+        })
     },
 }
 
@@ -194,13 +202,15 @@ EnumDefinition: Box<EnumDefinition> = {
     "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
         let mut v = v;
         v.push(e);
-        Box::new(EnumDefinition::new(n, v))
+        Box::new(EnumDefinition{name: n, values: v})
     }
 }
 
 StateVariableDeclaration: Box<StateVariableDeclaration> = {
     <t:ElementaryTypeName> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> ";" => {
-        Box::new(StateVariableDeclaration::new(t, a, i, e))
+        Box::new(StateVariableDeclaration{
+            typ: t, attrs: a, name: i, initializer: e
+        })
     }
 }
 
@@ -337,7 +347,7 @@ StringLiteral: String = {
 
 Parameter: Parameter = {
     <e:ElementaryTypeName> <s:StorageLocation?> <i:Identifier?> => {
-        Parameter::new(e, s, i)
+        Parameter{typ: e, storage: s, name: i}
     }
 }
 

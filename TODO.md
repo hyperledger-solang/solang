@@ -12,8 +12,6 @@ using llvm, for example [bfc](https://github.com/Wilfred/bfc).
    -Wall, --emit-llvm and -S
 
 ## Parser:
- * the AST uses positional structs, these should really be named fields
- * Remove new() methods and make all fields public
  * the lalrpop lexer cannot deal with comments, we need a customer lexer for this rather
    than removing comments in the strip_comments function
  * We should use location tracker so that warnings and errors can carry proper line and column
