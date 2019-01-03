@@ -223,6 +223,10 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
         Expression::Assign(l, r) |
         Expression::AssignAdd(l, r) |
         Expression::AssignSubtract(l, r) => binary_expression(f, l, r),
+        Expression::Equal(l, r) => {
+            binary_expression(f, l, r)?;
+            Ok(ElementaryTypeName::Bool)
+        }
         _ => Err(format!("resolve of expression {:?} not implemented yet", e))
     }
 }

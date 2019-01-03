@@ -2,9 +2,10 @@ use ast::*;
 use std::ptr::null_mut;
 use std::ffi::{CString, CStr};
 use std::str;
-use std::collections::HashMap;
 use resolve::*;
+use vartable::*;
 
+use llvm_sys::LLVMIntPredicate;
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
@@ -93,12 +94,6 @@ pub fn emit(s: SourceUnit) {
     }
 }
 
-#[derive(Debug)]
-struct Variable {
-    typ: ElementaryTypeName,
-    value: LLVMValueRef
-}
-
 unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLVMModuleRef, builder: LLVMBuilderRef) -> Result<(), String> {
     let mut args = vec!();
 
@@ -138,7 +133,9 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     let mut emitter = FunctionEmitter{
         context: context,
         builder: builder, 
-        vartable: HashMap::new(),
+        vartable: Vartable::new(),
+        basicblock: bb,
+        llfunction: function,
         function: &f
     };
 
@@ -147,7 +144,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     for p in &f.params {
         // Unnamed function arguments are not accessible
         if let Some(ref argname) = p.name {
-            emitter.vartable.insert(argname.to_string(), Variable{typ: p.typ, value: LLVMGetParam(function, i)});
+            emitter.vartable.insert(argname, p.typ, LLVMGetParam(function, i));
             i += 1;
         }
     }
@@ -161,7 +158,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
                 Some(e) => emitter.expression(e, v.typ)?
             };
 
-            emitter.vartable.insert(name.to_string(), Variable{typ: v.typ, value: value});
+            emitter.vartable.insert(name, v.typ, value);
         }
         Ok(())
     })?;
@@ -193,8 +190,10 @@ impl ElementaryTypeName {
 struct FunctionEmitter<'a> {
     context: LLVMContextRef,
     builder: LLVMBuilderRef,
+    llfunction: LLVMValueRef,
+    basicblock: LLVMBasicBlockRef,
     function: &'a FunctionDefinition,
-    vartable: HashMap<String, Variable>
+    vartable: Vartable,
 }
 
 impl<'a> FunctionEmitter<'a> {
@@ -226,6 +225,53 @@ impl<'a> FunctionEmitter<'a> {
             Statement::Empty => {
                 // nop
             },
+            Statement::If(cond, then, _) => {
+                let ifbb = self.basicblock;
+                let thenbb = unsafe {
+                    LLVMAppendBasicBlockInContext(self.context, self.llfunction, b"then\0".as_ptr() as *const _)
+                };
+                let endifbb = unsafe {
+                    LLVMAppendBasicBlockInContext(self.context, self.llfunction, b"endif\0".as_ptr() as *const _)
+                };
+                
+                let v = self.expression(cond, ElementaryTypeName::Bool)?;
+
+                unsafe {
+                    LLVMBuildCondBr(self.builder, v, thenbb, endifbb);
+                    LLVMPositionBuilderAtEnd(self.builder, thenbb);
+                }
+
+                self.basicblock = thenbb;
+
+                self.vartable.new_scope();
+
+                self.statement(then)?;
+                
+                unsafe {
+                    LLVMBuildBr(self.builder, endifbb);
+                    LLVMPositionBuilderAtEnd(self.builder, endifbb);
+                }
+
+                self.basicblock = endifbb;
+
+                // create phi nodes
+                for (name, var) in self.vartable.leave_scope() {
+                    let typ = self.vartable.get_type(&name);
+                    let cvalue = self.vartable.get_value(&name);
+                    let phi = unsafe {
+                        LLVMBuildPhi(self.builder, typ.LLVMType(self.context), b"\0".as_ptr() as *const _)
+                    };
+
+                    let mut values = vec!(cvalue, var.value);
+                    let mut blocks = vec!(ifbb, thenbb);
+
+                    unsafe {
+                        LLVMAddIncoming(phi, values.as_mut_ptr(), blocks.as_mut_ptr(), 2);
+                    }
+
+                    self.vartable.set_value(&name, phi);
+                }
+            }
             _ => {
                 return Err(format!("statement not implement: {:?}", stmt)); 
             }
@@ -289,8 +335,16 @@ impl<'a> FunctionEmitter<'a> {
                     }
                 }
             },
+            Expression::Equal(l, r) => {
+                let left = self.expression(l, ElementaryTypeName::Uint(32))?;
+                let right = self.expression(r, ElementaryTypeName::Uint(32))?;
+
+                unsafe {
+                    Ok(LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntEQ, left, right, b"\0".as_ptr() as *const _))
+                }
+            }
             Expression::Variable(s) => {
-                let var = self.vartable.get(s).unwrap();
+                let var = self.vartable.get(s);
 
                 if var.typ == t || t == ElementaryTypeName::Any {
                     Ok(var.value)
@@ -309,9 +363,25 @@ impl<'a> FunctionEmitter<'a> {
             Expression::Assign(l, r) => {
                 match l {
                     box Expression::Variable(s) => {
-                        let typ = self.vartable.get(s).unwrap().typ;
+                        let typ = self.vartable.get_type(s);
                         let value = self.expression(r, typ)?;
-                        self.vartable.get_mut(s).unwrap().value = value;
+                        self.vartable.set_value(s, value);
+                        Ok(0 as LLVMValueRef)
+                    },
+                    _ => panic!("cannot assign to non-lvalue")
+                }
+            },
+            Expression::AssignAdd(l, r) => {
+                match l {
+                    box Expression::Variable(s) => {
+                        let typ = self.vartable.get_type(s);
+                        let value = self.expression(r, typ)?;
+                        let lvalue = self.vartable.get_value(s);
+                        self.vartable.set_value(s, value);
+                        let nvalue = unsafe {
+                            LLVMBuildAdd(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
+                        };
+                        self.vartable.set_value(s, nvalue);
                         Ok(0 as LLVMValueRef)
                     },
                     _ => panic!("cannot assign to non-lvalue")

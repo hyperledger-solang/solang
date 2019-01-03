@@ -10,6 +10,7 @@ mod ast;
 mod solidity;
 mod resolve;
 mod emit;
+mod vartable;
 
 use std::env;
 use std::fs::File;
