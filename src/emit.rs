@@ -3,8 +3,6 @@ use std::ptr::null_mut;
 use std::ffi::{CString, CStr};
 use std::str;
 use std::collections::HashMap;
-use num_bigint::Sign;
-use num_traits::cast::ToPrimitive;
 use resolve::*;
 
 use llvm_sys::core::*;
@@ -183,6 +181,13 @@ impl ElementaryTypeName {
             }
         }
     }
+
+    fn signed(&self) -> bool {
+        match self {
+            ElementaryTypeName::Int(_) => true,
+            _ => false
+        }
+    }
 }
 
 struct FunctionEmitter<'a> {
@@ -232,20 +237,18 @@ impl<'a> FunctionEmitter<'a> {
     fn expression(&mut self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {
         match e {
             Expression::NumberLiteral(n) => {
-                let sign = n.sign() == Sign::Minus;
-                let ltype;
-                if t == ElementaryTypeName::Any {
+                let ltype = if t == ElementaryTypeName::Any {
                     unsafe {
-                        ltype = LLVMIntTypeInContext(self.context, n.bits() as u32);
+                        LLVMIntTypeInContext(self.context, n.bits() as u32)
                     }
                 } else {
-                    ltype = t.LLVMType(self.context);
-                }
-                match n.to_u64() {
-                    None => Err(format!("failed to convert {}", n)),
-                    Some(n) =>  unsafe {
-                        Ok(LLVMConstInt(ltype, n, sign as _))
-                    }
+                    t.LLVMType(self.context)
+                };
+
+                let s = n.to_string();
+
+                unsafe {
+                    Ok(LLVMConstIntOfStringAndSize(ltype, s.as_ptr() as *const _, s.len() as _, 10))
                 }
             },
             Expression::Add(l, r) => {
@@ -268,12 +271,6 @@ impl<'a> FunctionEmitter<'a> {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
-                if left.is_null() {
-                    panic!("left is null");
-                }
-                if right.is_null() {
-                    panic!("right is null");
-                }
                 unsafe {
                     Ok(LLVMBuildMul(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
@@ -282,15 +279,19 @@ impl<'a> FunctionEmitter<'a> {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
-                unsafe {
-                    Ok(LLVMBuildUDiv(self.builder, left, right, b"\0".as_ptr() as *const _))
+                if get_expression_type(self.function, l)?.signed() {
+                    unsafe {
+                        Ok(LLVMBuildSDiv(self.builder, left, right, b"\0".as_ptr() as *const _))
+                    }
+                } else {
+                    unsafe {
+                        Ok(LLVMBuildUDiv(self.builder, left, right, b"\0".as_ptr() as *const _))
+                    }
                 }
             },
             Expression::Variable(s) => {
                 let var = self.vartable.get(s).unwrap();
-                if var.value.is_null() {
-                    panic!("var value is null");
-                }
+
                 if var.typ == t || t == ElementaryTypeName::Any {
                     Ok(var.value)
                 } else {
