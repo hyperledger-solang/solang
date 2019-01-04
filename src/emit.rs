@@ -110,17 +110,11 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
         }
     };
  
-    let ret;
-
-    if f.returns.len() > 1 {
-        return Err("only functions with one return value implemented`".to_string());
-    }
-
-    if f.returns.len() == 0 {
-        ret = LLVMVoidType();
-    } else {
-        ret = f.returns[0].typ.LLVMType(context);
-    }
+    let ret = match f.returns.len() {
+        0 => LLVMVoidType(),
+        1 => f.returns[0].typ.LLVMType(context),
+        _ => return Err("only functions with one return value implemented".to_string())
+    };
 
     let ftype = LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0);
 
@@ -140,25 +134,26 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     };
 
     // create variable table
+    if let Some(ref vartable) = f.vartable {
+        for (name, typ) in vartable {
+            emitter.vartable.insert(name, *typ, LLVMConstInt(typ.LLVMType(context), 0, LLVM_FALSE));
+        }
+    }
+
     let mut i = 0;
     for p in &f.params {
         // Unnamed function arguments are not accessible
         if let Some(ref argname) = p.name {
             emitter.vartable.insert(argname, p.typ, LLVMGetParam(function, i));
-            i += 1;
         }
+        i += 1;
     }
 
     visit_statement(&f.body, &mut |s| {
-        if let Statement::VariableDefinition(v, e) = s {
-            let name = &v.name;
+        if let Statement::VariableDefinition(v, Some(e)) = s {
+            let value = emitter.expression(e, v.typ)?;
 
-            let value = match e {
-                None => LLVMConstInt(v.typ.LLVMType(context), 0, LLVM_FALSE),
-                Some(e) => emitter.expression(e, v.typ)?
-            };
-
-            emitter.vartable.insert(name, v.typ, value);
+            emitter.vartable.insert(&v.name, v.typ, value);
         }
         Ok(())
     })?;
