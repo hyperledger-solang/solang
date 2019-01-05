@@ -1,6 +1,7 @@
 use ast::*;
 use std::ptr::null_mut;
 use std::ffi::{CString, CStr};
+use std::collections::HashMap;
 use std::str;
 use resolve::*;
 use vartable::*;
@@ -82,6 +83,7 @@ pub fn emit(s: SourceUnit) {
                     println!("obj_error: {:?}", CStr::from_ptr(obj_error as *const _));
                 }
 
+                //LLVMDumpModule(module);
                 LLVMDisposeBuilder(builder);
                 LLVMDisposeModule(module);
             }
@@ -220,7 +222,7 @@ impl<'a> FunctionEmitter<'a> {
             Statement::Empty => {
                 // nop
             },
-            Statement::If(cond, then, _) => {
+            Statement::If(cond, then, else_) => {
                 let ifbb = self.basicblock;
                 let thenbb = unsafe {
                     LLVMAppendBasicBlockInContext(self.context, self.llfunction, b"then\0".as_ptr() as *const _)
@@ -228,11 +230,17 @@ impl<'a> FunctionEmitter<'a> {
                 let endifbb = unsafe {
                     LLVMAppendBasicBlockInContext(self.context, self.llfunction, b"endif\0".as_ptr() as *const _)
                 };
+                let elsebb = match else_ {
+                    box Some(_) => unsafe {
+                        Some(LLVMAppendBasicBlockInContext(self.context, self.llfunction, b"else\0".as_ptr() as *const _))
+                    },
+                    box None => None
+                };
                 
                 let v = self.expression(cond, ElementaryTypeName::Bool)?;
 
                 unsafe {
-                    LLVMBuildCondBr(self.builder, v, thenbb, endifbb);
+                    LLVMBuildCondBr(self.builder, v, thenbb, match elsebb { Some(b) => b, None => endifbb});
                     LLVMPositionBuilderAtEnd(self.builder, thenbb);
                 }
 
@@ -241,16 +249,42 @@ impl<'a> FunctionEmitter<'a> {
                 self.vartable.new_scope();
 
                 self.statement(then)?;
-                
+
                 unsafe {
                     LLVMBuildBr(self.builder, endifbb);
+                }
+
+                let thenlastbb = self.basicblock;
+                let thenscope = self.vartable.leave_scope();
+
+                let mut elsescope = if let Some(bb) = elsebb {
+                    unsafe {
+                        LLVMPositionBuilderAtEnd(self.builder, bb);
+                    }
+
+                    self.basicblock = bb;
+
+                    self.vartable.new_scope();
+
+                    if let box Some(e) = else_ {
+                        self.statement(e)?;
+                    }
+
+                    unsafe {
+                        LLVMBuildBr(self.builder, endifbb);
+                    }
+
+                    self.vartable.leave_scope()
+                } else {
+                    HashMap::new()
+                };
+                
+                unsafe {
                     LLVMPositionBuilderAtEnd(self.builder, endifbb);
                 }
 
-                self.basicblock = endifbb;
-
                 // create phi nodes
-                for (name, var) in self.vartable.leave_scope() {
+                for (name, var) in thenscope {
                     let typ = self.vartable.get_type(&name);
                     let cvalue = self.vartable.get_value(&name);
                     let phi = unsafe {
@@ -258,7 +292,30 @@ impl<'a> FunctionEmitter<'a> {
                     };
 
                     let mut values = vec!(cvalue, var.value);
-                    let mut blocks = vec!(ifbb, thenbb);
+                    let mut blocks = vec!(ifbb, thenlastbb);
+
+                    if let Some(var) = elsescope.remove(&name) {
+                        values.push(var.value);
+                        blocks.push(self.basicblock);
+                    }
+
+                    unsafe {
+                        LLVMAddIncoming(phi, values.as_mut_ptr(), blocks.as_mut_ptr(), values.len() as _);
+                    }
+
+                    self.vartable.set_value(&name, phi);
+                }
+
+                // rest of else scope
+                for (name, var) in elsescope {
+                    let typ = self.vartable.get_type(&name);
+                    let cvalue = self.vartable.get_value(&name);
+                    let phi = unsafe {
+                        LLVMBuildPhi(self.builder, typ.LLVMType(self.context), b"\0".as_ptr() as *const _)
+                    };
+
+                    let mut values = vec!(cvalue, var.value);
+                    let mut blocks = vec!(ifbb, self.basicblock);
 
                     unsafe {
                         LLVMAddIncoming(phi, values.as_mut_ptr(), blocks.as_mut_ptr(), 2);
@@ -266,6 +323,9 @@ impl<'a> FunctionEmitter<'a> {
 
                     self.vartable.set_value(&name, phi);
                 }
+
+
+                self.basicblock = endifbb;
             }
             _ => {
                 return Err(format!("statement not implement: {:?}", stmt)); 
@@ -375,6 +435,22 @@ impl<'a> FunctionEmitter<'a> {
                         self.vartable.set_value(s, value);
                         let nvalue = unsafe {
                             LLVMBuildAdd(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
+                        };
+                        self.vartable.set_value(s, nvalue);
+                        Ok(0 as LLVMValueRef)
+                    },
+                    _ => panic!("cannot assign to non-lvalue")
+                }
+            },
+            Expression::AssignSubtract(l, r) => {
+                match l {
+                    box Expression::Variable(s) => {
+                        let typ = self.vartable.get_type(s);
+                        let value = self.expression(r, typ)?;
+                        let lvalue = self.vartable.get_value(s);
+                        self.vartable.set_value(s, value);
+                        let nvalue = unsafe {
+                            LLVMBuildSub(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
                         };
                         self.vartable.set_value(s, nvalue);
                         Ok(0 as LLVMValueRef)

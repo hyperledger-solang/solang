@@ -6,6 +6,8 @@ contract test3 {
 		c = 100 * b;
 		if (a == 1) {
 			c += 5;
+		} else {
+			c -= 5;
 		}
 		return a * 1000 + c;
 	}
