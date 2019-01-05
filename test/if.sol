@@ -7,7 +7,13 @@ contract test3 {
 		if (a == 1) {
 			c += 5;
 		} else {
-			c -= 5;
+			if (a == 2) {	
+				c -= 5;
+			} else if (a == 3) {
+				c -= 10;
+			} else {
+				c -= 9;
+			}
 		}
 		return a * 1000 + c;
 	}

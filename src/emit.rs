@@ -170,6 +170,7 @@ impl ElementaryTypeName {
             ElementaryTypeName::Bool => unsafe { LLVMInt1TypeInContext(context) },
             ElementaryTypeName::Int(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
             ElementaryTypeName::Uint(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
+            ElementaryTypeName::Address => unsafe { LLVMIntTypeInContext(context, 20*8) },
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
@@ -323,7 +324,6 @@ impl<'a> FunctionEmitter<'a> {
 
                     self.vartable.set_value(&name, phi);
                 }
-
 
                 self.basicblock = endifbb;
             }
