@@ -2,10 +2,10 @@ use num_bigint::BigInt;
 use std::collections::HashMap;
 
 #[derive(Debug,PartialEq)]
-pub struct SourceUnit(
-    pub String,
-    pub Vec<SourceUnitPart>
-);
+pub struct SourceUnit {
+    pub name: String,
+    pub parts: Vec<SourceUnitPart>
+}
 
 #[derive(Debug,PartialEq)]
 pub enum SourceUnitPart {
@@ -64,11 +64,11 @@ pub enum ContractType {
 }
 
 #[derive(Debug,PartialEq)]
-pub struct ContractDefinition(
-    pub ContractType,
-    pub String,
-    pub Vec<ContractPart>,
-);
+pub struct ContractDefinition {
+    pub typ: ContractType,
+    pub name: String,
+    pub parts: Vec<ContractPart>,
+}
 
 #[derive(Debug,PartialEq)]
 pub struct EventParameter {
@@ -235,9 +235,9 @@ mod test {
                 }")
                 .unwrap();
 
-        let a = SourceUnit("".to_string(), vec![
+        let a = SourceUnit{name: "".to_string(), parts: vec![
             SourceUnitPart::ContractDefinition(
-                Box::new(ContractDefinition(ContractType::Contract, "foo".to_string(), vec![
+                Box::new(ContractDefinition{typ: ContractType::Contract, name: "foo".to_string(), parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition{name: "Jurisdiction".to_string(), fields: vec![
                         Box::new(VariableDeclaration{
                             typ: ElementaryTypeName::Bool, storage: StorageLocation::Default, name: "exists".to_string()
@@ -258,8 +258,8 @@ mod test {
                     ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
                         typ: ElementaryTypeName::Int(64), attrs: vec![], name: "$thing_102".to_string(), initializer: None
                     }))
-            ])))
-        ]);
+            ]}))
+        ]};
 
         assert_eq!(e, a);
     }

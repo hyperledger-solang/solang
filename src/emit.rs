@@ -55,10 +55,10 @@ pub fn emit(s: SourceUnit) {
 
     let tm = target_machine();
 
-    for part in &s.1 {
+    for part in &s.parts {
         if let SourceUnitPart::ContractDefinition(ref contract) = part {
-            let contractname = CString::new(contract.1.to_string()).unwrap();
-            let filename = CString::new(contract.1.to_string() + ".wasm").unwrap();
+            let contractname = CString::new(contract.name.to_string()).unwrap();
+            let filename = CString::new(contract.name.to_string() + ".wasm").unwrap();
 
             unsafe {
                 let module = LLVMModuleCreateWithName(contractname.as_ptr());
@@ -66,7 +66,7 @@ pub fn emit(s: SourceUnit) {
                 let mut builder = LLVMCreateBuilderInContext(context);
                 let mut obj_error = null_mut();
 
-                for m in &contract.2 {
+                for m in &contract.parts {
                     if let ContractPart::FunctionDefinition(ref func) = m {
                         if let Err(s) = emit_func(func, context, module, builder) {
                             println!("failed to compile: {}", s);

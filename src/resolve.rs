@@ -5,10 +5,10 @@ use std::collections::HashMap;
 use num_bigint::Sign;
 
 pub fn resolve(s: &mut SourceUnit) -> Result<(), String> {
-    for p in &mut s.1 {
+    for p in &mut s.parts {
         if let SourceUnitPart::ContractDefinition(ref mut def) = p {
-            if def.0 == ContractType::Contract {
-                for m in &mut def.2 {
+            if def.typ == ContractType::Contract {
+                for m in &mut def.parts {
                     if let ContractPart::FunctionDefinition(ref mut func) = m {
                         resolve_func(func)?;
                     }

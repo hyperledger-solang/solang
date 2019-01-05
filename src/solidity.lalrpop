@@ -6,7 +6,7 @@ use ast::*;
 grammar;
 
 pub SourceUnit: SourceUnit = {
-    <u:SourceUnitPart+> => SourceUnit("".to_string(), u)
+    <u:SourceUnitPart+> => SourceUnit{name: "".to_string(), parts: u}
 }
 
 SourceUnitPart: SourceUnitPart = {
@@ -178,7 +178,7 @@ ContractPart: ContractPart = {
 
 ContractDefinition: Box<ContractDefinition> = {
     <t:ContractType> <n:Identifier> "{" <p:(<ContractPart>)+> "}" => {
-        Box::new(ContractDefinition(t, n, p))
+        Box::new(ContractDefinition{typ: t, name: n, parts: p})
     }
 }
 

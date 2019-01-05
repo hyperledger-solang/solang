@@ -56,7 +56,7 @@ fn main() {
             }
         }
 
-        past.0 = filename.clone();
+        past.name = filename.clone();
 
         // resolve phase
         if let Err(s) = resolve::resolve(&mut past) {
