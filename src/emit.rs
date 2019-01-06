@@ -177,13 +177,6 @@ impl ElementaryTypeName {
             }
         }
     }
-
-    fn signed(&self) -> bool {
-        match self {
-            ElementaryTypeName::Int(_) => true,
-            _ => false
-        }
-    }
 }
 
 struct FunctionEmitter<'a> {
@@ -249,7 +242,7 @@ impl<'a> FunctionEmitter<'a> {
                 };
 
                 let mut endifbb = self.new_basic_block(&"endif".to_string());
-                self.create_phi_nodes(&mut endifbb, &changeset);
+                self.create_phi_nodes(&mut endifbb, &changeset, false);
 
                 let v = self.expression(cond, ElementaryTypeName::Bool)?;
 
@@ -268,7 +261,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, endifbb.basic_block);
                 }
 
-                endifbb.add_incoming(self.basicblock, self.vartable.leave_scope());
+                endifbb.add_incoming(self.basicblock, &self.vartable.leave_scope());
 
                 if let Some(bb) = elsebb {
                     unsafe {
@@ -287,7 +280,7 @@ impl<'a> FunctionEmitter<'a> {
                         LLVMBuildBr(self.builder, endifbb.basic_block);
                     }
 
-                    endifbb.add_incoming(self.basicblock, self.vartable.leave_scope());
+                    endifbb.add_incoming(self.basicblock, &self.vartable.leave_scope());
                 }
                 
                 unsafe {
@@ -295,7 +288,166 @@ impl<'a> FunctionEmitter<'a> {
                 }
 
                 self.basicblock = endifbb.basic_block;
-            }
+            },
+            Statement::DoWhile(body, cond) => {
+                let mut changeset = HashMap::new();
+
+                body.written_vars(&mut changeset);
+                cond.written_vars(&mut changeset);
+
+                let mut body_bb = self.new_basic_block(&"body".to_string());
+
+                self.create_phi_nodes(&mut body_bb, &changeset, true);
+
+                let mut end_dowhile_bb  = self.new_basic_block(&"end_dowhile".to_string());
+
+                self.create_phi_nodes(&mut end_dowhile_bb, &changeset, false);
+
+                // BODY
+                unsafe {
+                    LLVMBuildBr(self.builder, body_bb.basic_block);
+                    LLVMPositionBuilderAtEnd(self.builder, body_bb.basic_block);
+                }
+                self.basicblock = body_bb.basic_block;
+
+                self.vartable.new_scope();
+
+                self.statement(body)?;
+
+                // CONDITION
+                let v = self.expression(cond, ElementaryTypeName::Bool)?;
+
+                unsafe {
+                    LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_dowhile_bb.basic_block);
+                    LLVMPositionBuilderAtEnd(self.builder, end_dowhile_bb.basic_block);
+                }
+
+                let vars = self.vartable.leave_scope();
+
+                body_bb.add_incoming(body_bb.basic_block, &vars);
+                end_dowhile_bb.add_incoming(body_bb.basic_block, &vars);
+
+                self.basicblock = end_dowhile_bb.basic_block;
+            },
+            Statement::While(cond, body) => {
+                let mut changeset = HashMap::new();
+
+                cond.written_vars(&mut changeset);
+                body.written_vars(&mut changeset);
+
+                let mut cond_bb = self.new_basic_block(&"cond".to_string());
+
+                self.create_phi_nodes(&mut cond_bb, &changeset, true);
+
+                let mut body_bb = self.new_basic_block(&"body".to_string());
+
+                self.create_phi_nodes(&mut body_bb, &changeset, false);
+
+                let mut end_while_bb  = self.new_basic_block(&"end_while".to_string());
+
+                self.create_phi_nodes(&mut end_while_bb, &changeset, false);
+
+                // COND
+                unsafe {
+                    LLVMBuildBr(self.builder, cond_bb.basic_block);
+                    LLVMPositionBuilderAtEnd(self.builder, cond_bb.basic_block);
+                }
+                self.basicblock = cond_bb.basic_block;
+
+                self.vartable.new_scope();
+
+                let v = self.expression(cond, ElementaryTypeName::Bool)?;
+
+                unsafe {
+                    LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_while_bb.basic_block);
+                    LLVMPositionBuilderAtEnd(self.builder, end_while_bb.basic_block);
+                }
+
+                // BODY
+                self.statement(body)?;
+
+                unsafe {
+                    LLVMBuildBr(self.builder, end_while_bb.basic_block);
+                    LLVMPositionBuilderAtEnd(self.builder, end_while_bb.basic_block);
+                }
+
+                let vars = self.vartable.leave_scope();
+
+                cond_bb.add_incoming(body_bb.basic_block, &vars);
+                end_while_bb.add_incoming(body_bb.basic_block, &vars);
+
+                self.basicblock = end_while_bb.basic_block;
+            },
+            Statement::For(init, cond, next, body) => {
+                if let box Some(init) = init {
+                    self.statement(init)?;
+                }
+
+                let mut changeset = HashMap::new();
+            
+                if let box Some(cond) = cond {
+                    cond.written_vars(&mut changeset);
+                }
+                if let box Some(body) = body {
+                    body.written_vars(&mut changeset);
+                }
+                if let box Some(next) = next {
+                    next.written_vars(&mut changeset);
+                }
+
+                let mut cond_bb = self.new_basic_block(&"cond".to_string());
+
+                self.create_phi_nodes(&mut cond_bb, &changeset, true);
+
+                let mut body_bb = self.new_basic_block(&"body".to_string());
+
+                self.create_phi_nodes(&mut body_bb, &changeset, false);
+
+                let mut end_for_bb  = self.new_basic_block(&"end_for".to_string());
+
+                self.create_phi_nodes(&mut end_for_bb, &changeset, false);
+
+                if let box Some(cond) = cond {
+                    // COND
+                    unsafe {
+                        LLVMBuildBr(self.builder, cond_bb.basic_block);
+                        LLVMPositionBuilderAtEnd(self.builder, cond_bb.basic_block);
+                    }
+                    self.basicblock = cond_bb.basic_block;
+
+                    self.vartable.new_scope();
+
+                    let v = self.expression(cond, ElementaryTypeName::Bool)?;
+
+                    unsafe {
+                        LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_for_bb.basic_block);
+                        LLVMPositionBuilderAtEnd(self.builder, end_for_bb.basic_block);
+                    }
+                }
+
+                if let box Some(body) = body {
+                    // BODY
+                    self.statement(body)?;
+                }
+
+                if let box Some(next) = next {
+                    // BODY
+                    self.statement(next)?;
+                }
+
+                unsafe {
+                    LLVMBuildBr(self.builder, end_for_bb.basic_block);
+                    LLVMPositionBuilderAtEnd(self.builder, end_for_bb.basic_block);
+                }
+
+                let vars = self.vartable.leave_scope();
+
+                cond_bb.add_incoming(body_bb.basic_block, &vars);
+                end_for_bb.add_incoming(body_bb.basic_block, &vars);
+
+                self.basicblock = end_for_bb.basic_block;
+            },
+
             _ => {
                 return Err(format!("statement not implement: {:?}", stmt)); 
             }
@@ -366,7 +518,23 @@ impl<'a> FunctionEmitter<'a> {
                 unsafe {
                     Ok(LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntEQ, left, right, b"\0".as_ptr() as *const _))
                 }
-            }
+            },
+            Expression::More(l, r) => {
+                let left = self.expression(l, ElementaryTypeName::Uint(32))?;
+                let right = self.expression(r, ElementaryTypeName::Uint(32))?;
+
+                unsafe {
+                    Ok(LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntSGT, left, right, b"\0".as_ptr() as *const _))
+                }
+            },
+            Expression::Less(l, r) => {
+                let left = self.expression(l, ElementaryTypeName::Uint(32))?;
+                let right = self.expression(r, ElementaryTypeName::Uint(32))?;
+
+                unsafe {
+                    Ok(LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntSLT, left, right, b"\0".as_ptr() as *const _))
+                }
+            },
             Expression::Variable(_, s) => {
                 let var = self.vartable.get(s);
 
@@ -427,6 +595,62 @@ impl<'a> FunctionEmitter<'a> {
                     _ => panic!("cannot assign to non-lvalue")
                 }
             },
+            Expression::AssignMultiply(l, r) => {
+                match l {
+                    box Expression::Variable(_, s) => {
+                        let typ = self.vartable.get_type(s);
+                        let value = self.expression(r, typ)?;
+                        let lvalue = self.vartable.get_value(s);
+                        self.vartable.set_value(s, value);
+                        let nvalue = unsafe {
+                            LLVMBuildMul(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
+                        };
+                        self.vartable.set_value(s, nvalue);
+                        Ok(0 as LLVMValueRef)
+                    },
+                    _ => panic!("cannot assign to non-lvalue")
+                }
+            },
+            Expression::PostDecrement(box Expression::Variable(t, s)) => {
+                let before_value = self.vartable.get_value(s);
+                let after_value = unsafe {
+                    LLVMBuildSub(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
+                };
+
+                self.vartable.set_value(s, after_value);
+
+                Ok(before_value)
+            },
+            Expression::PreDecrement(box Expression::Variable(t, s)) => {
+                let before_value = self.vartable.get_value(s);
+                let after_value = unsafe {
+                    LLVMBuildSub(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
+                };
+
+                self.vartable.set_value(s, after_value);
+
+                Ok(after_value)
+            },
+            Expression::PostIncrement(box Expression::Variable(t, s)) => {
+                let before_value = self.vartable.get_value(s);
+                let after_value = unsafe {
+                    LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
+                };
+
+                self.vartable.set_value(s, after_value);
+
+                Ok(before_value)
+            },
+            Expression::PreIncrement(box Expression::Variable(t, s)) => {
+                let before_value = self.vartable.get_value(s);
+                let after_value = unsafe {
+                    LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
+                };
+
+                self.vartable.set_value(s, after_value);
+
+                Ok(after_value)
+            },
             _ => {
                 Err(format!("expression not implemented: {:?}", e))
             }
@@ -442,28 +666,37 @@ impl<'a> FunctionEmitter<'a> {
         }
     }
 
-    fn create_phi_nodes(&self, bb: &mut BasicBlock, names: &HashMap<String, ElementaryTypeName>) {
+    fn create_phi_nodes(&self, bb: &mut BasicBlock, names: &HashMap<String, ElementaryTypeName>, backedge: bool) {
         for (name, ty) in names {
             if bb.phi.contains_key(name) {
                 continue;
             }
 
             let cname = CString::new(name.to_string()).unwrap();
-
-            bb.phi.insert(
-                name.to_string(),
-                unsafe {
+            let phi = unsafe {
                     LLVMBuildPhi(self.builder, ty.LLVMType(self.context), cname.as_ptr() as *const _)
+            };
+
+            bb.phi.insert(name.to_string(), phi);
+
+            if backedge {
+                let var = self.vartable.get(name);
+
+                let mut values = vec!(var.value);
+                let mut blocks = vec!(self.basicblock);
+
+                unsafe {
+                    LLVMAddIncoming(phi, values.as_mut_ptr(), blocks.as_mut_ptr(), 1);
                 }
-            );
+            }
         }
     }
 }
 
 impl BasicBlock {
-    fn add_incoming(&self, from: LLVMBasicBlockRef, set: HashMap<String, Variable>) {
+    fn add_incoming(&self, from: LLVMBasicBlockRef, set: &HashMap<String, Variable>) {
         for (name, var) in set {
-            let phi = self.phi.get(&name).unwrap();
+            let phi = self.phi.get(name).unwrap();
 
             let mut values = vec!(var.value);
             let mut blocks = vec!(from);

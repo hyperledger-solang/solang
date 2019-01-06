@@ -434,10 +434,10 @@ ClosedStatement: Statement = {
     "while" "(" <e:Expression> ")" <b:ClosedStatement> => {
         Statement::While(e, Box::new(b))
     },
-    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Statement?> ")" <block:ClosedStatement> => {
+    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> => {
         Statement::For(Box::new(b), Box::new(c), Box::new(n), Box::new(Some(block)))
     },
-    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Statement?> ")" ";" => {
+    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" ";" => {
         Statement::For(Box::new(b), Box::new(c), Box::new(n), Box::new(None))
     }
 }
@@ -464,7 +464,7 @@ NonIfStatement: Statement = {
     "_" ";" => {
         Statement::PlaceHolder
     },
-    "do" <b:Statement> "while" "(" <e:Expression> ")" => {
+    "do" <b:Statement> "while" "(" <e:Expression> ")" ";" => {
         Statement::DoWhile(Box::new(b), e)
     },
     "continue" ";" => {

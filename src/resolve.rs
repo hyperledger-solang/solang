@@ -69,6 +69,13 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
             Statement::If(expr, _, _) => {
                 check_expression(f, expr, ElementaryTypeName::Bool)
             },
+            Statement::For(_, expr, _, _) => {
+                if let box Some(expr) = expr {
+                    check_expression(f, expr, ElementaryTypeName::Bool)
+                } else {
+                    Ok(())
+                }
+            },
             Statement::While(expr, _) => {
                 check_expression(f, expr, ElementaryTypeName::Bool)
             },
@@ -181,19 +188,53 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
                 panic!("vartable not there");
             }
         },
+        Expression::PostDecrement(box Expression::Variable(t, s)) |
+        Expression::PostIncrement(box Expression::Variable(t, s)) |
+        Expression::PreDecrement(box Expression::Variable(t, s)) |
+        Expression::PreIncrement(box Expression::Variable(t, s)) => {
+            if let Some(ref vartable) = f.vartable {
+                match vartable.get(s) {
+                    Some(v) => {
+                        if !v.ordered() {
+                            Err(format!("variable {} not a number", s))
+                        } else {
+                            t.set(*v);
+                            Ok(*v)
+                        }
+                    }
+                    ,
+                    None => Err(format!("variable {} not found", s))
+                }
+            } else {
+                panic!("vartable not there");
+            }
+        },
         Expression::Complement(e) => get_expression_type(f, e),
         Expression::Not(e) => get_expression_type(f, e),
         Expression::UnaryMinus(e) => get_expression_type(f, e),
         Expression::UnaryPlus(e) => get_expression_type(f, e),
-        Expression::Add(l, r) => binary_expression(f, l, r),
-        Expression::Subtract(l, r) => binary_expression(f, l, r),
-        Expression::Multiply(l, r) => binary_expression(f, l, r),
+        Expression::Add(l, r) |
+        Expression::Subtract(l, r) |
+        Expression::Multiply(l, r) |
+        Expression::Divide(l, r) |
         Expression::Modulo(l, r) => binary_expression(f, l, r),
         Expression::Assign(l, r) |
+        Expression::AssignMultiply(l, r) |
+        Expression::AssignDivide(l, r) |
         Expression::AssignAdd(l, r) |
         Expression::AssignSubtract(l, r) => binary_expression(f, l, r),
         Expression::Equal(l, r) => {
             binary_expression(f, l, r)?;
+            Ok(ElementaryTypeName::Bool)
+        },
+        Expression::More(l, r) |
+        Expression::Less(l, r) |
+        Expression::MoreEqual(l, r) |
+        Expression::LessEqual(l, r) => {
+            if !binary_expression(f, l, r)?.ordered() {
+                return Err(format!("{:?} is not allowed", e));
+            }
+
             Ok(ElementaryTypeName::Bool)
         }
         _ => Err(format!("resolve of expression {:?} not implemented yet", e))

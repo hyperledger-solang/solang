@@ -27,6 +27,23 @@ pub enum ElementaryTypeName {
     Any,
 }
 
+impl ElementaryTypeName {
+    pub fn signed(&self) -> bool {
+        match self {
+            ElementaryTypeName::Int(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn ordered(&self) -> bool {
+        match self {
+            ElementaryTypeName::Int(_) => true,
+            ElementaryTypeName::Uint(_) => true,
+            _ => false
+        }
+    }
+}
+
 #[derive(Debug,PartialEq)]
 pub enum StorageLocation {
     Default,
@@ -308,6 +325,9 @@ impl Statement {
                 }
             },
             Statement::While(_, b) => {
+                b.visit_stmt(f)?;
+            },
+            Statement::DoWhile(b, _) => {
                 b.visit_stmt(f)?;
             },
             Statement::If(_, then, _else) => {
