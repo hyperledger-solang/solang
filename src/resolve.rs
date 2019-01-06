@@ -20,41 +20,6 @@ pub fn resolve(s: &mut SourceUnit) -> Result<(), String> {
     Ok(())
 }
 
-pub fn visit_statement(s: &Statement, f: &mut FnMut(&Statement) -> Result<(), String>) -> Result<(), String> {
-    f(s)?;
-    
-    match s {
-        Statement::BlockStatement(BlockStatement(bs)) => {
-            for i in bs {
-                visit_statement(&i, f)?;
-            }
-        },
-        Statement::For(i, _, n, b) => {
-            if let box Some(j) = i {
-                visit_statement(&j, f)?;
-            }
-            if let box Some(j) = n {
-                visit_statement(&j, f)?;
-            }
-            if let box Some(j) = b {
-                visit_statement(&j, f)?;
-            }
-        },
-        Statement::While(_, b) => {
-            visit_statement(&b, f)?;
-        },
-        Statement::If(_, then, _else) => {
-            visit_statement(&then, f)?;
-            if let box Some(b) = _else {
-                visit_statement(&b, f)?;
-            }
-        },
-        _ => ()
-    }
-
-    Ok(())
-}
-
 fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
     // find all the variables
     let mut vartable = HashMap::new();
@@ -71,7 +36,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
         }
     }
 
-    visit_statement(&f.body, &mut |s| {
+    f.body.visit_stmt(&mut |s| {
         if let Statement::VariableDefinition(v, _) = s {
             let name = &v.name;
 
@@ -87,7 +52,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
     f.vartable = Some(vartable);
 
     // Check expressions
-    visit_statement(&f.body, &mut |s| {
+    f.body.visit_stmt(&mut |s| {
         match s {
             Statement::VariableDefinition(decl, Some(expr)) => {
                 check_expression(f, expr, decl.typ)
@@ -202,10 +167,14 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
                 }
             }
         },
-        Expression::Variable(s) => {
+        Expression::Variable(t, s) => {
             if let Some(ref vartable) = f.vartable {
                 match vartable.get(s) {
-                    Some(v) => Ok(*v),
+                    Some(v) => {
+                        t.set(*v);
+                        Ok(*v)
+                    }
+                    ,
                     None => Err(format!("variable {} not found", s))
                 }
             } else {

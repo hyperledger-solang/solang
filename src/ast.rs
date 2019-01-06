@@ -1,5 +1,6 @@
 use num_bigint::BigInt;
 use std::collections::HashMap;
+use std::cell::Cell;
 
 #[derive(Debug,PartialEq)]
 pub struct SourceUnit {
@@ -155,7 +156,77 @@ pub enum Expression {
     BoolLiteral(bool),
     NumberLiteral(BigInt),
     StringLiteral(String),
-    Variable(String),
+    Variable(Cell<ElementaryTypeName>, String),
+}
+
+impl Expression {
+    pub fn visit(&self, f: &mut FnMut(&Expression)  -> Result<(), String>) -> Result<(), String> {
+        f(self)?;
+
+        match self {
+            Expression::Not(e) |
+            Expression::Complement(e) => e.visit(f),
+            Expression::AssignShiftLeft(l, r) |
+            Expression::AssignShiftRight(l, r) |
+            Expression::AssignMultiply(l, r) |
+            Expression::AssignModulo(l, r) |
+            Expression::AssignXor(l, r) |
+            Expression::AssignDivide(l, r) |
+            Expression::AssignOr(l, r) |
+            Expression::AssignAnd(l, r) |
+            Expression::AssignAdd(l, r) |
+            Expression::AssignSubtract(l, r) |
+            Expression::Assign(l, r) |
+            Expression::ShiftLeft(l, r) |
+            Expression::ShiftRight(l, r) |
+            Expression::Multiply(l, r) |
+            Expression::Modulo(l, r) |
+            Expression::Divide(l, r) |
+            Expression::Subtract(l, r) |
+            Expression::Add(l, r) |
+            Expression::Equal(l, r) |
+            Expression::Less(l, r) |
+            Expression::LessEqual(l, r) |
+            Expression::More(l, r) |
+            Expression::MoreEqual(l, r) |
+            Expression::NotEqual(l, r) => {
+                l.visit(f)?;
+                r.visit(f)
+            },
+            Expression::PreDecrement(e) |
+            Expression::PostDecrement(e) |
+            Expression::PreIncrement(e) |
+            Expression::PostIncrement(e) => e.visit(f),
+            _ => Ok(())
+        }
+    }
+
+    pub fn written_vars(&self, set: &mut HashMap<String, ElementaryTypeName>) {
+        self.visit(&mut |expr| {
+            match expr {
+                Expression::AssignShiftLeft(box Expression::Variable(t, s), _) |
+                Expression::AssignShiftRight(box Expression::Variable(t, s), _) |
+                Expression::AssignMultiply(box Expression::Variable(t, s), _) |
+                Expression::AssignModulo(box Expression::Variable(t, s), _) |
+                Expression::AssignXor(box Expression::Variable(t, s), _) |
+                Expression::AssignDivide(box Expression::Variable(t, s), _) |
+                Expression::AssignOr(box Expression::Variable(t, s), _) |
+                Expression::AssignAnd(box Expression::Variable(t, s), _) |
+                Expression::AssignAdd(box Expression::Variable(t, s), _) |
+                Expression::AssignSubtract(box Expression::Variable(t, s), _) |
+                Expression::Assign(box Expression::Variable(t, s), _) |
+                Expression::PreDecrement(box Expression::Variable(t, s)) |
+                Expression::PostDecrement(box Expression::Variable(t, s)) |
+                Expression::PreIncrement(box Expression::Variable(t, s)) |
+                Expression::PostIncrement(box Expression::Variable(t, s)) => {
+                    set.insert(s.to_string(), t.get());
+                },
+                _ => ()
+            };
+
+            Ok(())
+        }).unwrap();
+    }
 }
 
 #[derive(Debug,PartialEq)]
@@ -213,6 +284,63 @@ pub enum Statement {
     Throw,
     Emit(String, Vec<Expression>),
     Empty
+}
+
+impl Statement {
+    pub fn visit_stmt(&self, f: &mut FnMut(&Statement) -> Result<(), String>) -> Result<(), String> {
+        f(self)?;
+
+        match self {
+            Statement::BlockStatement(BlockStatement(bs)) => {
+                for i in bs {
+                    i.visit_stmt(f)?;
+                }
+            },
+            Statement::For(i, _, n, b) => {
+                if let box Some(j) = i {
+                    j.visit_stmt(f)?;
+                }
+                if let box Some(j) = n {
+                    j.visit_stmt(f)?;
+                }
+                if let box Some(j) = b {
+                    j.visit_stmt(f)?;
+                }
+            },
+            Statement::While(_, b) => {
+                b.visit_stmt(f)?;
+            },
+            Statement::If(_, then, _else) => {
+                then.visit_stmt(f)?;
+                if let box Some(b) = _else {
+                    b.visit_stmt(f)?;
+                }
+            },
+            _ => ()
+        }
+
+        Ok(())
+    }
+
+    pub fn visit_expr(&self, f: &mut FnMut(&Expression)  -> Result<(), String>) -> Result<(), String> {
+        self.visit_stmt(&mut |s| {
+            match s {
+                Statement::Expression(e) => e.visit(f),
+                Statement::If(e, _, _) => e.visit(f),
+                Statement::While(e, _) => e.visit(f),
+                Statement::DoWhile(_, e) => e.visit(f),
+                Statement::For(_, box Some(e), _, _) => e.visit(f),
+                _ => Ok(())
+            }
+        })
+    }
+
+    pub fn written_vars(&self, set: &mut HashMap<String, ElementaryTypeName>) {
+        self.visit_expr(&mut |expr| {
+            expr.written_vars(set);
+            Ok(())
+        }).unwrap();
+    }
 }
 
 #[cfg(test)]

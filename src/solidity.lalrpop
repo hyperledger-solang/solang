@@ -1,6 +1,7 @@
 
 use std::str::FromStr;
 use num_bigint::BigInt;
+use std::cell::Cell;
 use ast::*;
 
 grammar;
@@ -336,7 +337,7 @@ Precedence1: Expression = {
     "true" => Expression::BoolLiteral(true),
     "false" => Expression::BoolLiteral(false),
     StringLiteral => Expression::StringLiteral(<>.to_string()),
-    <i:Identifier> => Expression::Variable(i),
+    <i:Identifier> => Expression::Variable(Cell::new(ElementaryTypeName::Any), i),
     "(" <e:Expression> ")" => e,
     r#"-?[0-9]+"# => Expression::NumberLiteral(BigInt::from_str(<>).unwrap()),
  }
