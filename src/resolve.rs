@@ -104,6 +104,8 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
         }
     })?;
 
+    // check for unreachable code (anything after return,break,continue)
+    // check for infinite loops
     // check if function ends with return
 
     Ok(())
