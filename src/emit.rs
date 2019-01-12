@@ -134,7 +134,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
         vartable: Vartable::new(),
         basicblock: bb,
         llfunction: function,
-        function: &f
+        function: &f,
     };
 
     // create variable table
@@ -228,13 +228,11 @@ impl<'a> FunctionEmitter<'a> {
 
                 then.written_vars(&mut changeset);
 
-                let mut then_bb = self.new_basic_block("then".to_string());
+                let then_bb = self.new_basic_block("then".to_string(), None);
 
-                let mut endif_bb = self.new_basic_block("endif".to_string());
+                let endif_bb = self.new_basic_block("endif".to_string(), Some(&changeset));
 
-                self.create_phi_nodes(&mut endif_bb, &changeset);
-
-                self.add_incoming(&mut endif_bb);
+                self.add_incoming(&endif_bb);
 
                 let v = self.expression(cond, ElementaryTypeName::Bool)?;
 
@@ -252,7 +250,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, endif_bb.basic_block);
                 }
 
-                self.add_incoming(&mut endif_bb);
+                self.add_incoming(&endif_bb);
 
                 self.vartable.leave_scope();
 
@@ -264,11 +262,9 @@ impl<'a> FunctionEmitter<'a> {
                 then.written_vars(&mut changeset);
                 else_.written_vars(&mut changeset);
 
-                let mut thenbb = self.new_basic_block("then".to_string());
-                let mut elsebb = self.new_basic_block("else".to_string());
-                let mut endifbb = self.new_basic_block("endif".to_string());
-
-                self.create_phi_nodes(&mut endifbb, &changeset);
+                let thenbb = self.new_basic_block("then".to_string(), None);
+                let elsebb = self.new_basic_block("else".to_string(), None);
+                let endifbb = self.new_basic_block("endif".to_string(), Some(&changeset));
 
                 let v = self.expression(cond, ElementaryTypeName::Bool)?;
 
@@ -286,7 +282,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, endifbb.basic_block);
                 }
 
-                self.add_incoming(&mut endifbb);
+                self.add_incoming(&endifbb);
 
                 self.vartable.leave_scope();
 
@@ -300,7 +296,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, endifbb.basic_block);
                 }
 
-                self.add_incoming(&mut endifbb);
+                self.add_incoming(&endifbb);
 
                 self.vartable.leave_scope();
 
@@ -312,12 +308,11 @@ impl<'a> FunctionEmitter<'a> {
                 body.written_vars(&mut changeset);
                 cond.written_vars(&mut changeset);
 
-                let mut body_bb = self.new_basic_block("body".to_string());
+                let body_bb = self.new_basic_block("body".to_string(), Some(&changeset));
 
-                let mut end_dowhile_bb  = self.new_basic_block("end_dowhile".to_string());
+                let end_dowhile_bb  = self.new_basic_block("end_dowhile".to_string(), None);
 
-                self.create_phi_nodes(&mut body_bb, &changeset);
-                self.add_incoming(&mut body_bb);
+                self.add_incoming(&body_bb);
 
                 // BODY
                 unsafe {
@@ -335,7 +330,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_dowhile_bb.basic_block);
                 }
 
-                self.add_incoming(&mut body_bb);
+                self.add_incoming(&body_bb);
 
                 self.set_builder(&end_dowhile_bb);
             },
@@ -345,15 +340,13 @@ impl<'a> FunctionEmitter<'a> {
                 cond.written_vars(&mut changeset);
                 body.written_vars(&mut changeset);
 
-                let mut cond_bb = self.new_basic_block("cond".to_string());
+                let cond_bb = self.new_basic_block("cond".to_string(), Some(&changeset));
 
-                let mut body_bb = self.new_basic_block("body".to_string());
+                let body_bb = self.new_basic_block("body".to_string(), None);
 
-                let mut end_while_bb  = self.new_basic_block("end_while".to_string());
+                let end_while_bb = self.new_basic_block("end_while".to_string(), None);
 
-                self.create_phi_nodes(&mut cond_bb, &changeset);
-
-                self.add_incoming(&mut cond_bb);
+                self.add_incoming(&cond_bb);
 
                 // COND
                 unsafe {
@@ -378,7 +371,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, end_while_bb.basic_block);
                 }
 
-                self.add_incoming(&mut body_bb);
+                self.add_incoming(&body_bb);
 
                 self.set_builder(&end_while_bb);
 
@@ -398,12 +391,11 @@ impl<'a> FunctionEmitter<'a> {
                     next.written_vars(&mut changeset);
                 }
 
-                let mut body_bb = self.new_basic_block("body".to_string());
+                let body_bb = self.new_basic_block("body".to_string(), Some(&changeset));
 
-                let mut end_for_bb  = self.new_basic_block("end_for".to_string());
+                let end_for_bb  = self.new_basic_block("end_for".to_string(), None);
 
-                self.create_phi_nodes(&mut body_bb, &changeset);
-                self.add_incoming(&mut body_bb);
+                self.add_incoming(&body_bb);
                 self.vartable.new_scope();
 
                 self.set_builder(&body_bb);
@@ -422,7 +414,7 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, body_bb.basic_block);
                 }
 
-                self.add_incoming(&mut body_bb);
+                self.add_incoming(&body_bb);
                 self.vartable.leave_scope();
 
                 self.set_builder(&end_for_bb);
@@ -443,14 +435,13 @@ impl<'a> FunctionEmitter<'a> {
                     next.written_vars(&mut changeset);
                 }
 
-                let mut cond_bb = self.new_basic_block("cond".to_string());
+                let cond_bb = self.new_basic_block("cond".to_string(), Some(&changeset));
 
-                let mut body_bb = self.new_basic_block("body".to_string());
+                let body_bb = self.new_basic_block("body".to_string(), None);
 
-                let mut end_for_bb  = self.new_basic_block("end_for".to_string());
+                let end_for_bb = self.new_basic_block("end_for".to_string(), None);
 
-                self.create_phi_nodes(&mut cond_bb, &changeset);
-                self.add_incoming(&mut cond_bb);
+                self.add_incoming(&cond_bb);
 
                 // COND
                 unsafe {
@@ -479,7 +470,7 @@ impl<'a> FunctionEmitter<'a> {
                     self.statement(next)?;
                 }
 
-                self.add_incoming(&mut cond_bb);
+                self.add_incoming(&cond_bb);
 
                 self.vartable.leave_scope();
 
@@ -685,7 +676,7 @@ impl<'a> FunctionEmitter<'a> {
             Expression::PreIncrement(box Expression::Variable(t, s)) => {
                 let before_value = self.vartable.get_value(s);
                 let after_value = unsafe {
-                    LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
+                        LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
                 };
 
                 self.vartable.set_value(s, after_value);
@@ -698,46 +689,43 @@ impl<'a> FunctionEmitter<'a> {
         }
     }
 
-    fn new_basic_block(&self, name: String) -> BasicBlock {
+    fn new_basic_block(&self, name: String, phi: Option<&HashMap<String, ElementaryTypeName>>) -> BasicBlock {
         let cstr = CString::new(name).unwrap();
 
-        BasicBlock{
+        let mut bb = BasicBlock{
             basic_block: unsafe { LLVMAppendBasicBlockInContext(self.context, self.llfunction, cstr.as_ptr() as *const _) },
             phi: HashMap::new(),
-        }
-    }
+        };
 
-    fn create_phi_nodes(&mut self, bb: &mut BasicBlock, names: &HashMap<String, ElementaryTypeName>) {
-        let saved_pos = self.basicblock;
-
-        unsafe {
-            LLVMPositionBuilderAtEnd(self.builder, bb.basic_block);
-        }
-
-        for (name, ty) in names {
-            if bb.phi.contains_key(name) {
-                continue;
+        if let Some(names) = phi {
+            unsafe {
+                LLVMPositionBuilderAtEnd(self.builder, bb.basic_block);
             }
 
-            let cname = CString::new(name.to_string()).unwrap();
-            let phi = unsafe {
-                LLVMBuildPhi(self.builder, ty.LLVMType(self.context), cname.as_ptr() as *const _)
-            };
+            for (name, ty) in names {
+                if bb.phi.contains_key(name) {
+                    continue;
+                }
 
-            bb.phi.insert(name.to_string(), phi);
+                let cname = CString::new(name.to_string()).unwrap();
+                let phi = unsafe {
+                    LLVMBuildPhi(self.builder, ty.LLVMType(self.context), cname.as_ptr() as *const _)
+                };
+
+                bb.phi.insert(name.to_string(), phi);
+            }
+
+            unsafe {
+                LLVMPositionBuilderAtEnd(self.builder, self.basicblock);
+            }
         }
 
-        unsafe {
-            LLVMPositionBuilderAtEnd(self.builder, saved_pos);
-        }
+        bb
     }
 
-    fn add_incoming(&self, bb: &mut BasicBlock) {
-        for (name, _ty) in &bb.phi {
-            let value = self.vartable.get_value(name);
-            let phi = bb.phi.get(name).unwrap();
-
-            let mut values = vec!(value);
+    fn add_incoming(&self, bb: &BasicBlock) {
+        for (name, phi) in &bb.phi {
+            let mut values = vec!(self.vartable.get_value(name));
             let mut blocks = vec!(self.basicblock);
 
             unsafe {
