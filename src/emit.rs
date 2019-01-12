@@ -133,7 +133,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
         context: context,
         builder: builder,
         vartable: Vartable::new(),
-        basicblock: bb,
+        basic_block: bb,
         llfunction: function,
         function: &f,
         loop_scope: Vec::new(),
@@ -188,7 +188,7 @@ struct FunctionEmitter<'a> {
     context: LLVMContextRef,
     builder: LLVMBuilderRef,
     llfunction: LLVMValueRef,
-    basicblock: LLVMBasicBlockRef,
+    basic_block: LLVMBasicBlockRef,
     function: &'a FunctionDefinition,
     vartable: Vartable,
     loop_scope: Vec<LoopScope>,
@@ -487,7 +487,7 @@ impl<'a> FunctionEmitter<'a> {
                 self.set_builder(&end_for_bb);
 
                 return Ok(scope.breaks_in_loop.get() > 0);
-           },
+            },
             Statement::For(init, box Some(cond), next, body) => {
                 if let box Some(init) = init {
                     self.statement(init)?;
@@ -815,7 +815,7 @@ impl<'a> FunctionEmitter<'a> {
             }
 
             unsafe {
-                LLVMPositionBuilderAtEnd(self.builder, self.basicblock);
+                LLVMPositionBuilderAtEnd(self.builder, self.basic_block);
             }
         }
 
@@ -825,7 +825,7 @@ impl<'a> FunctionEmitter<'a> {
     fn add_incoming(&self, bb: &BasicBlock) {
         for (name, phi) in &bb.phi {
             let mut values = vec!(self.vartable.get_value(name));
-            let mut blocks = vec!(self.basicblock);
+            let mut blocks = vec!(self.basic_block);
 
             unsafe {
                 LLVMAddIncoming(*phi, values.as_mut_ptr(), blocks.as_mut_ptr(), 1);
@@ -838,7 +838,7 @@ impl<'a> FunctionEmitter<'a> {
             LLVMPositionBuilderAtEnd(self.builder, bb.basic_block);
         }
 
-        self.basicblock = bb.basic_block;
+        self.basic_block = bb.basic_block;
 
         for (name, phi) in &bb.phi {
             self.vartable.set_value(name, *phi);
