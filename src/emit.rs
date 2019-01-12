@@ -4,6 +4,7 @@ use std::ffi::{CString, CStr};
 use std::collections::HashMap;
 use std::str;
 use vartable::*;
+use std::cell::Cell;
 
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::core::*;
@@ -163,7 +164,9 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
         Ok(())
     })?;
 
-    emitter.statement(&f.body)
+    emitter.statement(&f.body)?;
+
+    Ok(())
 }
 
 impl ElementaryTypeName {
@@ -198,18 +201,24 @@ struct BasicBlock {
 
 struct LoopScope {
     pub break_bb: BasicBlock,
+    pub breaks_in_loop: Cell<u32>
 }
 
 impl<'a> FunctionEmitter<'a> {
-    fn statement(&mut self, stmt: &Statement) -> Result<(), String> {
+    fn statement(&mut self, stmt: &Statement) -> Result<bool, String> {
         match stmt {
             Statement::VariableDefinition(_, _) => {
                 // variables
             },
             Statement::BlockStatement(block) => {
+                let mut reach = true;
                 for st in &block.0 {
-                    self.statement(st)?;
+                    reach = self.statement(st)?;
+                    if !reach {
+                        break;
+                    }
                 }
+                return Ok(reach);
             },
             Statement::Return(None) => {
                 unsafe {
@@ -250,10 +259,12 @@ impl<'a> FunctionEmitter<'a> {
 
                 self.vartable.new_scope();
 
-                self.statement(then)?;
+                let reach = self.statement(then)?;
 
-                unsafe {
-                    LLVMBuildBr(self.builder, endif_bb.basic_block);
+                if reach {
+                    unsafe {
+                        LLVMBuildBr(self.builder, endif_bb.basic_block);
+                    }
                 }
 
                 self.add_incoming(&endif_bb);
@@ -261,6 +272,8 @@ impl<'a> FunctionEmitter<'a> {
                 self.vartable.leave_scope();
 
                 self.set_builder(&endif_bb);
+
+                return Ok(true);
             },
             Statement::If(cond, then, box Some(else_)) => {
                 let mut changeset = HashMap::new();
@@ -282,10 +295,12 @@ impl<'a> FunctionEmitter<'a> {
 
                 self.vartable.new_scope();
 
-                self.statement(then)?;
+                let reach_then = self.statement(then)?;
 
-                unsafe {
-                    LLVMBuildBr(self.builder, endifbb.basic_block);
+                if reach_then {
+                    unsafe {
+                        LLVMBuildBr(self.builder, endifbb.basic_block);
+                    }
                 }
 
                 self.add_incoming(&endifbb);
@@ -296,10 +311,12 @@ impl<'a> FunctionEmitter<'a> {
 
                 self.vartable.new_scope();
 
-                self.statement(else_)?;
+                let reach_else = self.statement(else_)?;
 
-                unsafe {
-                    LLVMBuildBr(self.builder, endifbb.basic_block);
+                if reach_else {
+                    unsafe {
+                        LLVMBuildBr(self.builder, endifbb.basic_block);
+                    }
                 }
 
                 self.add_incoming(&endifbb);
@@ -307,6 +324,8 @@ impl<'a> FunctionEmitter<'a> {
                 self.vartable.leave_scope();
 
                 self.set_builder(&endifbb);
+
+                return Ok(reach_then || reach_else);
             },
             Statement::DoWhile(body, cond) => {
                 let mut changeset = HashMap::new();
@@ -326,25 +345,32 @@ impl<'a> FunctionEmitter<'a> {
                 }
 
                 self.loop_scope.push(LoopScope{
-                    break_bb: end_dowhile_bb
+                    break_bb: end_dowhile_bb,
+                    breaks_in_loop: Cell::new(0),
                 });
 
                 self.set_builder(&body_bb);
 
-                self.statement(body)?;
+                let reach = self.statement(body)?;
 
-                let end_dowhile_bb = self.loop_scope.pop().unwrap().break_bb;
+                let scope = self.loop_scope.pop().unwrap();
 
-                // CONDITION
-                let v = self.expression(cond, ElementaryTypeName::Bool)?;
+                let end_dowhile_bb = scope.break_bb;
 
-                unsafe {
-                    LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_dowhile_bb.basic_block);
+                if reach {
+                    // CONDITION
+                    let v = self.expression(cond, ElementaryTypeName::Bool)?;
+
+                    unsafe {
+                        LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_dowhile_bb.basic_block);
+                    }
                 }
 
                 self.add_incoming(&body_bb);
 
                 self.set_builder(&end_dowhile_bb);
+
+                return Ok(reach || scope.breaks_in_loop.get() > 0);
             },
             Statement::While(cond, body) => {
                 let mut changeset = HashMap::new();
@@ -377,16 +403,19 @@ impl<'a> FunctionEmitter<'a> {
                 self.set_builder(&body_bb);
 
                 self.loop_scope.push(LoopScope{
-                    break_bb: end_while_bb
+                    break_bb: end_while_bb,
+                    breaks_in_loop: Cell::new(0),
                 });
 
                 // BODY
-                self.statement(body)?;
+                let reachable = self.statement(body)?;
 
                 let end_while_bb = self.loop_scope.pop().unwrap().break_bb;
 
-                unsafe {
-                    LLVMBuildBr(self.builder, end_while_bb.basic_block);
+                if reachable {
+                    unsafe {
+                        LLVMBuildBr(self.builder, end_while_bb.basic_block);
+                    }
                 }
 
                 self.add_incoming(&body_bb);
@@ -394,6 +423,8 @@ impl<'a> FunctionEmitter<'a> {
                 self.set_builder(&end_while_bb);
 
                 self.vartable.leave_scope();
+
+                return Ok(true);
             },
             Statement::For(init, box None, next, body) => {
                 if let box Some(init) = init {
@@ -416,33 +447,45 @@ impl<'a> FunctionEmitter<'a> {
                 self.add_incoming(&body_bb);
                 self.vartable.new_scope();
 
-                self.set_builder(&body_bb);
-
-                self.loop_scope.push(LoopScope{
-                    break_bb: end_for_bb
-                });
-
-                if let box Some(body) = body {
-                    // BODY
-                    self.statement(body)?;
-                }
-
-                let end_for_bb = self.loop_scope.pop().unwrap().break_bb;
-
-                if let box Some(next) = next {
-                    // BODY
-                    self.statement(next)?;
-                }
-
                 unsafe {
                     LLVMBuildBr(self.builder, body_bb.basic_block);
                 }
 
+                self.set_builder(&body_bb);
+
+                self.loop_scope.push(LoopScope{
+                    break_bb: end_for_bb,
+                    breaks_in_loop: Cell::new(0),
+                });
+
+                let mut reach = match body {
+                    box Some(body) => self.statement(body)?,
+                    box None => true
+                };
+
+                let scope = self.loop_scope.pop().unwrap();
+
+                let end_for_bb = scope.break_bb;
+
+                if reach {
+                    if let box Some(next) = next {
+                        // BODY
+                        reach = self.statement(next)?;
+                    }
+                }
+
+                if reach {
+                    unsafe {
+                        LLVMBuildBr(self.builder, body_bb.basic_block);
+                    }
+                }
+
                 self.add_incoming(&body_bb);
                 self.vartable.leave_scope();
-
                 self.set_builder(&end_for_bb);
-            },
+
+                return Ok(scope.breaks_in_loop.get() > 0);
+           },
             Statement::For(init, box Some(cond), next, body) => {
                 if let box Some(init) = init {
                     self.statement(init)?;
@@ -485,30 +528,37 @@ impl<'a> FunctionEmitter<'a> {
                 self.set_builder(&body_bb);
 
                 self.loop_scope.push(LoopScope{
-                    break_bb: end_for_bb
+                    break_bb: end_for_bb,
+                    breaks_in_loop: Cell::new(0),
                 });
 
-                if let box Some(body) = body {
-                    // BODY
-                    self.statement(body)?;
-                }
+                let mut reach = match body {
+                    box Some(body) => self.statement(body)?,
+                    box None => false
+                };
 
                 let end_for_bb = self.loop_scope.pop().unwrap().break_bb;
 
-                if let box Some(next) = next {
-                    // BODY
-                    self.statement(next)?;
+                if reach {
+                    if let box Some(next) = next {
+                        // BODY
+                        reach = self.statement(next)?;
+                    }
                 }
 
                 self.add_incoming(&cond_bb);
 
                 self.vartable.leave_scope();
 
-                unsafe {
-                    LLVMBuildBr(self.builder, cond_bb.basic_block);
+                if reach {
+                    unsafe {
+                        LLVMBuildBr(self.builder, cond_bb.basic_block);
+                    }
                 }
 
                 self.set_builder(&end_for_bb);
+
+                return Ok(reach);
             },
             Statement::Break => {
                 let len = self.loop_scope.len();
@@ -517,12 +567,14 @@ impl<'a> FunctionEmitter<'a> {
                     return Err(format!("break statement not in loop"));
                 } else {
                     let scope = &self.loop_scope[len - 1];
+                    scope.breaks_in_loop.set(scope.breaks_in_loop.get()+1);
 
                     unsafe {
                         LLVMBuildBr(self.builder, scope.break_bb.basic_block);
                     }
 
                     self.add_incoming(&scope.break_bb);
+                    return Ok(false)
                 }
             },
             _ => {
@@ -530,7 +582,7 @@ impl<'a> FunctionEmitter<'a> {
             }
         }
 
-        Ok(())
+        Ok(true)
     }
 
     fn expression(&mut self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {

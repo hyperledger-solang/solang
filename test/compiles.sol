@@ -25,11 +25,10 @@ contract test3 {
 	}
 
 	function baz(uint32 x) returns (uint32) {
-		int l = 100;
-		for (uint i = 0; i<100; i++) {
+		for (uint32 i = 0; i<100; i++) {
 			x *= 7;
 
-			if (x > l) {
+			if (x > 200) {
 				break;
 			}
 
