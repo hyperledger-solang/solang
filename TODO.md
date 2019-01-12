@@ -21,18 +21,15 @@ using llvm, for example [bfc](https://github.com/Wilfred/bfc).
 ## Resolver:
  * The resolver is very bare-bones right now.
  * Variables need to be stored in scopes and carry their types and initializers
- * Need to walk the CFG to check for uninitialised usses
  * Expressions need to be checked for types, add warnings and errors or casts as appropriate
  * Custom types like mappings and structs need implementing
 
 ## Code Emitter/LLVM IR conversion
  * The code emmiter has barely started
- * llvm-sys is unsafe and a clean safe interface would be preferable
+ * continue statements
+ * function calls 
+ * enums, bytesN, structs
+ * dynamic types like bytes, and string and mappings. Needs wasm heap.
 
 ## Testing
  * We really need something which can load and test wasm files
-
-## Steps
- - Make re-assignment work
- - Make full control-flow work with pi-nodes
- - Make scoped variables work

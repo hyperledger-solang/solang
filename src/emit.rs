@@ -224,6 +224,7 @@ impl<'a> FunctionEmitter<'a> {
                 unsafe {
                     LLVMBuildRetVoid(self.builder);
                 }
+                return Ok(false);
             }
             Statement::Return(Some(expr)) => {
                 let v = self.expression(expr, self.function.returns[0].typ)?;
@@ -231,6 +232,7 @@ impl<'a> FunctionEmitter<'a> {
                 unsafe {
                     LLVMBuildRet(self.builder, v);
                 }
+                return Ok(false);
             },
             Statement::Expression(expr) => {
                 self.expression(expr, ElementaryTypeName::Any)?;
