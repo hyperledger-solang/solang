@@ -100,6 +100,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
                 }
             },
             Statement::BlockStatement(_) => Ok(()),
+            Statement::Break => Ok(()),
             _ => Err(format!("resolve of statement {:?} not implement yet", s))
         }
     })?;

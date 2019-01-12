@@ -23,4 +23,19 @@ contract test3 {
 		}
 		return i;
 	}
+
+	function baz(uint32 x) returns (uint32) {
+		int l = 100;
+		for (uint i = 0; i<100; i++) {
+			x *= 7;
+
+			if (x > l) {
+				break;
+			}
+
+			x++;
+		}
+
+		return x;
+	}
 }

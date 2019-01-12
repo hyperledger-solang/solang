@@ -135,6 +135,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
         basicblock: bb,
         llfunction: function,
         function: &f,
+        loop_scope: Vec::new(),
     };
 
     // create variable table
@@ -187,11 +188,16 @@ struct FunctionEmitter<'a> {
     basicblock: LLVMBasicBlockRef,
     function: &'a FunctionDefinition,
     vartable: Vartable,
+    loop_scope: Vec<LoopScope>,
 }
 
 struct BasicBlock {
     pub basic_block: LLVMBasicBlockRef,
     pub phi: HashMap<String, LLVMValueRef>,
+}
+
+struct LoopScope {
+    pub break_bb: BasicBlock,
 }
 
 impl<'a> FunctionEmitter<'a> {
@@ -319,9 +325,15 @@ impl<'a> FunctionEmitter<'a> {
                     LLVMBuildBr(self.builder, body_bb.basic_block);
                 }
 
+                self.loop_scope.push(LoopScope{
+                    break_bb: end_dowhile_bb
+                });
+
                 self.set_builder(&body_bb);
 
                 self.statement(body)?;
+
+                let end_dowhile_bb = self.loop_scope.pop().unwrap().break_bb;
 
                 // CONDITION
                 let v = self.expression(cond, ElementaryTypeName::Bool)?;
@@ -364,8 +376,14 @@ impl<'a> FunctionEmitter<'a> {
 
                 self.set_builder(&body_bb);
 
+                self.loop_scope.push(LoopScope{
+                    break_bb: end_while_bb
+                });
+
                 // BODY
                 self.statement(body)?;
+
+                let end_while_bb = self.loop_scope.pop().unwrap().break_bb;
 
                 unsafe {
                     LLVMBuildBr(self.builder, end_while_bb.basic_block);
@@ -400,10 +418,16 @@ impl<'a> FunctionEmitter<'a> {
 
                 self.set_builder(&body_bb);
 
+                self.loop_scope.push(LoopScope{
+                    break_bb: end_for_bb
+                });
+
                 if let box Some(body) = body {
                     // BODY
                     self.statement(body)?;
                 }
+
+                let end_for_bb = self.loop_scope.pop().unwrap().break_bb;
 
                 if let box Some(next) = next {
                     // BODY
@@ -460,10 +484,16 @@ impl<'a> FunctionEmitter<'a> {
 
                 self.set_builder(&body_bb);
 
+                self.loop_scope.push(LoopScope{
+                    break_bb: end_for_bb
+                });
+
                 if let box Some(body) = body {
                     // BODY
                     self.statement(body)?;
                 }
+
+                let end_for_bb = self.loop_scope.pop().unwrap().break_bb;
 
                 if let box Some(next) = next {
                     // BODY
@@ -479,6 +509,21 @@ impl<'a> FunctionEmitter<'a> {
                 }
 
                 self.set_builder(&end_for_bb);
+            },
+            Statement::Break => {
+                let len = self.loop_scope.len();
+
+                if len == 0 {
+                    return Err(format!("break statement not in loop"));
+                } else {
+                    let scope = &self.loop_scope[len - 1];
+
+                    unsafe {
+                        LLVMBuildBr(self.builder, scope.break_bb.basic_block);
+                    }
+
+                    self.add_incoming(&scope.break_bb);
+                }
             },
             _ => {
                 return Err(format!("statement not implement: {:?}", stmt));
