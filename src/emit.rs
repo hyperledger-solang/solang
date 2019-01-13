@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::str;
 use vartable::*;
 use std::cell::Cell;
+use std::slice;
 
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::core::*;
@@ -39,63 +40,128 @@ fn target_machine() -> LLVMTargetMachineRef {
     }
 }
 
-pub fn emit(s: SourceUnit) {
-    let context;
+pub struct Contract {
+    pub name: String,
+    pub module: LLVMModuleRef,
+}
 
-    unsafe {
-        LLVMInitializeWebAssemblyTargetInfo();
-        LLVMInitializeWebAssemblyTarget();
-        LLVMInitializeWebAssemblyTargetMC();
-        LLVMInitializeWebAssemblyAsmPrinter();
-        LLVMInitializeWebAssemblyAsmParser();
-        LLVMInitializeWebAssemblyDisassembler();
-
-        context = LLVMContextCreate();
+impl Contract {
+    pub fn dump_llvm(&self) {
+        unsafe {
+            LLVMDumpModule(self.module);
+        }
     }
 
-    let tm = target_machine();
+    pub fn wasm_file(&self, emitter: &Emitter, filename: String) -> Result<(), String> {
+        let mut obj_error = null_mut();
 
-    for part in &s.parts {
-        if let SourceUnitPart::ContractDefinition(ref contract) = part {
-            let contractname = CString::new(contract.name.to_string()).unwrap();
-            let filename = CString::new(contract.name.to_string() + ".wasm").unwrap();
+        unsafe {
+            let result = LLVMTargetMachineEmitToFile(emitter.tm,
+                                                    self.module,
+                                                    filename.as_ptr() as *mut i8,
+                                                    LLVMCodeGenFileType::LLVMObjectFile,
+                                                    &mut obj_error);
 
-            unsafe {
-                let module = LLVMModuleCreateWithName(contractname.as_ptr());
-                LLVMSetTarget(module, TRIPLE.as_ptr() as *const _);
-                LLVMSetSourceFileName(module, s.name.as_ptr() as *const _, s.name.len() as _);
-                let mut builder = LLVMCreateBuilderInContext(context);
-                let mut obj_error = null_mut();
-
-                for m in &contract.parts {
-                    if let ContractPart::FunctionDefinition(ref func) = m {
-                        if let Err(s) = emit_func(func, context, module, builder) {
-                            println!("failed to compile: {}", s);
-                        }
-                    }
-                }
-
-                LLVMDumpModule(module);
-
-                let result = LLVMTargetMachineEmitToFile(tm,
-                                                        module,
-                                                        filename.as_ptr() as *mut i8,
-                                                        LLVMCodeGenFileType::LLVMObjectFile,
-                                                        &mut obj_error);
-
-                if result != 0 {
-                    println!("obj_error: {:?}", CStr::from_ptr(obj_error as *const _));
-                }
-
-                LLVMDisposeBuilder(builder);
-                LLVMDisposeModule(module);
+            if result != 0 {
+                Err(CStr::from_ptr(obj_error as *const _).to_string_lossy().to_string())
+            } else {
+                Ok(())
             }
         }
     }
 
-    unsafe {
-        LLVMContextDispose(context);
-        LLVMDisposeTargetMachine(tm);
+    pub fn wasm(&self, emitter: &Emitter) -> Result<Vec<u8>, String> {
+        let mut obj_error = null_mut();
+        let mut memory_buffer = null_mut();
+
+        unsafe {
+            let result = LLVMTargetMachineEmitToMemoryBuffer(emitter.tm,
+                                                    self.module,
+                                                    LLVMCodeGenFileType::LLVMObjectFile,
+                                                    &mut obj_error,
+                                                    &mut memory_buffer);
+
+            if result != 0 {
+                Err(CStr::from_ptr(obj_error as *const _).to_string_lossy().to_string())
+            } else {
+                let v = slice::from_raw_parts(LLVMGetBufferStart(memory_buffer) as *const u8, LLVMGetBufferSize(memory_buffer) as usize).to_vec();
+                LLVMDisposeMemoryBuffer(memory_buffer);
+                Ok(v)
+            }
+        }
+    }
+}
+
+pub struct Emitter {
+    context: LLVMContextRef,
+    tm: LLVMTargetMachineRef,
+    pub contracts: Vec<Contract>,
+}
+
+impl Emitter {
+    pub fn init() {
+        unsafe {
+            LLVMInitializeWebAssemblyTargetInfo();
+            LLVMInitializeWebAssemblyTarget();
+            LLVMInitializeWebAssemblyTargetMC();
+            LLVMInitializeWebAssemblyAsmPrinter();
+            LLVMInitializeWebAssemblyAsmParser();
+            LLVMInitializeWebAssemblyDisassembler();
+        }
+    }
+
+    pub fn new(s: SourceUnit) -> Self {
+        let mut e = Emitter{
+            context: unsafe { LLVMContextCreate() },
+            tm: target_machine(),
+            contracts: Vec::new()
+        };
+
+        for part in &s.parts {
+            if let SourceUnitPart::ContractDefinition(ref contract) = part {
+                let contractname = CString::new(contract.name.to_string()).unwrap();
+
+                unsafe {
+                    let module = LLVMModuleCreateWithName(contractname.as_ptr());
+                    LLVMSetTarget(module, TRIPLE.as_ptr() as *const _);
+                    LLVMSetSourceFileName(module, s.name.as_ptr() as *const _, s.name.len() as _);
+                    let mut builder = LLVMCreateBuilderInContext(e.context);
+
+                    for m in &contract.parts {
+                        if let ContractPart::FunctionDefinition(ref func) = m {
+                            if let Err(s) = emit_func(func, e.context, module, builder) {
+                                println!("failed to compile: {}", s);
+                            }
+                        }
+                    }
+
+                    e.contracts.push(Contract{
+                        name: contract.name.to_string(), 
+                        module: module,
+                    });
+
+                    LLVMDisposeBuilder(builder);
+                }
+            }
+        
+        }
+
+        e
+    }
+}
+
+impl Drop for Emitter {
+    fn drop(&mut self) {
+        for c in &self.contracts {
+            unsafe {
+                LLVMDisposeModule(c.module);
+            }
+        }
+
+        unsafe {
+            LLVMContextDispose(self.context);
+            LLVMDisposeTargetMachine(self.tm);
+        }
     }
 }
 

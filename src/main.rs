@@ -16,6 +16,7 @@ use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use lalrpop_util::ParseError;
+use emit::Emitter;
 
 fn main() {
     for filename in env::args().skip(1) {
@@ -64,8 +65,17 @@ fn main() {
             break;
         }
 
+        Emitter::init();
+
         // emit phase
-        emit::emit(past);
+        let res = Emitter::new(past);
+
+        for contract in &res.contracts {
+            contract.dump_llvm();
+            if let Err(s) = contract.wasm_file(&res, contract.name.to_string() + ".wasm") {
+                println!("error: {}", s);
+            }
+        }
     }
 }
 
