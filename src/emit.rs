@@ -6,6 +6,9 @@ use std::str;
 use vartable::*;
 use std::cell::Cell;
 use std::slice;
+use link;
+use std::io::prelude::*;
+use std::fs::File;
 
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::core::*;
@@ -54,22 +57,33 @@ impl Contract {
 
     pub fn wasm_file(&self, emitter: &Emitter, filename: String) -> Result<(), String> {
         let mut obj_error = null_mut();
+        let mut memory_buffer = null_mut();
 
         unsafe {
-            let result = LLVMTargetMachineEmitToFile(emitter.tm,
+            let result = LLVMTargetMachineEmitToMemoryBuffer(emitter.tm,
                                                     self.module,
-                                                    filename.as_ptr() as *mut i8,
                                                     LLVMCodeGenFileType::LLVMObjectFile,
-                                                    &mut obj_error);
+                                                    &mut obj_error,
+                                                    &mut memory_buffer);
 
             if result != 0 {
                 Err(CStr::from_ptr(obj_error as *const _).to_string_lossy().to_string())
             } else {
+                let obj = slice::from_raw_parts(
+                    LLVMGetBufferStart(memory_buffer) as *const u8,
+                    LLVMGetBufferSize(memory_buffer) as usize
+                );
+                let res = link::link(&obj);
+                LLVMDisposeMemoryBuffer(memory_buffer);
+                
+                let mut file = File::create(filename).unwrap();
+                file.write_all(&res).unwrap();
                 Ok(())
             }
         }
     }
 
+    #[cfg(test)]
     pub fn wasm(&self, emitter: &Emitter) -> Result<Vec<u8>, String> {
         let mut obj_error = null_mut();
         let mut memory_buffer = null_mut();
@@ -84,9 +98,13 @@ impl Contract {
             if result != 0 {
                 Err(CStr::from_ptr(obj_error as *const _).to_string_lossy().to_string())
             } else {
-                let v = slice::from_raw_parts(LLVMGetBufferStart(memory_buffer) as *const u8, LLVMGetBufferSize(memory_buffer) as usize).to_vec();
+                let obj = slice::from_raw_parts(
+                    LLVMGetBufferStart(memory_buffer) as *const u8,
+                    LLVMGetBufferSize(memory_buffer) as usize
+                );
+                let res = link::link(&obj);
                 LLVMDisposeMemoryBuffer(memory_buffer);
-                Ok(v)
+                Ok(res)
             }
         }
     }
@@ -136,14 +154,14 @@ impl Emitter {
                     }
 
                     e.contracts.push(Contract{
-                        name: contract.name.to_string(), 
+                        name: contract.name.to_string(),
                         module: module,
                     });
 
                     LLVMDisposeBuilder(builder);
                 }
             }
-        
+
         }
 
         e
@@ -442,7 +460,7 @@ impl<'a> FunctionEmitter<'a> {
             },
             Statement::While(cond, body) => {
                 let mut changeset = HashMap::new();
- 
+
                 cond.written_vars(&mut changeset);
                 body.written_vars(&mut changeset);
 

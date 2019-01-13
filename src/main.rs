@@ -5,12 +5,16 @@ extern crate num_bigint;
 extern crate lalrpop_util;
 extern crate llvm_sys;
 extern crate num_traits;
+extern crate parity_wasm;
+extern crate wasmi;
 
 mod ast;
 mod solidity;
 mod resolve;
 mod emit;
+mod link;
 mod vartable;
+mod test;
 
 use std::env;
 use std::fs::File;
