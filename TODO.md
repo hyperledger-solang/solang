@@ -25,11 +25,12 @@ using llvm, for example [bfc](https://github.com/Wilfred/bfc).
  * Custom types like mappings and structs need implementing
 
 ## Code Emitter/LLVM IR conversion
- * The code emmiter has barely started
  * continue statements
  * function calls 
  * enums, bytesN, structs
  * dynamic types like bytes, and string and mappings. Needs wasm heap.
+ * abi encoding/decoding for external calls?
+ * imports and interfaces
 
-## Testing
- * We really need something which can load and test wasm files
+## Build system
+ * Write Dockerfile to build llvm and solang
