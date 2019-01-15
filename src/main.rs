@@ -7,7 +7,9 @@ extern crate llvm_sys;
 extern crate num_traits;
 extern crate parity_wasm;
 extern crate wasmi;
+extern crate clap;
 
+use clap::{App, Arg};
 mod ast;
 mod solidity;
 mod resolve;
@@ -16,14 +18,26 @@ mod link;
 mod vartable;
 mod test;
 
-use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use lalrpop_util::ParseError;
 use emit::Emitter;
 
 fn main() {
-    for filename in env::args().skip(1) {
+    let matches = App::new("solang")
+        .version(env!("CARGO_PKG_VERSION"))
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about("Solidity to WASM Compiler")
+        .arg(Arg::with_name("INPUT")
+            .help("Solidity input files")
+            .required(true)
+            .multiple(true))
+        .arg(Arg::with_name("LLVM")
+            .help("emit llvm IR rather than wasm")
+            .long("emit-llvm"))
+        .get_matches();
+
+    for filename in matches.values_of("INPUT").unwrap() {
         let mut f = File::open(&filename).expect("file not found");
 
         let mut contents = String::new();
@@ -61,7 +75,7 @@ fn main() {
             }
         }
 
-        past.name = filename.clone();
+        past.name = filename.to_string();
 
         // resolve phase
         if let Err(s) = resolve::resolve(&mut past) {
@@ -75,9 +89,12 @@ fn main() {
         let res = Emitter::new(past);
 
         for contract in &res.contracts {
-            contract.dump_llvm();
-            if let Err(s) = contract.wasm_file(&res, contract.name.to_string() + ".wasm") {
-                println!("error: {}", s);
+            if matches.is_present("LLVM") {
+                contract.dump_llvm();
+            } else {
+                if let Err(s) = contract.wasm_file(&res, contract.name.to_string() + ".wasm") {
+                    println!("error: {}", s);
+                }
             }
         }
     }

@@ -7,10 +7,6 @@ to wasm.
 There are other rust projects that implement a compiler frontend in rust
 using llvm, for example [bfc](https://github.com/Wilfred/bfc).
 
-## Commandline:
- * Add proper command line argument parser, so we have --help, --version, -O,
-   -Wall, --emit-llvm, -S and --resolve-only/check-only
-
 ## Parser:
  * the lalrpop lexer cannot deal with comments, we need a customer lexer for this rather
    than removing comments in the strip_comments function
