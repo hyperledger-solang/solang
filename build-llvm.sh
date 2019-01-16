@@ -1,8 +1,8 @@
 
 
-svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm-src
+svn co http://llvm.org/svn/llvm-project/llvm/branches/release_80 llvm-src
 cd llvm-src/tools
-svn co http://llvm.org/svn/llvm-project/lld/trunk lld
+svn co http://llvm.org/svn/llvm-project/lld/branches/release_80 lld
 cd ../..
 mkdir llvm-build
 cd llvm-build
