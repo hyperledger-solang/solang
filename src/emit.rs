@@ -594,7 +594,7 @@ impl<'a> FunctionEmitter<'a> {
 
                 let body_bb = self.new_basic_block("body".to_string(), None);
 
-                let end_for_bb = self.new_basic_block("end_for".to_string(), None);
+                let end_for_bb = self.new_basic_block("end_for".to_string(), Some(&changeset));
 
                 self.add_incoming(&cond_bb);
 
@@ -612,6 +612,8 @@ impl<'a> FunctionEmitter<'a> {
                 unsafe {
                     LLVMBuildCondBr(self.builder, v, body_bb.basic_block, end_for_bb.basic_block);
                 }
+
+                self.add_incoming(&end_for_bb);
 
                 self.set_builder(&body_bb);
 
