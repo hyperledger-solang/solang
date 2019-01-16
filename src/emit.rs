@@ -21,6 +21,17 @@ const TRIPLE: &'static [u8] = b"wasm32-unknown-unknown-wasm\0";
 const LLVM_FALSE: LLVMBool = 0;
 const LLVM_TRUE: LLVMBool = 1;
 
+lazy_static::lazy_static! {
+    static ref LLVM_INIT: () = unsafe {
+        LLVMInitializeWebAssemblyTargetInfo();
+        LLVMInitializeWebAssemblyTarget();
+        LLVMInitializeWebAssemblyTargetMC();
+        LLVMInitializeWebAssemblyAsmPrinter();
+        LLVMInitializeWebAssemblyAsmParser();
+        LLVMInitializeWebAssemblyDisassembler();
+    };
+}
+
 fn target_machine() -> LLVMTargetMachineRef {
     let mut target = null_mut();
     let mut err_msg_ptr = null_mut();
@@ -117,18 +128,9 @@ pub struct Emitter {
 }
 
 impl Emitter {
-    pub fn init() {
-        unsafe {
-            LLVMInitializeWebAssemblyTargetInfo();
-            LLVMInitializeWebAssemblyTarget();
-            LLVMInitializeWebAssemblyTargetMC();
-            LLVMInitializeWebAssemblyAsmPrinter();
-            LLVMInitializeWebAssemblyAsmParser();
-            LLVMInitializeWebAssemblyDisassembler();
-        }
-    }
-
     pub fn new(s: SourceUnit) -> Self {
+        lazy_static::initialize(&LLVM_INIT);
+
         let mut e = Emitter{
             context: unsafe { LLVMContextCreate() },
             tm: target_machine(),

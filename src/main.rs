@@ -8,6 +8,7 @@ extern crate num_traits;
 extern crate parity_wasm;
 extern crate wasmi;
 extern crate clap;
+extern crate lazy_static;
 
 use clap::{App, Arg};
 mod ast;
@@ -82,8 +83,6 @@ fn main() {
             println!("{}: {}", filename, s);
             break;
         }
-
-        Emitter::init();
 
         // emit phase
         let res = Emitter::new(past);

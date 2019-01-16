@@ -21,8 +21,6 @@ mod tests {
         resolve::resolve(&mut s).expect("resolve should succeed");
 
         // codegen
-        Emitter::init();
-
         let res = Emitter::new(s);
 
         assert_eq!(res.contracts.len(), 1);
