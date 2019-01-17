@@ -3,6 +3,18 @@ use std::collections::HashMap;
 use std::cell::Cell;
 
 #[derive(Debug,PartialEq)]
+pub struct Loc(
+    pub usize,
+    pub usize
+);
+
+#[derive(Debug,PartialEq)]
+pub struct Identifier {
+    pub loc: Loc,
+    pub name: String
+}
+
+#[derive(Debug,PartialEq)]
 pub struct SourceUnit {
     pub name: String,
     pub parts: Vec<SourceUnitPart>
@@ -11,7 +23,7 @@ pub struct SourceUnit {
 #[derive(Debug,PartialEq)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
-    PragmaDirective(String, String),
+    PragmaDirective(Identifier, String),
     ImportDirective(String)
 }
 
@@ -56,12 +68,12 @@ pub enum StorageLocation {
 pub struct VariableDeclaration {
     pub typ: ElementaryTypeName,
     pub storage: StorageLocation,
-    pub name: String
+    pub name: Identifier
 }
 
 #[derive(Debug,PartialEq)]
 pub struct StructDefinition {
-    pub name: String,
+    pub name: Identifier,
     pub fields: Vec<Box<VariableDeclaration>>
 }
 
@@ -84,7 +96,7 @@ pub enum ContractType {
 #[derive(Debug,PartialEq)]
 pub struct ContractDefinition {
     pub typ: ContractType,
-    pub name: String,
+    pub name: Identifier,
     pub parts: Vec<ContractPart>,
 }
 
@@ -92,20 +104,20 @@ pub struct ContractDefinition {
 pub struct EventParameter {
     pub typ: ElementaryTypeName,
     pub indexed: bool,
-    pub name: Option<String>,
+    pub name: Option<Identifier>,
 }
 
 #[derive(Debug,PartialEq)]
 pub struct EventDefinition {
-    pub name: String,
+    pub name: Identifier,
     pub fields: Vec<EventParameter>,
     pub anonymous: bool,
 }
 
 #[derive(Debug,PartialEq)]
 pub struct EnumDefinition {
-    pub name: String,
-    pub values: Vec<String>,
+    pub name: Identifier,
+    pub values: Vec<Identifier>,
 }
 
 #[derive(Debug,PartialEq)]
@@ -120,7 +132,7 @@ pub enum VariableAttribute {
 pub struct StateVariableDeclaration {
     pub typ: ElementaryTypeName,
     pub attrs: Vec<VariableAttribute>,
-    pub name: String,
+    pub name: Identifier,
     pub initializer: Option<Expression>,
 }
 
@@ -130,8 +142,8 @@ pub enum Expression {
     PostDecrement(Box<Expression>),
     New(ElementaryTypeName),
     IndexAccess(Box<Expression>, Box<Option<Expression>>),
-    MemberAccess(Box<Expression>, String),
-    FunctionCall(String, Vec<Expression>),
+    MemberAccess(Box<Expression>, Identifier),
+    FunctionCall(Identifier, Vec<Expression>),
     Not(Box<Expression>),
     Complement(Box<Expression>),
     Delete(Box<Expression>),
@@ -173,7 +185,7 @@ pub enum Expression {
     BoolLiteral(bool),
     NumberLiteral(BigInt),
     StringLiteral(String),
-    Variable(Cell<ElementaryTypeName>, String),
+    Variable(Cell<ElementaryTypeName>, Identifier),
 }
 
 impl Expression {
@@ -236,7 +248,7 @@ impl Expression {
                 Expression::PostDecrement(box Expression::Variable(t, s)) |
                 Expression::PreIncrement(box Expression::Variable(t, s)) |
                 Expression::PostIncrement(box Expression::Variable(t, s)) => {
-                    set.insert(s.to_string(), t.get());
+                    set.insert(s.name.to_string(), t.get());
                 },
                 _ => ()
             };
@@ -250,7 +262,7 @@ impl Expression {
 pub struct Parameter {
     pub typ: ElementaryTypeName,
     pub storage: Option<StorageLocation>,
-    pub name: Option<String>
+    pub name: Option<Identifier>
 }
 
 #[derive(Debug,PartialEq)]
@@ -271,7 +283,7 @@ pub enum FunctionAttribute {
 
 #[derive(Debug,PartialEq)]
 pub struct FunctionDefinition {
-    pub name: Option<String>,
+    pub name: Option<Identifier>,
     pub params: Vec<Parameter>,
     pub attributes: Vec<FunctionAttribute>,
     pub returns: Vec<Parameter>,
@@ -299,7 +311,7 @@ pub enum Statement {
     Break,
     Return(Option<Expression>),
     Throw,
-    Emit(String, Vec<Expression>),
+    Emit(Identifier, Vec<Expression>),
     Empty
 }
 
@@ -385,26 +397,26 @@ mod test {
 
         let a = SourceUnit{name: "".to_string(), parts: vec![
             SourceUnitPart::ContractDefinition(
-                Box::new(ContractDefinition{typ: ContractType::Contract, name: "foo".to_string(), parts: vec![
-                    ContractPart::StructDefinition(Box::new(StructDefinition{name: "Jurisdiction".to_string(), fields: vec![
+                Box::new(ContractDefinition{typ: ContractType::Contract, name: Identifier{loc: Loc(9, 12), name: "foo".to_string()}, parts: vec![
+                    ContractPart::StructDefinition(Box::new(StructDefinition{name: Identifier{loc: Loc(42, 54), name: "Jurisdiction".to_string()}, fields: vec![
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Bool, storage: StorageLocation::Default, name: "exists".to_string()
+                            typ: ElementaryTypeName::Bool, storage: StorageLocation::Default, name: Identifier{loc: Loc(86, 92), name: "exists".to_string()}
                         }),
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Uint(256), storage: StorageLocation::Default, name: "keyIdx".to_string()
+                            typ: ElementaryTypeName::Uint(256), storage: StorageLocation::Default, name: Identifier{loc: Loc(123, 129), name: "keyIdx".to_string()}
                         }),
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Bytes(2), storage: StorageLocation::Default, name: "country".to_string()
+                            typ: ElementaryTypeName::Bytes(2), storage: StorageLocation::Default, name: Identifier{loc: Loc(162, 169), name: "country".to_string()}
                         }),
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Bytes(32), storage: StorageLocation::Default, name: "region".to_string()
+                            typ: ElementaryTypeName::Bytes(32), storage: StorageLocation::Default, name: Identifier{loc: Loc(203, 209), name: "region".to_string()}
                         })
                     ]})),
                     ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
-                        typ: ElementaryTypeName::String, attrs: vec![], name: "__abba_$".to_string(), initializer: None
+                        typ: ElementaryTypeName::String, attrs: vec![], name: Identifier{loc: Loc(260, 268), name: "__abba_$".to_string()}, initializer: None
                     })),
                     ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
-                        typ: ElementaryTypeName::Int(64), attrs: vec![], name: "$thing_102".to_string(), initializer: None
+                        typ: ElementaryTypeName::Int(64), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, initializer: None
                     }))
             ]}))
         ]};

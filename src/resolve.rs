@@ -26,7 +26,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
 
     for p in &f.params {
         if let Some(ref n) = p.name {
-            vartable.insert(n.to_string(), p.typ);
+            vartable.insert(n.name.to_string(), p.typ);
         }
     }
 
@@ -40,10 +40,10 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
         if let Statement::VariableDefinition(v, _) = s {
             let name = &v.name;
 
-            if vartable.contains_key(name) {
-                return Err(format!("variable {} redeclared", name));
+            if vartable.contains_key(&name.name) {
+                return Err(format!("variable {} redeclared", name.name));
             } else {
-                vartable.insert(name.to_string(), v.typ);
+                vartable.insert(name.name.to_string(), v.typ);
             }
         }
         Ok(())
@@ -179,13 +179,13 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
         },
         Expression::Variable(t, s) => {
             if let Some(ref vartable) = f.vartable {
-                match vartable.get(s) {
+                match vartable.get(&s.name) {
                     Some(v) => {
                         t.set(*v);
                         Ok(*v)
                     }
                     ,
-                    None => Err(format!("variable {} not found", s))
+                    None => Err(format!("variable {} not found", s.name))
                 }
             } else {
                 panic!("vartable not there");
@@ -196,17 +196,17 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
         Expression::PreDecrement(box Expression::Variable(t, s)) |
         Expression::PreIncrement(box Expression::Variable(t, s)) => {
             if let Some(ref vartable) = f.vartable {
-                match vartable.get(s) {
+                match vartable.get(&s.name) {
                     Some(v) => {
                         if !v.ordered() {
-                            Err(format!("variable {} not a number", s))
+                            Err(format!("variable {} not a number", s.name))
                         } else {
                             t.set(*v);
                             Ok(*v)
                         }
                     }
                     ,
-                    None => Err(format!("variable {} not found", s))
+                    None => Err(format!("variable {} not found", s.name))
                 }
             } else {
                 panic!("vartable not there");

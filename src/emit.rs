@@ -139,7 +139,7 @@ impl Emitter {
 
         for part in &s.parts {
             if let SourceUnitPart::ContractDefinition(ref contract) = part {
-                let contractname = CString::new(contract.name.to_string()).unwrap();
+                let contractname = CString::new(contract.name.name.to_string()).unwrap();
 
                 unsafe {
                     let module = LLVMModuleCreateWithName(contractname.as_ptr());
@@ -156,7 +156,7 @@ impl Emitter {
                     }
 
                     e.contracts.push(Contract{
-                        name: contract.name.to_string(),
+                        name: contract.name.name.to_string(),
                         module: module,
                     });
 
@@ -197,7 +197,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
             return Err("function with no name are not implemented yet".to_string());
         },
         Some(ref n) => {
-            CString::new(n.to_string()).unwrap()
+            CString::new(n.name.to_string()).unwrap()
         }
     };
 
@@ -236,7 +236,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     for p in &f.params {
         // Unnamed function arguments are not accessible
         if let Some(ref argname) = p.name {
-            emitter.vartable.insert(argname, p.typ, LLVMGetParam(function, i));
+            emitter.vartable.insert(&argname.name, p.typ, LLVMGetParam(function, i));
         }
         i += 1;
     }
@@ -245,7 +245,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
         if let Statement::VariableDefinition(v, Some(e)) = s {
             let value = emitter.expression(e, v.typ)?;
 
-            emitter.vartable.insert(&v.name, v.typ, value);
+            emitter.vartable.insert(&(v.name.name), v.typ, value);
         }
         Ok(())
     })?;
@@ -755,7 +755,7 @@ impl<'a> FunctionEmitter<'a> {
                 }
             },
             Expression::Variable(_, s) => {
-                let var = self.vartable.get(s);
+                let var = self.vartable.get(&s.name);
 
                 if var.typ == t || t == ElementaryTypeName::Any {
                     Ok(var.value)
@@ -774,9 +774,9 @@ impl<'a> FunctionEmitter<'a> {
             Expression::Assign(l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
-                        let typ = self.vartable.get_type(s);
+                        let typ = self.vartable.get_type(&s.name);
                         let value = self.expression(r, typ)?;
-                        self.vartable.set_value(s, value);
+                        self.vartable.set_value(&s.name, value);
                         Ok(0 as LLVMValueRef)
                     },
                     _ => panic!("cannot assign to non-lvalue")
@@ -785,14 +785,14 @@ impl<'a> FunctionEmitter<'a> {
             Expression::AssignAdd(l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
-                        let typ = self.vartable.get_type(s);
+                        let typ = self.vartable.get_type(&s.name);
                         let value = self.expression(r, typ)?;
-                        let lvalue = self.vartable.get_value(s);
-                        self.vartable.set_value(s, value);
+                        let lvalue = self.vartable.get_value(&s.name);
+                        self.vartable.set_value(&s.name, value);
                         let nvalue = unsafe {
                             LLVMBuildAdd(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
                         };
-                        self.vartable.set_value(s, nvalue);
+                        self.vartable.set_value(&s.name, nvalue);
                         Ok(0 as LLVMValueRef)
                     },
                     _ => panic!("cannot assign to non-lvalue")
@@ -801,14 +801,14 @@ impl<'a> FunctionEmitter<'a> {
             Expression::AssignSubtract(l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
-                        let typ = self.vartable.get_type(s);
+                        let typ = self.vartable.get_type(&s.name);
                         let value = self.expression(r, typ)?;
-                        let lvalue = self.vartable.get_value(s);
-                        self.vartable.set_value(s, value);
+                        let lvalue = self.vartable.get_value(&s.name);
+                        self.vartable.set_value(&s.name, value);
                         let nvalue = unsafe {
                             LLVMBuildSub(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
                         };
-                        self.vartable.set_value(s, nvalue);
+                        self.vartable.set_value(&s.name, nvalue);
                         Ok(0 as LLVMValueRef)
                     },
                     _ => panic!("cannot assign to non-lvalue")
@@ -817,56 +817,56 @@ impl<'a> FunctionEmitter<'a> {
             Expression::AssignMultiply(l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
-                        let typ = self.vartable.get_type(s);
+                        let typ = self.vartable.get_type(&s.name);
                         let value = self.expression(r, typ)?;
-                        let lvalue = self.vartable.get_value(s);
-                        self.vartable.set_value(s, value);
+                        let lvalue = self.vartable.get_value(&s.name);
+                        self.vartable.set_value(&s.name, value);
                         let nvalue = unsafe {
                             LLVMBuildMul(self.builder, lvalue, value, b"\0".as_ptr() as *const _)
                         };
-                        self.vartable.set_value(s, nvalue);
+                        self.vartable.set_value(&s.name, nvalue);
                         Ok(0 as LLVMValueRef)
                     },
                     _ => panic!("cannot assign to non-lvalue")
                 }
             },
             Expression::PostDecrement(box Expression::Variable(t, s)) => {
-                let before_value = self.vartable.get_value(s);
+                let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                     LLVMBuildSub(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
                 };
 
-                self.vartable.set_value(s, after_value);
+                self.vartable.set_value(&s.name, after_value);
 
                 Ok(before_value)
             },
             Expression::PreDecrement(box Expression::Variable(t, s)) => {
-                let before_value = self.vartable.get_value(s);
+                let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                     LLVMBuildSub(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
                 };
 
-                self.vartable.set_value(s, after_value);
+                self.vartable.set_value(&s.name, after_value);
 
                 Ok(after_value)
             },
             Expression::PostIncrement(box Expression::Variable(t, s)) => {
-                let before_value = self.vartable.get_value(s);
+                let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                     LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
                 };
 
-                self.vartable.set_value(s, after_value);
+                self.vartable.set_value(&s.name, after_value);
 
                 Ok(before_value)
             },
             Expression::PreIncrement(box Expression::Variable(t, s)) => {
-                let before_value = self.vartable.get_value(s);
+                let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                         LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
                 };
 
-                self.vartable.set_value(s, after_value);
+                self.vartable.set_value(&s.name, after_value);
 
                 Ok(after_value)
             },
