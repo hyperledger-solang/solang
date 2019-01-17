@@ -4,18 +4,12 @@ mod tests {
     use solidity;
     use resolve;
     use emit::Emitter;
-    use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue};
+    use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue, ModuleRef};
 
-    #[test]
-    fn simple_solidiy_compile_and_run() {
-        // parse
+    fn build_solidity(src: &'static str) -> ModuleRef {
         let mut s = solidity::SourceUnitParser::new()
-            .parse("
-            contract test {
-                function foo() returns (uint32) {
-                    return 2;
-                }
-            }").expect("parse should succeed");
+            .parse(src)
+            .expect("parse should succeed");
         
         // resolve
         resolve::resolve(&mut s).expect("resolve should succeed");
@@ -29,10 +23,21 @@ mod tests {
 
         let module = Module::from_buffer(bc).expect("parse wasm should work");
 
-        let main = ModuleInstance::new(&module, &ImportsBuilder::default())
+        ModuleInstance::new(&module, &ImportsBuilder::default())
             .expect("Failed to instantiate module")
             .run_start(&mut NopExternals)
-            .expect("Failed to run start function in module");
+            .expect("Failed to run start function in module")
+    }
+
+    #[test]
+    fn simple_solidiy_compile_and_run() {
+        // parse
+        let main = build_solidity("
+            contract test {
+                function foo() returns (uint32) {
+                    return 2;
+                }
+            }");
 
         let ret = main.invoke_export("foo", &[], &mut NopExternals).expect("failed to call function");
 
@@ -41,8 +46,7 @@ mod tests {
 
     #[test]
     fn simple_loops() {
-        let mut s = solidity::SourceUnitParser::new()
-            .parse(r##"
+        let main = build_solidity(r##"
 contract test3 {
 	function foo(uint32 a) returns (uint32) {
 		uint32 b = 50 - a;
@@ -81,24 +85,7 @@ contract test3 {
 
 		return x;
 	}
-}"##).expect("parse should work");
-
-        // resolve
-        resolve::resolve(&mut s).expect("resolve should succeed");
-
-        // codegen
-        let res = Emitter::new(s);
-
-        assert_eq!(res.contracts.len(), 1);
-
-        let bc = res.contracts[0].wasm(&res).expect("llvm wasm emit should work");
-
-        let module = Module::from_buffer(bc).expect("parse wasm should work");
-
-        let main = ModuleInstance::new(&module, &ImportsBuilder::default())
-            .expect("Failed to instantiate module")
-            .run_start(&mut NopExternals)
-            .expect("Failed to run start function in module");
+}"##);
 
         for i in 0..=50 {
             let res = ((50 - i) * 100 + 5) + i * 1000;
@@ -140,8 +127,6 @@ contract test3 {
             }
 
             let ret = main.invoke_export("baz", &[RuntimeValue::I32(i)], &mut NopExternals).expect("failed to call function");
-
-            println!("i: {}", i);
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
