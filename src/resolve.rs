@@ -96,7 +96,7 @@ fn resolve_func(f: &mut Box<FunctionDefinition>, error: &mut Vec<Output>) -> Res
             Statement::Return(_, None) => {
                 // actually this allowed if all return values have names
                 if f.returns.len() > 0 {
-                    error.push(Output::error(Loc(0, 0), format!("missing return value, {} expected", f.params.len())));
+                    error.push(Output::error(Loc(0, 0), format!("missing return value, {} expected", f.returns.len())));
                 }
                 Ok(())
             },
@@ -161,7 +161,7 @@ fn binary_expression(f: &FunctionDefinition, l: &Expression, r: &Expression, loc
     if let Some(v) = coercion_type(left, right) {
         Ok(v)
     } else {
-        errors.push(Output::error(loc.clone(), format!("cannot convert {:?} to {:?}", left, right)));
+        errors.push(Output::error(loc.clone(), format!("cannot convert {} to {}", left.to_string(), right.to_string())));
         Err(())
     }
 }
@@ -172,7 +172,13 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression, errors: &mut 
         Expression::StringLiteral(_, _) => Ok(ElementaryTypeName::String),
         Expression::NumberLiteral(loc, b) => {
             // Return smallest type
-            let bits = b.bits();
+            let mut bits = b.bits();
+
+            if bits < 7 {
+                bits = 8;
+            } else {
+                bits = (bits + 7) & !7;
+            }
 
             if b.sign() == Sign::Minus {
                 if bits > 255 {
@@ -254,11 +260,24 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression, errors: &mut 
         Expression::Less(loc, l, r) |
         Expression::MoreEqual(loc, l, r) |
         Expression::LessEqual(loc, l, r) => {
-            if !binary_expression(f, l, r, loc, errors)?.ordered() {
-                errors.push(Output::error(loc.clone(), format!("ordered comparision not allowed")));
-                Err(())
-            } else {
+            let left = get_expression_type(f, l, errors)?;
+            let right = get_expression_type(f, r, errors)?;
+
+            if !left.ordered() {
+                errors.push(Output::error(l.loc().clone(), format!("{} cannot be used in ordered compare", left.to_string())));
+                return Err(());
+            }
+
+            if !right.ordered() {
+                errors.push(Output::error(r.loc().clone(), format!("{} cannot be used in ordered compare", right.to_string())));
+                return Err(());
+            }
+
+            if let Some(_) = coercion_type(left, right) {
                 Ok(ElementaryTypeName::Bool)
+            } else {
+                errors.push(Output::error(loc.clone(), format!("cannot compare {} to {}", left.to_string(), right.to_string())));
+                Err(())
             }
         },
         _ => panic!("resolve of expression {:?} not implemented yet", e)
@@ -269,7 +288,7 @@ fn check_expression(f: &FunctionDefinition, e: &Expression, t: ElementaryTypeNam
     let etype = get_expression_type(f, e, error)?;
 
     if let None = coercion_type(etype, t) {
-        error.push(Output::error(e.loc(), format!("cannot convert {:?} to {:?}", etype, t)));
+        error.push(Output::error(e.loc(), format!("cannot convert {} to {}", etype.to_string(), t.to_string())));
         Err(())
     } else {
         Ok(())

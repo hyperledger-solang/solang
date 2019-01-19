@@ -55,6 +55,19 @@ impl ElementaryTypeName {
             _ => false
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            ElementaryTypeName::Address => "address".to_string(),
+            ElementaryTypeName::Bool => "bool".to_string(),
+            ElementaryTypeName::String => "string".to_string(),
+            ElementaryTypeName::Int(n) => format!("int{}", n),
+            ElementaryTypeName::Uint(n) => format!("uint{}", n),
+            ElementaryTypeName::Bytes(n) => format!("bytes{}", n),
+            ElementaryTypeName::DynamicBytes => "bytes".to_string(),
+            ElementaryTypeName::Any => panic!("any")
+        }
+    }
 }
 
 #[derive(Debug,PartialEq)]
