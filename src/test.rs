@@ -1,18 +1,16 @@
 
 #[cfg(test)]
 mod tests {
-    use solidity;
+    use parse;
     use resolve;
     use emit::Emitter;
     use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue, ModuleRef};
 
     fn build_solidity(src: &'static str) -> ModuleRef {
-        let mut s = solidity::SourceUnitParser::new()
-            .parse(src)
-            .expect("parse should succeed");
+        let mut s = parse::parse(src).expect("parse should succeed");
         
         // resolve
-        resolve::resolve(&mut s).expect("resolve should succeed");
+        resolve::resolve(&mut s);
 
         // codegen
         let res = Emitter::new(s);

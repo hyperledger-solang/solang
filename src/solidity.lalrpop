@@ -7,7 +7,7 @@ use ast::*;
 grammar;
 
 pub SourceUnit: SourceUnit = {
-    <u:SourceUnitPart+> => SourceUnit{name: "".to_string(), parts: u}
+    <u:SourceUnitPart+> => SourceUnit{name: "".to_string(), parts: u, resolved: false}
 }
 
 SourceUnitPart: SourceUnitPart = {

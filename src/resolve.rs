@@ -3,24 +3,37 @@ use ast::*;
 use std::cmp;
 use std::collections::HashMap;
 use num_bigint::Sign;
+use output::Output;
 
-pub fn resolve(s: &mut SourceUnit) -> Result<(), String> {
+pub fn resolve(s: &mut SourceUnit) -> Vec<Output> {
+    let mut errors = Vec::new();
+
     for p in &mut s.parts {
         if let SourceUnitPart::ContractDefinition(ref mut def) = p {
             if def.typ == ContractType::Contract {
                 for m in &mut def.parts {
                     if let ContractPart::FunctionDefinition(ref mut func) = m {
-                        resolve_func(func)?;
+                        resolve_func(func, &mut errors);
                     }
                 }
             }
         }
     }
 
-    Ok(())
+    let mut fatal = 0;
+
+    for e in &errors {
+        if e.is_fatal() {
+            fatal += 1;
+        }
+    }
+
+    s.resolved = fatal == 0;
+
+    errors
 }
 
-fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
+fn resolve_func(f: &mut Box<FunctionDefinition>, error: &mut Vec<Output>) {
     // find all the variables
     let mut vartable = HashMap::new();
 
@@ -31,8 +44,8 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
     }
 
     for r in &f.returns {
-        if let Some(_) = r.name {
-            return Err(format!("named return values not allowed"));
+        if let Some(ref name) = r.name {
+            error.push(Output::warning(name.loc.clone(), format!("named return value `{}' not allowed", name.name)));
         }
     }
 
@@ -41,13 +54,13 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
             let name = &v.name;
 
             if vartable.contains_key(&name.name) {
-                return Err(format!("variable {} redeclared", name.name));
+                error.push(Output::error(name.loc.clone(), format!("variable {} redeclared", name.name)));
             } else {
                 vartable.insert(name.name.to_string(), v.typ);
             }
         }
         Ok(())
-    })?;
+    }).expect("should succeed");
 
     f.vartable = Some(vartable);
 
@@ -103,13 +116,11 @@ fn resolve_func(f: &mut Box<FunctionDefinition>) -> Result<(), String> {
             Statement::Break => Ok(()),
             _ => Err(format!("resolve of statement {:?} not implement yet", s))
         }
-    })?;
+    }).expect("should succeed");
 
     // check for unreachable code (anything after return,break,continue)
     // check for infinite loops
     // check if function ends with return
-
-    Ok(())
 }
 
 pub fn coercion_type(left: ElementaryTypeName, right: ElementaryTypeName) -> Option<ElementaryTypeName> {

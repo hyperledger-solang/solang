@@ -2,7 +2,7 @@ use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::cell::Cell;
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Clone)]
 pub struct Loc(
     pub usize,
     pub usize
@@ -17,7 +17,8 @@ pub struct Identifier {
 #[derive(Debug,PartialEq)]
 pub struct SourceUnit {
     pub name: String,
-    pub parts: Vec<SourceUnitPart>
+    pub parts: Vec<SourceUnitPart>,
+    pub resolved: bool
 }
 
 #[derive(Debug,PartialEq)]
@@ -419,7 +420,7 @@ mod test {
                         typ: ElementaryTypeName::Int(64), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, initializer: None
                     }))
             ]}))
-        ]};
+        ], resolved: false};
 
         assert_eq!(e, a);
     }
