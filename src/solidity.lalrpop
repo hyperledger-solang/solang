@@ -227,119 +227,119 @@ Expression: Expression = {
 }
 
 Precedence15: Expression = {
-    <l:Precedence15> "=" <r:Precedence14> => Expression::Assign(Box::new(l), Box::new(r)),
-    <l:Precedence15> "|=" <r:Precedence14> => Expression::AssignOr(Box::new(l), Box::new(r)),
-    <l:Precedence15> "^=" <r:Precedence14> => Expression::AssignXor(Box::new(l), Box::new(r)),
-    <l:Precedence15> "&=" <r:Precedence14> => Expression::AssignAnd(Box::new(l), Box::new(r)),
-    <l:Precedence15> "<<=" <r:Precedence14> => Expression::AssignShiftLeft(Box::new(l), Box::new(r)),
-    <l:Precedence15> ">>=" <r:Precedence14> => Expression::AssignShiftRight(Box::new(l), Box::new(r)),
-    <l:Precedence15> "+=" <r:Precedence14> => Expression::AssignAdd(Box::new(l), Box::new(r)),
-    <l:Precedence15> "-=" <r:Precedence14> => Expression::AssignSubtract(Box::new(l), Box::new(r)),
-    <l:Precedence15> "*=" <r:Precedence14> => Expression::AssignMultiply(Box::new(l), Box::new(r)),
-    <l:Precedence15> "/=" <r:Precedence14> => Expression::AssignDivide(Box::new(l), Box::new(r)),
-    <l:Precedence15> "%=" <r:Precedence14> => Expression::AssignModulo(Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "=" <b:@R> <r:Precedence14> => Expression::Assign(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "|=" <b:@R> <r:Precedence14> => Expression::AssignOr(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "^=" <b:@R> <r:Precedence14> => Expression::AssignXor(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "&=" <b:@R> <r:Precedence14> => Expression::AssignAnd(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "<<=" <b:@R> <r:Precedence14> => Expression::AssignShiftLeft(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> ">>=" <b:@R> <r:Precedence14> => Expression::AssignShiftRight(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "+=" <b:@R> <r:Precedence14> => Expression::AssignAdd(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "-=" <b:@R> <r:Precedence14> => Expression::AssignSubtract(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "*=" <b:@R> <r:Precedence14> => Expression::AssignMultiply(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "/=" <b:@R> <r:Precedence14> => Expression::AssignDivide(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence15> <a:@L> "%=" <b:@R> <r:Precedence14> => Expression::AssignModulo(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence14,
 }
 
 Precedence14: Expression = {
-    <c:Precedence14> "?" <l:Precedence13> ":" <r:Precedence13> => Expression::Ternary(Box::new(c), Box::new(l), Box::new(r)),
+    <c:Precedence14> <a:@L> "?" <l:Precedence13> ":" <b:@R> <r:Precedence13> => Expression::Ternary(Loc(a, b), Box::new(c), Box::new(l), Box::new(r)),
     Precedence13,
 }
 
 Precedence13: Expression = {
-    <l:Precedence13> "||" <r:Precedence12> => Expression::Or(Box::new(l), Box::new(r)),
+    <l:Precedence13> <a:@L> "||" <b:@R> <r:Precedence12> => Expression::Or(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence12,
 }
 
 Precedence12: Expression = {
-    <l:Precedence12> "&&" <r:Precedence11> => Expression::And(Box::new(l), Box::new(r)),
+    <l:Precedence12> <a:@L> "&&" <b:@R> <r:Precedence11> => Expression::And(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence11,
 }
 
 Precedence11: Expression = {
-    <l:Precedence11> "==" <r:Precedence10> => Expression::Equal(Box::new(l), Box::new(r)),
-    <l:Precedence11> "!=" <r:Precedence10> => Expression::NotEqual(Box::new(l), Box::new(r)),
+    <l:Precedence11> <a:@L> "==" <b:@R> <r:Precedence10> => Expression::Equal(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence11> <a:@L> "!=" <b:@R> <r:Precedence10> => Expression::NotEqual(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence10,
 }
 
 Precedence10: Expression = {
-    <l:Precedence10> "<" <r:Precedence9> => Expression::Less(Box::new(l), Box::new(r)),
-    <l:Precedence10> ">" <r:Precedence9> => Expression::More(Box::new(l), Box::new(r)),
-    <l:Precedence10> "<=" <r:Precedence9> => Expression::LessEqual(Box::new(l), Box::new(r)),
-    <l:Precedence10> ">=" <r:Precedence9> => Expression::MoreEqual(Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> "<" <b:@R> <r:Precedence9> => Expression::Less(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">"  <b:@R> <r:Precedence9> => Expression::More(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> "<=" <b:@R> <r:Precedence9> => Expression::LessEqual(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">=" <b:@R> <r:Precedence9> => Expression::MoreEqual(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence9,
 }
 
 Precedence9: Expression = {
-    <l:Precedence9> "|" <r:Precedence8> => Expression::BitwiseOr(Box::new(l), Box::new(r)),
+    <l:Precedence9> <a:@L> "|" <b:@R> <r:Precedence8> => Expression::BitwiseOr(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence8,
 }
 
 Precedence8: Expression = {
-    <l:Precedence8> "^" <r:Precedence7> => Expression::BitwiseXor(Box::new(l), Box::new(r)),
+    <l:Precedence8> <a:@L> "^" <b:@R> <r:Precedence7> => Expression::BitwiseXor(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence7,
 }
 
 Precedence7: Expression = {
-    <l:Precedence7> "&" <r:Precedence6> => Expression::BitwiseAnd(Box::new(l), Box::new(r)),
+    <l:Precedence7> <a:@L> "&" <b:@R> <r:Precedence6> => Expression::BitwiseAnd(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence6,
 }
 
 Precedence6: Expression = {
-    <l:Precedence6> "<<" <r:Precedence5> => Expression::ShiftLeft(Box::new(l), Box::new(r)),
-    <l:Precedence6> ">>" <r:Precedence5> => Expression::ShiftRight(Box::new(l), Box::new(r)),
+    <l:Precedence6> <a:@L> "<<" <b:@R> <r:Precedence5> => Expression::ShiftLeft(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence6> <a:@L> ">>" <b:@R> <r:Precedence5> => Expression::ShiftRight(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence5,
 }
 
 Precedence5: Expression = {
-    <l:Precedence5> "+" <r:Precedence4> => Expression::Add(Box::new(l), Box::new(r)),
-    <l:Precedence5> "-" <r:Precedence4> => Expression::Subtract(Box::new(l), Box::new(r)),
+    <l:Precedence5> <a:@L> "+" <b:@R> <r:Precedence4> => Expression::Add(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence5> <a:@L> "-" <b:@R> <r:Precedence4> => Expression::Subtract(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence4,
 }
 
 Precedence4: Expression = {
-    <l:Precedence4> "*" <r:Precedence3> => Expression::Multiply(Box::new(l), Box::new(r)),
-    <l:Precedence4> "/" <r:Precedence3> => Expression::Divide(Box::new(l), Box::new(r)),
-    <l:Precedence4> "%" <r:Precedence3> => Expression::Modulo(Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "*" <b:@R> <r:Precedence3> => Expression::Multiply(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "/" <b:@R> <r:Precedence3> => Expression::Divide(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "%" <b:@R> <r:Precedence3> => Expression::Modulo(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence3,
 }
 
 Precedence3: Expression = {
-    <l:Precedence3> "**" <r:Precedence2> => Expression::Power(Box::new(l), Box::new(r)),
+    <l:Precedence3> <a:@L> "**" <b:@R> <r:Precedence2> => Expression::Power(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence2,
 }
 
 Precedence2: Expression = {
-    "!" <e:Precedence2> => Expression::Not(Box::new(e)),
-    "~" <e:Precedence2> => Expression::Complement(Box::new(e)),
-    "delete" <e:Precedence2> => Expression::Delete(Box::new(e)),
-    "++" <e:Precedence2> => Expression::PreIncrement(Box::new(e)),
-    "--" <e:Precedence2> => Expression::PreDecrement(Box::new(e)),
-    "+" <e:Precedence2> => Expression::UnaryPlus(Box::new(e)),
-    "-" <e:Precedence2> => Expression::UnaryMinus(Box::new(e)),
+    <a:@L> "!" <b:@R> <e:Precedence2> => Expression::Not(Loc(a, b), Box::new(e)),
+    <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc(a, b), Box::new(e)),
+    <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc(a, b), Box::new(e)),
+    <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc(a, b), Box::new(e)),
+    <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc(a, b), Box::new(e)),
+    <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc(a, b), Box::new(e)),
+    <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc(a, b), Box::new(e)),
     Precedence1,
 }
 
 Precedence1: Expression = {
-    <e:Precedence1> "++" => Expression::PostIncrement(Box::new(e)),
-    <e:Precedence1> "--" => Expression::PostDecrement(Box::new(e)),
-    "new" <t:ElementaryTypeName> => Expression::New(t),
-    <e:Precedence1> "[" <i:Expression?> "]" => Expression::IndexAccess(Box::new(e), Box::new(i)),
-    <e:Precedence1> "." <i:Identifier> => Expression::MemberAccess(Box::new(e), i),
-    <i:Identifier> "(" ")" => {
-        Expression::FunctionCall(i, Vec::new())
+    <a:@L> <e:Precedence1> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
+    <a:@L> <e:Precedence1> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
+    <a:@L> "new" <t:ElementaryTypeName> <b:@R> => Expression::New(Loc(a, b), t),
+    <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), Box::new(i)),
+    <a:@L> <e:Precedence1> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
+    <a:@L> <i:Identifier> "(" ")" <b:@R> => {
+        Expression::FunctionCall(Loc(a, b), i, Vec::new())
     },
-    <i:Identifier> "(" <v:(<Expression> ",")+> <e:Expression> ")" => {
+    <a:@L> <i:Identifier> "(" <v:(<Expression> ",")+> <e:Expression> ")" <b:@R> => {
         let mut v = v;
         v.push(e);
-        Expression::FunctionCall(i, v)
+        Expression::FunctionCall(Loc(a, b), i, v)
     },
-    "true" => Expression::BoolLiteral(true),
-    "false" => Expression::BoolLiteral(false),
-    StringLiteral => Expression::StringLiteral(<>.to_string()),
+    <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
+    <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
+    <a:@L> <s:StringLiteral> <b:@R> => Expression::StringLiteral(Loc(a, b), s.to_string()),
     <i:Identifier> => Expression::Variable(Cell::new(ElementaryTypeName::Any), i),
     "(" <e:Expression> ")" => e,
-    r#"-?[0-9]+"# => Expression::NumberLiteral(BigInt::from_str(<>).unwrap()),
+    <l:@L> <n:r#"-?[0-9]+"#> <r:@R> => Expression::NumberLiteral(Loc(l, r), BigInt::from_str(n).unwrap()),
  }
 
 StringLiteral: String = {
@@ -473,8 +473,8 @@ NonIfStatement: Statement = {
     "break" ";" => {
         Statement::Break
     },
-    "return" <e:Expression?> ";" => {
-        Statement::Return(e)
+    <l:@L> "return" <e:Expression?> <r:@R> ";" => {
+        Statement::Return(Loc(l, r), e)
     },
     "throw" ";" => {
         Statement::Throw

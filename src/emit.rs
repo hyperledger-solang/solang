@@ -149,9 +149,7 @@ impl Emitter {
 
                     for m in &contract.parts {
                         if let ContractPart::FunctionDefinition(ref func) = m {
-                            if let Err(s) = emit_func(func, e.context, module, builder) {
-                                println!("failed to compile: {}", s);
-                            }
+                            let _ = emit_func(func, e.context, module, builder);
                         }
                     }
 
@@ -185,7 +183,7 @@ impl Drop for Emitter {
     }
 }
 
-unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLVMModuleRef, builder: LLVMBuilderRef) -> Result<(), String> {
+unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLVMModuleRef, builder: LLVMBuilderRef) -> Result<(), ()> {
     let mut args = vec!();
 
     for p in &f.params {
@@ -194,7 +192,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
 
     let fname = match f.name {
         None => {
-            return Err("function with no name are not implemented yet".to_string());
+            panic!("function with no name are not implemented yet".to_string());
         },
         Some(ref n) => {
             CString::new(n.name.to_string()).unwrap()
@@ -204,7 +202,7 @@ unsafe fn emit_func(f: &FunctionDefinition, context: LLVMContextRef, module: LLV
     let ret = match f.returns.len() {
         0 => LLVMVoidType(),
         1 => f.returns[0].typ.LLVMType(context),
-        _ => return Err("only functions with one return value implemented".to_string())
+        _ => panic!("only functions with one return value implemented".to_string())
     };
 
     let ftype = LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0);
@@ -291,7 +289,7 @@ struct LoopScope {
 }
 
 impl<'a> FunctionEmitter<'a> {
-    fn statement(&mut self, stmt: &Statement) -> Result<bool, String> {
+    fn statement(&mut self, stmt: &Statement) -> Result<bool, ()> {
         match stmt {
             Statement::VariableDefinition(_, _) => {
                 // variables
@@ -306,13 +304,13 @@ impl<'a> FunctionEmitter<'a> {
                 }
                 return Ok(reach);
             },
-            Statement::Return(None) => {
+            Statement::Return(_, None) => {
                 unsafe {
                     LLVMBuildRetVoid(self.builder);
                 }
                 return Ok(false);
             }
-            Statement::Return(Some(expr)) => {
+            Statement::Return(_, Some(expr)) => {
                 let v = self.expression(expr, self.function.returns[0].typ)?;
 
                 unsafe {
@@ -654,7 +652,7 @@ impl<'a> FunctionEmitter<'a> {
                 let len = self.loop_scope.len();
 
                 if len == 0 {
-                    return Err(format!("break statement not in loop"));
+                    panic!("break statement not in loop");
                 } else {
                     let scope = &self.loop_scope[len - 1];
                     scope.breaks_in_loop.set(scope.breaks_in_loop.get()+1);
@@ -668,16 +666,16 @@ impl<'a> FunctionEmitter<'a> {
                 }
             },
             _ => {
-                return Err(format!("statement not implement: {:?}", stmt));
+                panic!("statement not implement: {:?}", stmt);
             }
         }
 
         Ok(true)
     }
 
-    fn expression(&mut self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, String> {
+    fn expression(&mut self, e: &Expression, t: ElementaryTypeName) -> Result<LLVMValueRef, ()> {
         match e {
-            Expression::NumberLiteral(n) => {
+            Expression::NumberLiteral(_, n) => {
                 let ltype = if t == ElementaryTypeName::Any {
                     unsafe {
                         LLVMIntTypeInContext(self.context, n.bits() as u32)
@@ -692,7 +690,7 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMConstIntOfStringAndSize(ltype, s.as_ptr() as *const _, s.len() as _, 10))
                 }
             },
-            Expression::Add(l, r) => {
+            Expression::Add(_, l, r) => {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
@@ -700,7 +698,7 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMBuildAdd(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
             },
-            Expression::Subtract(l, r) => {
+            Expression::Subtract(_, l, r) => {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
@@ -708,7 +706,7 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMBuildSub(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
             },
-            Expression::Multiply(l, r) => {
+            Expression::Multiply(_, l, r) => {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
@@ -716,7 +714,7 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMBuildMul(self.builder, left, right, b"\0".as_ptr() as *const _))
                 }
             },
-            Expression::Divide(l, r) => {
+            Expression::Divide(_, l, r) => {
                 let left = self.expression(l, t)?;
                 let right = self.expression(r, t)?;
 
@@ -730,7 +728,7 @@ impl<'a> FunctionEmitter<'a> {
                     }
                 }
             },
-            Expression::Equal(l, r) => {
+            Expression::Equal(_, l, r) => {
                 let left = self.expression(l, ElementaryTypeName::Uint(32))?;
                 let right = self.expression(r, ElementaryTypeName::Uint(32))?;
 
@@ -738,7 +736,7 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntEQ, left, right, b"\0".as_ptr() as *const _))
                 }
             },
-            Expression::More(l, r) => {
+            Expression::More(_, l, r) => {
                 let left = self.expression(l, ElementaryTypeName::Uint(32))?;
                 let right = self.expression(r, ElementaryTypeName::Uint(32))?;
 
@@ -746,7 +744,7 @@ impl<'a> FunctionEmitter<'a> {
                     Ok(LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntSGT, left, right, b"\0".as_ptr() as *const _))
                 }
             },
-            Expression::Less(l, r) => {
+            Expression::Less(_, l, r) => {
                 let left = self.expression(l, ElementaryTypeName::Uint(32))?;
                 let right = self.expression(r, ElementaryTypeName::Uint(32))?;
 
@@ -771,9 +769,9 @@ impl<'a> FunctionEmitter<'a> {
                     })
                 }
             },
-            Expression::Assign(l, r) => {
+            Expression::Assign(_, l, r) => {
                 match l {
-                    box Expression::Variable(_, s) => {
+                    box Expression::Variable( _, s) => {
                         let typ = self.vartable.get_type(&s.name);
                         let value = self.expression(r, typ)?;
                         self.vartable.set_value(&s.name, value);
@@ -782,7 +780,7 @@ impl<'a> FunctionEmitter<'a> {
                     _ => panic!("cannot assign to non-lvalue")
                 }
             },
-            Expression::AssignAdd(l, r) => {
+            Expression::AssignAdd(_, l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
                         let typ = self.vartable.get_type(&s.name);
@@ -798,7 +796,7 @@ impl<'a> FunctionEmitter<'a> {
                     _ => panic!("cannot assign to non-lvalue")
                 }
             },
-            Expression::AssignSubtract(l, r) => {
+            Expression::AssignSubtract(_, l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
                         let typ = self.vartable.get_type(&s.name);
@@ -814,7 +812,7 @@ impl<'a> FunctionEmitter<'a> {
                     _ => panic!("cannot assign to non-lvalue")
                 }
             },
-            Expression::AssignMultiply(l, r) => {
+            Expression::AssignMultiply(_, l, r) => {
                 match l {
                     box Expression::Variable(_, s) => {
                         let typ = self.vartable.get_type(&s.name);
@@ -830,7 +828,7 @@ impl<'a> FunctionEmitter<'a> {
                     _ => panic!("cannot assign to non-lvalue")
                 }
             },
-            Expression::PostDecrement(box Expression::Variable(t, s)) => {
+            Expression::PostDecrement(_, box Expression::Variable(t, s)) => {
                 let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                     LLVMBuildSub(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
@@ -840,7 +838,7 @@ impl<'a> FunctionEmitter<'a> {
 
                 Ok(before_value)
             },
-            Expression::PreDecrement(box Expression::Variable(t, s)) => {
+            Expression::PreDecrement(_, box Expression::Variable(t, s)) => {
                 let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                     LLVMBuildSub(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
@@ -850,7 +848,7 @@ impl<'a> FunctionEmitter<'a> {
 
                 Ok(after_value)
             },
-            Expression::PostIncrement(box Expression::Variable(t, s)) => {
+            Expression::PostIncrement(_, box Expression::Variable(t, s)) => {
                 let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                     LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
@@ -860,7 +858,7 @@ impl<'a> FunctionEmitter<'a> {
 
                 Ok(before_value)
             },
-            Expression::PreIncrement(box Expression::Variable(t, s)) => {
+            Expression::PreIncrement(_, box Expression::Variable(t, s)) => {
                 let before_value = self.vartable.get_value(&s.name);
                 let after_value = unsafe {
                         LLVMBuildAdd(self.builder, before_value, LLVMConstInt(t.get().LLVMType(self.context), 1, LLVM_FALSE), b"\0".as_ptr() as *const _)
@@ -871,7 +869,7 @@ impl<'a> FunctionEmitter<'a> {
                 Ok(after_value)
             },
             _ => {
-                Err(format!("expression not implemented: {:?}", e))
+                panic!("expression not implemented: {:?}", e);
             }
         }
     }

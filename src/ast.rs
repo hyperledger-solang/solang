@@ -139,116 +139,169 @@ pub struct StateVariableDeclaration {
 
 #[derive(Debug,PartialEq)]
 pub enum Expression {
-    PostIncrement(Box<Expression>),
-    PostDecrement(Box<Expression>),
-    New(ElementaryTypeName),
-    IndexAccess(Box<Expression>, Box<Option<Expression>>),
-    MemberAccess(Box<Expression>, Identifier),
-    FunctionCall(Identifier, Vec<Expression>),
-    Not(Box<Expression>),
-    Complement(Box<Expression>),
-    Delete(Box<Expression>),
-    PreIncrement(Box<Expression>),
-    PreDecrement(Box<Expression>),
-    UnaryPlus(Box<Expression>),
-    UnaryMinus(Box<Expression>),
-    Power(Box<Expression>, Box<Expression>),
-    Multiply(Box<Expression>, Box<Expression>),
-    Divide(Box<Expression>, Box<Expression>),
-    Modulo(Box<Expression>, Box<Expression>),
-    Add(Box<Expression>, Box<Expression>),
-    Subtract(Box<Expression>, Box<Expression>),
-    ShiftLeft(Box<Expression>, Box<Expression>),
-    ShiftRight(Box<Expression>, Box<Expression>),
-    BitwiseAnd(Box<Expression>, Box<Expression>),
-    BitwiseXor(Box<Expression>, Box<Expression>),
-    BitwiseOr(Box<Expression>, Box<Expression>),
-    Less(Box<Expression>, Box<Expression>),
-    More(Box<Expression>, Box<Expression>),
-    LessEqual(Box<Expression>, Box<Expression>),
-    MoreEqual(Box<Expression>, Box<Expression>),
-    Equal(Box<Expression>, Box<Expression>),
-    NotEqual(Box<Expression>, Box<Expression>),
-    And(Box<Expression>, Box<Expression>),
-    Or(Box<Expression>, Box<Expression>),
-    Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
-    Assign(Box<Expression>, Box<Expression>),
-    AssignOr(Box<Expression>, Box<Expression>),
-    AssignAnd(Box<Expression>, Box<Expression>),
-    AssignXor(Box<Expression>, Box<Expression>),
-    AssignShiftLeft(Box<Expression>, Box<Expression>),
-    AssignShiftRight(Box<Expression>, Box<Expression>),
-    AssignAdd(Box<Expression>, Box<Expression>),
-    AssignSubtract(Box<Expression>, Box<Expression>),
-    AssignMultiply(Box<Expression>, Box<Expression>),
-    AssignDivide(Box<Expression>, Box<Expression>),
-    AssignModulo(Box<Expression>, Box<Expression>),
-    BoolLiteral(bool),
-    NumberLiteral(BigInt),
-    StringLiteral(String),
+    PostIncrement(Loc, Box<Expression>),
+    PostDecrement(Loc, Box<Expression>),
+    New(Loc, ElementaryTypeName),
+    IndexAccess(Loc, Box<Expression>, Box<Option<Expression>>),
+    MemberAccess(Loc, Box<Expression>, Identifier),
+    FunctionCall(Loc, Identifier, Vec<Expression>),
+    Not(Loc, Box<Expression>),
+    Complement(Loc, Box<Expression>),
+    Delete(Loc, Box<Expression>),
+    PreIncrement(Loc, Box<Expression>),
+    PreDecrement(Loc, Box<Expression>),
+    UnaryPlus(Loc, Box<Expression>),
+    UnaryMinus(Loc, Box<Expression>),
+    Power(Loc, Box<Expression>, Box<Expression>),
+    Multiply(Loc, Box<Expression>, Box<Expression>),
+    Divide(Loc, Box<Expression>, Box<Expression>),
+    Modulo(Loc, Box<Expression>, Box<Expression>),
+    Add(Loc, Box<Expression>, Box<Expression>),
+    Subtract(Loc, Box<Expression>, Box<Expression>),
+    ShiftLeft(Loc, Box<Expression>, Box<Expression>),
+    ShiftRight(Loc, Box<Expression>, Box<Expression>),
+    BitwiseAnd(Loc, Box<Expression>, Box<Expression>),
+    BitwiseXor(Loc, Box<Expression>, Box<Expression>),
+    BitwiseOr(Loc, Box<Expression>, Box<Expression>),
+    Less(Loc, Box<Expression>, Box<Expression>),
+    More(Loc, Box<Expression>, Box<Expression>),
+    LessEqual(Loc, Box<Expression>, Box<Expression>),
+    MoreEqual(Loc, Box<Expression>, Box<Expression>),
+    Equal(Loc, Box<Expression>, Box<Expression>),
+    NotEqual(Loc, Box<Expression>, Box<Expression>),
+    And(Loc, Box<Expression>, Box<Expression>),
+    Or(Loc, Box<Expression>, Box<Expression>),
+    Ternary(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
+    Assign(Loc, Box<Expression>, Box<Expression>),
+    AssignOr(Loc, Box<Expression>, Box<Expression>),
+    AssignAnd(Loc, Box<Expression>, Box<Expression>),
+    AssignXor(Loc, Box<Expression>, Box<Expression>),
+    AssignShiftLeft(Loc, Box<Expression>, Box<Expression>),
+    AssignShiftRight(Loc, Box<Expression>, Box<Expression>),
+    AssignAdd(Loc, Box<Expression>, Box<Expression>),
+    AssignSubtract(Loc, Box<Expression>, Box<Expression>),
+    AssignMultiply(Loc, Box<Expression>, Box<Expression>),
+    AssignDivide(Loc, Box<Expression>, Box<Expression>),
+    AssignModulo(Loc, Box<Expression>, Box<Expression>),
+    BoolLiteral(Loc, bool),
+    NumberLiteral(Loc, BigInt),
+    StringLiteral(Loc, String),
     Variable(Cell<ElementaryTypeName>, Identifier),
 }
 
 impl Expression {
-    pub fn visit(&self, f: &mut FnMut(&Expression)  -> Result<(), String>) -> Result<(), String> {
+    pub fn visit(&self, f: &mut FnMut(&Expression)  -> Result<(), ()>) -> Result<(), ()> {
         f(self)?;
 
         match self {
-            Expression::Not(e) |
-            Expression::Complement(e) => e.visit(f),
-            Expression::AssignShiftLeft(l, r) |
-            Expression::AssignShiftRight(l, r) |
-            Expression::AssignMultiply(l, r) |
-            Expression::AssignModulo(l, r) |
-            Expression::AssignXor(l, r) |
-            Expression::AssignDivide(l, r) |
-            Expression::AssignOr(l, r) |
-            Expression::AssignAnd(l, r) |
-            Expression::AssignAdd(l, r) |
-            Expression::AssignSubtract(l, r) |
-            Expression::Assign(l, r) |
-            Expression::ShiftLeft(l, r) |
-            Expression::ShiftRight(l, r) |
-            Expression::Multiply(l, r) |
-            Expression::Modulo(l, r) |
-            Expression::Divide(l, r) |
-            Expression::Subtract(l, r) |
-            Expression::Add(l, r) |
-            Expression::Equal(l, r) |
-            Expression::Less(l, r) |
-            Expression::LessEqual(l, r) |
-            Expression::More(l, r) |
-            Expression::MoreEqual(l, r) |
-            Expression::NotEqual(l, r) => {
+            Expression::Not(_, e) |
+            Expression::Complement(_, e) => e.visit(f),
+            Expression::AssignShiftLeft(_, l, r) |
+            Expression::AssignShiftRight(_, l, r) |
+            Expression::AssignMultiply(_, l, r) |
+            Expression::AssignModulo(_, l, r) |
+            Expression::AssignXor(_, l, r) |
+            Expression::AssignDivide(_, l, r) |
+            Expression::AssignOr(_, l, r) |
+            Expression::AssignAnd(_, l, r) |
+            Expression::AssignAdd(_, l, r) |
+            Expression::AssignSubtract(_, l, r) |
+            Expression::Assign(_, l, r) |
+            Expression::ShiftLeft(_, l, r) |
+            Expression::ShiftRight(_, l, r) |
+            Expression::Multiply(_, l, r) |
+            Expression::Modulo(_, l, r) |
+            Expression::Divide(_, l, r) |
+            Expression::Subtract(_, l, r) |
+            Expression::Add(_, l, r) |
+            Expression::Equal(_, l, r) |
+            Expression::Less(_, l, r) |
+            Expression::LessEqual(_, l, r) |
+            Expression::More(_, l, r) |
+            Expression::MoreEqual(_, l, r) |
+            Expression::NotEqual(_, l, r) => {
                 l.visit(f)?;
                 r.visit(f)
             },
-            Expression::PreDecrement(e) |
-            Expression::PostDecrement(e) |
-            Expression::PreIncrement(e) |
-            Expression::PostIncrement(e) => e.visit(f),
+            Expression::PreDecrement(_, e) |
+            Expression::PostDecrement(_, e) |
+            Expression::PreIncrement(_, e) |
+            Expression::PostIncrement(_, e) => e.visit(f),
             _ => Ok(())
+        }
+    }
+
+    pub fn loc(&self) -> Loc {
+        match self {
+            Expression::PostIncrement(loc, _) |
+            Expression::PostDecrement(loc, _) |
+            Expression::New(loc, _) |
+            Expression::IndexAccess(loc, _, _) |
+            Expression::MemberAccess(loc, _, _) |
+            Expression::FunctionCall(loc, _, _) |
+            Expression::Not(loc, _) |
+            Expression::Complement(loc, _) |
+            Expression::Delete(loc, _) |
+            Expression::PreIncrement(loc, _) |
+            Expression::PreDecrement(loc, _) |
+            Expression::UnaryPlus(loc, _) |
+            Expression::UnaryMinus(loc, _) |
+            Expression::Power(loc, _, _) |
+            Expression::Multiply(loc, _, _) |
+            Expression::Divide(loc, _, _) |
+            Expression::Modulo(loc, _, _) |
+            Expression::Add(loc, _, _) |
+            Expression::Subtract(loc, _, _) |
+            Expression::ShiftLeft(loc, _, _) |
+            Expression::ShiftRight(loc, _, _) |
+            Expression::BitwiseAnd(loc, _, _) |
+            Expression::BitwiseXor(loc, _, _) |
+            Expression::BitwiseOr(loc, _, _) |
+            Expression::Less(loc, _, _) |
+            Expression::More(loc, _, _) |
+            Expression::LessEqual(loc, _, _) |
+            Expression::MoreEqual(loc, _, _) |
+            Expression::Equal(loc, _, _) |
+            Expression::NotEqual(loc, _, _) |
+            Expression::And(loc, _, _) |
+            Expression::Or(loc, _, _) |
+            Expression::Ternary(loc, _, _, _) |
+            Expression::Assign(loc, _, _) |
+            Expression::AssignOr(loc, _, _) |
+            Expression::AssignAnd(loc, _, _) |
+            Expression::AssignXor(loc, _, _) |
+            Expression::AssignShiftLeft(loc, _, _) |
+            Expression::AssignShiftRight(loc, _, _) |
+            Expression::AssignAdd(loc, _, _) |
+            Expression::AssignSubtract(loc, _, _) |
+            Expression::AssignMultiply(loc, _, _) |
+            Expression::AssignDivide(loc, _, _) |
+            Expression::AssignModulo(loc, _, _) |
+            Expression::BoolLiteral(loc, _) |
+            Expression::NumberLiteral(loc, _) |
+            Expression::StringLiteral(loc, _) |
+            Expression::Variable(_, Identifier{ loc, name: _ })  => loc.clone()
         }
     }
 
     pub fn written_vars(&self, set: &mut HashMap<String, ElementaryTypeName>) {
         self.visit(&mut |expr| {
             match expr {
-                Expression::AssignShiftLeft(box Expression::Variable(t, s), _) |
-                Expression::AssignShiftRight(box Expression::Variable(t, s), _) |
-                Expression::AssignMultiply(box Expression::Variable(t, s), _) |
-                Expression::AssignModulo(box Expression::Variable(t, s), _) |
-                Expression::AssignXor(box Expression::Variable(t, s), _) |
-                Expression::AssignDivide(box Expression::Variable(t, s), _) |
-                Expression::AssignOr(box Expression::Variable(t, s), _) |
-                Expression::AssignAnd(box Expression::Variable(t, s), _) |
-                Expression::AssignAdd(box Expression::Variable(t, s), _) |
-                Expression::AssignSubtract(box Expression::Variable(t, s), _) |
-                Expression::Assign(box Expression::Variable(t, s), _) |
-                Expression::PreDecrement(box Expression::Variable(t, s)) |
-                Expression::PostDecrement(box Expression::Variable(t, s)) |
-                Expression::PreIncrement(box Expression::Variable(t, s)) |
-                Expression::PostIncrement(box Expression::Variable(t, s)) => {
+                Expression::AssignShiftLeft(_, box Expression::Variable(t, s), _) |
+                Expression::AssignShiftRight(_, box Expression::Variable(t, s), _) |
+                Expression::AssignMultiply(_, box Expression::Variable(t, s), _) |
+                Expression::AssignModulo(_, box Expression::Variable(t, s), _) |
+                Expression::AssignXor(_, box Expression::Variable(t, s), _) |
+                Expression::AssignDivide(_, box Expression::Variable(t, s), _) |
+                Expression::AssignOr(_, box Expression::Variable(t, s), _) |
+                Expression::AssignAnd(_, box Expression::Variable(t, s), _) |
+                Expression::AssignAdd(_, box Expression::Variable(t, s), _) |
+                Expression::AssignSubtract(_, box Expression::Variable(t, s), _) |
+                Expression::Assign(_, box Expression::Variable(t, s), _) |
+                Expression::PreDecrement(_, box Expression::Variable(t, s)) |
+                Expression::PostDecrement(_, box Expression::Variable(t, s)) |
+                Expression::PreIncrement(_, box Expression::Variable(t, s)) |
+                Expression::PostIncrement(_, box Expression::Variable(t, s)) => {
                     set.insert(s.name.to_string(), t.get());
                 },
                 _ => ()
@@ -310,14 +363,14 @@ pub enum Statement {
     DoWhile(Box<Statement>, Expression),
     Continue,
     Break,
-    Return(Option<Expression>),
+    Return(Loc, Option<Expression>),
     Throw,
     Emit(Identifier, Vec<Expression>),
     Empty
 }
 
 impl Statement {
-    pub fn visit_stmt(&self, f: &mut FnMut(&Statement) -> Result<(), String>) -> Result<(), String> {
+    pub fn visit_stmt(&self, f: &mut FnMut(&Statement) -> Result<(), ()>) -> Result<(), ()> {
         f(self)?;
 
         match self {
@@ -355,7 +408,7 @@ impl Statement {
         Ok(())
     }
 
-    pub fn visit_expr(&self, f: &mut FnMut(&Expression)  -> Result<(), String>) -> Result<(), String> {
+    pub fn visit_expr(&self, f: &mut FnMut(&Expression)  -> Result<(), ()>) -> Result<(), ()> {
         self.visit_stmt(&mut |s| {
             match s {
                 Statement::Expression(e) => e.visit(f),

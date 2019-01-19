@@ -13,7 +13,7 @@ pub fn resolve(s: &mut SourceUnit) -> Vec<Output> {
             if def.typ == ContractType::Contract {
                 for m in &mut def.parts {
                     if let ContractPart::FunctionDefinition(ref mut func) = m {
-                        resolve_func(func, &mut errors);
+                        let _ = resolve_func(func, &mut errors);
                     }
                 }
             }
@@ -33,7 +33,7 @@ pub fn resolve(s: &mut SourceUnit) -> Vec<Output> {
     errors
 }
 
-fn resolve_func(f: &mut Box<FunctionDefinition>, error: &mut Vec<Output>) {
+fn resolve_func(f: &mut Box<FunctionDefinition>, error: &mut Vec<Output>) -> Result<(), ()> {
     // find all the variables
     let mut vartable = HashMap::new();
 
@@ -68,59 +68,58 @@ fn resolve_func(f: &mut Box<FunctionDefinition>, error: &mut Vec<Output>) {
     f.body.visit_stmt(&mut |s| {
         match s {
             Statement::VariableDefinition(decl, Some(expr)) => {
-                check_expression(f, expr, decl.typ)
+                check_expression(f, expr, decl.typ, error)
             },
             Statement::VariableDefinition(_, None) => {
                 Ok(())
             },
             Statement::Expression(expr) => {
-                match get_expression_type(f, expr) {
-                    Ok(_) => Ok(()),
-                    Err(s) => Err(s)
-                }
+                get_expression_type(f, expr, error)?;
+
+                Ok(())
             }
             Statement::If(expr, _, _) => {
-                check_expression(f, expr, ElementaryTypeName::Bool)
+                check_expression(f, expr, ElementaryTypeName::Bool, error)
             },
             Statement::For(_, expr, _, _) => {
                 if let box Some(expr) = expr {
-                    check_expression(f, expr, ElementaryTypeName::Bool)
-                } else {
-                    Ok(())
+                    check_expression(f, expr, ElementaryTypeName::Bool, error)?;
                 }
+                Ok(())
             },
             Statement::While(expr, _) => {
-                check_expression(f, expr, ElementaryTypeName::Bool)
+                check_expression(f, expr, ElementaryTypeName::Bool, error)
             },
             Statement::DoWhile(_, expr) => {
-                check_expression(f, expr, ElementaryTypeName::Bool)
+                check_expression(f, expr, ElementaryTypeName::Bool, error)
             },
-            Statement::Return(None) => {
+            Statement::Return(_, None) => {
                 // actually this allowed if all return values have names
                 if f.returns.len() > 0 {
-                    Err(format!("missing return value, {} expected", f.params.len()))
-                } else {
-                    Ok(())
+                    error.push(Output::error(Loc(0, 0), format!("missing return value, {} expected", f.params.len())));
                 }
+                Ok(())
             },
-            Statement::Return(Some(expr)) => {
+            Statement::Return(_, Some(expr)) => {
                 if f.returns.len() == 0 {
-                    Err(format!("this function has no return value"))
+                    error.push(Output::error(Loc(0, 0), format!("this function has no return value")));
                 } else if f.returns.len() == 1 {
-                    check_expression(f, expr, f.returns[0].typ)
-                } else {
-                    Ok(())
+                    check_expression(f, expr, f.returns[0].typ, error)?;
                 }
+
+                Ok(())
             },
             Statement::BlockStatement(_) => Ok(()),
             Statement::Break => Ok(()),
-            _ => Err(format!("resolve of statement {:?} not implement yet", s))
+            _ => panic!(format!("resolve of statement {:?} not implement yet", s))
         }
-    }).expect("should succeed");
+    })?;
 
     // check for unreachable code (anything after return,break,continue)
     // check for infinite loops
     // check if function ends with return
+
+    Ok(())
 }
 
 pub fn coercion_type(left: ElementaryTypeName, right: ElementaryTypeName) -> Option<ElementaryTypeName> {
@@ -155,34 +154,37 @@ pub fn coercion_type(left: ElementaryTypeName, right: ElementaryTypeName) -> Opt
     None
 }
 
-fn binary_expression(f: &FunctionDefinition, l: &Expression, r: &Expression) -> Result<ElementaryTypeName, String> {
-    let left = get_expression_type(f, l)?;
-    let right = get_expression_type(f, r)?;
+fn binary_expression(f: &FunctionDefinition, l: &Expression, r: &Expression, loc: &Loc, errors: &mut Vec<Output>) -> Result<ElementaryTypeName, ()> {
+    let left = get_expression_type(f, l, errors)?;
+    let right = get_expression_type(f, r, errors)?;
 
     if let Some(v) = coercion_type(left, right) {
         Ok(v)
     } else {
-        Err(format!("cannot convert {:?} to {:?}", left, right))
+        errors.push(Output::error(loc.clone(), format!("cannot convert {:?} to {:?}", left, right)));
+        Err(())
     }
 }
 
-pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<ElementaryTypeName, String> {
+pub fn get_expression_type(f: &FunctionDefinition, e: &Expression, errors: &mut Vec<Output>) -> Result<ElementaryTypeName, ()> {
     match e {
-        Expression::BoolLiteral(_) => Ok(ElementaryTypeName::Bool),
-        Expression::StringLiteral(_) => Ok(ElementaryTypeName::String),
-        Expression::NumberLiteral(b) => {
+        Expression::BoolLiteral(_, _) => Ok(ElementaryTypeName::Bool),
+        Expression::StringLiteral(_, _) => Ok(ElementaryTypeName::String),
+        Expression::NumberLiteral(loc, b) => {
             // Return smallest type
             let bits = b.bits();
 
             if b.sign() == Sign::Minus {
                 if bits > 255 {
-                    Err(format!("{} is too large", b))
+                    errors.push(Output::error(loc.clone(), format!("{} is too large", b)));
+                    Err(())
                 } else {
                     Ok(ElementaryTypeName::Int(bits as u16))
                 }
             } else {
                 if bits > 256 {
-                    Err(format!("{} is too large", b))
+                    errors.push(Output::error(loc.clone(), format!("{} is too large", b)));
+                    Err(())
                 } else {
                     Ok(ElementaryTypeName::Uint(bits as u16))
                 }
@@ -196,70 +198,79 @@ pub fn get_expression_type(f: &FunctionDefinition, e: &Expression) -> Result<Ele
                         Ok(*v)
                     }
                     ,
-                    None => Err(format!("variable {} not found", s.name))
+                    None => {
+                        errors.push(Output::error(s.loc.clone(), format!("variable {} not found", s.name)));
+                        Err(())
+                    }
                 }
             } else {
                 panic!("vartable not there");
             }
         },
-        Expression::PostDecrement(box Expression::Variable(t, s)) |
-        Expression::PostIncrement(box Expression::Variable(t, s)) |
-        Expression::PreDecrement(box Expression::Variable(t, s)) |
-        Expression::PreIncrement(box Expression::Variable(t, s)) => {
+        Expression::PostDecrement(_, box Expression::Variable(t, s)) |
+        Expression::PostIncrement(_, box Expression::Variable(t, s)) |
+        Expression::PreDecrement(_, box Expression::Variable(t, s)) |
+        Expression::PreIncrement(_, box Expression::Variable(t, s)) => {
             if let Some(ref vartable) = f.vartable {
                 match vartable.get(&s.name) {
                     Some(v) => {
                         if !v.ordered() {
-                            Err(format!("variable {} not a number", s.name))
+                            errors.push(Output::error(s.loc.clone(), format!("variable {} not a number", s.name)));
+                            Err(())
                         } else {
                             t.set(*v);
                             Ok(*v)
                         }
                     }
                     ,
-                    None => Err(format!("variable {} not found", s.name))
+                    None => {
+                        errors.push(Output::error(s.loc.clone(), format!("variable {} not found", s.name)));
+                        Err(())
+                    }
                 }
             } else {
                 panic!("vartable not there");
             }
         },
-        Expression::Complement(e) => get_expression_type(f, e),
-        Expression::Not(e) => get_expression_type(f, e),
-        Expression::UnaryMinus(e) => get_expression_type(f, e),
-        Expression::UnaryPlus(e) => get_expression_type(f, e),
-        Expression::Add(l, r) |
-        Expression::Subtract(l, r) |
-        Expression::Multiply(l, r) |
-        Expression::Divide(l, r) |
-        Expression::Modulo(l, r) => binary_expression(f, l, r),
-        Expression::Assign(l, r) |
-        Expression::AssignMultiply(l, r) |
-        Expression::AssignDivide(l, r) |
-        Expression::AssignAdd(l, r) |
-        Expression::AssignSubtract(l, r) => binary_expression(f, l, r),
-        Expression::Equal(l, r) => {
-            binary_expression(f, l, r)?;
+        Expression::Complement(_, e) => get_expression_type(f, e, errors),
+        Expression::Not(_, e) => get_expression_type(f, e, errors),
+        Expression::UnaryMinus(_, e) => get_expression_type(f, e, errors),
+        Expression::UnaryPlus(_, e) => get_expression_type(f, e, errors),
+        Expression::Add(loc, l, r) |
+        Expression::Subtract(loc, l, r) |
+        Expression::Multiply(loc, l, r) |
+        Expression::Divide(loc, l, r) |
+        Expression::Modulo(loc, l, r) => binary_expression(f, l, r, loc, errors),
+        Expression::Assign(loc, l, r) |
+        Expression::AssignMultiply(loc, l, r) |
+        Expression::AssignDivide(loc, l, r) |
+        Expression::AssignAdd(loc, l, r) |
+        Expression::AssignSubtract(loc, l, r) => binary_expression(f, l, r, loc, errors),
+        Expression::Equal(loc, l, r) => {
+            binary_expression(f, l, r, loc, errors)?;
             Ok(ElementaryTypeName::Bool)
         },
-        Expression::More(l, r) |
-        Expression::Less(l, r) |
-        Expression::MoreEqual(l, r) |
-        Expression::LessEqual(l, r) => {
-            if !binary_expression(f, l, r)?.ordered() {
-                return Err(format!("{:?} is not allowed", e));
+        Expression::More(loc, l, r) |
+        Expression::Less(loc, l, r) |
+        Expression::MoreEqual(loc, l, r) |
+        Expression::LessEqual(loc, l, r) => {
+            if !binary_expression(f, l, r, loc, errors)?.ordered() {
+                errors.push(Output::error(loc.clone(), format!("ordered comparision not allowed")));
+                Err(())
+            } else {
+                Ok(ElementaryTypeName::Bool)
             }
-
-            Ok(ElementaryTypeName::Bool)
-        }
-        _ => Err(format!("resolve of expression {:?} not implemented yet", e))
+        },
+        _ => panic!("resolve of expression {:?} not implemented yet", e)
     }
 }
 
-fn check_expression(f: &FunctionDefinition, e: &Expression, t: ElementaryTypeName) -> Result<(), String> {
-    let etype = get_expression_type(f, e)?;
+fn check_expression(f: &FunctionDefinition, e: &Expression, t: ElementaryTypeName, error: &mut Vec<Output>) -> Result<(), ()> {
+    let etype = get_expression_type(f, e, error)?;
 
     if let None = coercion_type(etype, t) {
-        Err(format!("cannot convert {:?} to {:?}", etype, t))
+        error.push(Output::error(e.loc(), format!("cannot convert {:?} to {:?}", etype, t)));
+        Err(())
     } else {
         Ok(())
     }
