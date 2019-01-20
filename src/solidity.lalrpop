@@ -203,7 +203,7 @@ EnumDefinition: Box<EnumDefinition> = {
     "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
         let mut v = v;
         v.push(e);
-        Box::new(EnumDefinition{name: n, values: v})
+        Box::new(EnumDefinition{name: n, values: v, ty: Cell::new(ElementaryTypeName::Any)})
     }
 }
 

@@ -132,6 +132,7 @@ pub struct EventDefinition {
 pub struct EnumDefinition {
     pub name: Identifier,
     pub values: Vec<Identifier>,
+    pub ty: Cell<ElementaryTypeName>,
 }
 
 #[derive(Debug,PartialEq)]

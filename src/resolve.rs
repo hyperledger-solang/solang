@@ -5,8 +5,50 @@ use std::collections::HashMap;
 use num_bigint::Sign;
 use output::Output;
 
+pub enum Object {
+    Function(FunctionDefinition),
+    Enum(EnumDefinition),
+    Struct(StructDefinition)
+}
+
+impl Object {
+    pub fn loc(&self) -> &Loc {
+        match self {
+            Object::Function(FunctionDefinition{name: Some(ref name), .. }) => &name.loc,
+            Object::Enum(ref e) => &e.name.loc,
+            Object::Struct(ref s) => &s.name.loc,
+            _ => panic!("function with no name? why")
+        }
+    }
+}
+
 pub fn resolve(s: &mut SourceUnit) -> Vec<Output> {
     let mut errors = Vec::new();
+    let mut namespace: HashMap<String, Object> = HashMap::new();
+
+    // first enums
+    for p in &mut s.parts {
+        if let SourceUnitPart::ContractDefinition(ref mut contract) = p {
+            for m in &mut contract.parts {
+                match m {
+                    ContractPart::EnumDefinition(ref mut enum_) => {
+                        enum_decl(enum_, &mut namespace, &mut errors);
+                    },
+                    _ => {}
+                }
+            }
+        }
+
+        if let SourceUnitPart::ContractDefinition(ref mut def) = p {
+            if def.typ == ContractType::Contract {
+                for m in &mut def.parts {
+                    if let ContractPart::FunctionDefinition(ref mut func) = m {
+                        let _ = resolve_func(func, &mut errors);
+                    }
+                }
+            }
+        }
+    }
 
     for p in &mut s.parts {
         if let SourceUnitPart::ContractDefinition(ref mut def) = p {
@@ -292,5 +334,31 @@ fn check_expression(f: &FunctionDefinition, e: &Expression, t: ElementaryTypeNam
         Err(())
     } else {
         Ok(())
+    }
+}
+
+fn enum_decl(enum_: &mut EnumDefinition, namespace: &mut HashMap<String, Object>, errors: &mut Vec<Output>) {
+    if let Some(d) = namespace.get(&enum_.name.name) {
+        errors.push(Output::error_with_note(enum_.name.loc.clone(), format!("{} is already defined", enum_.name.name),
+            d.loc().clone(), "location of previous definition".to_string()));
+        return;
+    }
+
+    let mut bits = std::mem::size_of::<usize>() as u32 * 8 - enum_.values.len().leading_zeros();
+    bits = (bits + 7) & !7;
+
+    enum_.ty.set(ElementaryTypeName::Uint(bits as u16));
+
+    // check for duplicates
+    let mut entries: HashMap<String, Loc> = HashMap::new();
+
+    for e in &enum_.values {
+        if let Some(d) = entries.get(&e.name.to_string()) {
+            errors.push(Output::error_with_note(e.loc.clone(), format!("duplicate enum value {}", e.name),
+                d.clone(), "location of previous definition".to_string()));
+            continue;
+        }
+        
+        entries.insert(e.name.to_string(), e.loc.clone());
     }
 }

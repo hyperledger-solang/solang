@@ -9,10 +9,17 @@ pub enum Level {
 }
 
 #[derive(Debug,PartialEq)]
+pub struct Note {
+    pub pos: ast::Loc,
+    pub message: String
+}
+
+#[derive(Debug,PartialEq)]
 pub struct Output {
     pub level: Level,
     pub pos: ast::Loc,
-    pub message: String
+    pub message: String,
+    pub notes: Vec<Note>
 }
 
 impl Level {
@@ -27,11 +34,15 @@ impl Level {
 
 impl Output {
     pub fn error(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Error, pos, message}
+        Output{level: Level::Error, pos, message, notes: Vec::new()}
     }
 
     pub fn warning(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Warning, pos, message}
+        Output{level: Level::Warning, pos, message, notes: Vec::new()}
+    }
+
+    pub fn error_with_note(pos: ast::Loc, message: String, note_pos: ast::Loc, note: String) -> Self {
+        Output{level: Level::Error, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
     }
 
     pub fn is_fatal(&self) -> bool {
@@ -52,19 +63,31 @@ pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>) {
         }
     }
 
-    for msg in messages {
-        let mut line_no = 0;
-        let mut col_no = 1;
+    let convert_loc = |loc| {
+        let mut line_no = 1;
+        let mut col_no = loc + 1;
 
         for l in &line_starts {
-            if msg.pos.0 < *l {
+            if loc < *l {
                 break;
             }
 
             line_no += 1;
-            col_no = (msg.pos.0 - l) + 1;
+            col_no = loc - l;
         }
 
-        eprintln!("{}:{}:{}: {}: {}", filename, line_no, col_no, msg.level.to_string(), msg.message);
+        (line_no, col_no)
+    };
+
+    for msg in messages {
+        let mut loc = convert_loc(msg.pos.0);
+
+        eprintln!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, msg.level.to_string(), msg.message);
+
+        for note in &msg.notes {
+            let mut loc = convert_loc(note.pos.0);
+
+            eprintln!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, "note", note.message);
+        }
     }
 }
