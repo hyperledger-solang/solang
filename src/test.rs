@@ -2,22 +2,22 @@
 #[cfg(test)]
 mod tests {
     use parse;
-    use resolve;
-    use emit::Emitter;
+    use resolver;
+    use emit;
     use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue, ModuleRef};
 
     fn build_solidity(src: &'static str) -> ModuleRef {
-        let mut s = parse::parse(src).expect("parse should succeed");
+        let s = parse::parse(src).expect("parse should succeed");
         
         // resolve
-        resolve::resolve(&mut s);
+        let (contracts, _errors) = resolver::resolver(s);
+
+        assert_eq!(contracts.len(), 1);
 
         // codegen
-        let res = Emitter::new(s);
+        let contract = emit::Contract::new(&contracts[0], &"foo.sol");
 
-        assert_eq!(res.contracts.len(), 1);
-
-        let bc = res.contracts[0].wasm(&res).expect("llvm wasm emit should work");
+        let bc = contract.wasm().expect("llvm wasm emit should work");
 
         let module = Module::from_buffer(bc).expect("parse wasm should work");
 
@@ -128,6 +128,5 @@ contract test3 {
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
-
     }
 }

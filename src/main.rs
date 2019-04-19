@@ -13,17 +13,16 @@ extern crate lazy_static;
 use clap::{App, Arg};
 mod ast;
 mod solidity;
-mod resolve;
+mod resolver;
 mod emit;
 mod link;
-mod vartable;
 mod test;
 mod output;
 mod parse;
+mod cfg;
 
 use std::fs::File;
 use std::io::prelude::*;
-use emit::Emitter;
 
 fn main() {
     let matches = App::new("solang")
@@ -34,6 +33,9 @@ fn main() {
             .help("Solidity input files")
             .required(true)
             .multiple(true))
+        .arg(Arg::with_name("CFG")
+            .help("emit control flow graph")
+            .long("emit-cfg"))
         .arg(Arg::with_name("LLVM")
             .help("emit llvm IR rather than wasm")
             .long("emit-llvm"))
@@ -58,24 +60,23 @@ fn main() {
         };
 
         // resolve phase
-        let errors = resolve::resolve(&mut past);
+        let (contracts, errors) = resolver::resolver(past);
 
         output::print_messages(filename, &contents, &errors);
 
-        if !past.resolved {
-            fatal = true;
-            continue;
-        }
-
         // emit phase
-        let res = Emitter::new(past);
+        for contract in &contracts {
+            if matches.is_present("CFG") {
+                println!("{}\n", contract.to_string());
+            }
 
-        for contract in &res.contracts {
+            let contract = emit::Contract::new(contract, &filename);
             if matches.is_present("LLVM") {
                 contract.dump_llvm();
             } else {
-                if let Err(s) = contract.wasm_file(&res, contract.name.to_string() + ".wasm") {
+                if let Err(s) = contract.wasm_file(contract.name.to_string() + ".wasm") {
                     println!("error: {}", s);
+                    std::process::exit(1);
                 }
             }
         }

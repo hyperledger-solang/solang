@@ -8,8 +8,8 @@ build = "build.rs"
 lalrpop = "0.16.1"
 
 [dependencies]
-lalrpop = "0.16.1"
-lalrpop-util = "0.16.1"
+lalrpop = "0.16.3"
+lalrpop-util = "0.16.3"
 regex = "0.2.1"
 llvm-sys = "70.0.1"
 num-bigint = "0.2"

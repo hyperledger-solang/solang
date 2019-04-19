@@ -45,12 +45,8 @@ impl Output {
         Output{level: Level::Error, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
     }
 
-    pub fn is_fatal(&self) -> bool {
-       if let Level::Error = self.level {
-           true
-       } else {
-           false
-       }
+    pub fn error_with_notes(pos: ast::Loc, message: String, notes: Vec<Note>) -> Self {
+        Output{level: Level::Error, pos, message, notes}
     }
 }
 

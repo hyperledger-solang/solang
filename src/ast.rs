@@ -1,14 +1,12 @@
 use num_bigint::BigInt;
-use std::collections::HashMap;
-use std::cell::Cell;
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug,PartialEq,Clone,Copy)]
 pub struct Loc(
     pub usize,
     pub usize
 );
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Clone)]
 pub struct Identifier {
     pub loc: Loc,
     pub name: String
@@ -37,7 +35,12 @@ pub enum ElementaryTypeName {
     Uint(u16),
     Bytes(u8),
     DynamicBytes,
-    Any,
+}
+
+#[derive(Debug,PartialEq,Clone)]
+pub enum TypeName {
+    Elementary(ElementaryTypeName),
+    Unresolved(Identifier)
 }
 
 impl ElementaryTypeName {
@@ -56,6 +59,17 @@ impl ElementaryTypeName {
         }
     }
 
+    pub fn bits(&self) -> u16 {
+        match self {
+            ElementaryTypeName::Address => 160,
+            ElementaryTypeName::Bool => 1,
+            ElementaryTypeName::Int(n) => *n,
+            ElementaryTypeName::Uint(n) => *n,
+            ElementaryTypeName::Bytes(n) => (*n * 8) as u16,
+            _ => panic!("{} not fixed size", self.to_string())
+        }
+    }
+
     pub fn to_string(&self) -> String {
         match self {
             ElementaryTypeName::Address => "address".to_string(),
@@ -65,7 +79,6 @@ impl ElementaryTypeName {
             ElementaryTypeName::Uint(n) => format!("uint{}", n),
             ElementaryTypeName::Bytes(n) => format!("bytes{}", n),
             ElementaryTypeName::DynamicBytes => "bytes".to_string(),
-            ElementaryTypeName::Any => panic!("any")
         }
     }
 }
@@ -80,7 +93,7 @@ pub enum StorageLocation {
 
 #[derive(Debug,PartialEq)]
 pub struct VariableDeclaration {
-    pub typ: ElementaryTypeName,
+    pub typ: TypeName,
     pub storage: StorageLocation,
     pub name: Identifier
 }
@@ -116,7 +129,7 @@ pub struct ContractDefinition {
 
 #[derive(Debug,PartialEq)]
 pub struct EventParameter {
-    pub typ: ElementaryTypeName,
+    pub typ: TypeName,
     pub indexed: bool,
     pub name: Option<Identifier>,
 }
@@ -132,7 +145,6 @@ pub struct EventDefinition {
 pub struct EnumDefinition {
     pub name: Identifier,
     pub values: Vec<Identifier>,
-    pub ty: Cell<ElementaryTypeName>,
 }
 
 #[derive(Debug,PartialEq)]
@@ -200,51 +212,10 @@ pub enum Expression {
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
     StringLiteral(Loc, String),
-    Variable(Cell<ElementaryTypeName>, Identifier),
+    Variable(Identifier),
 }
 
 impl Expression {
-    pub fn visit(&self, f: &mut FnMut(&Expression)  -> Result<(), ()>) -> Result<(), ()> {
-        f(self)?;
-
-        match self {
-            Expression::Not(_, e) |
-            Expression::Complement(_, e) => e.visit(f),
-            Expression::AssignShiftLeft(_, l, r) |
-            Expression::AssignShiftRight(_, l, r) |
-            Expression::AssignMultiply(_, l, r) |
-            Expression::AssignModulo(_, l, r) |
-            Expression::AssignXor(_, l, r) |
-            Expression::AssignDivide(_, l, r) |
-            Expression::AssignOr(_, l, r) |
-            Expression::AssignAnd(_, l, r) |
-            Expression::AssignAdd(_, l, r) |
-            Expression::AssignSubtract(_, l, r) |
-            Expression::Assign(_, l, r) |
-            Expression::ShiftLeft(_, l, r) |
-            Expression::ShiftRight(_, l, r) |
-            Expression::Multiply(_, l, r) |
-            Expression::Modulo(_, l, r) |
-            Expression::Divide(_, l, r) |
-            Expression::Subtract(_, l, r) |
-            Expression::Add(_, l, r) |
-            Expression::Equal(_, l, r) |
-            Expression::Less(_, l, r) |
-            Expression::LessEqual(_, l, r) |
-            Expression::More(_, l, r) |
-            Expression::MoreEqual(_, l, r) |
-            Expression::NotEqual(_, l, r) => {
-                l.visit(f)?;
-                r.visit(f)
-            },
-            Expression::PreDecrement(_, e) |
-            Expression::PostDecrement(_, e) |
-            Expression::PreIncrement(_, e) |
-            Expression::PostIncrement(_, e) => e.visit(f),
-            _ => Ok(())
-        }
-    }
-
     pub fn loc(&self) -> Loc {
         match self {
             Expression::PostIncrement(loc, _) |
@@ -294,41 +265,14 @@ impl Expression {
             Expression::BoolLiteral(loc, _) |
             Expression::NumberLiteral(loc, _) |
             Expression::StringLiteral(loc, _) |
-            Expression::Variable(_, Identifier{ loc, name: _ })  => loc.clone()
+            Expression::Variable(Identifier{ loc, name: _ })  => loc.clone()
         }
-    }
-
-    pub fn written_vars(&self, set: &mut HashMap<String, ElementaryTypeName>) {
-        self.visit(&mut |expr| {
-            match expr {
-                Expression::AssignShiftLeft(_, box Expression::Variable(t, s), _) |
-                Expression::AssignShiftRight(_, box Expression::Variable(t, s), _) |
-                Expression::AssignMultiply(_, box Expression::Variable(t, s), _) |
-                Expression::AssignModulo(_, box Expression::Variable(t, s), _) |
-                Expression::AssignXor(_, box Expression::Variable(t, s), _) |
-                Expression::AssignDivide(_, box Expression::Variable(t, s), _) |
-                Expression::AssignOr(_, box Expression::Variable(t, s), _) |
-                Expression::AssignAnd(_, box Expression::Variable(t, s), _) |
-                Expression::AssignAdd(_, box Expression::Variable(t, s), _) |
-                Expression::AssignSubtract(_, box Expression::Variable(t, s), _) |
-                Expression::Assign(_, box Expression::Variable(t, s), _) |
-                Expression::PreDecrement(_, box Expression::Variable(t, s)) |
-                Expression::PostDecrement(_, box Expression::Variable(t, s)) |
-                Expression::PreIncrement(_, box Expression::Variable(t, s)) |
-                Expression::PostIncrement(_, box Expression::Variable(t, s)) => {
-                    set.insert(s.name.to_string(), t.get());
-                },
-                _ => ()
-            };
-
-            Ok(())
-        }).unwrap();
     }
 }
 
 #[derive(Debug,PartialEq)]
 pub struct Parameter {
-    pub typ: ElementaryTypeName,
+    pub typ: TypeName,
     pub storage: Option<StorageLocation>,
     pub name: Option<Identifier>
 }
@@ -351,13 +295,12 @@ pub enum FunctionAttribute {
 
 #[derive(Debug,PartialEq)]
 pub struct FunctionDefinition {
+    pub loc: Loc,
     pub name: Option<Identifier>,
     pub params: Vec<Parameter>,
     pub attributes: Vec<FunctionAttribute>,
     pub returns: Vec<Parameter>,
     pub body: Statement,
-    // annotated tree
-    pub vartable: Option<HashMap<String, ElementaryTypeName>>,
 }
 
 #[derive(Debug,PartialEq)]
@@ -377,69 +320,16 @@ pub enum Statement {
     DoWhile(Box<Statement>, Expression),
     Continue,
     Break,
-    Return(Loc, Option<Expression>),
+    Return(Loc, Vec<Expression>),
     Throw,
     Emit(Identifier, Vec<Expression>),
     Empty
 }
 
 impl Statement {
-    pub fn visit_stmt(&self, f: &mut FnMut(&Statement) -> Result<(), ()>) -> Result<(), ()> {
-        f(self)?;
-
-        match self {
-            Statement::BlockStatement(BlockStatement(bs)) => {
-                for i in bs {
-                    i.visit_stmt(f)?;
-                }
-            },
-            Statement::For(i, _, n, b) => {
-                if let box Some(j) = i {
-                    j.visit_stmt(f)?;
-                }
-                if let box Some(j) = n {
-                    j.visit_stmt(f)?;
-                }
-                if let box Some(j) = b {
-                    j.visit_stmt(f)?;
-                }
-            },
-            Statement::While(_, b) => {
-                b.visit_stmt(f)?;
-            },
-            Statement::DoWhile(b, _) => {
-                b.visit_stmt(f)?;
-            },
-            Statement::If(_, then, _else) => {
-                then.visit_stmt(f)?;
-                if let box Some(b) = _else {
-                    b.visit_stmt(f)?;
-                }
-            },
-            _ => ()
-        }
-
-        Ok(())
-    }
-
-    pub fn visit_expr(&self, f: &mut FnMut(&Expression)  -> Result<(), ()>) -> Result<(), ()> {
-        self.visit_stmt(&mut |s| {
-            match s {
-                Statement::Expression(e) => e.visit(f),
-                Statement::If(e, _, _) => e.visit(f),
-                Statement::While(e, _) => e.visit(f),
-                Statement::DoWhile(_, e) => e.visit(f),
-                Statement::For(_, box Some(e), _, _) => e.visit(f),
-                _ => Ok(())
-            }
-        })
-    }
-
-    pub fn written_vars(&self, set: &mut HashMap<String, ElementaryTypeName>) {
-        self.visit_expr(&mut |expr| {
-            expr.written_vars(set);
-            Ok(())
-        }).unwrap();
+    pub fn loc(&self) -> Loc {
+        // FIXME add to parser
+        Loc(0, 0)
     }
 }
 
@@ -468,16 +358,16 @@ mod test {
                 Box::new(ContractDefinition{typ: ContractType::Contract, name: Identifier{loc: Loc(9, 12), name: "foo".to_string()}, parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition{name: Identifier{loc: Loc(42, 54), name: "Jurisdiction".to_string()}, fields: vec![
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Bool, storage: StorageLocation::Default, name: Identifier{loc: Loc(86, 92), name: "exists".to_string()}
+                            typ: TypeName::Elementary(ElementaryTypeName::Bool), storage: StorageLocation::Default, name: Identifier{loc: Loc(86, 92), name: "exists".to_string()}
                         }),
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Uint(256), storage: StorageLocation::Default, name: Identifier{loc: Loc(123, 129), name: "keyIdx".to_string()}
+                            typ: TypeName::Elementary(ElementaryTypeName::Uint(256)), storage: StorageLocation::Default, name: Identifier{loc: Loc(123, 129), name: "keyIdx".to_string()}
                         }),
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Bytes(2), storage: StorageLocation::Default, name: Identifier{loc: Loc(162, 169), name: "country".to_string()}
+                            typ: TypeName::Elementary(ElementaryTypeName::Bytes(2)), storage: StorageLocation::Default, name: Identifier{loc: Loc(162, 169), name: "country".to_string()}
                         }),
                         Box::new(VariableDeclaration{
-                            typ: ElementaryTypeName::Bytes(32), storage: StorageLocation::Default, name: Identifier{loc: Loc(203, 209), name: "region".to_string()}
+                            typ: TypeName::Elementary(ElementaryTypeName::Bytes(32)), storage: StorageLocation::Default, name: Identifier{loc: Loc(203, 209), name: "region".to_string()}
                         })
                     ]})),
                     ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{

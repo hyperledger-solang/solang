@@ -1,7 +1,6 @@
 
 use std::str::FromStr;
 use num_bigint::BigInt;
-use std::cell::Cell;
 use ast::*;
 
 grammar;
@@ -138,6 +137,11 @@ ElementaryTypeName: ElementaryTypeName = {
     "bytes32" => ElementaryTypeName::Bytes(32),
 }
 
+TypeName: TypeName = {
+    ElementaryTypeName => TypeName::Elementary(<>),
+    Identifier => TypeName::Unresolved(<>),
+}
+
 StorageLocation: StorageLocation = {
     "memory" => StorageLocation::Memory,
     "storage" => StorageLocation::Storage,
@@ -149,10 +153,10 @@ Identifier: Identifier = {
 }
 
 VariableDeclaration: Box<VariableDeclaration> = {
-    <t:ElementaryTypeName> <s:StorageLocation> <i:Identifier> => Box::new(VariableDeclaration{
+    <t:TypeName> <s:StorageLocation> <i:Identifier> => Box::new(VariableDeclaration{
         typ: t, storage: s, name: i
     }),
-    <t:ElementaryTypeName> <i:Identifier> => Box::new(VariableDeclaration{ 
+    <t:TypeName> <i:Identifier> => Box::new(VariableDeclaration{ 
         typ: t, storage: StorageLocation::Default, name: i
     })
 }
@@ -184,7 +188,7 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <t:ElementaryTypeName>  <i:"indexed"?> <n:Identifier?> => EventParameter{
+    <t:TypeName>  <i:"indexed"?> <n:Identifier?> => EventParameter{
         typ: t, indexed: match i { Some(_) => true, _ => false }, name:n
     }
 }
@@ -203,7 +207,7 @@ EnumDefinition: Box<EnumDefinition> = {
     "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
         let mut v = v;
         v.push(e);
-        Box::new(EnumDefinition{name: n, values: v, ty: Cell::new(ElementaryTypeName::Any)})
+        Box::new(EnumDefinition{name: n, values: v})
     }
 }
 
@@ -337,7 +341,7 @@ Precedence1: Expression = {
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <a:@L> <s:StringLiteral> <b:@R> => Expression::StringLiteral(Loc(a, b), s.to_string()),
-    <i:Identifier> => Expression::Variable(Cell::new(ElementaryTypeName::Any), i),
+    <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
     <l:@L> <n:r#"-?[0-9]+"#> <r:@R> => Expression::NumberLiteral(Loc(l, r), BigInt::from_str(n).unwrap()),
  }
@@ -347,7 +351,7 @@ StringLiteral: String = {
 }
 
 Parameter: Parameter = {
-    <e:ElementaryTypeName> <s:StorageLocation?> <i:Identifier?> => {
+    <e:TypeName> <s:StorageLocation?> <i:Identifier?> => {
         Parameter{typ: e, storage: s, name: i}
     }
 }
@@ -376,34 +380,34 @@ FunctionAttribute: FunctionAttribute = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" => {
+    <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" <e:@R> => {
         let returns = match r {
             None => vec!(),
             Some(v) => v,
         };
         
         Box::new(FunctionDefinition{
+            loc: Loc(l, e),
             name: n,
             params: a,
             attributes: t,
             returns: returns,
             body: Statement::Empty,
-            vartable: None,
         })
     },
-    "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> => {
+    <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
         let returns = match r {
             None => vec!(),
             Some(v) => v,
         };
         
         Box::new(FunctionDefinition{
+            loc: Loc(l, e),
             name: n,
             params: a,
             attributes: t,
             returns: returns,
             body: Statement::BlockStatement(b),
-            vartable: None,
         })
     }
 }
@@ -473,8 +477,16 @@ NonIfStatement: Statement = {
     "break" ";" => {
         Statement::Break
     },
-    <l:@L> "return" <e:Expression?> <r:@R> ";" => {
-        Statement::Return(Loc(l, r), e)
+    <l:@L> "return" <r:@R> ";" => {
+        Statement::Return(Loc(l, r), Vec::new())
+    },
+    <l:@L> "return" <e:Expression> <r:@R> ";" => {
+        Statement::Return(Loc(l, r), vec!(e))
+    },
+    <l:@L> "return" "(" <v:(<Expression> ",")+> <e:Expression> ")" <r:@R> ";" => {
+        let mut v = v;
+        v.push(e);
+        Statement::Return(Loc(l, r), v)
     },
     "throw" ";" => {
         Statement::Throw
