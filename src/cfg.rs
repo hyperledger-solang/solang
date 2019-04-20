@@ -693,39 +693,70 @@ fn coerce_int(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, 
 
 fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to: &resolver::TypeName, ns: &resolver::ContractNameSpace, errors: &mut Vec<output::Output>) -> Result<Expression, ()> {
     if from == to {
-        Ok(expr)
-    } else {
-        let (from_len, from_signed) = match from {
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) => (*n, false),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => (*n, true),
-            _ => {
-                errors.push(Output::error(*loc, format!("implicit conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
+        return Ok(expr)
+    }
+
+    match (from, to) {
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len))) |
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(from_len)),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len))) => {
+            if from_len > to_len {
+                errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
                 return Err(());
             }
-        };
 
-        let to_len = match to {
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) => *n,
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => *n,
-            _ => {
-                errors.push(Output::error(*loc, format!("implicit conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
+            if from_len < to_len {
+                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+            } else {
+                Ok(expr)
+            }
+        },
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(from_len)),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(to_len))) |
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(to_len))) => {
+            if from_len > to_len {
+                errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
                 return Err(());
             }
-        };
 
-        if from_len > to_len {
-            errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
-            return Err(());
-        }
-
-        if from_len < to_len {
-            if from_signed {
+            if from_len < to_len {
                 Ok(Expression::SignExt(to.clone(), Box::new(expr)))
             } else {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+                Ok(expr)
             }
-        } else {
+        },
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(from_len)),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len))) => {
+            if from_len > to_len {
+                errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                return Err(());
+            }
+
             Ok(expr)
+        },
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(_)),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::String)) => {
+            Ok(expr)
+        },
+        (resolver::TypeName::Elementary(ast::ElementaryTypeName::String),
+         resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len))) => {
+            match &expr {
+                Expression::StringLiteral(from_str) => {
+                    if from_str.len() > *to_len as usize {
+                        errors.push(Output::error(*loc, format!("string is too long to fit into to {}", to.to_string(ns))));
+                        return Err(())
+                    }
+                },
+                _ => ()
+            }
+
+            Ok(expr)
+        },
+        _ => {
+             errors.push(Output::error(*loc, format!("implicit conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
+            Err(())
         }
     }
 }
@@ -744,7 +775,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 Err(())
             } else {
                 let bs = hex::decode(v).unwrap();
-                Ok((Expression::HexLiteral(bs), resolver::TypeName::Elementary(ast::ElementaryTypeName::String)))
+                let len = bs.len() as u8;
+                Ok((Expression::HexLiteral(bs), resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(len))))
             }
         },
         ast::Expression::NumberLiteral(loc, b) => {
