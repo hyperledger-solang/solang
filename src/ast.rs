@@ -212,6 +212,7 @@ pub enum Expression {
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
     StringLiteral(Loc, String),
+    HexLiteral(Loc, String),
     Variable(Identifier),
 }
 
@@ -265,6 +266,7 @@ impl Expression {
             Expression::BoolLiteral(loc, _) |
             Expression::NumberLiteral(loc, _) |
             Expression::StringLiteral(loc, _) |
+            Expression::HexLiteral(loc, _) |
             Expression::Variable(Identifier{ loc, name: _ })  => loc.clone()
         }
     }

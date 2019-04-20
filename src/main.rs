@@ -9,6 +9,7 @@ extern crate parity_wasm;
 extern crate wasmi;
 extern crate clap;
 extern crate lazy_static;
+extern crate hex;
 
 use clap::{App, Arg};
 mod ast;

@@ -9,6 +9,7 @@ use std::collections::LinkedList;
 use num_traits::One;
 
 use ast;
+use hex;
 use resolver;
 use output;
 use output::Output;
@@ -16,6 +17,7 @@ use output::Output;
 pub enum Expression {
     BoolLiteral(bool),
     StringLiteral(String),
+    HexLiteral(Vec<u8>),
     NumberLiteral(u16, BigInt),
     Add(Box<Expression>, Box<Expression>),
     Subtract(Box<Expression>, Box<Expression>),
@@ -101,6 +103,7 @@ impl ControlFlowGraph {
             Expression::BoolLiteral(false) => "false".to_string(),
             Expression::BoolLiteral(true) => "true".to_string(),
             Expression::StringLiteral(s) => format!("\"{}\"", s), // FIXME: escape with lion snailquote
+            Expression::HexLiteral(s) => format!("hex\"{}\"", hex::encode(s)),
             Expression::NumberLiteral(bits, n) => format!("i{} {}", bits, n.to_str_radix(10)),
             Expression::Add(l, r) => format!("({} + {})", self.expr_to_string(ns, l), self.expr_to_string(ns, r)),
             Expression::Subtract(l, r) => format!("({} - {})", self.expr_to_string(ns, l), self.expr_to_string(ns, r)),
@@ -734,6 +737,15 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
         },
         ast::Expression::StringLiteral(_, v) => {
             Ok((Expression::StringLiteral(v.clone()), resolver::TypeName::Elementary(ast::ElementaryTypeName::String)))
+        },
+        ast::Expression::HexLiteral(loc, v) => {
+            if (v.len() % 2) != 0 {
+                errors.push(Output::error(loc.clone(), format!("hex string \"{}\" has odd number of characters", v)));
+                Err(())
+            } else {
+                let bs = hex::decode(v).unwrap();
+                Ok((Expression::HexLiteral(bs), resolver::TypeName::Elementary(ast::ElementaryTypeName::String)))
+            }
         },
         ast::Expression::NumberLiteral(loc, b) => {
             // Return smallest type

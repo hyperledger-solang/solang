@@ -341,6 +341,7 @@ Precedence1: Expression = {
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <a:@L> <s:StringLiteral> <b:@R> => Expression::StringLiteral(Loc(a, b), s.to_string()),
+    <a:@L> <s:HexLiteral> <b:@R> => Expression::HexLiteral(Loc(a, b), s.to_string()),
     <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
     <l:@L> <n:r#"-?[0-9]+"#> <r:@R> => Expression::NumberLiteral(Loc(l, r), BigInt::from_str(n).unwrap()),
@@ -348,6 +349,14 @@ Precedence1: Expression = {
 
 StringLiteral: String = {
     r#""([^"\r\n\\]|'\\'.)*""# => <>.to_string()
+}
+
+HexLiteral: String = {
+    r#"hex"[0-9a-fA-F]*""# => {
+        let v = <>.to_string();
+        let hex_len = v.len() - 5;
+        v.chars().skip(4).take(hex_len).collect()
+    }
 }
 
 Parameter: Parameter = {
