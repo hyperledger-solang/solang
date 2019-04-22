@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::LinkedList;
 use num_traits::One;
+use unescape::unescape;
 
 use ast;
 use hex;
@@ -766,8 +767,17 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
         ast::Expression::BoolLiteral(_, v) => {
             Ok((Expression::BoolLiteral(*v), resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool)))
         },
-        ast::Expression::StringLiteral(_, v) => {
-            Ok((Expression::StringLiteral(v.clone()), resolver::TypeName::Elementary(ast::ElementaryTypeName::String)))
+        ast::Expression::StringLiteral(loc, v) => {
+            match unescape(v) {
+                Some(v) => {
+                    Ok((Expression::StringLiteral(v), resolver::TypeName::Elementary(ast::ElementaryTypeName::String)))
+                },
+                None => {
+                    // would be helpful if unescape told us what the problem was
+                    errors.push(Output::error(loc.clone(), format!("string \"{}\" has invalid escape", v)));
+                    Err(())
+                }
+            }
         },
         ast::Expression::HexLiteral(loc, v) => {
             if (v.len() % 2) != 0 {

@@ -348,7 +348,13 @@ Precedence1: Expression = {
  }
 
 StringLiteral: String = {
-    r#""([^"\r\n\\]|'\\'.)*""# => <>.to_string()
+    r#""([^"]|'\\'.)*""# => {
+        let mut v = <>.to_string();
+        v.remove(0);
+        let len = v.len();
+        v.remove(len - 1);
+        v.replace("\\\n", "")
+    }
 }
 
 HexLiteral: String = {
