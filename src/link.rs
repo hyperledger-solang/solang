@@ -82,8 +82,11 @@ pub enum Symbol {
 fn read_linking_section<R: std::io::Read>(input: &mut R) ->  Result<Vec<Symbol>, elements::Error> {
 	let meta_data_version = u32::from(VarUint32::deserialize(input)?);
 
-    if meta_data_version != 1 {
-        return Err(elements::Error::Other("unsupported meta data version"));
+    match meta_data_version {
+        1 | 2 => (),
+        _ => {
+            return Err(elements::Error::Other("unsupported meta data version"));
+        }
     }
 
     let mut symbol_table = Vec::new();
