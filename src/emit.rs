@@ -6,9 +6,6 @@ use std::ptr::null_mut;
 use std::ffi::{CString, CStr};
 use std::str;
 use std::slice;
-use link;
-use std::io::prelude::*;
-use std::fs::File;
 
 use std::collections::VecDeque;
 use std::collections::HashMap;
@@ -79,35 +76,6 @@ impl<'a> Contract<'a> {
         }
     }
 
-    pub fn wasm_file(&self, filename: String) -> Result<(), String> {
-        let mut obj_error = null_mut();
-        let mut memory_buffer = null_mut();
-
-        unsafe {
-            let result = LLVMTargetMachineEmitToMemoryBuffer(self.tm,
-                                                    self.module,
-                                                    LLVMCodeGenFileType::LLVMObjectFile,
-                                                    &mut obj_error,
-                                                    &mut memory_buffer);
-
-            if result != 0 {
-                Err(CStr::from_ptr(obj_error as *const _).to_string_lossy().to_string())
-            } else {
-                let obj = slice::from_raw_parts(
-                    LLVMGetBufferStart(memory_buffer) as *const u8,
-                    LLVMGetBufferSize(memory_buffer) as usize
-                );
-                let res = link::link(&obj);
-                LLVMDisposeMemoryBuffer(memory_buffer);
-                
-                let mut file = File::create(filename).unwrap();
-                file.write_all(&res).unwrap();
-                Ok(())
-            }
-        }
-    }
-
-    #[cfg(test)]
     pub fn wasm(&self) -> Result<Vec<u8>, String> {
         let mut obj_error = null_mut();
         let mut memory_buffer = null_mut();
@@ -126,7 +94,7 @@ impl<'a> Contract<'a> {
                     LLVMGetBufferStart(memory_buffer) as *const u8,
                     LLVMGetBufferSize(memory_buffer) as usize
                 );
-                let res = link::link(&obj);
+                let res = obj.to_vec();
                 LLVMDisposeMemoryBuffer(memory_buffer);
                 Ok(res)
             }

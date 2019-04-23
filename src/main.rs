@@ -41,6 +41,9 @@ fn main() {
         .arg(Arg::with_name("LLVM")
             .help("emit llvm IR rather than wasm")
             .long("emit-llvm"))
+        .arg(Arg::with_name("NOLINK")
+            .help("Skip linking, emit wasm object file")
+            .long("no-link"))
         .get_matches();
 
     let mut fatal = false;
@@ -76,10 +79,22 @@ fn main() {
             if matches.is_present("LLVM") {
                 contract.dump_llvm();
             } else {
-                if let Err(s) = contract.wasm_file(contract.name.to_string() + ".wasm") {
-                    println!("error: {}", s);
-                    std::process::exit(1);
+                let mut obj = match contract.wasm() {
+                    Ok(o) => o,
+                    Err(s) => {
+                        println!("error: {}", s);
+                        std::process::exit(1);
+                    }
+                };
+
+                if !matches.is_present("NOLINK") {
+                    obj = link::link(&obj);
                 }
+
+                let filename = contract.name.to_string() + ".wasm";
+
+                let mut file = File::create(filename).unwrap();
+                file.write_all(&obj).unwrap();
             }
         }
     }

@@ -4,6 +4,7 @@ mod tests {
     use parse;
     use resolver;
     use emit;
+    use link;
     use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue, ModuleRef};
 
     fn build_solidity(src: &'static str) -> ModuleRef {
@@ -17,7 +18,9 @@ mod tests {
         // codegen
         let contract = emit::Contract::new(&contracts[0], &"foo.sol");
 
-        let bc = contract.wasm().expect("llvm wasm emit should work");
+        let obj = contract.wasm().expect("llvm wasm emit should work");
+
+        let bc = link::link(&obj);
 
         let module = Module::from_buffer(bc).expect("parse wasm should work");
 
