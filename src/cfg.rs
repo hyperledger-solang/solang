@@ -1158,7 +1158,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 
             Ok((Expression::Variable(id.loc.clone(), pos), ty))
         }
-        _ => Err(())
+        _ => unimplemented!()
     }
 }
 

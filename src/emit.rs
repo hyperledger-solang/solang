@@ -58,6 +58,12 @@ fn target_machine() -> LLVMTargetMachineRef {
     }
 }
 
+#[derive(Clone)]
+struct Variable {
+    value_ref: LLVMValueRef,
+    stack: bool,
+}
+
 pub struct Contract<'a> {
     pub name: String,
     pub module: LLVMModuleRef,
@@ -155,7 +161,7 @@ impl<'a> Contract<'a> {
         e
     }
 
-    fn expression(&self, builder: LLVMBuilderRef, e: &cfg::Expression, vartab: &Vec<LLVMValueRef>) -> LLVMValueRef {
+    fn expression(&self, builder: LLVMBuilderRef, e: &cfg::Expression, vartab: &Vec<Variable>) -> LLVMValueRef {
         match e {
             cfg::Expression::NumberLiteral(bits, n) => {
                 let ty = unsafe { LLVMIntTypeInContext(self.context, *bits as _) };
@@ -230,7 +236,13 @@ impl<'a> Contract<'a> {
                 }
             },
             cfg::Expression::Variable(_, s) => {
-                vartab[*s]
+                if vartab[*s].stack {
+                    unsafe {
+                        LLVMBuildLoad(builder, vartab[*s].value_ref, b"\0".as_ptr() as *const _)
+                    }
+                } else {
+                    vartab[*s].value_ref
+                }
             },
             cfg::Expression::ZeroExt(t, e) => {
                 let e = self.expression(builder, e, vartab);
@@ -285,7 +297,7 @@ impl<'a> Contract<'a> {
 
         struct Work {
             bb_no: usize,
-            vars: Vec<LLVMValueRef>
+            vars: Vec<Variable>
         }
 
         let mut blocks : HashMap<usize, BasicBlock> = HashMap::new();
@@ -301,6 +313,7 @@ impl<'a> Contract<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
+                    // FIXME: no phis needed for stack based vars
                     let ty = cfg.vars[*v].ty.LLVMType(self.ns, self.context);
                     let name = CString::new(cfg.vars[*v].id.name.to_string()).unwrap();
 
@@ -316,9 +329,31 @@ impl<'a> Contract<'a> {
         let mut work = VecDeque::new();
 
         blocks.insert(0, create_bb(0));
+
+        // Create all the stack variables
+        let mut vars = Vec::new();
+
+        for v in &cfg.vars {
+            if v.ty.stack_based() {
+                let name = CString::new(v.id.name.to_string()).unwrap();
+                
+                vars.push(Variable{
+                    value_ref: unsafe {
+                        LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
+                    },
+                    stack: true,
+                });
+            } else {
+                vars.push(Variable{
+                    value_ref: null_mut(),
+                    stack: false,
+                });
+            }
+        }
+
         work.push_back(Work{
             bb_no: 0,
-            vars: vec![null_mut(); cfg.vars.len()]
+            vars: vars,
         });
 
         loop {
@@ -334,7 +369,7 @@ impl<'a> Contract<'a> {
                 unsafe { LLVMPositionBuilderAtEnd(builder, bb.bb); }
 
                 for (v, phi) in bb.phis.iter() {
-                    w.vars[*v] = *phi;
+                    w.vars[*v].value_ref = *phi;
                 }
 
                 bb.bb
@@ -343,7 +378,7 @@ impl<'a> Contract<'a> {
             for ins in &cfg.bb[w.bb_no].instr {
                 match ins {
                     cfg::Instr::FuncArg{ res, arg } => {
-                        w.vars[*res] = unsafe { LLVMGetParam(function, *arg as u32) };
+                        w.vars[*res].value_ref = unsafe { LLVMGetParam(function, *arg as u32) };
                     },
                     cfg::Instr::Return{ value } if value.is_empty() => {
                         unsafe {
@@ -357,7 +392,13 @@ impl<'a> Contract<'a> {
                         }
                     },
                     cfg::Instr::Set{ res, expr } => {
-                        w.vars[*res] = self.expression(builder, expr, &w.vars);
+                        let value_ref = self.expression(builder, expr, &w.vars);
+                        if w.vars[*res].stack {
+                            unsafe { LLVMBuildStore(builder, value_ref, w.vars[*res].value_ref); }
+
+                        } else {
+                            w.vars[*res].value_ref = value_ref;
+                        }
                     },
                     cfg::Instr::Branch{ bb: dest } => {
                         if !blocks.contains_key(&dest) {
@@ -372,7 +413,7 @@ impl<'a> Contract<'a> {
 
                         for (v, phi) in bb.phis.iter() {
                             unsafe {
-                                LLVMAddIncoming(*phi, &mut w.vars[*v], &mut ll_bb, 1);
+                                LLVMAddIncoming(*phi, &mut w.vars[*v].value_ref, &mut ll_bb, 1);
                             }
                         }
 
@@ -397,7 +438,7 @@ impl<'a> Contract<'a> {
 
                             for (v, phi) in bb.phis.iter() {
                                 unsafe {
-                                    LLVMAddIncoming(*phi, &mut w.vars[*v], &mut ll_bb, 1);
+                                    LLVMAddIncoming(*phi, &mut w.vars[*v].value_ref, &mut ll_bb, 1);
                                 }
                             }
 
@@ -417,7 +458,7 @@ impl<'a> Contract<'a> {
 
                             for (v, phi) in bb.phis.iter() {
                                 unsafe {
-                                    LLVMAddIncoming(*phi, &mut w.vars[*v], &mut ll_bb, 1);
+                                    LLVMAddIncoming(*phi, &mut w.vars[*v].value_ref, &mut ll_bb, 1);
                                 }
                             }
 
@@ -457,9 +498,21 @@ impl ast::ElementaryTypeName {
             ast::ElementaryTypeName::Int(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
             ast::ElementaryTypeName::Uint(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
             ast::ElementaryTypeName::Address => unsafe { LLVMIntTypeInContext(context, 20*8) },
+            ast::ElementaryTypeName::Bytes(n) => unsafe { LLVMIntTypeInContext(context, (*n * 8) as _) },
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
+        }
+    }
+
+    fn stack_based(&self) -> bool {
+        match self {
+            ast::ElementaryTypeName::Bool => false,
+            ast::ElementaryTypeName::Int(n) => *n > 64,
+            ast::ElementaryTypeName::Uint(n) => *n > 64,
+            ast::ElementaryTypeName::Address => true,
+            ast::ElementaryTypeName::Bytes(n) => *n > 8,
+            _ => unimplemented!()
         }
     }
 }
@@ -470,6 +523,13 @@ impl resolver::TypeName {
         match self {
             resolver::TypeName::Elementary(e) => e.LLVMType(context),
             resolver::TypeName::Enum(n) => { ns.enums[*n].ty.LLVMType(context) },
+        }
+    }
+
+    fn stack_based(&self) -> bool {
+        match self {
+            resolver::TypeName::Elementary(e) => e.stack_based(),
+            resolver::TypeName::Enum(_) => false,
         }
     }
 }
