@@ -746,7 +746,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
             match &expr {
                 Expression::StringLiteral(from_str) => {
                     if from_str.len() > *to_len as usize {
-                        errors.push(Output::error(*loc, format!("string is too long to fit into to {}", to.to_string(ns))));
+                        errors.push(Output::error(*loc, format!("string of {} bytes is too long to fit into {}", from_str.len(), to.to_string(ns))));
                         return Err(())
                     }
                 },
@@ -768,12 +768,14 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             Ok((Expression::BoolLiteral(*v), resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool)))
         },
         ast::Expression::StringLiteral(loc, v) => {
+            // unescape supports octal escape values, solc does not
+            // neither solc nor unescape support unicode code points like \u{61}
             match unescape(v) {
                 Some(v) => {
                     Ok((Expression::StringLiteral(v), resolver::TypeName::Elementary(ast::ElementaryTypeName::String)))
                 },
                 None => {
-                    // would be helpful if unescape told us what the problem was
+                    // would be helpful if unescape told us what/where the problem was
                     errors.push(Output::error(loc.clone(), format!("string \"{}\" has invalid escape", v)));
                     Err(())
                 }
