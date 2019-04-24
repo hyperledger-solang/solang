@@ -1,6 +1,6 @@
 
 use parity_wasm;
-use parity_wasm::elements::{Internal, Module, ExportEntry};
+use parity_wasm::elements::{Internal, Module, ExportEntry, GlobalEntry, GlobalType, ValueType, InitExpr};
 use parity_wasm::builder;
 
 use parity_wasm::elements::{VarUint7, VarUint32, Deserialize};
@@ -10,6 +10,7 @@ pub fn link(input: &[u8]) -> Vec<u8> {
     let mut module : Module = parity_wasm::deserialize_buffer(input).expect("cannot deserialize llvm wasm");
 
     let mut exports = Vec::new();
+    let mut globals = Vec::new();
 
     for c in module.custom_sections() {
         if c.name() != "linking" {
@@ -22,6 +23,17 @@ pub fn link(input: &[u8]) -> Vec<u8> {
             match sym {
                 Symbol::Function(SymbolFunction { flags: _, index, name}) => {
                     exports.push(ExportEntry::new(name, Internal::Function(index)));
+                },
+                Symbol::Global(SymbolGlobal{ flags: _, index: _, name: _}) => {
+                    // FIXME: Here we're assuming it's the stack pointer
+                    // Stack is 64 KiB for now -- size of one page.
+                    globals.push(GlobalEntry::new(
+                        GlobalType::new(ValueType::I32,true),
+                        InitExpr::new(vec![
+                                elements::Instruction::I32Const(0x10000 as i32),
+                                elements::Instruction::End
+                        ])
+                    ));
                 },
                 _ => {}
             }
@@ -37,8 +49,23 @@ pub fn link(input: &[u8]) -> Vec<u8> {
         linked.push_export(e);
     }
 
+    for e in globals {
+        linked = linked.with_global(e);
+    }
+
+    linked.push_memory(builder::MemoryBuilder::new().with_min(1).build());
+
     parity_wasm::serialize(linked.build()).expect("cannot serialize linked wasm")
 }
+
+#[allow(dead_code)]
+pub const FLAG_UNDEFINED : u32 = 0x10;
+#[allow(dead_code)]
+pub const FLAG_EXPLICIT_NAME : u32 = 0x40;
+#[allow(dead_code)]
+pub const FLAG_MASK_VISIBILITY : u32 = 0x04;
+#[allow(dead_code)]
+pub const FLAG_MASK_BINDING : u32 = 0x03;
 
 pub struct SymbolFunction {
     pub flags: u32,
@@ -131,7 +158,11 @@ fn read_linking_section<R: std::io::Read>(input: &mut R) ->  Result<Vec<Symbol>,
             },
             2 => {
                 let index = u32::from(VarUint32::deserialize(input)?);
-                let name = String::deserialize(input)?;
+                let name = if (flags & FLAG_UNDEFINED) == 0 || (flags & FLAG_EXPLICIT_NAME) != 0 {
+                    String::deserialize(input)?
+                } else {
+                    String::new()
+                };
 
                 Symbol::Global(SymbolGlobal{
                     flags,

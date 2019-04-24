@@ -132,4 +132,21 @@ contract test3 {
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
     }
+
+    #[test]
+    fn stack_test() {
+        let main = build_solidity(r##"
+contract test3 {
+	function foo() returns (bool) {
+		uint b = 18446744073709551616;
+        uint c = 36893488147419103232;
+
+        return b * 2 == c;
+	}
+}"##);
+
+        let ret = main.invoke_export("foo", &[], &mut NopExternals).expect("failed to call function");
+
+        assert_eq!(ret, Some(RuntimeValue::I32(1)));
+    }
 }
