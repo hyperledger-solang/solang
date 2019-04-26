@@ -395,6 +395,23 @@ FunctionAttribute: FunctionAttribute = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
+    <l:@L> "constructor" <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
+        let returns = match r {
+            None => vec!(),
+            Some(v) => v,
+        };
+        
+        Box::new(FunctionDefinition{
+            loc: Loc(l, e),
+            constructor: true,
+            name: None,
+            params: a,
+            attributes: t,
+            returns: returns,
+            body: Statement::BlockStatement(b),
+        })
+    },
+
     <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" <e:@R> => {
         let returns = match r {
             None => vec!(),
@@ -403,6 +420,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
         
         Box::new(FunctionDefinition{
             loc: Loc(l, e),
+            constructor: false,
             name: n,
             params: a,
             attributes: t,
@@ -418,6 +436,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
         
         Box::new(FunctionDefinition{
             loc: Loc(l, e),
+            constructor: false,
             name: n,
             params: a,
             attributes: t,

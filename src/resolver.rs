@@ -51,6 +51,7 @@ pub struct EnumDecl {
 
 pub struct FunctionDecl {
     pub loc: ast::Loc,
+    pub constructor: bool,
     pub name: Option<String>,
     pub sig: String,
     pub ast_index: usize,
@@ -136,7 +137,16 @@ impl ContractNameSpace {
 
     fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
-            if let None = f.name {
+            if !f.constructor && None == f.name {
+                return Some(i);
+            }
+        }
+        return None;
+    }
+
+    fn constructor_function(&self) -> Option<usize> {
+        for (i, f) in self.functions.iter().enumerate() {
+            if f.constructor {
                 return Some(i);
             }
         }
@@ -290,6 +300,21 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
     let mut returns = Vec::new();
     let mut broken = false;
 
+    if f.constructor && !f.returns.is_empty() {
+        errors.push(Output::warning(f.loc, format!("constructor cannot have return values")));
+        return;
+    } else if !f.constructor && f.name == None {
+        if !f.returns.is_empty() {
+            errors.push(Output::warning(f.loc, format!("fallback function cannot have return values")));
+            broken = true;
+        }
+
+        if !f.params.is_empty() {
+            errors.push(Output::warning(f.loc, format!("fallback function cannot have parameters")));
+            broken = true;
+        }
+    }
+
     for p in &f.params {
         match ns.resolve(&p.typ, errors) {
             Some(s) => params.push(s),
@@ -321,13 +346,25 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
         loc: f.loc,
         sig: external_signature(&name, &params, &ns),
         name: name,
+        constructor: f.constructor,
         ast_index: i,
         params,
         returns,
         cfg: None
     };
 
-    if let Some(ref id) = f.name {
+    if f.constructor {
+        // fallback function
+        if let Some(i) = ns.constructor_function() {
+            let prev = &ns.functions[i];
+            errors.push(Output::error_with_note(f.loc, "constructor already defined".to_string(),
+                    prev.loc, "location of previous definition".to_string()));
+
+            return;
+        }
+
+        ns.functions.push(fdecl);   
+    } else if let Some(ref id) = f.name {
         if let Some(Symbol::Function(ref mut v)) = ns.symbols.get_mut(&id.name) {
             // check if signature already present
             for o in v.iter() {
@@ -355,7 +392,6 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
         // fallback function
         if let Some(i) = ns.fallback_function() {
             let prev = &ns.functions[i];
-
             errors.push(Output::error_with_note(f.loc, "fallback function already defined".to_string(),
                     prev.loc, "location of previous definition".to_string()));
 

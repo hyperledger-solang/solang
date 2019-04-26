@@ -298,6 +298,7 @@ pub enum FunctionAttribute {
 #[derive(Debug,PartialEq)]
 pub struct FunctionDefinition {
     pub loc: Loc,
+    pub constructor: bool,
     pub name: Option<Identifier>,
     pub params: Vec<Parameter>,
     pub attributes: Vec<FunctionAttribute>,
