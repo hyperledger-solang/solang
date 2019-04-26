@@ -328,7 +328,7 @@ Precedence1: Expression = {
     <a:@L> <e:Precedence1> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence1> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
     <a:@L> "new" <t:ElementaryTypeName> <b:@R> => Expression::New(Loc(a, b), t),
-    <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), Box::new(i)),
+    <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence1> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
     <a:@L> <i:Identifier> "(" ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), i, Vec::new())
@@ -454,10 +454,10 @@ BlockStatement: BlockStatement = {
 
 OpenStatement: Statement = {
     "if" "(" <cond:Expression> ")" <body:Statement> => {
-        Statement::If(cond, Box::new(body), Box::new(None))
+        Statement::If(cond, Box::new(body), None)
     },
     "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> => {
-        Statement::If(cond, Box::new(body), Box::new(Some(o)))
+        Statement::If(cond, Box::new(body), Some(Box::new(o)))
     },
     "while" "(" <e:Expression> ")" <b:OpenStatement> => {
         Statement::While(e, Box::new(b))
@@ -467,16 +467,16 @@ OpenStatement: Statement = {
 ClosedStatement: Statement = {
     NonIfStatement,
     "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> => {
-        Statement::If(cond, Box::new(body), Box::new(Some(o)))
+        Statement::If(cond, Box::new(body), Some(Box::new(o)))
     },
     "while" "(" <e:Expression> ")" <b:ClosedStatement> => {
         Statement::While(e, Box::new(b))
     },
     "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> => {
-        Statement::For(Box::new(b), Box::new(c), Box::new(n), Box::new(Some(block)))
+        Statement::For(box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
     },
     "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" ";" => {
-        Statement::For(Box::new(b), Box::new(c), Box::new(n), Box::new(None))
+        Statement::For(box_option(b), box_option(c), box_option(n), None)
     }
 }
 

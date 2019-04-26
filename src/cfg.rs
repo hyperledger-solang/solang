@@ -337,7 +337,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
 
             Ok(true)
         },
-        ast::Statement::If(cond, then_stmt, box None) => {
+        ast::Statement::If(cond, then_stmt, None) => {
             let (expr, expr_ty) = expression(cond, cfg, ns, vartab, errors)?;
 
             let then = cfg.new_basic_block("then".to_string());
@@ -367,7 +367,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
 
             Ok(true)
         },
-        ast::Statement::If(cond, then_stmt, box Some(else_stmt)) => {
+        ast::Statement::If(cond, then_stmt, Some(else_stmt)) => {
             let (expr, expr_ty) = expression(cond, cfg, ns, vartab, errors)?;
 
             let then = cfg.new_basic_block("then".to_string());
@@ -520,14 +520,14 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
 
             Ok(true)
         },
-        ast::Statement::For(init_stmt, box None, next_stmt, body_stmt) => {
+        ast::Statement::For(init_stmt, None, next_stmt, body_stmt) => {
             let body = cfg.new_basic_block("body".to_string());
             let next = cfg.new_basic_block("next".to_string());
             let end = cfg.new_basic_block("endfor".to_string());
 
             vartab.new_scope();
 
-            if let box Some(init_stmt) = init_stmt {
+            if let Some(init_stmt) = init_stmt {
                 statement(init_stmt, f, cfg, ns, vartab, loops, errors)?;
             }
 
@@ -535,12 +535,12 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
 
             cfg.set_basic_block(body);
 
-            loops.new_scope(end, match next_stmt { box Some(_) => next, box None => body});
+            loops.new_scope(end, match next_stmt { Some(_) => next, None => body});
             vartab.new_dirty_tracker();
 
             let mut body_reachable = match body_stmt {
-                box Some(body_stmt) => statement(body_stmt, f, cfg, ns, vartab, loops, errors)?,
-                box None => true
+                Some(body_stmt) => statement(body_stmt, f, cfg, ns, vartab, loops, errors)?,
+                None => true
             };
 
             if body_reachable {
@@ -554,7 +554,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             }
 
             if body_reachable {
-                if let box Some(next_stmt) = next_stmt {
+                if let Some(next_stmt) = next_stmt {
                     cfg.set_basic_block(next);
                     body_reachable = statement(next_stmt, f, cfg, ns, vartab, loops, errors)?;
                 }
@@ -576,7 +576,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
 
             Ok(control.no_breaks > 0)
         },
-        ast::Statement::For(init_stmt, box Some(cond_expr), next_stmt, body_stmt) => {
+        ast::Statement::For(init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
             let body = cfg.new_basic_block("body".to_string());
             let cond = cfg.new_basic_block("cond".to_string());
             let next = cfg.new_basic_block("next".to_string());
@@ -584,7 +584,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
 
             vartab.new_scope();
 
-            if let box Some(init_stmt) = init_stmt {
+            if let Some(init_stmt) = init_stmt {
                 statement(init_stmt, f, cfg, ns, vartab, loops, errors)?;
             }
 
@@ -603,12 +603,12 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             cfg.set_basic_block(body);
 
             // continue goes to next, and if that does exist, cond
-            loops.new_scope(end, match next_stmt { box Some(_) => next, box None => cond});
+            loops.new_scope(end, match next_stmt { Some(_) => next, None => cond});
             vartab.new_dirty_tracker();
 
             let mut body_reachable = match body_stmt {
-                box Some(body_stmt) => statement(body_stmt, f, cfg, ns, vartab, loops, errors)?,
-                box None => true
+                Some(body_stmt) => statement(body_stmt, f, cfg, ns, vartab, loops, errors)?,
+                None => true
             };
 
             if body_reachable {
@@ -622,7 +622,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             }
 
             if body_reachable {
-                if let box Some(next_stmt) = next_stmt {
+                if let Some(next_stmt) = next_stmt {
                     cfg.set_basic_block(next);
                     body_reachable = statement(next_stmt, f, cfg, ns, vartab, loops, errors)?;
                 }
@@ -997,10 +997,15 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
         },
 
         // pre/post decrement/increment
-        ast::Expression::PostIncrement(loc, box ast::Expression::Variable(id)) |
-        ast::Expression::PreIncrement(loc, box ast::Expression::Variable(id)) |
-        ast::Expression::PostDecrement(loc, box ast::Expression::Variable(id)) |
-        ast::Expression::PreDecrement(loc, box ast::Expression::Variable(id)) => {
+        ast::Expression::PostIncrement(loc, var) |
+        ast::Expression::PreIncrement(loc, var) |
+        ast::Expression::PostDecrement(loc, var) |
+        ast::Expression::PreDecrement(loc, var) => {
+            let id = match var.as_ref() {
+                ast::Expression::Variable(id) => id,
+                _ => unreachable!()
+            };
+
             let (pos, ty) = match vartab.find(&id.name) {
                 Some(v) => {
                     (v.pos, v.ty.clone())
@@ -1079,7 +1084,12 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
         },
 
         // assignment
-        ast::Expression::Assign(_, box ast::Expression::Variable(id), e) => {
+        ast::Expression::Assign(_, var, e) => {
+            let id = match var.as_ref() {
+                ast::Expression::Variable(id) => id,
+                _ => unreachable!()
+            };
+
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
             let (res, ty) = match vartab.find(&id.name) {
@@ -1100,11 +1110,16 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             Ok((Expression::Variable(id.loc.clone(), res), ty))
         },
 
-        ast::Expression::AssignAdd(_, box ast::Expression::Variable(id), e) |
-        ast::Expression::AssignSubtract(_, box ast::Expression::Variable(id), e) |
-        ast::Expression::AssignMultiply(_, box ast::Expression::Variable(id), e) |
-        ast::Expression::AssignDivide(_, box ast::Expression::Variable(id), e) |
-        ast::Expression::AssignModulo(_, box ast::Expression::Variable(id), e) => {
+        ast::Expression::AssignAdd(_, var, e) |
+        ast::Expression::AssignSubtract(_, var, e) |
+        ast::Expression::AssignMultiply(_, var, e) |
+        ast::Expression::AssignDivide(_, var, e) |
+        ast::Expression::AssignModulo(_, var, e) => {
+            let id = match var.as_ref() {
+                ast::Expression::Variable(id) => id,
+                _ => unreachable!()
+            };
+
             let (pos, ty) = match vartab.find(&id.name) {
                 Some(v) => {
                     (v.pos, v.ty.clone())

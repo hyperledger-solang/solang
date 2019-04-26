@@ -168,7 +168,7 @@ pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
     New(Loc, ElementaryTypeName),
-    IndexAccess(Loc, Box<Expression>, Box<Option<Expression>>),
+    IndexAccess(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, Identifier, Vec<Expression>),
     Not(Loc, Box<Expression>),
@@ -314,12 +314,12 @@ pub struct BlockStatement(
 #[derive(Debug,PartialEq)]
 pub enum Statement {
     BlockStatement(BlockStatement),
-    If(Expression, Box<Statement>, Box<Option<Statement>>),
+    If(Expression, Box<Statement>, Option<Box<Statement>>),
     While(Expression, Box<Statement>),
     PlaceHolder,
     Expression(Expression),
     VariableDefinition(Box<VariableDeclaration>, Option<Expression>),
-    For(Box<Option<Statement>>, Box<Option<Expression>>, Box<Option<Statement>>, Box<Option<Statement>>),
+    For(Option<Box<Statement>>, Option<Box<Expression>>, Option<Box<Statement>>, Option<Box<Statement>>),
     DoWhile(Box<Statement>, Expression),
     Continue,
     Break,
@@ -383,5 +383,12 @@ mod test {
         ], resolved: false};
 
         assert_eq!(e, a);
+    }
+}
+
+pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
+    match o {
+        None => None,
+        Some(x) => Some(Box::new(x))
     }
 }

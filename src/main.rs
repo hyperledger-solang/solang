@@ -1,4 +1,3 @@
-#![feature(box_patterns)]
 
 extern crate lalrpop;
 extern crate num_bigint;

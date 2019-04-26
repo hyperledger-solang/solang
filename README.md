@@ -77,11 +77,6 @@ On Ubuntu 18.10, you need:
 
 Earlier versions require your own build of llvm, see below.
 
-To use the lalrpop parser, solang relies on rust box_patterns. This is not
-available in rust stable channel yet, so the rustc nightly compiler must be
-used. So, install rust using [rustup](https://rustup.rs/) and then switch to
-the nightly channel using `rustup default nightly`.
-
 ## llvm libraries
 
 You will need the llvm libs, compiled with the WebAssembly backend/target.
