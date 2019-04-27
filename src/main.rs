@@ -10,6 +10,7 @@ extern crate clap;
 extern crate lazy_static;
 extern crate hex;
 extern crate unescape;
+extern crate tiny_keccak;
 
 use clap::{App, Arg};
 mod ast;

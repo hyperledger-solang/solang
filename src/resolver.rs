@@ -135,7 +135,7 @@ impl ContractNameSpace {
         }
     }
 
-    fn fallback_function(&self) -> Option<usize> {
+    pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
             if !f.constructor && None == f.name {
                 return Some(i);
@@ -144,7 +144,7 @@ impl ContractNameSpace {
         return None;
     }
 
-    fn constructor_function(&self) -> Option<usize> {
+    pub fn constructor_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
             if f.constructor {
                 return Some(i);
@@ -363,7 +363,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
             return;
         }
 
-        ns.functions.push(fdecl);   
+        ns.functions.push(fdecl);
     } else if let Some(ref id) = f.name {
         if let Some(Symbol::Function(ref mut v)) = ns.symbols.get_mut(&id.name) {
             // check if signature already present

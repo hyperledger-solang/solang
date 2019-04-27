@@ -15,6 +15,7 @@ use llvm_sys::core::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
 use llvm_sys::target_machine::*;
+use tiny_keccak::Keccak;
 
 const TRIPLE: &'static [u8] = b"wasm32-unknown-unknown-wasm\0";
 
@@ -67,6 +68,7 @@ pub struct Contract<'a> {
     context: LLVMContextRef,
     tm: LLVMTargetMachineRef,
     ns: &'a resolver::ContractNameSpace,
+    functions: Vec<LLVMValueRef>
 }
 
 impl<'a> Contract<'a> {
@@ -106,12 +108,13 @@ impl<'a> Contract<'a> {
 
         let contractname = CString::new(contract.name.to_string()).unwrap();
 
-        let e = Contract{
+        let mut e = Contract{
             name: contract.name.to_string(),
             module: unsafe { LLVMModuleCreateWithName(contractname.as_ptr()) },
             context: unsafe { LLVMContextCreate() },
             tm: target_machine(),
             ns: contract,
+            functions: Vec::new(),
         };
 
         unsafe {
@@ -120,8 +123,11 @@ impl<'a> Contract<'a> {
             let builder = LLVMCreateBuilderInContext(e.context);
 
             for func in &contract.functions {
-                e.emit_func(func, builder);
+                let f = e.emit_func(func, builder);
+                e.functions.push(f);
             }
+
+            e.emit_dispatch(contract, builder);
 
             LLVMDisposeBuilder(builder);
         }
@@ -226,20 +232,149 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_func(&self, f: &resolver::FunctionDecl, builder: LLVMBuilderRef) {
+    fn emit_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
+        // create start function
+        let ret = unsafe { LLVMVoidType() };
+        let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
+        let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
+        let fname  = CString::new("__function_solabi").unwrap();
+        let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
+        let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
+        let fallback_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "fallback\0".as_ptr() as *const _) };
+        let switch_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "switch\0".as_ptr() as *const _) };
+        unsafe { LLVMPositionBuilderAtEnd(builder, entry); }
+        let arg = unsafe { LLVMGetParam(function, 0) };
+        let length = unsafe { LLVMBuildLoad(builder, arg, "length\0".as_ptr() as *const _) };
+
+        let not_fallback = unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntUGE,
+                    length, LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE),
+                    "not_fallback\0".as_ptr() as *const _) };
+
+        unsafe { LLVMBuildCondBr(builder, not_fallback, switch_bb, fallback_bb); }
+
+        unsafe { LLVMPositionBuilderAtEnd(builder, switch_bb); }
+
+        // step over length
+        let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+        let fid_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_one, 1 as _, "fid_ptr\0".as_ptr() as *const _) };
+        let id = unsafe { LLVMBuildLoad(builder, fid_ptr, "fid\0".as_ptr() as *const _) };
+        let nomatch_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "no_match\0".as_ptr() as *const _) };
+
+        // pointer/size for abi decoding
+        let mut index_two = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 2, LLVM_FALSE) };
+        let args_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_two, 1 as _, "args_ptr\0".as_ptr() as *const _) };
+        let args_len = unsafe { LLVMBuildSub(builder, 
+                                    length,
+                                    LLVMConstInt(LLVMInt32TypeInContext(self.context), 2, LLVM_FALSE),
+                                    "args_len\0".as_ptr() as *const _) };
+        let switch = unsafe {
+            LLVMBuildSwitch(builder, id, nomatch_bb, contract.functions.iter().filter(|x| x.name != None).count() as _)
+        };
+
+        unsafe { LLVMPositionBuilderAtEnd(builder, nomatch_bb); }
+        unsafe { LLVMBuildUnreachable(builder); }
+
+        for (i, f) in contract.functions.iter().enumerate() {
+            // ignore constructors and fallback
+            if f.name == None {
+                continue;
+            }
+            let mut sha3 = Keccak::new_sha3_256();
+            let mut res: [u8; 32] = [0; 32];
+
+            sha3.update(f.sig.as_bytes());
+            sha3.finalize(&mut res);
+
+            let bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "\0".as_ptr() as *const _) };
+            let fid = u32::from_le_bytes([ res[0], res[1], res[2], res[3] ]);
+
+            unsafe {
+                LLVMAddCase(switch,
+                    LLVMConstInt(LLVMIntTypeInContext(self.context, 32), fid as _, LLVM_FALSE),
+                    bb);
+            }
+         
+            unsafe { LLVMPositionBuilderAtEnd(builder, bb); }
+
+            let mut args = Vec::new();
+
+            // insert abi decode
+            self.emit_abi_decode(builder, &mut args, args_ptr, args_len, f);
+
+            unsafe {
+                LLVMBuildCall(builder, self.functions[i], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+
+                // insert abi decode
+                LLVMBuildRetVoid(builder);
+            }
+        }
+
+        // emit fallback code
+        unsafe { LLVMPositionBuilderAtEnd(builder, fallback_bb); }
+        match contract.fallback_function() {
+            Some(n) => {
+                let mut args = Vec::new();
+
+                unsafe {
+                    LLVMBuildCall(builder, self.functions[n], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                    LLVMBuildRetVoid(builder);
+                }
+            },
+            None => {
+                unsafe {
+                    LLVMBuildUnreachable(builder);
+                }
+            }
+        }
+    }
+
+    fn emit_abi_decode(&self, builder: LLVMBuilderRef, args: &mut Vec<LLVMValueRef>, data: LLVMValueRef, length: LLVMValueRef, spec: &resolver::FunctionDecl) {
+        let mut data = data;
+
+        for arg in &spec.params {
+            args.push(match arg {
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool) => {
+                    // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
+                    // which is unneeded (hopefully)
+                    // cast to 64 bit pointer
+                    let bool_ptr = unsafe {
+                        LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt64TypeInContext(self.context), 0), "\0".as_ptr() as *const _) };
+                    // get third 64 bit value
+                    let mut three = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 3, LLVM_FALSE) };
+                    let mut zero = unsafe { LLVMConstInt(LLVMInt64TypeInContext(self.context), 0, LLVM_FALSE) };
+                    let bool_ptr = unsafe { LLVMBuildGEP(builder, bool_ptr, &mut three, 1 as _, "bool_ptr\0".as_ptr() as *const _) };
+                    let bool_ = unsafe { LLVMBuildLoad(builder, bool_ptr, "bool\0".as_ptr() as *const _) };
+                    unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, bool_, zero, "iszero\0".as_ptr() as *const _) }
+                },
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(32)) |
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(32)) => {
+                    // get 7th 32 bit value
+                    let mut seven = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 7, LLVM_FALSE) };
+                    let int_ptr = unsafe { LLVMBuildGEP(builder, data, &mut seven, 1 as _, "int_ptr\0".as_ptr() as *const _) };
+                    let int = unsafe { LLVMBuildLoad(builder, int_ptr, "int\0".as_ptr() as *const _) };
+                    int
+                },
+                _ => panic!()
+            });
+
+            let mut eight = unsafe { LLVMConstInt(LLVMInt64TypeInContext(self.context), 8, LLVM_FALSE) };
+            data = unsafe { LLVMBuildGEP(builder, data, &mut eight, 1 as _, "data_next\0".as_ptr() as *const _) };
+        }
+    }
+
+    fn emit_func(&self, f: &resolver::FunctionDecl, builder: LLVMBuilderRef) -> LLVMValueRef {
         let mut args = vec!();
 
         for p in &f.params {
             args.push(p.LLVMType(self.ns, self.context));
         }
-
-        let fname = match f.name {
-            None => {
-                panic!("function with no name are not implemented yet".to_string());
-            },
-            Some(ref n) => {
-                CString::new(n.to_string()).unwrap()
-            }
+        
+        let fname = if f.constructor {
+            CString::new("__constructor").unwrap()
+        } else if let Some(ref name) = f.name {
+            CString::new(name.to_string()).unwrap()
+        } else {
+            CString::new("__fallback").unwrap()
         };
 
         let ret = match f.returns.len() {
@@ -254,7 +389,7 @@ impl<'a> Contract<'a> {
 
         let cfg = match f.cfg {
             Some(ref cfg) => cfg,
-            None => return
+            None => panic!()
         };
 
         // recurse through basic blocks
@@ -304,7 +439,7 @@ impl<'a> Contract<'a> {
         for v in &cfg.vars {
             if v.ty.stack_based() {
                 let name = CString::new(v.id.name.to_string()).unwrap();
-                
+
                 vars.push(Variable{
                     value_ref: unsafe {
                         LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
@@ -444,6 +579,8 @@ impl<'a> Contract<'a> {
                 }
             }
         }
+
+        function
     }
 }
 
@@ -456,7 +593,6 @@ impl<'a> Drop for Contract<'a> {
         }
     }
 }
-
 
 impl ast::ElementaryTypeName {
     #[allow(non_snake_case)]

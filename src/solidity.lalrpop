@@ -411,7 +411,6 @@ FunctionDefinition: Box<FunctionDefinition> = {
             body: Statement::BlockStatement(b),
         })
     },
-
     <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" <e:@R> => {
         let returns = match r {
             None => vec!(),
