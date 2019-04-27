@@ -68,7 +68,8 @@ pub struct Contract<'a> {
     context: LLVMContextRef,
     tm: LLVMTargetMachineRef,
     ns: &'a resolver::ContractNameSpace,
-    functions: Vec<LLVMValueRef>
+    functions: Vec<LLVMValueRef>,
+    swap_intrinsics: HashMap<u16, LLVMValueRef>,
 }
 
 impl<'a> Contract<'a> {
@@ -115,7 +116,18 @@ impl<'a> Contract<'a> {
             tm: target_machine(),
             ns: contract,
             functions: Vec::new(),
+            swap_intrinsics: HashMap::new(),
         };
+
+        for n in (8..=256).step_by(8) {
+            let ret = unsafe { LLVMIntTypeInContext(e.context, n) };
+            let mut args = vec![ unsafe { LLVMIntTypeInContext(e.context, n) }];
+            let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
+
+            e.swap_intrinsics.insert(n as  u16, unsafe {
+                LLVMAddFunction(e.module, format!("llvm.bswap.i{}\0", n).as_ptr() as *const _, ftype)
+            });
+        }
 
         unsafe {
             LLVMSetTarget(e.module, TRIPLE.as_ptr() as *const _);
@@ -127,7 +139,8 @@ impl<'a> Contract<'a> {
                 e.functions.push(f);
             }
 
-            e.emit_dispatch(contract, builder);
+            e.emit_constructor_dispatch(contract, builder);
+            e.emit_function_dispatch(contract, builder);
 
             LLVMDisposeBuilder(builder);
         }
@@ -232,7 +245,40 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
+    fn emit_constructor_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
+        // create start function
+        let ret = unsafe { LLVMVoidType() };
+        let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
+        let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
+        let fname = CString::new("__constructor_solabi").unwrap();
+        let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
+        let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
+        unsafe { LLVMPositionBuilderAtEnd(builder, entry); }
+
+        if let Some(n) = contract.constructor_function() {
+            let mut args = Vec::new();
+
+            let arg = unsafe { LLVMGetParam(function, 0) };
+            let length = unsafe { LLVMBuildLoad(builder, arg, "length\0".as_ptr() as *const _) };
+
+            // step over length
+            let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+            let args_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_one, 1 as _, "fid_ptr\0".as_ptr() as *const _) };
+
+            // insert abi decode
+            self.emit_abi_decode(builder, &mut args, args_ptr, length, &contract.functions[n]);
+
+            unsafe {
+                LLVMBuildCall(builder, self.functions[n], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+            }
+        }
+
+        unsafe {
+            LLVMBuildRetVoid(builder);
+        }
+    }
+
+    fn emit_function_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
         // create start function
         let ret = unsafe { LLVMVoidType() };
         let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
@@ -346,13 +392,53 @@ impl<'a> Contract<'a> {
                     let bool_ = unsafe { LLVMBuildLoad(builder, bool_ptr, "bool\0".as_ptr() as *const _) };
                     unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, bool_, zero, "iszero\0".as_ptr() as *const _) }
                 },
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(32)) |
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(32)) => {
-                    // get 7th 32 bit value
-                    let mut seven = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 7, LLVM_FALSE) };
-                    let int_ptr = unsafe { LLVMBuildGEP(builder, data, &mut seven, 1 as _, "int_ptr\0".as_ptr() as *const _) };
-                    let int = unsafe { LLVMBuildLoad(builder, int_ptr, "int\0".as_ptr() as *const _) };
-                    int
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) |
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => {
+                    // first cast to byte pointer for ease of casting
+                    let int8_ptr = unsafe {
+                        LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) };
+                    let int_type = unsafe { LLVMIntTypeInContext(self.context, *n as u32) };
+                    let mut index = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 32 - (*n as u64) / 8, LLVM_FALSE) };
+                    let mut int_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut index, 1 as _, "int_ptr\0".as_ptr() as *const _) };
+                    // we have the right offset; cast it back to type we want
+                    int_ptr = unsafe {
+                        LLVMBuildPointerCast(builder, int_ptr, LLVMPointerType(int_type, 0), "\0".as_ptr() as *const _) };
+                    let mut int = unsafe { LLVMBuildLoad(builder, int_ptr, "int\0".as_ptr() as *const _) };
+                    // now it needs to be swapped back..
+
+                    if *n == 8 {
+                        int
+                    } else {
+                        let val = if *n % 16 == 0 {
+                            unsafe { LLVMBuildCall(builder, self.swap_intrinsics[n], &mut int, 1 as _, "le2be\0".as_ptr() as *const _) }
+                        } else {
+                            // so here we have an uint with an odd number of bytes, like uint24. This is a terrible idea and why does solidity
+                            // even supporty this insanity? We Should totally warning that this is madness
+                            
+                            // llvm swap does not support this. So extend it one byte
+                            let big_size = *n + 8;
+                            let mut big = unsafe { LLVMBuildZExt(builder, int, LLVMIntTypeInContext(self.context, big_size as u32), "bigger\0".as_ptr() as *const _) };
+                            let eight = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 8, LLVM_FALSE) };
+                            big = unsafe { LLVMBuildShl(builder, big, eight, "bigger\0".as_ptr() as *const _) };
+                            big = unsafe { LLVMBuildCall(builder, self.swap_intrinsics[&big_size], &mut big, 1 as _, "le2be\0".as_ptr() as *const _) };
+                            unsafe { LLVMBuildTrunc(builder, big, int_type, "result\0".as_ptr() as *const _) }
+                        };
+
+                        if *n <= 64 {
+                            val
+                        } else {
+                            // store on the stack
+                            let stack = unsafe {
+                                LLVMBuildAlloca(builder, int_type, "stack\0".as_ptr() as *const _)
+                            };
+
+                            unsafe {
+                                LLVMBuildStore(builder, val, stack);
+                            }
+
+                            stack
+                        }
+                    }
                 },
                 _ => panic!()
             });
