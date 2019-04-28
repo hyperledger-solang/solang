@@ -392,6 +392,15 @@ impl<'a> Contract<'a> {
                     let bool_ = unsafe { LLVMBuildLoad(builder, bool_ptr, "bool\0".as_ptr() as *const _) };
                     unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, bool_, zero, "iszero\0".as_ptr() as *const _) }
                 },
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(8)) |
+                resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(8)) => {
+                    let mut int8_ptr = unsafe {
+                        LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    };
+                    let mut thirtyone = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
+                    int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
+                    unsafe { LLVMBuildLoad(builder, int8_ptr, "int8\0".as_ptr() as *const _) }
+                },
                 resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) |
                 resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => {
                     // first cast to byte pointer for ease of casting
