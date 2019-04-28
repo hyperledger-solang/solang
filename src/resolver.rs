@@ -341,7 +341,10 @@ fn var_decl(s: &ast::StateVariableDeclaration, ns: &mut ContractNameSpace, error
         ty,
     };
 
-    // FIXME: resolve expression
+    // FIXME: resolve init expression
+    // init expression can call functions and access other state variables
+
+    // FIXME: constant expressions
 
     let pos = ns.variables.len();
 
