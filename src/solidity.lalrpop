@@ -212,9 +212,9 @@ EnumDefinition: Box<EnumDefinition> = {
 }
 
 StateVariableDeclaration: Box<StateVariableDeclaration> = {
-    <t:ElementaryTypeName> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> ";" => {
+    <l:@L> <t:TypeName> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
         Box::new(StateVariableDeclaration{
-            typ: t, attrs: a, name: i, initializer: e
+            loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
         })
     }
 }

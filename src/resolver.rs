@@ -60,9 +60,16 @@ pub struct FunctionDecl {
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
+pub struct StateVariableDecl {
+    pub name: String,
+    pub ty: TypeName,
+    pub storage: usize,
+}
+
 pub enum Symbol {
     Enum(ast::Loc, usize),
     Function(Vec<(ast::Loc, usize)>),
+    Variable(ast::Loc, usize),
 }
 
 pub struct ContractNameSpace {
@@ -70,13 +77,13 @@ pub struct ContractNameSpace {
     pub enums: Vec<EnumDecl>,
     // structs/events
     pub functions: Vec<FunctionDecl>,
-    // state variables
+    pub variables: Vec<StateVariableDecl>,
     // constants
     symbols: HashMap<String, Symbol>,
 }
 
 impl ContractNameSpace {
-    fn add_symbol(&mut self, id: &ast::Identifier, symbol: Symbol, errors: &mut Vec<Output>) {
+    fn add_symbol(&mut self, id: &ast::Identifier, symbol: Symbol, errors: &mut Vec<Output>) -> bool {
         if let Some(prev) = self.symbols.get(&id.name) {
             match prev {
                 Symbol::Enum(e, _) => {
@@ -92,12 +99,18 @@ impl ContractNameSpace {
 
                     errors.push(Output::error_with_notes(id.loc, format!("{} is already defined as function", id.name.to_string()),
                             notes));
+                },
+                Symbol::Variable(e, _) => {
+                    errors.push(Output::error_with_note(id.loc, format!("{} is already defined as state variable", id.name.to_string()),
+                            e.clone(), "location of previous definition".to_string()));
                 }
             }
-            return
+            return false;
         }
 
         self.symbols.insert(id.name.to_string(), symbol);
+
+        true
     }
 
     pub fn resolve(&self, id: &ast::TypeName, errors: &mut Vec<Output>) -> Option<TypeName> {
@@ -116,6 +129,9 @@ impl ContractNameSpace {
                         errors.push(Output::error(s.loc, format!("`{}' is a function", s.name)));
                         None
                     }
+                    Some(Symbol::Variable(_, n)) => {
+                        Some(self.variables[*n].ty.clone())
+                    }
                 }
             }
         }
@@ -130,6 +146,10 @@ impl ContractNameSpace {
             Some(Symbol::Function(_)) => {
                 errors.push(Output::warning(id.loc, format!("declaration of `{}' shadows function", id.name)));
                 // FIXME: add location of functionS
+            },
+            Some(Symbol::Variable(_, _)) => {
+                errors.push(Output::warning(id.loc, format!("declaration of `{}' shadows state variable", id.name)));
+                // FIXME: add location of enum
             },
             None => {}
         }
@@ -192,8 +212,11 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
         name: def.name.name.to_string(),
         enums: Vec::new(),
         functions: Vec::new(),
+        variables: Vec::new(),
         symbols: HashMap::new(),
     };
+
+    let mut broken = false;
 
     // first resolve enums
     for parts in &def.parts {
@@ -202,22 +225,31 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
 
             ns.enums.push(enum_decl(e, errors));
 
-            ns.add_symbol(&e.name, Symbol::Enum(e.name.loc, pos), errors);
+            if !ns.add_symbol(&e.name, Symbol::Enum(e.name.loc, pos), errors) {
+                broken = true;
+            }
         }
     }
 
     // FIXME: next resolve structs/event
 
-    // FIXME: next resolve state variables
+    // resolve state variables
+    for parts in &def.parts {
+        if let ast::ContractPart::StateVariableDeclaration(ref s) = parts {
+            if !var_decl(s, &mut ns, errors) {
+                broken = true;
+            }
+        }
+    }
 
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {
         if let ast::ContractPart::FunctionDefinition(ref f) = parts {
-            func_decl(f, i, &mut ns, errors);
+            if !func_decl(f, i, &mut ns, errors) {
+                broken = true;
+            }
         }
     }
-
-    let mut all_done = true;
 
     // resolve function bodies
     for f in 0..ns.functions.len() {
@@ -225,12 +257,12 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
         if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
             match cfg::generate_cfg(ast_f, &ns.functions[f], &ns, errors) {
                 Ok(c) => ns.functions[f].cfg = Some(c),
-                Err(_) => all_done = false
+                Err(_) => broken = true
             }
         }
     }
 
-    if all_done {
+    if !broken {
         Some(ns)
     } else {
         None
@@ -295,30 +327,53 @@ fn enum_256values_is_uint8() {
     assert_eq!(r2.ty, ast::ElementaryTypeName::Uint(16));
 }
 
-fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, errors: &mut Vec<Output>) {
+fn var_decl(s: &ast::StateVariableDeclaration, ns: &mut ContractNameSpace, errors: &mut Vec<Output>) -> bool {
+    let ty = match ns.resolve(&s.ty, errors) {
+        Some(s) => s,
+        None => {
+            return false;
+        }
+    };
+
+    let sdecl = StateVariableDecl{
+        name: s.name.name.to_string(),
+        storage: ns.variables.len(),
+        ty,
+    };
+
+    // FIXME: resolve expression
+
+    let pos = ns.variables.len();
+
+    ns.variables.push(sdecl);
+
+    ns.add_symbol(&s.name, Symbol::Variable(s.loc, pos), errors)
+}
+
+fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, errors: &mut Vec<Output>) -> bool {
     let mut params = Vec::new();
     let mut returns = Vec::new();
-    let mut broken = false;
+    let mut success = true;
 
     if f.constructor && !f.returns.is_empty() {
         errors.push(Output::warning(f.loc, format!("constructor cannot have return values")));
-        return;
+        return false;
     } else if !f.constructor && f.name == None {
         if !f.returns.is_empty() {
             errors.push(Output::warning(f.loc, format!("fallback function cannot have return values")));
-            broken = true;
+            success = false;
         }
 
         if !f.params.is_empty() {
             errors.push(Output::warning(f.loc, format!("fallback function cannot have parameters")));
-            broken = true;
+            success = false;
         }
     }
 
     for p in &f.params {
         match ns.resolve(&p.typ, errors) {
             Some(s) => params.push(s),
-            None => { broken = true },
+            None => { success = true },
         }
     }
 
@@ -329,12 +384,12 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
 
         match ns.resolve(&r.typ, errors) {
             Some(s) => returns.push(s),
-            None => { broken = true },
+            None => { success = true },
         }
     }
 
-    if broken {
-        return;
+    if !success {
+        return false;
     }
 
     let name = match f.name {
@@ -359,11 +414,12 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
             let prev = &ns.functions[i];
             errors.push(Output::error_with_note(f.loc, "constructor already defined".to_string(),
                     prev.loc, "location of previous definition".to_string()));
-
-            return;
+            return false;
         }
 
         ns.functions.push(fdecl);
+
+        true
     } else if let Some(ref id) = f.name {
         if let Some(Symbol::Function(ref mut v)) = ns.symbols.get_mut(&id.name) {
             // check if signature already present
@@ -371,7 +427,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
                 if fdecl.sig == ns.functions[o.1].sig {
                     errors.push(Output::error_with_note(f.loc, "overloaded function with this signature already exist".to_string(),
                             o.0.clone(), "location of previous definition".to_string()));
-                    return;
+                    return false;
                 }
             }
 
@@ -380,25 +436,26 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
             ns.functions.push(fdecl);
 
             v.push((f.loc, pos));
-            return;
+            return true;
         }
 
         let pos = ns.functions.len();
 
         ns.functions.push(fdecl);
 
-        ns.add_symbol(id, Symbol::Function(vec!((id.loc, pos))), errors);
+        ns.add_symbol(id, Symbol::Function(vec!((id.loc, pos))), errors)
     } else {
         // fallback function
         if let Some(i) = ns.fallback_function() {
             let prev = &ns.functions[i];
             errors.push(Output::error_with_note(f.loc, "fallback function already defined".to_string(),
                     prev.loc, "location of previous definition".to_string()));
-
-            return;
+            return false;
         }
 
         ns.functions.push(fdecl);
+
+        true
     }
 }
 
@@ -429,6 +486,7 @@ fn signatures() {
         name: String::from("foo"),
         enums: Vec::new(),
         functions: Vec::new(),
+        variables: Vec::new(),
         symbols: HashMap::new(),
     };
 

@@ -157,7 +157,8 @@ pub enum VariableAttribute {
 
 #[derive(Debug,PartialEq)]
 pub struct StateVariableDeclaration {
-    pub typ: ElementaryTypeName,
+    pub loc: Loc,
+    pub ty: TypeName,
     pub attrs: Vec<VariableAttribute>,
     pub name: Identifier,
     pub initializer: Option<Expression>,
@@ -374,10 +375,10 @@ mod test {
                         })
                     ]})),
                     ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
-                        typ: ElementaryTypeName::String, attrs: vec![], name: Identifier{loc: Loc(260, 268), name: "__abba_$".to_string()}, initializer: None
+                        ty: TypeName::Elementary(ElementaryTypeName::String), attrs: vec![], name: Identifier{loc: Loc(260, 268), name: "__abba_$".to_string()}, loc: Loc(253, 268), initializer: None
                     })),
                     ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
-                        typ: ElementaryTypeName::Int(64), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, initializer: None
+                        ty: TypeName::Elementary(ElementaryTypeName::Int(64)), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, loc: Loc(290, 306), initializer: None
                     }))
             ]}))
         ], resolved: false};
