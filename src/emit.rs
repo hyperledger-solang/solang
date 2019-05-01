@@ -69,7 +69,8 @@ pub struct Contract<'a> {
     tm: LLVMTargetMachineRef,
     ns: &'a resolver::ContractNameSpace,
     functions: Vec<LLVMValueRef>,
-    swap_intrinsics: LLVMValueRef,
+    be32toleN: LLVMValueRef,
+    init_heap: LLVMValueRef,
 }
 
 impl<'a> Contract<'a> {
@@ -116,10 +117,11 @@ impl<'a> Contract<'a> {
             tm: target_machine(),
             ns: contract,
             functions: Vec::new(),
-            swap_intrinsics: null_mut(),
+            be32toleN: null_mut(),
+            init_heap: null_mut(),
         };
 
-
+        // intrinsics
         let ret = unsafe { LLVMVoidType() };
         let mut args = vec![
             unsafe { LLVMPointerType(LLVMInt32TypeInContext(e.context), 0) },
@@ -129,8 +131,14 @@ impl<'a> Contract<'a> {
 
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
 
-        e.swap_intrinsics = unsafe {
+        e.be32toleN = unsafe {
             LLVMAddFunction(e.module, "__be32toleN\0".as_ptr() as *const _, ftype)
+        };
+
+        let init_heap_ftype = unsafe { LLVMFunctionType(ret, null_mut(), 0, 0) };
+
+        e.init_heap = unsafe {
+            LLVMAddFunction(e.module, "__init_heap\0".as_ptr() as *const _, init_heap_ftype)
         };
 
         unsafe {
@@ -257,7 +265,11 @@ impl<'a> Contract<'a> {
         let fname = CString::new("__constructor_solabi").unwrap();
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
         let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
-        unsafe { LLVMPositionBuilderAtEnd(builder, entry); }
+
+        unsafe {
+            LLVMPositionBuilderAtEnd(builder, entry);
+            LLVMBuildCall(builder, self.init_heap, null_mut(), 0, "\0".as_ptr() as *const _);
+        }
 
         if let Some(n) = contract.constructor_function() {
             let mut args = Vec::new();
@@ -430,7 +442,7 @@ impl<'a> Contract<'a> {
                         }
                     ];
                     unsafe {
-                        LLVMBuildCall(builder, self.swap_intrinsics, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                        LLVMBuildCall(builder, self.be32toleN, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
                     }
 
                     if *n <= 64 {
