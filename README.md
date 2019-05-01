@@ -72,15 +72,15 @@ stage need work.
 ## How to build
 
 Required:
- - rust 1.33.0 or higher, rust 1.32.0 does not work.
- - llvm libraries with the WebAssembly backend enabled. `llc --version` should
-list the wasm32 target
+ - rust 1.33.0 or higher
+ - llvm libraries with the WebAssembly target enabled.
+
+To check if your llvm installation has the WebAassmebly backend, run
+ `llc --version`. It should list the wasm32 target.
 
 ### On Fedora 30, you need:
 
 `sudo dnf install cargo llvm-static zlib-devel clang glibc-devel.i686`
-
-llvm-sys.rs still needs [a patch](https://bitbucket.org/tari/llvm-sys.rs/pull-requests/18/fix-linking-llvm-on-fedora-30/diff).
 
 ### On Ubuntu 18.10, you need:
 
