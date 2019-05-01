@@ -1,5 +1,5 @@
 
-// clang --target=wasm32 -c -O3 -Wall intrincics.c
+// clang --target=wasm32 -c -O3 -Wall intrinsics.c
 
 #include <stdint.h>
 

@@ -71,13 +71,24 @@ stage need work.
 
 ## How to build
 
-On Ubuntu 18.10, you need:
+Required:
+ - rust 1.33.0 or higher, rust 1.32.0 does not work.
+ - llvm libraries with the WebAssembly backend enabled. `llc --version` should
+list the wasm32 target
 
-`sudo apt install curl llvm git build-essential zlib1g-dev`
+### On Fedora 30, you need:
 
-Earlier versions require your own build of llvm, see below.
+`sudo dnf install cargo llvm-static zlib-devel clang glibc-devel.i686`
 
-## llvm libraries
+llvm-sys.rs still needs [a patch](https://bitbucket.org/tari/llvm-sys.rs/pull-requests/18/fix-linking-llvm-on-fedora-30/diff).
+
+### On Ubuntu 18.10, you need:
+
+`sudo apt install curl llvm git zlib1g-dev`
+
+Then use [rustup](https://rustup.rs) to install the latest stable rust.
+
+## Build your llvm libraries
 
 You will need the llvm libs, compiled with the WebAssembly backend/target.
 The output of `llc --version` must include `wasm32 - WebAssembly 32-bit`. If
