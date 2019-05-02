@@ -12,6 +12,8 @@ use std::collections::HashMap;
 
 use llvm_sys::LLVMIntPredicate;
 use llvm_sys::core::*;
+use llvm_sys::ir_reader::*;
+use llvm_sys::linker::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
 use llvm_sys::target_machine::*;
@@ -75,8 +77,6 @@ pub struct Contract<'a> {
     tm: LLVMTargetMachineRef,
     ns: &'a resolver::ContractNameSpace,
     functions: Vec<Function>,
-    be32toleN: LLVMValueRef,
-    init_heap: LLVMValueRef,
 }
 
 impl<'a> Contract<'a> {
@@ -123,29 +123,13 @@ impl<'a> Contract<'a> {
             tm: target_machine(),
             ns: contract,
             functions: Vec::new(),
-            be32toleN: null_mut(),
-            init_heap: null_mut(),
         };
 
         // intrinsics
-        let ret = unsafe { LLVMVoidType() };
-        let mut args = vec![
-            unsafe { LLVMPointerType(LLVMInt32TypeInContext(e.context), 0) },
-            unsafe { LLVMPointerType(LLVMInt32TypeInContext(e.context), 0) },
-            unsafe { LLVMInt32TypeInContext(e.context) },
-        ];
-
-        let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
-
-        e.be32toleN = unsafe {
-            LLVMAddFunction(e.module, "__be32toleN\0".as_ptr() as *const _, ftype)
-        };
-
-        let init_heap_ftype = unsafe { LLVMFunctionType(ret, null_mut(), 0, 0) };
-
-        e.init_heap = unsafe {
-            LLVMAddFunction(e.module, "__init_heap\0".as_ptr() as *const _, init_heap_ftype)
-        };
+        let intr = load_intrinsics(e.context);
+        if unsafe { LLVMLinkModules2(e.module, intr) } == LLVM_TRUE {
+            panic!("failed to link in intrinsics");
+        }
 
         unsafe {
             LLVMSetTarget(e.module, TRIPLE.as_ptr() as *const _);
@@ -274,7 +258,8 @@ impl<'a> Contract<'a> {
 
         unsafe {
             LLVMPositionBuilderAtEnd(builder, entry);
-            LLVMBuildCall(builder, self.init_heap, null_mut(), 0, "\0".as_ptr() as *const _);
+            let init_heap = LLVMGetNamedFunction(self.module, "__init_heap\0".as_ptr() as *const i8);
+            LLVMBuildCall(builder, init_heap,  null_mut(), 0, "\0".as_ptr() as *const _);
         }
 
         if let Some(n) = contract.constructor_function() {
@@ -454,10 +439,12 @@ impl<'a> Contract<'a> {
 
                     let mut args = vec![
                         // from
-                        data,
+                        unsafe {
+                            LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                        },
                         // to
                         unsafe {
-                            LLVMBuildPointerCast(builder, store, LLVMPointerType(LLVMInt32TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                            LLVMBuildPointerCast(builder, store, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
                         },
                         // type_size
                         unsafe {
@@ -465,7 +452,9 @@ impl<'a> Contract<'a> {
                         }
                     ];
                     unsafe {
-                        LLVMBuildCall(builder, self.be32toleN, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                        let be32tolen = LLVMGetNamedFunction(self.module, "__be32toleN\0".as_ptr() as *const i8);
+
+                        LLVMBuildCall(builder, be32tolen, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
                     }
 
                     if *n <= 64 {
@@ -789,4 +778,22 @@ impl resolver::TypeName {
             resolver::TypeName::Enum(_) => false,
         }
     }
+}
+
+static INTRINSICS_IR: &'static [u8] = include_bytes!("../intrinsics/intrinsics.bc");
+
+fn load_intrinsics(context: LLVMContextRef) -> LLVMModuleRef {
+    let llmembuf = unsafe {
+        LLVMCreateMemoryBufferWithMemoryRange(INTRINSICS_IR.as_ptr() as *const i8, INTRINSICS_IR.len(), "intrinsics.c\0".as_ptr() as *const i8, LLVM_FALSE)
+    };
+    let mut module = null_mut();
+    let mut err_msg_ptr = null_mut();
+
+    if unsafe { LLVMParseIRInContext(context, llmembuf, &mut module, &mut err_msg_ptr) } == LLVM_TRUE {
+        let err_msg_cstr = unsafe { CStr::from_ptr(err_msg_ptr as *const _) };
+        let err_msg = str::from_utf8(err_msg_cstr.to_bytes()).unwrap();
+        panic!("failed to read intrinsics.bc: {}", err_msg);
+     }
+
+    module
 }

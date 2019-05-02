@@ -1,6 +1,4 @@
 
-use std::collections::HashMap;
-
 use parity_wasm;
 use parity_wasm::elements::{Internal, Module, ExportEntry, GlobalEntry, GlobalType, ValueType, InitExpr};
 use parity_wasm::builder;
@@ -17,13 +15,10 @@ pub const FLAG_MASK_VISIBILITY : u32 = 0x04;
 #[allow(dead_code)]
 pub const FLAG_MASK_BINDING : u32 = 0x03;
 
-static INTRINSICS_WASM: &'static [u8] = include_bytes!("../intrinsics/intrinsics.o");
-
 pub fn link(input: &[u8]) -> Vec<u8> {
 
     let mut module : Module = parity_wasm::deserialize_buffer(input).expect("cannot deserialize llvm wasm");
 
-    let mut intrinscis = read_intrinsics();
     let mut exports = Vec::new();
     let mut globals = Vec::new();
 
@@ -54,32 +49,6 @@ pub fn link(input: &[u8]) -> Vec<u8> {
                 },
                 _ => {}
             }
-        }
-    }
-
-    let mut func_index : u32 = 0;
-    let mut patch_functions = Vec::new();
-
-    for import in module.import_section().unwrap().entries() {
-        if let elements::External::Function(sig) = import.external() {
-            if let Some(body) = intrinscis.remove(import.field()) {
-                patch_functions.push((func_index, *sig, body));
-            }
-            func_index += 1;
-        }
-    }
-
-    {
-        let signatures = module.function_section_mut().unwrap().entries_mut();
-        for (index, sig, _body) in &patch_functions {
-            signatures.insert(*index as usize, elements::Func::new(*sig));
-        }
-    }
-
-    {
-        let bodies = module.code_section_mut().unwrap().bodies_mut();
-        for (index, _sig, body) in patch_functions {
-            bodies.insert(index as usize, body);
         }
     }
 
@@ -233,32 +202,4 @@ fn read_linking_section<R: std::io::Read>(input: &mut R) ->  Result<Vec<Symbol>,
     }
 
     Ok(symbol_table)
-}
-
-// Our intrinsics are written in C (obviously) and compiled to wasm. Then here we get all the function boddies
-// so that we can staticall link them. 
-fn read_intrinsics() -> HashMap<String, elements::FuncBody> {
-    let intrinsics_module : Module = parity_wasm::deserialize_buffer(INTRINSICS_WASM).expect("cannot deserialize intrinsics wasm");
-
-    let code_section = intrinsics_module.code_section().unwrap().bodies();
-
-    let mut intrinscis = HashMap::new();
-
-    for c in intrinsics_module.custom_sections().filter(|s| s.name() == "linking") {
-        let mut payload = c.payload();
-
-        for sym in read_linking_section(&mut payload).expect("cannot read linking section") {
-            if let Symbol::Function(SymbolFunction{ flags, index, name}) = sym {
-                if (flags & FLAG_UNDEFINED) != 0 {
-                    continue;
-                }
-
-                let body = code_section[index as usize].clone();
-
-                intrinscis.insert(name, body);
-            }
-        }
-    }
-
-    intrinscis
 }

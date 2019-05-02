@@ -1,4 +1,4 @@
-// clang --target=wasm32 -c -O3 -Wall intrinsics.c
+// clang --target=wasm32 -c -emit-llvm -O3 -fno-builtin -Wall intrinsics.c
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -7,15 +7,26 @@
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.
  */
-void __memcpy(void *_dest, void *_src, size_t length)
+void __memcpy8(void *_dest, void *_src, size_t length)
 {
 	uint64_t *dest = _dest;
 	uint64_t *src = _src;
 
 	do {
 		*dest++ = *src++;
-		length -= sizeof(uint64_t);
-	} while (length);
+	} while (--length);
+}
+
+/*
+ * Fast-ish clear, 8 bytes at a time.
+ */
+void __bzero8(void *_dest, size_t length)
+{
+	uint64_t *dest = _dest;
+
+	do
+		*dest++ = 0;
+	while (--length);
 }
 
 /*
@@ -123,7 +134,7 @@ void* __realloc(void *m, size_t size)
 		return m;
 	} else {
 		void *n = __malloc(size);
-		__memcpy(n, m, size);
+		__memcpy8(n, m, size / 8);
 		__free(m);
 		return n;
 	}
