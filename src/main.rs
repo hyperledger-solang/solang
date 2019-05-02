@@ -110,6 +110,10 @@ fn main() {
             output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
         }
 
+        if contracts.is_empty() {
+            continue;
+        }
+
         let mut json_contracts = HashMap::new();
 
         // emit phase

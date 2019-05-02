@@ -154,14 +154,14 @@ impl ContractNameSpace {
             ast::TypeName::Unresolved(s) => {
                 match self.symbols.get(&s.name) {
                     None => {
-                        errors.push(Output::error(s.loc, format!("`{}' is not declared", s.name)));
+                        errors.push(Output::decl_error(s.loc, format!("`{}' is not declared", s.name)));
                         None
                     },
                     Some(Symbol::Enum(_, n)) => {
                         Some(TypeName::Enum(*n))
                     }
                     Some(Symbol::Function(_)) => {
-                        errors.push(Output::error(s.loc, format!("`{}' is a function", s.name)));
+                        errors.push(Output::decl_error(s.loc, format!("`{}' is a function", s.name)));
                         None
                     }
                     Some(Symbol::Variable(_, n)) => {

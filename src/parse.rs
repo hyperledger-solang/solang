@@ -15,18 +15,18 @@ pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
 
     if let Err(e) = s {
         errors.push(match e {
-            ParseError::InvalidToken{location} => Output::error(ast::Loc(location, location), "invalid token".to_string()),
+            ParseError::InvalidToken{location} => Output::parser_error(ast::Loc(location, location), "invalid token".to_string()),
             ParseError::UnrecognizedToken{token, expected} => {
                 match token {
-                    None => Output::error(ast::Loc(0, 0), format!("unrecognised token, expected `{}'", expected.join(","))),
-                    Some(t) => Output::error(ast::Loc(t.0, t.2), format!("unrecognised token `{}'", t.1)),
+                    None => Output::parser_error(ast::Loc(0, 0), format!("unrecognised token, expected `{}'", expected.join(","))),
+                    Some(t) => Output::parser_error(ast::Loc(t.0, t.2), format!("unrecognised token `{}'", t.1)),
                 }
             },
             ParseError::User{error} => {
-                Output::error(ast::Loc(0, 0), error.to_string())
+                Output::parser_error(ast::Loc(0, 0), error.to_string())
             },
             ParseError::ExtraToken{token} => {
-                Output::error(ast::Loc(token.0, token.2), format!("extra token `{}' encountered", token.0))
+                Output::parser_error(ast::Loc(token.0, token.2), format!("extra token `{}' encountered", token.0))
             }
         });
 

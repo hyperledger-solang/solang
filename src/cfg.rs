@@ -703,7 +703,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len))) => {
             if from_len > to_len {
-                errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
                 return Err(());
             }
 
@@ -718,7 +718,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(to_len))) => {
             if from_len > to_len {
-                errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
                 return Err(());
             }
 
@@ -731,7 +731,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len))) => {
             if from_len > to_len {
-                errors.push(Output::error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
                 return Err(());
             }
 
@@ -746,7 +746,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
             match &expr {
                 Expression::StringLiteral(from_str) => {
                     if from_str.len() > *to_len as usize {
-                        errors.push(Output::error(*loc, format!("string of {} bytes is too long to fit into {}", from_str.len(), to.to_string(ns))));
+                        errors.push(Output::type_error(*loc, format!("string of {} bytes is too long to fit into {}", from_str.len(), to.to_string(ns))));
                         return Err(())
                     }
                 },
@@ -756,7 +756,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
             Ok(expr)
         },
         _ => {
-             errors.push(Output::error(*loc, format!("implicit conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
+             errors.push(Output::type_error(*loc, format!("implicit conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
             Err(())
         }
     }
@@ -823,7 +823,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                     Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
                 },
                 None => {
-                    errors.push(Output::error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
+                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
                     Err(())
                 }
             }
@@ -1011,7 +1011,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                     (v.pos, v.ty.clone())
                 },
                 None => {
-                    errors.push(Output::error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
+                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
                     return Err(());
                 }
             };
@@ -1097,7 +1097,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                     (v.pos, v.ty.clone())
                 },
                 None => {
-                    errors.push(Output::error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
+                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
                     return Err(());
                 }
             };
@@ -1125,7 +1125,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                     (v.pos, v.ty.clone())
                 },
                 None => {
-                    errors.push(Output::error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
+                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
                     return Err(());
                 }
             };

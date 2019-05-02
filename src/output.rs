@@ -10,6 +10,16 @@ pub enum Level {
 }
 
 #[derive(Debug,PartialEq)]
+pub enum ErrorType {
+    None,
+    ParserError,
+    SyntaxError,
+    DeclarationError,
+    TypeError,
+    Warning
+}
+
+#[derive(Debug,PartialEq)]
 pub struct Note {
     pub pos: ast::Loc,
     pub message: String
@@ -18,6 +28,7 @@ pub struct Note {
 #[derive(Debug,PartialEq)]
 pub struct Output {
     pub level: Level,
+    pub ty: ErrorType,
     pub pos: ast::Loc,
     pub message: String,
     pub notes: Vec<Note>
@@ -35,23 +46,35 @@ impl Level {
 
 impl Output {
     pub fn info(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Info, pos, message, notes: Vec::new()}
+        Output{level: Level::Info, ty: ErrorType::None, pos, message, notes: Vec::new()}
+    }
+
+    pub fn parser_error(pos: ast::Loc, message: String) -> Self {
+        Output{level: Level::Error, ty: ErrorType::ParserError, pos, message, notes: Vec::new()}
     }
 
     pub fn error(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Error, pos, message, notes: Vec::new()}
+        Output{level: Level::Error, ty: ErrorType::SyntaxError, pos, message, notes: Vec::new()}
+    }
+
+    pub fn decl_error(pos: ast::Loc, message: String) -> Self {
+        Output{level: Level::Error, ty: ErrorType::DeclarationError, pos, message, notes: Vec::new()}
+    }
+
+    pub fn type_error(pos: ast::Loc, message: String) -> Self {
+        Output{level: Level::Error, ty: ErrorType::TypeError, pos, message, notes: Vec::new()}
     }
 
     pub fn warning(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Warning, pos, message, notes: Vec::new()}
+        Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes: Vec::new()}
     }
 
     pub fn error_with_note(pos: ast::Loc, message: String, note_pos: ast::Loc, note: String) -> Self {
-        Output{level: Level::Error, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
+        Output{level: Level::Error, ty: ErrorType::None, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
     }
 
     pub fn error_with_notes(pos: ast::Loc, message: String, notes: Vec<Note>) -> Self {
-        Output{level: Level::Error, pos, message, notes}
+        Output{level: Level::Error, ty: ErrorType::None, pos, message, notes}
     }
 }
 
@@ -116,7 +139,7 @@ pub fn message_as_json(filename: &str, src: &str, messages: &Vec<Output>) -> Vec
 
         json.push(OutputJson{
             sourceLocation: LocJson{ file: filename.to_string(), start: msg.pos.0, end: msg.pos.1 },
-            ty: "TypeError".to_owned(), // FIXME we should record this
+            ty: format!("{:?}", msg.ty),
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
