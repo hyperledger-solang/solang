@@ -76,6 +76,20 @@ impl Output {
     pub fn error_with_notes(pos: ast::Loc, message: String, notes: Vec<Note>) -> Self {
         Output{level: Level::Error, ty: ErrorType::None, pos, message, notes}
     }
+
+    fn formated_message(&self, filename: &str, pos: &FilePostitions) -> String {
+        let loc = pos.to_string(self.pos);
+
+        let mut s = format!("{}:{}: {}: {}", filename, loc, self.level.to_string(), self.message);
+
+        for note in &self.notes {
+            let loc = pos.to_string(note.pos);
+
+            s.push_str(&format!("\n\t{}:{}: {}: {}", filename, loc, "note", note.message));
+        }
+
+        s
+    }
 }
 
 pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>, verbose: bool) {
@@ -86,15 +100,7 @@ pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>, verbose
             continue;
         }
 
-        let loc = pos.to_string(msg.pos);
-
-        eprintln!("{}:{}: {}: {}", filename, loc, msg.level.to_string(), msg.message);
-
-        for note in &msg.notes {
-            let loc = pos.to_string(note.pos);
-
-            eprintln!("{}:{}: {}: {}", filename, loc, "note", note.message);
-        }
+        eprintln!("{}", msg.formated_message(filename, &pos));
     }
 }
 
@@ -127,23 +133,13 @@ pub fn message_as_json(filename: &str, src: &str, messages: &Vec<Output>) -> Vec
             continue;
         }
 
-        let loc = pos.to_string(msg.pos);
-
-        let mut formatted = format!("{}:{}: {}: {}", filename, loc, msg.level.to_string(), msg.message);
-
-        for note in &msg.notes {
-            let loc = pos.to_string(note.pos);
-
-            formatted.push_str(&format!("{}:{}: {}: {}", filename, loc, "note", note.message));
-        }
-
         json.push(OutputJson{
             sourceLocation: LocJson{ file: filename.to_string(), start: msg.pos.0, end: msg.pos.1 },
             ty: format!("{:?}", msg.ty),
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: formatted
+            formattedMessage: msg.formated_message(filename, &pos)
         });
     }
 
