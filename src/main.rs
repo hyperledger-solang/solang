@@ -66,7 +66,7 @@ fn main() {
             .help("emit llvm IR rather than wasm")
             .long("emit-llvm"))
         .arg(Arg::with_name("JSON")
-            .help("mimic solidity json output on stdout")
+            .help("mimic solidity output json output on stdout")
             .long("standard-json"))
         .arg(Arg::with_name("NOLINK")
             .help("Skip linking, emit wasm object file")
@@ -128,7 +128,6 @@ fn main() {
                         wasm: hex::encode_upper(contract.wasm().unwrap())
                     }
                 });
-                continue;
             } else if matches.is_present("LLVM") {
                 contract.dump_llvm();
             } else {

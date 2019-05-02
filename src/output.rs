@@ -56,8 +56,6 @@ impl Output {
 }
 
 pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>, verbose: bool) {
-    let mut line_starts = Vec::new();
-
     let pos = FilePostitions::new(src);
 
     for msg in messages {
@@ -65,14 +63,14 @@ pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>, verbose
             continue;
         }
 
-        let mut loc = pos::convert(msg.pos.0);
+        let loc = pos.to_string(msg.pos);
 
-        eprintln!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, msg.level.to_string(), msg.message);
+        eprintln!("{}:{}: {}: {}", filename, loc, msg.level.to_string(), msg.message);
 
         for note in &msg.notes {
-            let mut loc = pos::convert(note.pos.0);
+            let loc = pos.to_string(note.pos);
 
-            eprintln!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, "note", note.message);
+            eprintln!("{}:{}: {}: {}", filename, loc, "note", note.message);
         }
     }
 }
@@ -106,14 +104,14 @@ pub fn message_as_json(filename: &str, src: &str, messages: &Vec<Output>) -> Vec
             continue;
         }
 
-        let mut loc = pos.convert(msg.pos.0);
+        let loc = pos.to_string(msg.pos);
 
-        let mut formatted = format!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, msg.level.to_string(), msg.message);
+        let mut formatted = format!("{}:{}: {}: {}", filename, loc, msg.level.to_string(), msg.message);
 
         for note in &msg.notes {
-            let mut loc = pos.convert(note.pos.0);
+            let loc = pos.to_string(note.pos);
 
-            formatted.push_str(&format!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, "note", note.message));
+            formatted.push_str(&format!("{}:{}: {}: {}", filename, loc, "note", note.message));
         }
 
         json.push(OutputJson{
@@ -142,6 +140,19 @@ impl FilePostitions {
         }
 
         FilePostitions(line_starts)
+    }
+
+    fn to_string(&self, loc: ast::Loc) -> String {
+        let (from_line, from_column) = self.convert(loc.0);
+        let (to_line, to_column) = self.convert(loc.1);
+
+        if from_line == to_line && from_column == to_column {
+            format!("{}:{}", from_line, from_column)
+        } else if from_line == to_line {
+            format!("{}:{}-{}", from_line, from_column, to_column)
+        } else {
+            format!("{}:{}-{}:{}", from_line, from_column, to_line, to_column)
+        }
     }
 
     fn convert(&self, loc: usize) -> (usize, usize) {
