@@ -119,34 +119,39 @@ fn main() {
         // emit phase
         for contract in &contracts {
             if matches.is_present("CFG") {
-                println!("{}\n", contract.to_string());
+                println!("{}", contract.to_string());
+                continue;
             }
 
             let abi = contract.generate_abi();
 
             let contract = emit::Contract::new(contract, &filename);
+
+            if matches.is_present("LLVM") {
+                contract.dump_llvm();
+                continue;
+            }
+
+            let mut obj = match contract.wasm() {
+                Ok(o) => o,
+                Err(s) => {
+                    println!("error: {}", s);
+                    std::process::exit(1);
+                }
+            };
+
+            if !matches.is_present("NOLINK") {
+                obj = link::link(&obj);
+            }
+
             if matches.is_present("JSON") {
                 json_contracts.insert(contract.name.to_owned(), JsonContract{
                     abi,
                     ewasm: EwasmContract{
-                        wasm: hex::encode_upper(contract.wasm().unwrap())
+                        wasm: hex::encode_upper(obj)
                     }
                 });
-            } else if matches.is_present("LLVM") {
-                contract.dump_llvm();
             } else {
-                let mut obj = match contract.wasm() {
-                    Ok(o) => o,
-                    Err(s) => {
-                        println!("error: {}", s);
-                        std::process::exit(1);
-                    }
-                };
-
-                if !matches.is_present("NOLINK") {
-                    obj = link::link(&obj);
-                }
-
                 let wasm_filename = contract.name.to_string() + ".wasm";
 
                 let mut file = File::create(wasm_filename).unwrap();
