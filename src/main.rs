@@ -26,6 +26,25 @@ mod cfg;
 
 use std::fs::File;
 use std::io::prelude::*;
+use serde::Serialize;
+use std::collections::HashMap;
+
+#[derive(Serialize)]
+pub struct EwasmContract {
+    pub wasm: String
+}
+
+#[derive(Serialize)]
+pub struct JsonContract {
+    abi: Vec<resolver::ABI>,
+    ewasm: EwasmContract
+}
+
+#[derive(Serialize)]
+pub struct JsonResult {
+    pub errors: Vec<output::OutputJson>,
+    pub contracts: HashMap<String, HashMap<String, JsonContract>>,
+}
 
 fn main() {
     let matches = App::new("solang")
@@ -46,12 +65,19 @@ fn main() {
         .arg(Arg::with_name("LLVM")
             .help("emit llvm IR rather than wasm")
             .long("emit-llvm"))
+        .arg(Arg::with_name("JSON")
+            .help("mimic solidity json output on stdout")
+            .long("standard-json"))
         .arg(Arg::with_name("NOLINK")
             .help("Skip linking, emit wasm object file")
             .long("no-link"))
         .get_matches();
 
     let mut fatal = false;
+    let mut json = JsonResult{
+        errors: Vec::new(),
+        contracts: HashMap::new(),
+    };
 
     for filename in matches.values_of("INPUT").unwrap() {
         let mut f = File::open(&filename).expect("file not found");
@@ -63,8 +89,13 @@ fn main() {
         let mut past = match parse::parse(&contents) {
             Ok(s) => s,
             Err(errors) => {
-                output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
-                fatal = true;
+                if matches.is_present("JSON") {
+                    let mut out = output::message_as_json(filename, &contents, &errors);
+                    json.errors.append(&mut out);
+                } else {
+                    output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
+                    fatal = true;
+                }
                 continue;
             }
         };
@@ -72,7 +103,14 @@ fn main() {
         // resolve phase
         let (contracts, errors) = resolver::resolver(past);
 
-        output::print_messages(filename, &contents, &errors, matches.is_present("VERBOSE"));
+        if matches.is_present("JSON") {
+            let mut out = output::message_as_json(filename, &contents, &errors);
+            json.errors.append(&mut out);
+        } else {
+            output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
+        }
+
+        let mut json_contracts = HashMap::new();
 
         // emit phase
         for contract in &contracts {
@@ -83,7 +121,15 @@ fn main() {
             let abi = contract.generate_abi();
 
             let contract = emit::Contract::new(contract, &filename);
-            if matches.is_present("LLVM") {
+            if matches.is_present("JSON") {
+                json_contracts.insert(contract.name.to_owned(), JsonContract{
+                    abi,
+                    ewasm: EwasmContract{
+                        wasm: hex::encode_upper(contract.wasm().unwrap())
+                    }
+                });
+                continue;
+            } else if matches.is_present("LLVM") {
                 contract.dump_llvm();
             } else {
                 let mut obj = match contract.wasm() {
@@ -110,9 +156,13 @@ fn main() {
                 file.write_all(serde_json::to_string(&abi).unwrap().as_bytes()).unwrap();
             }
         }
+
+        json.contracts.insert(filename.to_owned(), json_contracts);
     }
 
-    if fatal {
+    if matches.is_present("JSON") {
+        println!("{}", serde_json::to_string(&json).unwrap());
+    } else if fatal {
         std::process::exit(1);
     }
 }
