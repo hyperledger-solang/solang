@@ -282,7 +282,7 @@ impl<'a> Contract<'a> {
             let args_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_one, 1 as _, "fid_ptr\0".as_ptr() as *const _) };
 
             // insert abi decode
-            self.emit_abi_decode(builder, &mut args, args_ptr, length, &contract.functions[n]);
+            self.emit_abi_decode(builder, function, &mut args, args_ptr, length, &contract.functions[n]);
 
             unsafe {
                 LLVMBuildCall(builder, self.functions[n], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
@@ -361,7 +361,7 @@ impl<'a> Contract<'a> {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.emit_abi_decode(builder, &mut args, args_ptr, args_len, f);
+            self.emit_abi_decode(builder, function, &mut args, args_ptr, args_len, f);
 
             unsafe {
                 LLVMBuildCall(builder, self.functions[i], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
@@ -390,8 +390,21 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_abi_decode(&self, builder: LLVMBuilderRef, args: &mut Vec<LLVMValueRef>, data: LLVMValueRef, length: LLVMValueRef, spec: &resolver::FunctionDecl) {
+    fn emit_abi_decode(&self, builder: LLVMBuilderRef, function: LLVMValueRef, args: &mut Vec<LLVMValueRef>, data: LLVMValueRef, length: LLVMValueRef, spec: &resolver::FunctionDecl) {
         let mut data = data;
+
+        let decode_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "abi_decode\0".as_ptr() as *const _) };
+        let wrong_length_bb  = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "wrong_abi_length\0".as_ptr() as *const _) };
+
+        let is_ok = unsafe {
+            let correct_length = LLVMConstInt(LLVMInt32TypeInContext(self.context), (32 * spec.params.len()) as _, LLVM_FALSE);
+            LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, length, correct_length, "abilength\0".as_ptr() as *const _)
+        };
+
+        unsafe {
+            LLVMBuildCondBr(builder, is_ok, decode_bb, wrong_length_bb);
+            LLVMPositionBuilderAtEnd(builder, decode_bb);
+        }
 
         for arg in &spec.params {
             let ty = match &arg.ty {
@@ -424,7 +437,6 @@ impl<'a> Contract<'a> {
                 },
                 ast::ElementaryTypeName::Uint(n) |
                 ast::ElementaryTypeName::Int(n) => {
-                    // FIXME: can be much shorter for uint8 without allocation
                     // no need to allocate space for each uint64
                     // allocate enough for type
                     let int_type = unsafe { LLVMIntTypeInContext(self.context, *n as u32) };
@@ -463,6 +475,16 @@ impl<'a> Contract<'a> {
 
             let mut eight = unsafe { LLVMConstInt(LLVMInt64TypeInContext(self.context), 8, LLVM_FALSE) };
             data = unsafe { LLVMBuildGEP(builder, data, &mut eight, 1 as _, "data_next\0".as_ptr() as *const _) };
+        }
+
+        unsafe {
+            // FIXME: generate a call to revert/abort with some human readable error or error code
+            LLVMPositionBuilderAtEnd(builder, wrong_length_bb);
+            LLVMBuildUnreachable(builder);
+        }
+
+        unsafe {
+            LLVMPositionBuilderAtEnd(builder, decode_bb);
         }
     }
 
