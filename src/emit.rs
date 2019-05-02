@@ -394,8 +394,13 @@ impl<'a> Contract<'a> {
         let mut data = data;
 
         for arg in &spec.params {
-            args.push(match &arg.ty {
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool) => {
+            let ty = match &arg.ty {
+                resolver::TypeName::Elementary(e) => e,
+                resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty
+            };
+
+            args.push(match ty {
+                ast::ElementaryTypeName::Bool => {
                     // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
                     // which is unneeded (hopefully)
                     // cast to 64 bit pointer
@@ -408,8 +413,8 @@ impl<'a> Contract<'a> {
                     let bool_ = unsafe { LLVMBuildLoad(builder, bool_ptr, "bool\0".as_ptr() as *const _) };
                     unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, bool_, zero, "iszero\0".as_ptr() as *const _) }
                 },
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(8)) |
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(8)) => {
+                ast::ElementaryTypeName::Uint(8) |
+                ast::ElementaryTypeName::Int(8) => {
                     let mut int8_ptr = unsafe {
                         LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
                     };
@@ -417,8 +422,8 @@ impl<'a> Contract<'a> {
                     int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
                     unsafe { LLVMBuildLoad(builder, int8_ptr, "int8\0".as_ptr() as *const _) }
                 },
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) |
-                resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => {
+                ast::ElementaryTypeName::Uint(n) |
+                ast::ElementaryTypeName::Int(n) => {
                     // FIXME: can be much shorter for uint8 without allocation
                     // no need to allocate space for each uint64
                     // allocate enough for type
