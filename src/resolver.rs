@@ -174,17 +174,17 @@ impl ContractNameSpace {
 
     pub fn check_shadowing(&self, id: &ast::Identifier, errors: &mut Vec<Output>) {
         match self.symbols.get(&id.name) {
-            Some(Symbol::Enum(_, _)) => {
-                errors.push(Output::warning(id.loc, format!("declaration of `{}' shadows enum", id.name)));
-                // FIXME: add location of enum
+            Some(Symbol::Enum(loc, _)) => {
+                errors.push(Output::warning_with_note(id.loc, format!("declaration of `{}' shadows enum", id.name),
+                        loc.clone(), format!("previous declaration of enum")));
             },
-            Some(Symbol::Function(_)) => {
-                errors.push(Output::warning(id.loc, format!("declaration of `{}' shadows function", id.name)));
-                // FIXME: add location of functionS
+            Some(Symbol::Function(v)) => {
+                let notes = v.iter().map(|(pos, _)| Note{pos: pos.clone(), message: "previous declaration of function".to_owned()}).collect();
+                errors.push(Output::warning_with_notes(id.loc, format!("declaration of `{}' shadows function", id.name), notes));
             },
-            Some(Symbol::Variable(_, _)) => {
-                errors.push(Output::warning(id.loc, format!("declaration of `{}' shadows state variable", id.name)));
-                // FIXME: add location of enum
+            Some(Symbol::Variable(loc, _)) => {
+                errors.push(Output::warning_with_note(id.loc, format!("declaration of `{}' shadows state variable", id.name),
+                        loc.clone(), format!("previous declaration of state variable")));
             },
             None => {}
         }

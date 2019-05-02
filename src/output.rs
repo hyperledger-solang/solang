@@ -69,6 +69,14 @@ impl Output {
         Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes: Vec::new()}
     }
 
+    pub fn warning_with_note(pos: ast::Loc, message: String, note_pos: ast::Loc, note: String) -> Self {
+        Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
+    }
+
+    pub fn warning_with_notes(pos: ast::Loc, message: String, notes: Vec<Note>) -> Self {
+        Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes}
+    }
+
     pub fn error_with_note(pos: ast::Loc, message: String, note_pos: ast::Loc, note: String) -> Self {
         Output{level: Level::Error, ty: ErrorType::None, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
     }
