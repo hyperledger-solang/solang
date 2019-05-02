@@ -216,6 +216,8 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
         symbols: HashMap::new(),
     };
 
+    errors.push(Output::info(def.loc, format!("found contract {}", def.name.name)));
+
     let mut broken = false;
 
     // first resolve enums

@@ -33,6 +33,10 @@ impl Level {
 }
 
 impl Output {
+    pub fn info(pos: ast::Loc, message: String) -> Self {
+        Output{level: Level::Info, pos, message, notes: Vec::new()}
+    }
+
     pub fn error(pos: ast::Loc, message: String) -> Self {
         Output{level: Level::Error, pos, message, notes: Vec::new()}
     }
@@ -50,7 +54,7 @@ impl Output {
     }
 }
 
-pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>) {
+pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>, verbose: bool) {
     let mut line_starts = Vec::new();
 
     for (ind, c) in src.char_indices() {
@@ -76,6 +80,10 @@ pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>) {
     };
 
     for msg in messages {
+        if !verbose && msg.level == Level::Info {
+            continue;
+        }
+
         let mut loc = convert_loc(msg.pos.0);
 
         eprintln!("{}:{}:{}: {}: {}", filename, loc.0, loc.1, msg.level.to_string(), msg.message);

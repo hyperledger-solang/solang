@@ -122,7 +122,8 @@ pub enum ContractType {
 
 #[derive(Debug,PartialEq)]
 pub struct ContractDefinition {
-    pub typ: ContractType,
+    pub loc: Loc,
+    pub ty: ContractType,
     pub name: Identifier,
     pub parts: Vec<ContractPart>,
 }
@@ -359,7 +360,7 @@ mod test {
 
         let a = SourceUnit{name: "".to_string(), parts: vec![
             SourceUnitPart::ContractDefinition(
-                Box::new(ContractDefinition{typ: ContractType::Contract, name: Identifier{loc: Loc(9, 12), name: "foo".to_string()}, parts: vec![
+                Box::new(ContractDefinition{loc: Loc(0, 325), ty: ContractType::Contract, name: Identifier{loc: Loc(9, 12), name: "foo".to_string()}, parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition{name: Identifier{loc: Loc(42, 54), name: "Jurisdiction".to_string()}, fields: vec![
                         Box::new(VariableDeclaration{
                             typ: TypeName::Elementary(ElementaryTypeName::Bool), storage: StorageLocation::Default, name: Identifier{loc: Loc(86, 92), name: "exists".to_string()}

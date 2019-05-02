@@ -38,6 +38,10 @@ fn main() {
         .arg(Arg::with_name("CFG")
             .help("emit control flow graph")
             .long("emit-cfg"))
+        .arg(Arg::with_name("VERBOSE")
+            .help("show verbose messages")
+            .short("v")
+            .long("verbose"))
         .arg(Arg::with_name("LLVM")
             .help("emit llvm IR rather than wasm")
             .long("emit-llvm"))
@@ -58,7 +62,7 @@ fn main() {
         let mut past = match parse::parse(&contents) {
             Ok(s) => s,
             Err(errors) => {
-                output::print_messages(filename, &contents, &errors);
+                output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
                 fatal = true;
                 continue;
             }
@@ -67,7 +71,7 @@ fn main() {
         // resolve phase
         let (contracts, errors) = resolver::resolver(past);
 
-        output::print_messages(filename, &contents, &errors);
+        output::print_messages(filename, &contents, &errors, matches.is_present("VERBOSE"));
 
         // emit phase
         for contract in &contracts {
