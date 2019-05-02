@@ -62,13 +62,19 @@ struct Variable {
     stack: bool,
 }
 
+#[derive(Clone)]
+struct Function {
+    value_ref: LLVMValueRef,
+    wasm_return: bool,
+}
+
 pub struct Contract<'a> {
     pub name: String,
     pub module: LLVMModuleRef,
     context: LLVMContextRef,
     tm: LLVMTargetMachineRef,
     ns: &'a resolver::ContractNameSpace,
-    functions: Vec<LLVMValueRef>,
+    functions: Vec<Function>,
     be32toleN: LLVMValueRef,
     init_heap: LLVMValueRef,
 }
@@ -285,7 +291,7 @@ impl<'a> Contract<'a> {
             self.emit_abi_decode(builder, function, &mut args, args_ptr, length, &contract.functions[n]);
 
             unsafe {
-                LLVMBuildCall(builder, self.functions[n], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                LLVMBuildCall(builder, self.functions[n].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
             }
         }
 
@@ -364,7 +370,7 @@ impl<'a> Contract<'a> {
             self.emit_abi_decode(builder, function, &mut args, args_ptr, args_len, f);
 
             unsafe {
-                LLVMBuildCall(builder, self.functions[i], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                LLVMBuildCall(builder, self.functions[i].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
 
                 // insert abi decode
                 LLVMBuildRetVoid(builder);
@@ -378,7 +384,7 @@ impl<'a> Contract<'a> {
                 let mut args = Vec::new();
 
                 unsafe {
-                    LLVMBuildCall(builder, self.functions[n], args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                    LLVMBuildCall(builder, self.functions[n].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
                     LLVMBuildRetVoid(builder);
                 }
             },
@@ -488,12 +494,29 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_func(&self, f: &resolver::FunctionDecl, builder: LLVMBuilderRef) -> LLVMValueRef {
+    fn emit_func(&self, f: &resolver::FunctionDecl, builder: LLVMBuilderRef) -> Function {
         let mut args = vec!();
+        let mut wasm_return = false;
 
         for p in &f.params {
-            args.push(p.ty.LLVMType(self.ns, self.context));
+            let mut ty = p.ty.LLVMType(self.ns, self.context);
+            if p.ty.stack_based() {
+                ty = unsafe { LLVMPointerType(ty, 0) };
+            }
+            args.push(ty);
         }
+
+        let ret = if f.returns.len() == 1 && !f.returns[0].ty.stack_based() {
+            wasm_return = true;
+            f.returns[0].ty.LLVMType(self.ns, self.context)
+        } else {
+            // add return
+            for p in &f.returns {
+                let ty = unsafe { LLVMPointerType(p.ty.LLVMType(self.ns, self.context), 0) };
+                args.push(ty);
+            }
+            unsafe { LLVMVoidType() }
+        };
 
         let fname = if f.constructor {
             CString::new("sol::__constructor").unwrap()
@@ -501,12 +524,6 @@ impl<'a> Contract<'a> {
             CString::new(format!("sol::{}", name)).unwrap()
         } else {
             CString::new("sol::__fallback").unwrap()
-        };
-
-        let ret = match f.returns.len() {
-            0 => unsafe { LLVMVoidType() },
-            1 => f.returns[0].ty.LLVMType(self.ns, self.context),
-            _ => panic!("only functions with one return value implemented".to_string())
         };
 
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
@@ -614,10 +631,23 @@ impl<'a> Contract<'a> {
                             LLVMBuildRetVoid(builder);
                         }
                     },
-                    cfg::Instr::Return{ value } if value.len() == 1 => {
+                    cfg::Instr::Return{ value } if wasm_return => {
                         let retval = self.expression(builder, &value[0], &w.vars);
                         unsafe {
                             LLVMBuildRet(builder, retval);
+                        }
+                    },
+                    cfg::Instr::Return{ value } => {
+                        let mut returns_offset = f.params.len();
+                        for (i, val) in value.iter().enumerate() {
+                            let arg = unsafe { LLVMGetParam(function, (returns_offset + i) as _) };
+                            let retval = self.expression(builder, val, &w.vars);
+                            unsafe {
+                                LLVMBuildStore(builder, retval, arg);
+                            }
+                        }
+                        unsafe {
+                            LLVMBuildRetVoid(builder);
                         }
                     },
                     cfg::Instr::Set{ res, expr } => {
@@ -699,14 +729,11 @@ impl<'a> Contract<'a> {
                             LLVMBuildCondBr(builder, cond, bb_true, bb_false);
                         }
                     },
-                    _ => {
-                        unreachable!();
-                    }
                 }
             }
         }
 
-        function
+        Function{value_ref: function, wasm_return}
     }
 }
 
