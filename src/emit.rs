@@ -262,7 +262,7 @@ impl<'a> Contract<'a> {
         let ret = unsafe { LLVMVoidType() };
         let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
-        let fname = CString::new("__constructor_solabi").unwrap();
+        let fname = CString::new("constructor").unwrap();
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
         let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
 
@@ -299,7 +299,7 @@ impl<'a> Contract<'a> {
         let ret = unsafe { LLVMVoidType() };
         let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
-        let fname  = CString::new("__function_solabi").unwrap();
+        let fname  = CString::new("function_call").unwrap();
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
         let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
         let fallback_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "fallback\0".as_ptr() as *const _) };
@@ -496,11 +496,11 @@ impl<'a> Contract<'a> {
         }
 
         let fname = if f.constructor {
-            CString::new("__constructor").unwrap()
+            CString::new("sol::__constructor").unwrap()
         } else if let Some(ref name) = f.name {
-            CString::new(name.to_string()).unwrap()
+            CString::new(format!("sol::{}", name)).unwrap()
         } else {
-            CString::new("__fallback").unwrap()
+            CString::new("sol::__fallback").unwrap()
         };
 
         let ret = match f.returns.len() {
