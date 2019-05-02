@@ -205,7 +205,7 @@ pub fn generate_cfg(ast_f: &ast::FunctionDefinition, resolve_f: &resolver::Funct
     // first add function parameters
     for (i, p) in ast_f.params.iter().enumerate() {
         if let Some(ref name) = p.name {
-            if let Some(pos) = vartab.add(name, resolve_f.params[i].clone(), errors) {
+            if let Some(pos) = vartab.add(name, resolve_f.params[i].ty.clone(), errors) {
                 ns.check_shadowing(name, errors);
 
                 cfg.add(&mut vartab, Instr::FuncArg{
@@ -323,7 +323,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             for (i, r) in returns.iter().enumerate() {
                 let (e, ty) = expression(r, cfg, ns, vartab, errors)?;
 
-                exprs.push(implicit_cast(&r.loc(), e, &ty, &f.returns[i], ns, errors)?);
+                exprs.push(implicit_cast(&r.loc(), e, &ty, &f.returns[i].ty, ns, errors)?);
             }
 
             cfg.add(vartab, Instr::Return{

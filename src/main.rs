@@ -11,6 +11,7 @@ extern crate lazy_static;
 extern crate hex;
 extern crate unescape;
 extern crate tiny_keccak;
+extern crate serde;
 
 use clap::{App, Arg};
 mod ast;
@@ -79,6 +80,8 @@ fn main() {
                 println!("{}\n", contract.to_string());
             }
 
+            let abi = contract.generate_abi();
+
             let contract = emit::Contract::new(contract, &filename);
             if matches.is_present("LLVM") {
                 contract.dump_llvm();
@@ -95,10 +98,16 @@ fn main() {
                     obj = link::link(&obj);
                 }
 
-                let filename = contract.name.to_string() + ".wasm";
+                let wasm_filename = contract.name.to_string() + ".wasm";
 
-                let mut file = File::create(filename).unwrap();
+                let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&obj).unwrap();
+
+
+                let abi_filename = contract.name.to_string() + ".abi";
+
+                file = File::create(abi_filename).unwrap();
+                file.write_all(serde_json::to_string(&abi).unwrap().as_bytes()).unwrap();
             }
         }
     }

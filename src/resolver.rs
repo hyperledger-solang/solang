@@ -2,6 +2,24 @@ use ast;
 use cfg;
 use output::{Output,Note};
 use std::collections::HashMap;
+use serde::Serialize;
+
+
+#[derive(Serialize)]
+pub struct ABIParam {
+    pub name: String,
+    #[serde(rename="type")]
+    pub ty: String,
+}
+
+#[derive(Serialize)]
+pub struct ABI {
+    pub name: String,
+    #[serde(rename="type")]
+    pub ty: String,
+    pub inputs: Vec<ABIParam>,
+    pub outputs: Vec<ABIParam>
+}
 
 #[derive(PartialEq,Clone)]
 pub enum TypeName {
@@ -49,14 +67,31 @@ pub struct EnumDecl {
     pub values: HashMap<String, (ast::Loc, usize)>,
 }
 
+pub struct Parameter {
+    pub name: String,
+    pub ty: TypeName,
+}
+
+impl Parameter {
+    fn to_abi(&self, ns: &ContractNameSpace) -> ABIParam {
+        ABIParam{
+            name: self.name.to_string(),
+            ty: match &self.ty {
+                TypeName::Elementary(e) => e.to_string(),
+                TypeName::Enum(ref i) => ns.enums[*i].ty.to_string()
+            }
+        }
+    }
+}
+
 pub struct FunctionDecl {
     pub loc: ast::Loc,
     pub constructor: bool,
     pub name: Option<String>,
     pub sig: String,
     pub ast_index: usize,
-    pub params: Vec<TypeName>,
-    pub returns: Vec<TypeName>,
+    pub params: Vec<Parameter>,
+    pub returns: Vec<Parameter>,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
@@ -171,6 +206,30 @@ impl ContractNameSpace {
             }
         }
         return None;
+    }
+
+    pub fn generate_abi(&self) -> Vec<ABI> {
+        let mut abis = Vec::new();
+
+        for f in &self.functions {
+            let (ty, name) = if f.constructor {
+                ("constructor".to_string(), "".to_string())
+            } else {
+                match &f.name {
+                    Some(n) => ("function".to_string(), n.to_string()),
+                    None => ("fallback".to_string(), "".to_string()),
+                }
+            };
+
+            abis.push(ABI{
+                name,
+                ty,
+                inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
+                outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
+            })
+        }
+
+        abis
     }
 
     pub fn to_string(&self) -> String {
@@ -377,8 +436,11 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
 
     for p in &f.params {
         match ns.resolve(&p.typ, errors) {
-            Some(s) => params.push(s),
-            None => { success = true },
+            Some(s) => params.push(Parameter{
+                name: p.name.as_ref().map_or("".to_string(), |id| id.name.to_string()),
+                ty: s
+            }),
+            None => { success = false },
         }
     }
 
@@ -388,8 +450,11 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
         }
 
         match ns.resolve(&r.typ, errors) {
-            Some(s) => returns.push(s),
-            None => { success = true },
+            Some(s) => returns.push(Parameter{
+                name: r.name.as_ref().map_or("".to_string(), |id| id.name.to_string()),
+                ty: s
+            }),
+            None => { success = false },
         }
     }
 
@@ -464,7 +529,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
     }
 }
 
-pub fn external_signature(name: &Option<String>, params: &Vec<TypeName>, ns: &ContractNameSpace) -> String {
+pub fn external_signature(name: &Option<String>, params: &Vec<Parameter>, ns: &ContractNameSpace) -> String {
     let mut sig = match name { Some(ref n) => n.to_string(), None => "".to_string() };
 
     sig.push('(');
@@ -474,7 +539,7 @@ pub fn external_signature(name: &Option<String>, params: &Vec<TypeName>, ns: &Co
             sig.push(',');
         }
 
-        sig.push_str(&match p {
+        sig.push_str(&match &p.ty {
             TypeName::Elementary(e) => e.to_string(),
             TypeName::Enum(i) => ns.enums[*i].ty.to_string()
         });
@@ -496,7 +561,9 @@ fn signatures() {
     };
 
     assert_eq!(external_signature(&Some("foo".to_string()), &vec!(
-        TypeName::Elementary(ast::ElementaryTypeName::Uint(8)),
-        TypeName::Elementary(ast::ElementaryTypeName::Address)), &ns),
+        Parameter{name: "".to_string(), ty: TypeName::Elementary(ast::ElementaryTypeName::Uint(8))},
+        Parameter{name: "".to_string(), ty: TypeName::Elementary(ast::ElementaryTypeName::Address)},
+        ),
+        &ns),
         "foo(uint8,address)");
 }

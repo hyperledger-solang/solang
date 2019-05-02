@@ -394,7 +394,7 @@ impl<'a> Contract<'a> {
         let mut data = data;
 
         for arg in &spec.params {
-            args.push(match arg {
+            args.push(match &arg.ty {
                 resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool) => {
                     // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
                     // which is unneeded (hopefully)
@@ -465,7 +465,7 @@ impl<'a> Contract<'a> {
         let mut args = vec!();
 
         for p in &f.params {
-            args.push(p.LLVMType(self.ns, self.context));
+            args.push(p.ty.LLVMType(self.ns, self.context));
         }
 
         let fname = if f.constructor {
@@ -478,7 +478,7 @@ impl<'a> Contract<'a> {
 
         let ret = match f.returns.len() {
             0 => unsafe { LLVMVoidType() },
-            1 => f.returns[0].LLVMType(self.ns, self.context),
+            1 => f.returns[0].ty.LLVMType(self.ns, self.context),
             _ => panic!("only functions with one return value implemented".to_string())
         };
 
