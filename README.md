@@ -80,7 +80,7 @@ To check if your llvm installation has the WebAassmebly backend, run
 
 ### On Fedora 30, you need:
 
-`sudo dnf install cargo llvm-static zlib-devel clang glibc-devel.i686`
+`sudo dnf install cargo llvm-static llvm-devel zlib-devel clang glibc-devel.i686`
 
 ### On Ubuntu 18.10, you need:
 
