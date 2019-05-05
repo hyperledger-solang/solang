@@ -354,11 +354,77 @@ impl<'a> Contract<'a> {
             // insert abi decode
             self.emit_abi_decode(builder, function, &mut args, args_ptr, args_len, f);
 
-            unsafe {
-                LLVMBuildCall(builder, self.functions[i].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+            let ret = unsafe {
+                LLVMBuildCall(builder, self.functions[i].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _)
+            };
+
+            if f.returns.is_empty() {
+                // return ABI of length 0
+
+                // malloc 4 bytes
+                let mut four = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) };
+                let mut args = [ four ];
+                let malloc = unsafe {
+                    LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
+                };
+                let dest = unsafe {
+                    LLVMBuildCall(builder, malloc, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                };
+
+                // write length
+                let dest = unsafe {
+                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt32TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                };
+
+                unsafe {
+                    LLVMBuildStore(builder,
+                        LLVMConstInt(LLVMInt32TypeInContext(self.context), 0, LLVM_FALSE),
+                        dest
+                    );
+                }
+
+                unsafe {
+                    LLVMBuildRet(builder, dest);
+                }
+            } else if self.functions[i].wasm_return {
+                // malloc 36 bytes
+                let mut c36 = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 36, LLVM_FALSE) };
+                let mut args = [ c36 ];
+                let malloc = unsafe {
+                    LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
+                };
+                let dest = unsafe {
+                    LLVMBuildCall(builder, malloc, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                };
+
+                // write length
+                let dest = unsafe {
+                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt32TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                };
+
+                unsafe {
+                    LLVMBuildStore(builder,
+                        LLVMConstInt(LLVMInt32TypeInContext(self.context), 32, LLVM_FALSE),
+                        dest
+                    );
+                }
+
+                let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+                let abi_ptr = unsafe { LLVMBuildGEP(builder, dest, &mut index_one, 1 as _, "abi_ptr\0".as_ptr() as *const _) };
 
                 // insert abi decode
-                LLVMBuildRetVoid(builder);
+                let ty = match &f.returns[0].ty {
+                    resolver::TypeName::Elementary(e) => e,
+                    resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty
+                };
+
+                self.emit_abi_encode_single_val(builder, &ty, abi_ptr, ret);
+
+                unsafe {
+                    LLVMBuildRet(builder, dest);
+                }
+            } else {
+                // abi encode all the arguments
             }
         }
 
@@ -378,6 +444,139 @@ impl<'a> Contract<'a> {
                     LLVMBuildUnreachable(builder);
                 }
             }
+        }
+    }
+
+    fn emit_abi_encode_single_val(&self, builder: LLVMBuilderRef,  ty: &ast::ElementaryTypeName, dest: LLVMValueRef, val: LLVMValueRef) {
+        match ty {
+            ast::ElementaryTypeName::Bool => {
+                let bzero8 = unsafe {
+                    LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
+                };
+                let mut args = [
+                    unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) }
+                ];
+                unsafe {
+                    LLVMBuildCall(builder, bzero8, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                };
+
+                let zero = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
+                let one = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 1, LLVM_FALSE) };
+                let val = unsafe {
+                    LLVMBuildSelect(builder, val, one, zero, "bool\0".as_ptr() as *const i8)
+                };
+
+                let mut int8_ptr = unsafe {
+                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                };
+                let mut thirtyone = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
+                int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
+                unsafe {
+                    LLVMBuildStore(builder, val, int8_ptr);
+                }
+            },
+            ast::ElementaryTypeName::Int(8) |
+            ast::ElementaryTypeName::Uint(8) => {
+                let func = if let ast::ElementaryTypeName::Int(8) = ty {
+                    let zero = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
+                    let negative = unsafe {
+                        LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntSLT, val, zero, "neg\0".as_ptr() as *const _)
+                    };
+
+                    unsafe {
+                        LLVMBuildSelect(builder, negative,
+                            LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8),
+                            LLVMGetNamedFunction(self.module, "__bset8\0".as_ptr() as *const i8),
+                            "clearfunc\0".as_ptr() as *const _)
+                    }
+                } else {
+                    unsafe {
+                        LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
+                    }
+                };
+
+                let mut args = [
+                    unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) }
+                ];
+                let dest = unsafe {
+                    LLVMBuildCall(builder, func, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                };
+
+                let mut int8_ptr = unsafe {
+                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                };
+                let mut thirtyone = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
+                int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
+                unsafe {
+                    LLVMBuildStore(builder, val, int8_ptr);
+                }
+            },
+            ast::ElementaryTypeName::Uint(n) |
+            ast::ElementaryTypeName::Int(n) => {
+                if *n < 256 {
+                    let func = if let ast::ElementaryTypeName::Int(_) = ty {
+                        let zero = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
+                        let negative = unsafe {
+                            LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntSLT, val, zero, "neg\0".as_ptr() as *const _)
+                        };
+
+                        unsafe {
+                            LLVMBuildSelect(builder, negative,
+                                LLVMGetNamedFunction(self.module, "__bset8\0".as_ptr() as *const i8),
+                                LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8),
+                                "clearfunc\0".as_ptr() as *const _)
+                        }
+                    } else {
+                        unsafe {
+                            LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
+                        }
+                    };
+
+                    let mut args = [
+                        unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                        unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) }
+                    ];
+
+                    unsafe {
+                        LLVMBuildCall(builder, func, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                    };
+                }
+                // no need to allocate space for each uint64
+                // allocate enough for type
+                let int_type = unsafe { LLVMIntTypeInContext(self.context, *n as u32) };
+                let type_size = unsafe { LLVMSizeOf(int_type) };
+
+                let store = unsafe {
+                    LLVMBuildAlloca(builder, int_type, "stack\0".as_ptr() as *const _)
+                };
+
+                unsafe {
+                    LLVMBuildStore(builder, val, store);
+                }
+
+                let mut args = vec![
+                    // from
+                    unsafe {
+                        LLVMBuildPointerCast(builder, store, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    },
+                    // to
+                    unsafe {
+                        LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    },
+                    // type_size
+                    unsafe {
+                        LLVMBuildTrunc(builder, type_size, LLVMInt32TypeInContext(self.context), "size\0".as_ptr() as *const _)
+                    }
+                ];
+                unsafe {
+                    let le_ntobe32 = LLVMGetNamedFunction(self.module, "__leNtobe32\0".as_ptr() as *const i8);
+
+                    LLVMBuildCall(builder, le_ntobe32, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                }
+            },
+            _ => unimplemented!()
         }
     }
 

@@ -65,7 +65,7 @@ pub fn link(input: &[u8]) -> Vec<u8> {
         linked = linked.with_global(e);
     }
 
-    linked.push_memory(builder::MemoryBuilder::new().with_min(1).build());
+    linked.push_memory(builder::MemoryBuilder::new().with_min(2).build());
 
     parity_wasm::serialize(linked.build()).expect("cannot serialize linked wasm")
 }

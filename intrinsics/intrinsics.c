@@ -30,6 +30,18 @@ void __bzero8(void *_dest, size_t length)
 }
 
 /*
+ * Fast-ish set, 8 bytes at a time.
+ */
+void __bset8(void *_dest, size_t length)
+{
+	int64_t *dest = _dest;
+
+	do
+		*dest++ = -1;
+	while (--length);
+}
+
+/*
   There are many tradeoffs in heaps. I think for Solidity, we want:
    - small code size to reduce code length
    - not many malloc objects
