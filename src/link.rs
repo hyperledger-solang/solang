@@ -67,6 +67,9 @@ pub fn link(input: &[u8]) -> Vec<u8> {
 
     linked.push_memory(builder::MemoryBuilder::new().with_min(2).build());
 
+    // FIXME: export our memory so that it's easy to reference in the tests. Shouldn't really be needed.
+    linked.push_export(builder::ExportBuilder::new().field("memory").internal().memory(0).build());
+
     parity_wasm::serialize(linked.build()).expect("cannot serialize linked wasm")
 }
 

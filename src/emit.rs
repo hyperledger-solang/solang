@@ -17,7 +17,7 @@ use llvm_sys::linker::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
 use llvm_sys::target_machine::*;
-use tiny_keccak::Keccak;
+use tiny_keccak::keccak256;
 
 const TRIPLE: &'static [u8] = b"wasm32-unknown-unknown-wasm\0";
 
@@ -287,10 +287,10 @@ impl<'a> Contract<'a> {
 
     fn emit_function_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
         // create start function
-        let ret = unsafe { LLVMVoidType() };
-        let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
+        let ret = unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) };
+        let mut args = vec![ ret ];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
-        let fname  = CString::new("function_call").unwrap();
+        let fname  = CString::new("function").unwrap();
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
         let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
         let fallback_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "fallback\0".as_ptr() as *const _) };
@@ -318,7 +318,7 @@ impl<'a> Contract<'a> {
         let args_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_two, 1 as _, "args_ptr\0".as_ptr() as *const _) };
         let args_len = unsafe { LLVMBuildSub(builder,
                                     length,
-                                    LLVMConstInt(LLVMInt32TypeInContext(self.context), 2, LLVM_FALSE),
+                                    LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE),
                                     "args_len\0".as_ptr() as *const _) };
         let switch = unsafe {
             LLVMBuildSwitch(builder, id, nomatch_bb, contract.functions.iter().filter(|x| x.name != None).count() as _)
@@ -332,11 +332,8 @@ impl<'a> Contract<'a> {
             if f.name == None {
                 continue;
             }
-            let mut sha3 = Keccak::new_sha3_256();
-            let mut res: [u8; 32] = [0; 32];
 
-            sha3.update(f.sig.as_bytes());
-            sha3.finalize(&mut res);
+            let mut res = keccak256(f.sig.as_bytes());
 
             let bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "\0".as_ptr() as *const _) };
             let fid = u32::from_le_bytes([ res[0], res[1], res[2], res[3] ]);

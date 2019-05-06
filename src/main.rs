@@ -12,6 +12,8 @@ extern crate hex;
 extern crate unescape;
 extern crate tiny_keccak;
 extern crate serde;
+extern crate ethabi;
+extern crate ethereum_types;
 
 use clap::{App, Arg};
 mod ast;
