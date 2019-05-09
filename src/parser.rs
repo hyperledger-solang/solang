@@ -83,6 +83,13 @@ fn strip_comments(s: &str) -> String {
     n
 }
 
+pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
+    match o {
+        None => None,
+        Some(x) => Some(Box::new(x))
+    }
+}
+
 #[test]
 fn strip_comments_test() {
     assert_eq!(strip_comments(&("foo //Zabc\nbar".to_string())),

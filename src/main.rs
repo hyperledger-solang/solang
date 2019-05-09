@@ -23,7 +23,7 @@ mod emit;
 mod link;
 mod test;
 mod output;
-mod parse;
+mod parser;
 mod cfg;
 
 use std::fs::File;
@@ -88,7 +88,7 @@ fn main() {
         f.read_to_string(&mut contents)
             .expect("something went wrong reading the file");
 
-        let mut past = match parse::parse(&contents) {
+        let mut past = match parser::parse(&contents) {
             Ok(s) => s,
             Err(errors) => {
                 if matches.is_present("JSON") {

@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use parse;
+    use parser;
     use resolver;
     use emit;
     use link;
@@ -9,7 +9,7 @@ mod tests {
     use std::mem;
 
     fn build_solidity(src: &'static str) -> (ModuleRef, String) {
-        let s = parse::parse(src).expect("parse should succeed");
+        let s = parser::parse(src).expect("parse should succeed");
         
         // resolve
         let (contracts, _errors) = resolver::resolver(s);
