@@ -7,7 +7,7 @@ use parser::box_option;
 grammar;
 
 pub SourceUnit: SourceUnit = {
-    <u:SourceUnitPart+> => SourceUnit{name: "".to_string(), parts: u}
+    SourceUnitPart+ => SourceUnit(<>)
 }
 
 SourceUnitPart: SourceUnitPart = {
@@ -189,7 +189,7 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <t:TypeName>  <i:"indexed"?> <n:Identifier?> => EventParameter{
+    <t:TypeName> <i:"indexed"?> <n:Identifier?> => EventParameter{
         typ: t, indexed: match i { Some(_) => true, _ => false }, name:n
     }
 }
@@ -269,7 +269,7 @@ Precedence11: Expression = {
 
 Precedence10: Expression = {
     <l:Precedence10> <a:@L> "<" <b:@R> <r:Precedence9> => Expression::Less(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence10> <a:@L> ">"  <b:@R> <r:Precedence9> => Expression::More(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">" <b:@R> <r:Precedence9> => Expression::More(Loc(a, b), Box::new(l), Box::new(r)),
     <l:Precedence10> <a:@L> "<=" <b:@R> <r:Precedence9> => Expression::LessEqual(Loc(a, b), Box::new(l), Box::new(r)),
     <l:Precedence10> <a:@L> ">=" <b:@R> <r:Precedence9> => Expression::MoreEqual(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence9,

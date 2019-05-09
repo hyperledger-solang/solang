@@ -13,10 +13,9 @@ pub struct Identifier {
 }
 
 #[derive(Debug,PartialEq)]
-pub struct SourceUnit {
-    pub name: String,
-    pub parts: Vec<SourceUnitPart>,
-}
+pub struct SourceUnit(
+    pub Vec<SourceUnitPart>
+);
 
 #[derive(Debug,PartialEq)]
 pub enum SourceUnitPart {
@@ -357,7 +356,7 @@ mod test {
                 }")
                 .unwrap();
 
-        let a = SourceUnit{name: "".to_string(), parts: vec![
+        let a = SourceUnit(vec![
             SourceUnitPart::ContractDefinition(
                 Box::new(ContractDefinition{loc: Loc(0, 325), ty: ContractType::Contract, name: Identifier{loc: Loc(9, 12), name: "foo".to_string()}, parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition{name: Identifier{loc: Loc(42, 54), name: "Jurisdiction".to_string()}, fields: vec![
@@ -381,7 +380,7 @@ mod test {
                         ty: TypeName::Elementary(ElementaryTypeName::Int(64)), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, loc: Loc(290, 306), initializer: None
                     }))
             ]}))
-        ]};
+        ]);
 
         assert_eq!(e, a);
     }

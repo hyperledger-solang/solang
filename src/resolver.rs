@@ -255,7 +255,7 @@ pub fn resolver(s: ast::SourceUnit) -> (Vec<Contract>, Vec<Output>) {
     let mut namespace = Vec::new();
     let mut errors = Vec::new();
 
-    for part in s.parts {
+    for part in s.0 {
         if let ast::SourceUnitPart::ContractDefinition(def) = part {
             if let Some(c) = resolve_contract(def, &mut errors) {
                 namespace.push(c)
