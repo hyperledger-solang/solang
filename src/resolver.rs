@@ -411,16 +411,22 @@ fn var_decl(s: &ast::ContractVariableDefinition, ns: &mut Contract, errors: &mut
         }
     }
 
+    if is_constant && s.initializer == None {
+        errors.push(Output::decl_error(s.loc.clone(), format!("missing initializer for constant")));
+        return false;
+    }
+
     let storage = if !is_constant  {
+        let storage = ns.top_of_contract_storage;
         ns.top_of_contract_storage += 1;
-        Some(ns.top_of_contract_storage)
+        Some(storage)
     } else {
         None
     };
 
     let sdecl = ContractVariable{
         name: s.name.name.to_string(),
-        storage: storage,
+        storage,
         ty
     };
 
