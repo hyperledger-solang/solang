@@ -3,6 +3,20 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+
+/*
+ * The external interface
+ */
+
+/*
+ * Retrieve contract storage for this account. If nothing is stored at the key,
+ * set the memory at dest to 0. If the storage is shorter, pad the remaining bytes
+ * with 0.
+ */
+extern void get_contract_storage32(uint32_t key, void *dest, int32_t length);
+extern void set_contract_storage32(uint32_t key, void *src, int32_t length);
+
+
 /*
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.

@@ -765,7 +765,7 @@ impl<'a> Contract<'a> {
         let mut vars = Vec::new();
 
         for v in &cfg.vars {
-            if v.ty.stack_based() {
+            if v.storage != None || v.ty.stack_based() {
                 let name = CString::new(v.id.name.to_string()).unwrap();
 
                 vars.push(Variable{
@@ -914,6 +914,56 @@ impl<'a> Contract<'a> {
                             LLVMBuildCondBr(builder, cond, bb_true, bb_false);
                         }
                     },
+                    cfg::Instr::GetStorage{ local, storage } => {
+                        let get_storage = unsafe {
+                            LLVMGetNamedFunction(self.module, "get_storage32\0".as_ptr() as *const i8)
+                        };
+                        let dest = w.vars[*local].value_ref;
+                        // calculate type
+                        let nil = unsafe {
+                            LLVMConstNull(LLVMTypeOf(dest))
+                        };
+                        let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+                        let off1 = unsafe { LLVMBuildGEP(builder, nil, &mut index_one, 1 as _, "offset 1\0".as_ptr() as *const _) };
+
+                        let mut args = vec![
+                            // key
+                            unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), *storage as _, LLVM_FALSE) },
+                            // dest
+                            unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                            // length
+                            unsafe { LLVMBuildPtrToInt(builder, off1, LLVMInt32TypeInContext(self.context), "\0".as_ptr() as *const i8) }
+                        ];
+
+                        unsafe {
+                            LLVMBuildCall(builder, get_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _); 
+                        }
+                    },
+                    cfg::Instr::SetStorage{ local, storage } => {
+                        let set_storage = unsafe {
+                            LLVMGetNamedFunction(self.module, "set_storage32\0".as_ptr() as *const i8)
+                        };
+                        let dest = w.vars[*local].value_ref;
+                        // calculate type
+                        let nil = unsafe {
+                            LLVMConstNull(LLVMTypeOf(dest))
+                        };
+                        let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+                        let off1 = unsafe { LLVMBuildGEP(builder, nil, &mut index_one, 1 as _, "offset 1\0".as_ptr() as *const _) };
+
+                        let mut args = vec![
+                            // key
+                            unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), *storage as _, LLVM_FALSE) },
+                            // dest
+                            unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                            // length
+                            unsafe { LLVMBuildPtrToInt(builder, off1, LLVMInt32TypeInContext(self.context), "\0".as_ptr() as *const i8) }
+                        ];
+
+                        unsafe {
+                            LLVMBuildCall(builder, set_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _); 
+                        }
+                    }
                 }
             }
         }

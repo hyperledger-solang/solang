@@ -45,6 +45,8 @@ pub enum Expression {
 
 pub enum Instr {
     FuncArg{ res: usize, arg: usize },
+    GetStorage{ local: usize, storage: usize },
+    SetStorage{ local: usize, storage: usize },
     Set{ res: usize, expr: Expression },
     Return{ value: Vec<Expression> },
     Branch{ bb: usize },
@@ -152,6 +154,8 @@ impl ControlFlowGraph {
             Instr::Branch{ bb } => format!("branch bb{}", bb),
             Instr::BranchCond{ cond, true_, false_ } => format!("branchcond {}, bb{}, bb{}", self.expr_to_string(ns, cond), true_, false_),
             Instr::FuncArg{ res, arg } => format!("%{} = funcarg({})", self.vars[*res].id.name, arg),
+            Instr::SetStorage{ local, storage } => format!("setstorage %{} = %{})", *storage, self.vars[*local].id.name),
+            Instr::GetStorage{ local, storage } => format!("getstorage %{} = %{})", *storage, self.vars[*local].id.name),
         }
     }
 
@@ -199,7 +203,7 @@ pub fn generate_cfg(ast_f: &ast::FunctionDefinition, resolve_f: &resolver::Funct
 
     cfg.new_basic_block("entry".to_string());
 
-    let mut vartab = Vartable::new();
+    let mut vartab = Vartable::new(ns);
     let mut loops = LoopScopes::new();
   
     // first add function parameters
@@ -254,10 +258,28 @@ fn check_return(f: &ast::FunctionDefinition, cfg: &mut ControlFlowGraph, errors:
     }
 }
 
+fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
+    if let Some(offset) = var.storage {
+        cfg.add(vartab, Instr::GetStorage{
+            local: var.pos,
+            storage: offset
+        });
+    }
+}
+
+fn set_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
+    if let Some(offset) = var.storage {
+        cfg.add(vartab, Instr::SetStorage{
+            local: var.pos,
+            storage: offset
+        });
+    }
+}
+
 fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut ControlFlowGraph, ns: &resolver::Contract, vartab: &mut Vartable, loops: &mut LoopScopes, errors: &mut Vec<output::Output>) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let var_ty = match ns.resolve(&decl.typ, errors) {
+            let var_ty = match ns.resolve_type(&decl.typ, errors) {
                 Some(ty) => ty,
                 None => return Err(())
             };
@@ -818,15 +840,9 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             }
         },
         ast::Expression::Variable(id) => {
-            match vartab.find(&id.name) {
-                Some(v) => {
-                    Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
-                },
-                None => {
-                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
-                    Err(())
-                }
-            }
+            let v = vartab.find(id, errors)?;
+            get_contract_storage(&v, cfg, vartab);
+            Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
         },
         ast::Expression::Add(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
@@ -1006,14 +1022,11 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 _ => unreachable!()
             };
 
-            let (pos, ty) = match vartab.find(&id.name) {
-                Some(v) => {
-                    (v.pos, v.ty.clone())
-                },
-                None => {
-                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
-                    return Err(());
-                }
+            let var = vartab.find(id, errors)?;
+            let (pos, ty) = {
+                get_contract_storage(&var, cfg, vartab);
+
+                (var.pos, var.ty.clone())
             };
 
             get_int_length(&ty, loc, ns, errors)?;
@@ -1032,6 +1045,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                             Box::new(Expression::NumberLiteral(ty.bits(), One::one())))
                     });
 
+                    set_contract_storage(&var, cfg, vartab);
+
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
                 ast::Expression::PostDecrement(_, _) => {
@@ -1046,6 +1061,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                             Box::new(Expression::Variable(id.loc.clone(), pos)),
                             Box::new(Expression::NumberLiteral(ty.bits(), One::one())))
                     });
+
+                    set_contract_storage(&var, cfg, vartab);
 
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
@@ -1062,6 +1079,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                         expr: Expression::Variable(id.loc.clone(), pos),
                     });
 
+                    set_contract_storage(&var, cfg, vartab);
+
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
                 ast::Expression::PreDecrement(_, _) => {
@@ -1076,6 +1095,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                         res: temp_pos,
                         expr: Expression::Variable(id.loc.clone(), pos),
                     });
+
+                    set_contract_storage(&var, cfg, vartab);
 
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
@@ -1092,22 +1113,16 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            let (res, ty) = match vartab.find(&id.name) {
-                Some(v) => {
-                    (v.pos, v.ty.clone())
-                },
-                None => {
-                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
-                    return Err(());
-                }
-            };
+            let var = vartab.find(id, errors)?;
 
             cfg.add(vartab, Instr::Set{
-                res,
-                expr: implicit_cast(&id.loc, expr, &expr_type, &ty, ns, errors)?,
+                res: var.pos,
+                expr: implicit_cast(&id.loc, expr, &expr_type, &var.ty, ns, errors)?,
             });
 
-            Ok((Expression::Variable(id.loc.clone(), res), ty))
+            set_contract_storage(&var, cfg, vartab);
+
+            Ok((Expression::Variable(id.loc.clone(), var.pos), var.ty))
         },
 
         ast::Expression::AssignAdd(_, var, e) |
@@ -1120,14 +1135,12 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 _ => unreachable!()
             };
 
-            let (pos, ty) = match vartab.find(&id.name) {
-                Some(v) => {
-                    (v.pos, v.ty.clone())
-                },
-                None => {
-                    errors.push(Output::decl_error(id.loc, format!("undeclared identifier {}", id.name.to_string())));
-                    return Err(());
-                }
+
+            let var = vartab.find(id, errors)?;
+            let (pos, ty) = {
+                get_contract_storage(&var, cfg, vartab);
+
+                (var.pos, var.ty.clone())
             };
 
             if !ty.ordered() {
@@ -1170,6 +1183,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 res: pos,
                 expr: set,
             });
+            
+            set_contract_storage(&var, cfg, vartab);
 
             Ok((Expression::Variable(id.loc.clone(), pos), ty))
         }
@@ -1185,10 +1200,12 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 // leave scope
 // produce full Vector of all variables
 
+#[derive(Clone)]
 pub struct Variable {
     pub id: ast::Identifier,
     pub ty: resolver::TypeName,
     pub pos: usize,
+    pub storage: Option<usize>,
 }
 
 struct VarScope (
@@ -1196,9 +1213,11 @@ struct VarScope (
     Option<HashSet<usize>>
 );
 
-pub struct Vartable {
+pub struct Vartable<'a> {
+    contract: &'a resolver::Contract,
     vars: Vec<Variable>,
     names: LinkedList<VarScope>,
+    storage_vars: HashMap<String, usize>,
     dirty: Vec<DirtyTracker>,
 }
 
@@ -1207,15 +1226,15 @@ pub struct DirtyTracker {
     set: HashSet<usize>,
 }
 
-impl Vartable {
-    pub fn new() -> Self {
+impl<'a> Vartable<'a> {
+    pub fn new(contract: &'a resolver::Contract) -> Self {
         let mut list = LinkedList::new();
         list.push_front(VarScope(HashMap::new(), None));
-        Vartable{vars: Vec::new(), names: list, dirty: Vec::new()}
+        Vartable{contract, vars: Vec::new(), names: list, storage_vars: HashMap::new(), dirty: Vec::new()}
     }
 
     pub fn add(&mut self, id: &ast::Identifier, ty: resolver::TypeName, errors: &mut Vec<output::Output>) -> Option<usize> {
-        if let Some(ref prev) = self.find(&id.name) {
+        if let Some(ref prev) = self.find_local(&id.name) {
             errors.push(Output::error_with_note(id.loc, format!("{} is already declared", id.name.to_string()),
                     prev.id.loc.clone(), "location of previous declaration".to_string()));
             return None;
@@ -1227,6 +1246,7 @@ impl Vartable {
             id: id.clone(),
             ty,
             pos,
+            storage: None
         });
 
         self.names.front_mut().unwrap().0.insert(id.name.to_string(), pos);
@@ -1234,7 +1254,7 @@ impl Vartable {
         Some(pos)
     }
 
-    pub fn find(&self, name: &String) -> Option<&Variable> {
+    fn find_local(&self, name: &str) -> Option<&Variable> {
         for scope in &self.names {
             if let Some(n) = scope.0.get(name) {
                 return Some(&self.vars[*n]);
@@ -1242,6 +1262,36 @@ impl Vartable {
         }
 
         None
+    }
+
+    pub fn find(&mut self, id: &ast::Identifier, errors: &mut Vec<output::Output>) -> Result<Variable, ()> {
+        for scope in &self.names {
+            if let Some(n) = scope.0.get(&id.name) {
+                return Ok(self.vars[*n].clone());
+            }
+        }
+
+        if let Some(n) = self.storage_vars.get(&id.name) {
+            return Ok(self.vars[*n].clone());
+        }
+
+        if let Some(v) = self.contract.resolve_var(&id, errors) {
+            let var = &self.contract.variables[v];
+            let pos = self.vars.len();
+
+            self.vars.push(Variable{
+                id: id.clone(),
+                ty: var.ty.clone(),
+                pos,
+                storage: var.storage
+            });
+
+            self.storage_vars.insert(id.name.to_string(), pos);
+
+            Ok(self.vars[pos].clone())
+        } else {
+            Err(())
+        }
     }
 
     pub fn temp(&mut self, id: &ast::Identifier, ty: &resolver::TypeName) -> usize {
@@ -1254,6 +1304,7 @@ impl Vartable {
             },
             ty: ty.clone(),
             pos,
+            storage: None
         });
 
         pos

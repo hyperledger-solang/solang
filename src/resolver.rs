@@ -148,7 +148,7 @@ impl Contract {
         true
     }
 
-    pub fn resolve(&self, id: &ast::TypeName, errors: &mut Vec<Output>) -> Option<TypeName> {
+    pub fn resolve_type(&self, id: &ast::TypeName, errors: &mut Vec<Output>) -> Option<TypeName> {
         match id {
             ast::TypeName::Elementary(e) => Some(TypeName::Elementary(*e)),
             ast::TypeName::Unresolved(s) => {
@@ -168,6 +168,26 @@ impl Contract {
                         Some(self.variables[*n].ty.clone())
                     }
                 }
+            }
+        }
+    }
+
+    pub fn resolve_var(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Option<usize> {
+        match self.symbols.get(&id.name) {
+            None => {
+                errors.push(Output::decl_error(id.loc.clone(), format!("`{}' is not declared", id.name)));
+                None
+            },
+            Some(Symbol::Enum(_, _)) => {
+                errors.push(Output::decl_error(id.loc.clone(), format!("`{}' is an enum", id.name)));
+                None
+            }
+            Some(Symbol::Function(_)) => {
+                errors.push(Output::decl_error(id.loc.clone(), format!("`{}' is a function", id.name)));
+                None
+            }
+            Some(Symbol::Variable(_, n)) => {
+                Some(*n)
             }
         }
     }
@@ -390,7 +410,7 @@ fn enum_256values_is_uint8() {
 }
 
 fn var_decl(s: &ast::ContractVariableDefinition, ns: &mut Contract, errors: &mut Vec<Output>) -> bool {
-    let ty = match ns.resolve(&s.ty, errors) {
+    let ty = match ns.resolve_type(&s.ty, errors) {
         Some(s) => s,
         None => {
             return false;
@@ -461,7 +481,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &
     }
 
     for p in &f.params {
-        match ns.resolve(&p.typ, errors) {
+        match ns.resolve_type(&p.typ, errors) {
             Some(s) => params.push(Parameter{
                 name: p.name.as_ref().map_or("".to_string(), |id| id.name.to_string()),
                 ty: s
@@ -475,7 +495,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &
             errors.push(Output::warning(n.loc, format!("named return value `{}' not allowed", n.name)));
         }
 
-        match ns.resolve(&r.typ, errors) {
+        match ns.resolve_type(&r.typ, errors) {
             Some(s) => returns.push(Parameter{
                 name: r.name.as_ref().map_or("".to_string(), |id| id.name.to_string()),
                 ty: s
