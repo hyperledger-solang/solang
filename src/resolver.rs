@@ -98,7 +98,7 @@ pub struct FunctionDecl {
 pub struct StateVariableDecl {
     pub name: String,
     pub ty: TypeName,
-    pub storage: usize,
+    pub storage: Option<usize>,
 }
 
 pub enum Symbol {
@@ -113,7 +113,7 @@ pub struct ContractNameSpace {
     // structs/events
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<StateVariableDecl>,
-    // constants
+    top_of_contract_storage: usize,
     symbols: HashMap<String, Symbol>,
 }
 
@@ -272,6 +272,7 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
         enums: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
+        top_of_contract_storage: 0,
         symbols: HashMap::new(),
     };
 
@@ -396,16 +397,35 @@ fn var_decl(s: &ast::StateVariableDeclaration, ns: &mut ContractNameSpace, error
         }
     };
 
-    let sdecl = StateVariableDecl{
-        name: s.name.name.to_string(),
-        storage: ns.variables.len(),
-        ty,
+    let mut is_constant = false;
+
+    for attr in &s.attrs {
+        match attr {
+            ast::VariableAttribute::Constant(loc) => {
+                if is_constant {
+                    errors.push(Output::warning(loc.clone(), format!("duplicate constant attribute")));
+                }
+                is_constant = true;
+            },
+            _ => ()
+        }
+    }
+
+    let storage = if !is_constant  {
+        ns.top_of_contract_storage += 1;
+        Some(ns.top_of_contract_storage)
+    } else {
+        None
     };
 
-    // FIXME: resolve init expression
-    // init expression can call functions and access other state variables
+    let sdecl = StateVariableDecl{
+        name: s.name.name.to_string(),
+        storage: storage,
+        ty
+    };
 
-    // FIXME: constant expressions
+    // FIXME: resolve init expression and check for constant (if constant)
+    // init expression can call functions and access other state variables
 
     let pos = ns.variables.len();
 
@@ -557,6 +577,7 @@ fn signatures() {
         enums: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
+        top_of_contract_storage: 0,
         symbols: HashMap::new(),
     };
 

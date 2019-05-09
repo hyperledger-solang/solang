@@ -150,10 +150,10 @@ pub struct EnumDefinition {
 
 #[derive(Debug,PartialEq)]
 pub enum VariableAttribute {
-    Public,
-    Internal,
-    Private,
-    Constant
+    Public(Loc),
+    Internal(Loc),
+    Private(Loc),
+    Constant(Loc)
 }
 
 #[derive(Debug,PartialEq)]

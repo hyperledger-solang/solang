@@ -220,10 +220,10 @@ StateVariableDeclaration: Box<StateVariableDeclaration> = {
 }
 
 VariableAttribute: VariableAttribute = {
-    "public" => VariableAttribute::Public,
-    "internal" => VariableAttribute::Internal,
-    "private" => VariableAttribute::Private,
-    "constant" => VariableAttribute::Constant
+    <l:@L> "public" <r:@R> => VariableAttribute::Public(Loc(l, r)),
+    <l:@L> "internal" <r:@R> => VariableAttribute::Internal(Loc(l, r)),
+    <l:@L> "private" <r:@R> => VariableAttribute::Private(Loc(l, r)),
+    <l:@L> "constant" <r:@R>=> VariableAttribute::Constant(Loc(l, r))
 }
 
 Expression: Expression = {
