@@ -28,7 +28,7 @@ pub enum TypeName {
 }
 
 impl TypeName {
-    pub fn to_string(&self, ns: &ContractNameSpace) -> String {
+    pub fn to_string(&self, ns: &Contract) -> String {
         match self {
             TypeName::Elementary(e) => e.to_string(),
             TypeName::Enum(n) => format!("enum {}", ns.enums[*n].name)
@@ -73,7 +73,7 @@ pub struct Parameter {
 }
 
 impl Parameter {
-    fn to_abi(&self, ns: &ContractNameSpace) -> ABIParam {
+    fn to_abi(&self, ns: &Contract) -> ABIParam {
         ABIParam{
             name: self.name.to_string(),
             ty: match &self.ty {
@@ -95,7 +95,7 @@ pub struct FunctionDecl {
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
-pub struct StateVariableDecl {
+pub struct ContractVariable {
     pub name: String,
     pub ty: TypeName,
     pub storage: Option<usize>,
@@ -107,17 +107,17 @@ pub enum Symbol {
     Variable(ast::Loc, usize),
 }
 
-pub struct ContractNameSpace {
+pub struct Contract {
     pub name: String,
     pub enums: Vec<EnumDecl>,
     // structs/events
     pub functions: Vec<FunctionDecl>,
-    pub variables: Vec<StateVariableDecl>,
+    pub variables: Vec<ContractVariable>,
     top_of_contract_storage: usize,
     symbols: HashMap<String, Symbol>,
 }
 
-impl ContractNameSpace {
+impl Contract {
     fn add_symbol(&mut self, id: &ast::Identifier, symbol: Symbol, errors: &mut Vec<Output>) -> bool {
         if let Some(prev) = self.symbols.get(&id.name) {
             match prev {
@@ -251,7 +251,7 @@ impl ContractNameSpace {
     }
 }
 
-pub fn resolver(s: ast::SourceUnit) -> (Vec<ContractNameSpace>, Vec<Output>) {
+pub fn resolver(s: ast::SourceUnit) -> (Vec<Contract>, Vec<Output>) {
     let mut namespace = Vec::new();
     let mut errors = Vec::new();
 
@@ -266,8 +266,8 @@ pub fn resolver(s: ast::SourceUnit) -> (Vec<ContractNameSpace>, Vec<Output>) {
     (namespace, errors)
 }
 
-fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>) -> Option<ContractNameSpace> {
-    let mut ns = ContractNameSpace{
+fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>) -> Option<Contract> {
+    let mut ns = Contract{
         name: def.name.name.to_string(),
         enums: Vec::new(),
         functions: Vec::new(),
@@ -297,7 +297,7 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
 
     // resolve state variables
     for parts in &def.parts {
-        if let ast::ContractPart::StateVariableDeclaration(ref s) = parts {
+        if let ast::ContractPart::ContractVariableDefinition(ref s) = parts {
             if !var_decl(s, &mut ns, errors) {
                 broken = true;
             }
@@ -389,7 +389,7 @@ fn enum_256values_is_uint8() {
     assert_eq!(r2.ty, ast::ElementaryTypeName::Uint(16));
 }
 
-fn var_decl(s: &ast::StateVariableDeclaration, ns: &mut ContractNameSpace, errors: &mut Vec<Output>) -> bool {
+fn var_decl(s: &ast::ContractVariableDefinition, ns: &mut Contract, errors: &mut Vec<Output>) -> bool {
     let ty = match ns.resolve(&s.ty, errors) {
         Some(s) => s,
         None => {
@@ -418,7 +418,7 @@ fn var_decl(s: &ast::StateVariableDeclaration, ns: &mut ContractNameSpace, error
         None
     };
 
-    let sdecl = StateVariableDecl{
+    let sdecl = ContractVariable{
         name: s.name.name.to_string(),
         storage: storage,
         ty
@@ -434,7 +434,7 @@ fn var_decl(s: &ast::StateVariableDeclaration, ns: &mut ContractNameSpace, error
     ns.add_symbol(&s.name, Symbol::Variable(s.loc, pos), errors)
 }
 
-fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, errors: &mut Vec<Output>) -> bool {
+fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &mut Vec<Output>) -> bool {
     let mut params = Vec::new();
     let mut returns = Vec::new();
     let mut success = true;
@@ -549,7 +549,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut ContractNameSpace, 
     }
 }
 
-pub fn external_signature(name: &Option<String>, params: &Vec<Parameter>, ns: &ContractNameSpace) -> String {
+pub fn external_signature(name: &Option<String>, params: &Vec<Parameter>, ns: &Contract) -> String {
     let mut sig = match name { Some(ref n) => n.to_string(), None => "".to_string() };
 
     sig.push('(');
@@ -572,7 +572,7 @@ pub fn external_signature(name: &Option<String>, params: &Vec<Parameter>, ns: &C
 
 #[test]
 fn signatures() {
-    let ns = ContractNameSpace{
+    let ns = Contract{
         name: String::from("foo"),
         enums: Vec::new(),
         functions: Vec::new(),

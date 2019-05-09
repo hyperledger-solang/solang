@@ -6,7 +6,7 @@ use ast::*;
 grammar;
 
 pub SourceUnit: SourceUnit = {
-    <u:SourceUnitPart+> => SourceUnit{name: "".to_string(), parts: u, resolved: false}
+    <u:SourceUnitPart+> => SourceUnit{name: "".to_string(), parts: u}
 }
 
 SourceUnitPart: SourceUnitPart = {
@@ -177,7 +177,7 @@ ContractPart: ContractPart = {
     StructDefinition => ContractPart::StructDefinition(<>),
     EventDefinition => ContractPart::EventDefinition(<>),
     EnumDefinition => ContractPart::EnumDefinition(<>),
-    StateVariableDeclaration => ContractPart::StateVariableDeclaration(<>),
+    ContractVariableDefinition => ContractPart::ContractVariableDefinition(<>),
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
 }
 
@@ -211,9 +211,9 @@ EnumDefinition: Box<EnumDefinition> = {
     }
 }
 
-StateVariableDeclaration: Box<StateVariableDeclaration> = {
+ContractVariableDefinition: Box<ContractVariableDefinition> = {
     <l:@L> <t:TypeName> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
-        Box::new(StateVariableDeclaration{
+        Box::new(ContractVariableDefinition{
             loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
         })
     }

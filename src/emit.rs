@@ -75,7 +75,7 @@ pub struct Contract<'a> {
     pub module: LLVMModuleRef,
     context: LLVMContextRef,
     tm: LLVMTargetMachineRef,
-    ns: &'a resolver::ContractNameSpace,
+    ns: &'a resolver::Contract,
     functions: Vec<Function>,
 }
 
@@ -111,7 +111,7 @@ impl<'a> Contract<'a> {
         }
     }
 
-    pub fn new(contract: &'a resolver::ContractNameSpace, filename: &str) -> Self {
+    pub fn new(contract: &'a resolver::Contract, filename: &str) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
         let contractname = CString::new(contract.name.to_string()).unwrap();
@@ -247,7 +247,7 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_constructor_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
+    fn emit_constructor_dispatch(&self, contract: &resolver::Contract, builder: LLVMBuilderRef) {
         // create start function
         let ret = unsafe { LLVMVoidType() };
         let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
@@ -285,7 +285,7 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_function_dispatch(&self, contract: &resolver::ContractNameSpace, builder: LLVMBuilderRef) {
+    fn emit_function_dispatch(&self, contract: &resolver::Contract, builder: LLVMBuilderRef) {
         // create start function
         let ret = unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) };
         let mut args = vec![ ret ];
@@ -961,7 +961,7 @@ impl ast::ElementaryTypeName {
 
 impl resolver::TypeName {
     #[allow(non_snake_case)]
-    fn LLVMType(&self, ns: &resolver::ContractNameSpace, context: LLVMContextRef) -> LLVMTypeRef {
+    fn LLVMType(&self, ns: &resolver::Contract, context: LLVMContextRef) -> LLVMTypeRef {
         match self {
             resolver::TypeName::Elementary(e) => e.LLVMType(context),
             resolver::TypeName::Enum(n) => { ns.enums[*n].ty.LLVMType(context) },

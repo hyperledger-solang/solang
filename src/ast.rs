@@ -16,7 +16,6 @@ pub struct Identifier {
 pub struct SourceUnit {
     pub name: String,
     pub parts: Vec<SourceUnitPart>,
-    pub resolved: bool
 }
 
 #[derive(Debug,PartialEq)]
@@ -109,7 +108,7 @@ pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
     EnumDefinition(Box<EnumDefinition>),
-    StateVariableDeclaration(Box<StateVariableDeclaration>),
+    ContractVariableDefinition(Box<ContractVariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
 }
 
@@ -157,7 +156,7 @@ pub enum VariableAttribute {
 }
 
 #[derive(Debug,PartialEq)]
-pub struct StateVariableDeclaration {
+pub struct ContractVariableDefinition {
     pub loc: Loc,
     pub ty: TypeName,
     pub attrs: Vec<VariableAttribute>,
@@ -375,14 +374,14 @@ mod test {
                             typ: TypeName::Elementary(ElementaryTypeName::Bytes(32)), storage: StorageLocation::Default, name: Identifier{loc: Loc(203, 209), name: "region".to_string()}
                         })
                     ]})),
-                    ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
+                    ContractPart::ContractVariableDefinition(Box::new(ContractVariableDefinition{
                         ty: TypeName::Elementary(ElementaryTypeName::String), attrs: vec![], name: Identifier{loc: Loc(260, 268), name: "__abba_$".to_string()}, loc: Loc(253, 268), initializer: None
                     })),
-                    ContractPart::StateVariableDeclaration(Box::new(StateVariableDeclaration{
+                    ContractPart::ContractVariableDefinition(Box::new(ContractVariableDefinition{
                         ty: TypeName::Elementary(ElementaryTypeName::Int(64)), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, loc: Loc(290, 306), initializer: None
                     }))
             ]}))
-        ], resolved: false};
+        ]};
 
         assert_eq!(e, a);
     }

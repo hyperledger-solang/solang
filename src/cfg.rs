@@ -99,7 +99,7 @@ impl ControlFlowGraph {
         self.bb[self.current].add(ins);
     }
 
-    pub fn expr_to_string(&self, ns: &resolver::ContractNameSpace, expr: &Expression) -> String {
+    pub fn expr_to_string(&self, ns: &resolver::Contract, expr: &Expression) -> String {
         match expr {
             Expression::BoolLiteral(false) => "false".to_string(),
             Expression::BoolLiteral(true) => "true".to_string(),
@@ -132,7 +132,7 @@ impl ControlFlowGraph {
         }
     }
 
-    pub fn instr_to_string(&self, ns: &resolver::ContractNameSpace, instr: &Instr) -> String {
+    pub fn instr_to_string(&self, ns: &resolver::Contract, instr: &Instr) -> String {
         match instr {
             Instr::Return{ value } => {
                 let mut s = String::from("return ");
@@ -155,7 +155,7 @@ impl ControlFlowGraph {
         }
     }
 
-    pub fn basic_block_to_string(&self, ns: &resolver::ContractNameSpace, pos: usize) -> String {
+    pub fn basic_block_to_string(&self, ns: &resolver::Contract, pos: usize) -> String {
         let mut s = format!("bb{}: # {}\n", pos, self.bb[pos].name);
 
         if let Some(ref phis) = self.bb[pos].phis {
@@ -179,7 +179,7 @@ impl ControlFlowGraph {
         s
     }
 
-    pub fn to_string(&self, ns: &resolver::ContractNameSpace) -> String {
+    pub fn to_string(&self, ns: &resolver::Contract) -> String {
         let mut s = String::from("");
 
         for i in 0..self.bb.len() {
@@ -190,7 +190,7 @@ impl ControlFlowGraph {
     }
 }
 
-pub fn generate_cfg(ast_f: &ast::FunctionDefinition, resolve_f: &resolver::FunctionDecl, ns: &resolver::ContractNameSpace, errors: &mut Vec<output::Output>) -> Result<Box<ControlFlowGraph>, ()> {
+pub fn generate_cfg(ast_f: &ast::FunctionDefinition, resolve_f: &resolver::FunctionDecl, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<Box<ControlFlowGraph>, ()> {
     let mut cfg = Box::new(ControlFlowGraph{
         vars: Vec::new(),
         bb: Vec::new(),
@@ -254,7 +254,7 @@ fn check_return(f: &ast::FunctionDefinition, cfg: &mut ControlFlowGraph, errors:
     }
 }
 
-fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut ControlFlowGraph, ns: &resolver::ContractNameSpace, vartab: &mut Vartable, loops: &mut LoopScopes, errors: &mut Vec<output::Output>) -> Result<bool, ()> {
+fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut ControlFlowGraph, ns: &resolver::Contract, vartab: &mut Vartable, loops: &mut LoopScopes, errors: &mut Vec<output::Output>) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
             let var_ty = match ns.resolve(&decl.typ, errors) {
@@ -652,7 +652,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
     }
 }
 
-fn coerce(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, r_loc: &ast::Loc, ns: &resolver::ContractNameSpace, errors: &mut Vec<output::Output>) -> Result<resolver::TypeName, ()> {
+fn coerce(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, r_loc: &ast::Loc, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<resolver::TypeName, ()> {
     if *l == *r {
         return Ok(l.clone());
     }
@@ -660,7 +660,7 @@ fn coerce(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, r_lo
     coerce_int(l, l_loc, r, r_loc, ns, errors)
 }
 
-fn get_int_length(l: &resolver::TypeName, l_loc: &ast::Loc, ns: &resolver::ContractNameSpace, errors: &mut Vec<output::Output>) -> Result<(u16, bool), ()> {
+fn get_int_length(l: &resolver::TypeName, l_loc: &ast::Loc, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<(u16, bool), ()> {
     Ok(match l {
         resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) => (*n, false),
         resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => (*n, true),
@@ -675,7 +675,7 @@ fn get_int_length(l: &resolver::TypeName, l_loc: &ast::Loc, ns: &resolver::Contr
     })
 }
 
-fn coerce_int(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, r_loc: &ast::Loc, ns: &resolver::ContractNameSpace, errors: &mut Vec<output::Output>) -> Result<resolver::TypeName, ()> {
+fn coerce_int(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, r_loc: &ast::Loc, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<resolver::TypeName, ()> {
     let (left_len, left_signed) = get_int_length(l, l_loc, ns, errors)?;
 
     let (right_len, right_signed) = get_int_length(r, r_loc, ns, errors)?;
@@ -692,7 +692,7 @@ fn coerce_int(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, 
     }))
 }
 
-fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to: &resolver::TypeName, ns: &resolver::ContractNameSpace, errors: &mut Vec<output::Output>) -> Result<Expression, ()> {
+fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to: &resolver::TypeName, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<Expression, ()> {
     if from == to {
         return Ok(expr)
     }
@@ -762,7 +762,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
     }
 }
 
-fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver::ContractNameSpace, vartab: &mut Vartable, errors: &mut Vec<output::Output>) -> Result<(Expression, resolver::TypeName), ()> {
+fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver::Contract, vartab: &mut Vartable, errors: &mut Vec<output::Output>) -> Result<(Expression, resolver::TypeName), ()> {
     match expr {
         ast::Expression::BoolLiteral(_, v) => {
             Ok((Expression::BoolLiteral(*v), resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool)))
