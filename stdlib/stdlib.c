@@ -1,4 +1,4 @@
-// clang --target=wasm32 -c -emit-llvm -O3 -fno-builtin -Wall intrinsics.c
+// clang --target=wasm32 -c -emit-llvm -O3 -fno-builtin -Wall stdlib.c
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>

@@ -7,8 +7,8 @@ RUN dnf -y install cargo llvm-static llvm-devel zlib-devel clang glibc-devel.i68
 
 RUN mkdir -p src/
 COPY . src/
-WORKDIR /src/intrinsics/
-RUN clang --target=wasm32 -c -emit-llvm -O3 -fno-builtin -Wall intrinsics.c
+WORKDIR /src/stdlib/
+RUN clang --target=wasm32 -c -emit-llvm -O3 -fno-builtin -Wall stdlib.c
 
 WORKDIR /src/
 RUN cargo build --release

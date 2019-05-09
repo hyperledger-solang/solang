@@ -125,10 +125,10 @@ impl<'a> Contract<'a> {
             functions: Vec::new(),
         };
 
-        // intrinsics
-        let intr = load_intrinsics(e.context);
+        // stdlib
+        let intr = load_stdlib(e.context);
         if unsafe { LLVMLinkModules2(e.module, intr) } == LLVM_TRUE {
-            panic!("failed to link in intrinsics");
+            panic!("failed to link in stdlib");
         }
 
         unsafe {
@@ -976,11 +976,11 @@ impl resolver::TypeName {
     }
 }
 
-static INTRINSICS_IR: &'static [u8] = include_bytes!("../intrinsics/intrinsics.bc");
+static STDLIB_IR: &'static [u8] = include_bytes!("../stdlib/stdlib.bc");
 
-fn load_intrinsics(context: LLVMContextRef) -> LLVMModuleRef {
+fn load_stdlib(context: LLVMContextRef) -> LLVMModuleRef {
     let llmembuf = unsafe {
-        LLVMCreateMemoryBufferWithMemoryRange(INTRINSICS_IR.as_ptr() as *const i8, INTRINSICS_IR.len(), "intrinsics.c\0".as_ptr() as *const i8, LLVM_FALSE)
+        LLVMCreateMemoryBufferWithMemoryRange(STDLIB_IR.as_ptr() as *const i8, STDLIB_IR.len(), "stdlib.c\0".as_ptr() as *const i8, LLVM_FALSE)
     };
     let mut module = null_mut();
     let mut err_msg_ptr = null_mut();
@@ -988,7 +988,7 @@ fn load_intrinsics(context: LLVMContextRef) -> LLVMModuleRef {
     if unsafe { LLVMParseIRInContext(context, llmembuf, &mut module, &mut err_msg_ptr) } == LLVM_TRUE {
         let err_msg_cstr = unsafe { CStr::from_ptr(err_msg_ptr as *const _) };
         let err_msg = str::from_utf8(err_msg_cstr.to_bytes()).unwrap();
-        panic!("failed to read intrinsics.bc: {}", err_msg);
+        panic!("failed to read stdlib.bc: {}", err_msg);
      }
 
     module
