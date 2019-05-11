@@ -279,11 +279,29 @@ pub struct Parameter {
     pub name: Option<Identifier>
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Clone)]
 pub enum StateMutability {
-    Pure,
-    View,
-    Payable
+    Pure(Loc),
+    View(Loc),
+    Payable(Loc),
+}
+
+impl StateMutability {
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            StateMutability::Pure(_) => "pure",
+            StateMutability::View(_) => "view",
+            StateMutability::Payable(_) => "payable",
+        }
+    }
+
+    pub fn loc(&self) -> Loc {
+        match self {
+            StateMutability::Pure(loc) |
+            StateMutability::View(loc) |
+            StateMutability::Payable(loc) => loc.clone(),
+        }
+    }
 }
 
 #[derive(Debug,PartialEq)]

@@ -18,7 +18,8 @@ pub struct ABI {
     #[serde(rename="type")]
     pub ty: String,
     pub inputs: Vec<ABIParam>,
-    pub outputs: Vec<ABIParam>
+    pub outputs: Vec<ABIParam>,
+    pub constant: bool
 }
 
 #[derive(PartialEq,Clone)]
@@ -90,6 +91,7 @@ pub struct FunctionDecl {
     pub name: Option<String>,
     pub sig: String,
     pub ast_index: usize,
+    pub mutability: Option<ast::StateMutability>,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
@@ -241,8 +243,14 @@ impl Contract {
                 }
             };
 
+            let constant = match &f.cfg {
+                Some(cfg) => !cfg.writes_contract_storage,
+                None => false,
+            };
+
             abis.push(ABI{
                 name,
+                constant,
                 ty,
                 inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
                 outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
@@ -338,7 +346,41 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
         let ast_index = ns.functions[f].ast_index;
         if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
             match cfg::generate_cfg(ast_f, &ns.functions[f], &ns, errors) {
-                Ok(c) => ns.functions[f].cfg = Some(c),
+                Ok(c) => {
+                    match &ns.functions[f].mutability {
+                        Some(ast::StateMutability::Pure(loc)) => {
+                            if c.writes_contract_storage {
+                                errors.push(Output::error(loc.clone(), format!("function declared pure but writes contract storage")));
+                                broken = true;
+                            } else if c.reads_contract_storage {
+                                errors.push(Output::error(loc.clone(), format!("function declared pure but reads contract storage")));
+                                broken = true;
+                            }
+                        },
+                        Some(ast::StateMutability::View(loc)) => {
+                            if c.writes_contract_storage {
+                                errors.push(Output::error(loc.clone(), format!("function declared view but writes contract storage")));
+                                broken = true;
+                            } else if !c.reads_contract_storage {
+                                errors.push(Output::warning(loc.clone(), format!("function can be declared pure")));
+                            }
+                        },
+                        Some(ast::StateMutability::Payable(_)) => {
+                            unimplemented!();
+                        },
+                        None => {
+                            let loc = &ns.functions[f].loc;
+
+                            if !c.writes_contract_storage && !c.reads_contract_storage {
+                                errors.push(Output::warning(loc.clone(), format!("function can be declare pure")));
+                            } else if !c.writes_contract_storage {
+                                errors.push(Output::warning(loc.clone(), format!("function can be declared view")));
+                            }
+                        }
+
+                    }
+                    ns.functions[f].cfg = Some(c);
+                },
                 Err(_) => broken = true
             }
         }
@@ -504,6 +546,21 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &
         }
     }
 
+    let mut mutability : Option<ast::StateMutability> = None;
+
+    for a in &f.attributes {
+        if let ast::FunctionAttribute::StateMutability(m) = a {
+            if let Some(e) = &mutability {
+                errors.push(Output::warning_with_note(m.loc().clone(), format!("function redeclared `{}'", m.to_string()),
+                            e.loc().clone(), format!("location of previous declaration of `{}'", e.to_string())));
+                success = false;
+                continue;
+            }
+
+            mutability = Some(m.clone());
+        }
+    }
+
     if !success {
         return false;
     }
@@ -517,6 +574,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &
         loc: f.loc,
         sig: external_signature(&name, &params, &ns),
         name: name,
+        mutability,
         constructor: f.constructor,
         ast_index: i,
         params,

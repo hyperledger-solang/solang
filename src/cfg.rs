@@ -69,6 +69,8 @@ pub struct ControlFlowGraph {
     pub vars: Vec<Variable>,
     pub bb: Vec<BasicBlock>,
     current: usize,
+    pub writes_contract_storage: bool,
+    pub reads_contract_storage: bool,
 }
 
 impl ControlFlowGraph {
@@ -198,7 +200,9 @@ pub fn generate_cfg(ast_f: &ast::FunctionDefinition, resolve_f: &resolver::Funct
     let mut cfg = Box::new(ControlFlowGraph{
         vars: Vec::new(),
         bb: Vec::new(),
-        current: 0
+        current: 0,
+        reads_contract_storage: false,
+        writes_contract_storage: false,
     });
 
     cfg.new_basic_block("entry".to_string());
@@ -260,6 +264,7 @@ fn check_return(f: &ast::FunctionDefinition, cfg: &mut ControlFlowGraph, errors:
 
 fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
     if let Some(offset) = var.storage {
+        cfg.reads_contract_storage = true;
         cfg.add(vartab, Instr::GetStorage{
             local: var.pos,
             storage: offset
@@ -269,6 +274,7 @@ fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut
 
 fn set_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
     if let Some(offset) = var.storage {
+        cfg.writes_contract_storage = true;
         cfg.add(vartab, Instr::SetStorage{
             local: var.pos,
             storage: offset

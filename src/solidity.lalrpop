@@ -382,9 +382,9 @@ ParameterList: Vec<Parameter> = {
 }
 
 StateMutability: StateMutability = {
-    "pure" => StateMutability::Pure,
-    "view" => StateMutability::View,
-    "payable" => StateMutability::Payable
+    <l:@L> "pure" <r:@R> => StateMutability::Pure(Loc(l, r)),
+    <l:@L> "view" <r:@R> => StateMutability::View(Loc(l, r)),
+    <l:@L> "payable" <r:@R> => StateMutability::Payable(Loc(l, r)),
 }
 
 FunctionAttribute: FunctionAttribute = {
