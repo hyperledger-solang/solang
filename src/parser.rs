@@ -16,17 +16,17 @@ pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
     if let Err(e) = s {
         errors.push(match e {
             ParseError::InvalidToken{location} => Output::parser_error(ast::Loc(location, location), "invalid token".to_string()),
-            ParseError::UnrecognizedToken{token, expected} => {
-                match token {
-                    None => Output::parser_error(ast::Loc(0, 0), format!("unrecognised token, expected `{}'", expected.join(","))),
-                    Some(t) => Output::parser_error(ast::Loc(t.0, t.2), format!("unrecognised token `{}'", t.1)),
-                }
+            ParseError::UnrecognizedToken{token: (l, token, r), expected} => {
+                Output::parser_error(ast::Loc(l, r), format!("unrecognised token `{}', expected {}", token.0, expected.join(", ")))
             },
             ParseError::User{error} => {
                 Output::parser_error(ast::Loc(0, 0), error.to_string())
             },
             ParseError::ExtraToken{token} => {
                 Output::parser_error(ast::Loc(token.0, token.2), format!("extra token `{}' encountered", token.0))
+            },
+            ParseError::UnrecognizedEOF{location, expected} => {
+                Output::parser_error(ast::Loc(location, location), format!("unexpected end of file, expecting {}", expected.join(", ")))
             }
         });
 

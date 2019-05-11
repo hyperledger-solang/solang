@@ -1,5 +1,4 @@
 
-extern crate lalrpop;
 extern crate num_bigint;
 extern crate lalrpop_util;
 extern crate llvm_sys;
