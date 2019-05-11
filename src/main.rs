@@ -66,6 +66,9 @@ fn main() {
         .arg(Arg::with_name("LLVM")
             .help("emit llvm IR rather than wasm")
             .long("emit-llvm"))
+        .arg(Arg::with_name("BC")
+            .help("emit llvm BC rather than wasm")
+            .long("emit-bc"))
         .arg(Arg::with_name("JSON")
             .help("mimic solidity output json output on stdout")
             .long("standard-json"))
@@ -130,6 +133,15 @@ fn main() {
 
             if matches.is_present("LLVM") {
                 contract.dump_llvm();
+                continue;
+            }
+
+            if matches.is_present("BC") {
+                let bc = contract.bitcode();
+                let bc_filename = contract.name.to_string() + ".bc";
+
+                let mut file = File::create(bc_filename).unwrap();
+                file.write_all(&bc).unwrap();
                 continue;
             }
 

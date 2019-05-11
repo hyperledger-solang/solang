@@ -16,6 +16,7 @@ use llvm_sys::ir_reader::*;
 use llvm_sys::linker::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
+use llvm_sys::bit_writer::*;
 use llvm_sys::target_machine::*;
 use tiny_keccak::keccak256;
 
@@ -77,6 +78,7 @@ pub struct Contract<'a> {
     tm: LLVMTargetMachineRef,
     ns: &'a resolver::Contract,
     functions: Vec<Function>,
+    externals: HashMap<String, LLVMValueRef>,
 }
 
 impl<'a> Contract<'a> {
@@ -111,6 +113,26 @@ impl<'a> Contract<'a> {
         }
     }
 
+    pub fn bitcode(&self) -> Vec<u8> {
+        let memory_buffer = unsafe {
+            LLVMWriteBitcodeToMemoryBuffer(self.module)
+        };
+
+        let bc = unsafe {
+            slice::from_raw_parts(
+                LLVMGetBufferStart(memory_buffer) as *const u8,
+                LLVMGetBufferSize(memory_buffer) as usize
+            )
+        };
+        let res = bc.to_vec();
+
+        unsafe {
+            LLVMDisposeMemoryBuffer(memory_buffer);
+        }
+
+        res
+    }
+
     pub fn new(contract: &'a resolver::Contract, filename: &str) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
@@ -123,6 +145,7 @@ impl<'a> Contract<'a> {
             tm: target_machine(),
             ns: contract,
             functions: Vec::new(),
+            externals: HashMap::new(),
         };
 
         // stdlib
@@ -130,6 +153,9 @@ impl<'a> Contract<'a> {
         if unsafe { LLVMLinkModules2(e.module, intr) } == LLVM_TRUE {
             panic!("failed to link in stdlib");
         }
+
+        // externals
+        e.declare_externals();
 
         unsafe {
             LLVMSetTarget(e.module, TRIPLE.as_ptr() as *const _);
@@ -148,6 +174,24 @@ impl<'a> Contract<'a> {
         }
 
         e
+    }
+
+    fn declare_externals(&mut self) {
+        let ret = unsafe { LLVMVoidType() };
+        let mut args = vec![
+            unsafe { LLVMInt32TypeInContext(self.context) },
+            unsafe { LLVMPointerType(LLVMInt8TypeInContext(self.context), 0) },
+            unsafe { LLVMInt32TypeInContext(self.context) },
+        ];
+        let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as u32, 0) };
+        self.externals.insert(
+            "get_storage32".to_owned(),
+            unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const i8, ftype) }
+        );
+        self.externals.insert(
+            "set_storage32".to_owned(),
+            unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const i8, ftype) }
+        );
     }
 
     fn expression(&self, builder: LLVMBuilderRef, e: &cfg::Expression, vartab: &Vec<Variable>) -> LLVMValueRef {
@@ -915,9 +959,7 @@ impl<'a> Contract<'a> {
                         }
                     },
                     cfg::Instr::GetStorage{ local, storage } => {
-                        let get_storage = unsafe {
-                            LLVMGetNamedFunction(self.module, "get_storage32\0".as_ptr() as *const i8)
-                        };
+                        let get_storage = &self.externals["get_storage32"];
                         let dest = w.vars[*local].value_ref;
                         // calculate type
                         let nil = unsafe {
@@ -936,13 +978,11 @@ impl<'a> Contract<'a> {
                         ];
 
                         unsafe {
-                            LLVMBuildCall(builder, get_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _); 
+                            LLVMBuildCall(builder, *get_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _);
                         }
                     },
                     cfg::Instr::SetStorage{ local, storage } => {
-                        let set_storage = unsafe {
-                            LLVMGetNamedFunction(self.module, "set_storage32\0".as_ptr() as *const i8)
-                        };
+                        let set_storage = &self.externals["set_storage32"];
                         let dest = w.vars[*local].value_ref;
                         // calculate type
                         let nil = unsafe {
@@ -961,7 +1001,7 @@ impl<'a> Contract<'a> {
                         ];
 
                         unsafe {
-                            LLVMBuildCall(builder, set_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _); 
+                            LLVMBuildCall(builder, *set_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _);
                         }
                     }
                 }
