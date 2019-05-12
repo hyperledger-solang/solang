@@ -220,11 +220,16 @@ ContractVariableDefinition: Box<ContractVariableDefinition> = {
     }
 }
 
+Visibility: Visibility = {
+    <l:@L> "public" <r:@R> => Visibility::Public(Loc(l, r)),
+    <l:@L> "external" <r:@R> => Visibility::External(Loc(l, r)),
+    <l:@L> "internal" <r:@R> => Visibility::Internal(Loc(l, r)),
+    <l:@L> "private" <r:@R> => Visibility::Private(Loc(l, r)),
+}
+
 VariableAttribute: VariableAttribute = {
-    <l:@L> "public" <r:@R> => VariableAttribute::Public(Loc(l, r)),
-    <l:@L> "internal" <r:@R> => VariableAttribute::Internal(Loc(l, r)),
-    <l:@L> "private" <r:@R> => VariableAttribute::Private(Loc(l, r)),
-    <l:@L> "constant" <r:@R>=> VariableAttribute::Constant(Loc(l, r))
+    Visibility => VariableAttribute::Visibility(<>),
+    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc(l, r))
 }
 
 Expression: Expression = {
@@ -389,10 +394,7 @@ StateMutability: StateMutability = {
 
 FunctionAttribute: FunctionAttribute = {
     StateMutability => FunctionAttribute::StateMutability(<>),
-    "external" => FunctionAttribute::External,
-    "public" => FunctionAttribute::Public,
-    "internal" => FunctionAttribute::Internal,
-    "private" => FunctionAttribute::Private
+    Visibility => FunctionAttribute::Visibility(<>),
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {

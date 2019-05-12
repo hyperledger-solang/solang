@@ -148,9 +148,7 @@ pub struct EnumDefinition {
 
 #[derive(Debug,PartialEq)]
 pub enum VariableAttribute {
-    Public(Loc),
-    Internal(Loc),
-    Private(Loc),
+    Visibility(Visibility),
     Constant(Loc)
 }
 
@@ -304,13 +302,38 @@ impl StateMutability {
     }
 }
 
+#[derive(Debug,PartialEq,Clone)]
+pub enum Visibility {
+    External(Loc),
+    Public(Loc),
+    Internal(Loc),
+    Private(Loc),
+}
+
+impl Visibility {
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            Visibility::Public(_) => "public",
+            Visibility::External(_) => "external",
+            Visibility::Internal(_) => "internal",
+            Visibility::Private(_) => "private",
+        }
+    }
+
+    pub fn loc(&self) -> Loc {
+        match self {
+            Visibility::Public(loc) |
+            Visibility::External(loc) |
+            Visibility::Internal(loc) |
+            Visibility::Private(loc) => loc.clone()
+        }
+    }
+}
+
 #[derive(Debug,PartialEq)]
 pub enum FunctionAttribute {
     StateMutability(StateMutability),
-    External,
-    Public,
-    Internal,
-    Private,
+    Visibility(Visibility)
 }
 
 #[derive(Debug,PartialEq)]

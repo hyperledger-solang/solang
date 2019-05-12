@@ -377,6 +377,14 @@ impl<'a> Contract<'a> {
                 continue;
             }
 
+            match &f.visibility {
+                ast::Visibility::Internal(_) |
+                ast::Visibility::Private(_) => {
+                    continue;
+                },
+                _ => (),
+            }
+
             let mut res = keccak256(f.sig.as_bytes());
 
             let bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "\0".as_ptr() as *const _) };
@@ -468,6 +476,8 @@ impl<'a> Contract<'a> {
                 // abi encode all the arguments
             }
         }
+
+        // FIXME: emit code for public contract variables
 
         // emit fallback code
         unsafe { LLVMPositionBuilderAtEnd(builder, fallback_bb); }

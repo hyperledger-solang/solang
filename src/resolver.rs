@@ -95,6 +95,7 @@ pub struct FunctionDecl {
     pub sig: String,
     pub ast_index: usize,
     pub mutability: Option<ast::StateMutability>,
+    pub visibility: ast::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
@@ -103,6 +104,7 @@ pub struct FunctionDecl {
 pub struct ContractVariable {
     pub name: String,
     pub ty: TypeName,
+    pub visibility: ast::Visibility,
     pub storage: Option<usize>,
 }
 
@@ -475,18 +477,36 @@ fn var_decl(s: &ast::ContractVariableDefinition, ns: &mut Contract, errors: &mut
     };
 
     let mut is_constant = false;
+    let mut visibility : Option<ast::Visibility> = None;
 
     for attr in &s.attrs {
-        match attr {
+        match &attr {
             ast::VariableAttribute::Constant(loc) => {
                 if is_constant {
                     errors.push(Output::warning(loc.clone(), format!("duplicate constant attribute")));
                 }
                 is_constant = true;
             },
-            _ => ()
+            ast::VariableAttribute::Visibility(ast::Visibility::External(loc)) => {
+                errors.push(Output::error(loc.clone(), format!("variable cannot be declared external")));
+                return false;
+            },
+            ast::VariableAttribute::Visibility(v) => {
+                if let Some(e) = &visibility {
+                    errors.push(Output::error_with_note(v.loc().clone(), format!("variable redeclared `{}'", v.to_string()),
+                                e.loc().clone(), format!("location of previous declaration of `{}'", e.to_string())));
+                    return false;
+                }
+
+                visibility = Some(v.clone());
+            }
         }
     }
+
+    let visibility = match visibility {
+        Some(v) => v,
+        None => ast::Visibility::Private(ast::Loc(0, 0))
+    };
 
     if is_constant && s.initializer == None {
         errors.push(Output::decl_error(s.loc.clone(), format!("missing initializer for constant")));
@@ -504,6 +524,7 @@ fn var_decl(s: &ast::ContractVariableDefinition, ns: &mut Contract, errors: &mut
     let sdecl = ContractVariable{
         name: s.name.name.to_string(),
         storage,
+        visibility,
         ty
     };
 
@@ -562,19 +583,39 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &
     }
 
     let mut mutability : Option<ast::StateMutability> = None;
+    let mut visibility : Option<ast::Visibility> = None;
 
     for a in &f.attributes {
-        if let ast::FunctionAttribute::StateMutability(m) = a {
-            if let Some(e) = &mutability {
-                errors.push(Output::warning_with_note(m.loc().clone(), format!("function redeclared `{}'", m.to_string()),
-                            e.loc().clone(), format!("location of previous declaration of `{}'", e.to_string())));
-                success = false;
-                continue;
-            }
+        match &a {
+            ast::FunctionAttribute::StateMutability(m) => {
+                if let Some(e) = &mutability {
+                    errors.push(Output::error_with_note(m.loc().clone(), format!("function redeclared `{}'", m.to_string()),
+                                e.loc().clone(), format!("location of previous declaration of `{}'", e.to_string())));
+                    success = false;
+                    continue;
+                }
 
-            mutability = Some(m.clone());
+                mutability = Some(m.clone());
+            },
+            ast::FunctionAttribute::Visibility(v) => {
+                if let Some(e) = &visibility {
+                    errors.push(Output::error_with_note(v.loc().clone(), format!("function redeclared `{}'", v.to_string()),
+                                e.loc().clone(), format!("location of previous declaration of `{}'", e.to_string())));
+                    success = false;
+                    continue;
+                }
+
+                visibility = Some(v.clone());
+            }
         }
     }
+
+    if visibility == None {
+        errors.push(Output::error(f.loc, format!("function has no visibility specifier")));
+        success = false;
+    }
+
+    // FIXME: check visibility of constructor. 
 
     if !success {
         return false;
@@ -590,6 +631,7 @@ fn func_decl(f: &ast::FunctionDefinition, i: usize, ns: &mut Contract, errors: &
         sig: external_signature(&name, &params, &ns),
         name: name,
         mutability,
+        visibility: visibility.unwrap(),
         constructor: f.constructor,
         ast_index: i,
         params,
