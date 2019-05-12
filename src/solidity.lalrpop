@@ -336,10 +336,10 @@ Precedence1: Expression = {
     <a:@L> "new" <t:ElementaryTypeName> <b:@R> => Expression::New(Loc(a, b), t),
     <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence1> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
-    <a:@L> <i:Identifier> "(" ")" <b:@R> => {
+    <a:@L> <i:TypeName> "(" ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), i, Vec::new())
     },
-    <a:@L> <i:Identifier> "(" <v:(<Expression> ",")+> <e:Expression> ")" <b:@R> => {
+    <a:@L> <i:TypeName> "(" <v:(<Expression> ",")*> <e:Expression> ")" <b:@R> => {
         let mut v = v;
         v.push(e);
         Expression::FunctionCall(Loc(a, b), i, v)

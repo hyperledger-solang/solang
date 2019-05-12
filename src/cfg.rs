@@ -30,6 +30,7 @@ pub enum Expression {
     Variable(ast::Loc, usize),
     ZeroExt(resolver::TypeName, Box<Expression>),
     SignExt(resolver::TypeName, Box<Expression>),
+    Trunc(resolver::TypeName, Box<Expression>),
 
     More(Box<Expression>, Box<Expression>),
     Less(Box<Expression>, Box<Expression>),
@@ -121,6 +122,7 @@ impl ControlFlowGraph {
 
             Expression::ZeroExt(ty, e) => format!("(zext {} {})", ty.to_string(ns), self.expr_to_string(ns, e)),
             Expression::SignExt(ty, e) => format!("(sext {} {})", ty.to_string(ns), self.expr_to_string(ns, e)),
+            Expression::Trunc(ty, e) => format!("(trunc {} {})", ty.to_string(ns), self.expr_to_string(ns, e)),
 
             Expression::More(l, r) => format!("({} > {})", self.expr_to_string(ns, l), self.expr_to_string(ns, r)),
             Expression::Less(l, r) => format!("({} < {})", self.expr_to_string(ns, l), self.expr_to_string(ns, r)),
@@ -156,8 +158,8 @@ impl ControlFlowGraph {
             Instr::Branch{ bb } => format!("branch bb{}", bb),
             Instr::BranchCond{ cond, true_, false_ } => format!("branchcond {}, bb{}, bb{}", self.expr_to_string(ns, cond), true_, false_),
             Instr::FuncArg{ res, arg } => format!("%{} = funcarg({})", self.vars[*res].id.name, arg),
-            Instr::SetStorage{ local, storage } => format!("setstorage %{} = %{})", *storage, self.vars[*local].id.name),
-            Instr::GetStorage{ local, storage } => format!("getstorage %{} = %{})", *storage, self.vars[*local].id.name),
+            Instr::SetStorage{ local, storage } => format!("setstorage %{} = %{}", *storage, self.vars[*local].id.name),
+            Instr::GetStorage{ local, storage } => format!("getstorage %{} = %{}", *storage, self.vars[*local].id.name),
         }
     }
 
@@ -293,9 +295,9 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             let e_t = if let Some(init) = init {
                 let (expr, init_ty) = expression(init, cfg, ns, vartab, errors)?;
 
-                Some(implicit_cast(
+                Some(cast(
                     &decl.name.loc, expr,
-                    &init_ty, &var_ty, ns, errors)?)
+                    &init_ty, &var_ty, true, ns, errors)?)
             } else {
                 None
             };
@@ -351,7 +353,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             for (i, r) in returns.iter().enumerate() {
                 let (e, ty) = expression(r, cfg, ns, vartab, errors)?;
 
-                exprs.push(implicit_cast(&r.loc(), e, &ty, &f.returns[i].ty, ns, errors)?);
+                exprs.push(cast(&r.loc(), e, &ty, &f.returns[i].ty, true, ns, errors)?);
             }
 
             cfg.add(vartab, Instr::Return{
@@ -372,7 +374,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             let endif = cfg.new_basic_block("endif".to_string());
 
             cfg.add(vartab, Instr::BranchCond{
-                cond: implicit_cast(&cond.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), ns, errors)?,
+                cond: cast(&cond.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), true, ns, errors)?,
                 true_: then,
                 false_: endif,
             });
@@ -403,7 +405,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             let endif = cfg.new_basic_block("endif".to_string());
 
             cfg.add(vartab, Instr::BranchCond{
-                cond: implicit_cast(&cond.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), ns, errors)?,
+                cond: cast(&cond.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), true, ns, errors)?,
                 true_: then,
                 false_: else_,
             });
@@ -496,7 +498,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
                 let (expr, expr_ty) = expression(cond_expr, cfg, ns, vartab, errors)?;
 
                 cfg.add(vartab, Instr::BranchCond{
-                    cond: implicit_cast(&cond_expr.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), ns, errors)?,
+                    cond: cast(&cond_expr.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), true, ns, errors)?,
                     true_: body,
                     false_: end,
                 });
@@ -523,7 +525,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             let (expr, expr_ty) = expression(cond_expr, cfg, ns, vartab, errors)?;
 
             cfg.add(vartab, Instr::BranchCond{
-                cond: implicit_cast(&cond_expr.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), ns, errors)?,
+                cond: cast(&cond_expr.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), true, ns, errors)?,
                 true_: body,
                 false_: end,
             });
@@ -623,7 +625,7 @@ fn statement(stmt: &ast::Statement, f: &resolver::FunctionDecl, cfg: &mut Contro
             let (expr, expr_ty) = expression(cond_expr, cfg, ns, vartab, errors)?;
 
             cfg.add(vartab, Instr::BranchCond{
-                cond: implicit_cast(&cond_expr.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), ns, errors)?,
+                cond: cast(&cond_expr.loc(), expr, &expr_ty, &resolver::TypeName::new_bool(), true, ns, errors)?,
                 true_: body,
                 false_: end,
             });
@@ -720,22 +722,44 @@ fn coerce_int(l: &resolver::TypeName, l_loc: &ast::Loc, r: &resolver::TypeName, 
     }))
 }
 
-fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to: &resolver::TypeName, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<Expression, ()> {
+fn cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to: &resolver::TypeName, implicit: bool, ns: &resolver::Contract, errors: &mut Vec<output::Output>) -> Result<Expression, ()> {
     if from == to {
         return Ok(expr)
     }
 
-    match (from, to) {
+    let (from_conv, to_conv) = {
+        if implicit {
+            (from.clone(), to.clone())
+        } else {
+            let from_conv = if let resolver::TypeName::Enum(n) = from {
+                resolver::TypeName::Elementary(ns.enums[*n].ty)
+            } else {
+                from.clone()
+            };
+
+            let to_conv = if let resolver::TypeName::Enum(n) = to {
+                resolver::TypeName::Elementary(ns.enums[*n].ty)
+            } else {
+                to.clone()
+            };
+
+            (from_conv, to_conv)
+        }
+    };
+
+    match (from_conv, to_conv) {
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len))) |
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len))) => {
             if from_len > to_len {
-                errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
-                return Err(());
-            }
-
-            if from_len < to_len {
+                if implicit {
+                    errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                    Err(())
+                } else {
+                    Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                }
+            } else if from_len < to_len {
                 Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
@@ -746,11 +770,13 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(to_len))) => {
             if from_len > to_len {
-                errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
-                return Err(());
-            }
-
-            if from_len < to_len {
+                if implicit {
+                    errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                    Err(())
+                } else {
+                    Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                }
+            } else if from_len < to_len {
                 Ok(Expression::SignExt(to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
@@ -759,8 +785,12 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
         (resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(from_len)),
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len))) => {
             if from_len > to_len {
-                errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
-                return Err(());
+                if implicit {
+                    errors.push(Output::type_error(*loc, format!("implicit conversion would truncate from {} to {}", from.to_string(ns), to.to_string(ns))));
+                    return Err(());
+                } else {
+                    unimplemented!();
+                }
             }
 
             Ok(expr)
@@ -773,7 +803,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
          resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len))) => {
             match &expr {
                 Expression::StringLiteral(from_str) => {
-                    if from_str.len() > *to_len as usize {
+                    if from_str.len() > to_len as usize {
                         errors.push(Output::type_error(*loc, format!("string of {} bytes is too long to fit into {}", from_str.len(), to.to_string(ns))));
                         return Err(())
                     }
@@ -784,7 +814,7 @@ fn implicit_cast(loc: &ast::Loc, expr: Expression, from: &resolver::TypeName, to
             Ok(expr)
         },
         _ => {
-             errors.push(Output::type_error(*loc, format!("implicit conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
+             errors.push(Output::type_error(*loc, format!("conversion from {} to {} not possible", from.to_string(ns), to.to_string(ns))));
             Err(())
         }
     }
@@ -857,8 +887,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::Add(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 ty))
         },
         ast::Expression::Subtract(_, l, r) => {
@@ -868,8 +898,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::Subtract(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 ty))
         },
         ast::Expression::Multiply(_, l, r) => {
@@ -879,8 +909,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::Multiply(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 ty))
         },
         ast::Expression::Divide(_, l, r) => {
@@ -891,13 +921,13 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 
             if ty.signed() {
                 Ok((Expression::SDivide(
-                    Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                    Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                     ty))
             } else {
                 Ok((Expression::UDivide(
-                    Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                    Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                     ty))
             }
         },
@@ -909,13 +939,13 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 
             if ty.signed() {
                 Ok((Expression::SModulo(
-                    Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                    Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                     ty))
             } else {
                 Ok((Expression::UModulo(
-                    Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                    Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                     ty))
             }
         },
@@ -928,8 +958,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::More(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
         ast::Expression::Less(_, l, r) => {
@@ -939,8 +969,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::Less(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
         ast::Expression::MoreEqual(_, l, r) => {
@@ -950,8 +980,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::MoreEqual(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
         ast::Expression::LessEqual(_, l, r) => {
@@ -961,8 +991,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::LessEqual(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
         ast::Expression::Equal(_, l, r) => {
@@ -972,8 +1002,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::Equal(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
         ast::Expression::NotEqual(_, l, r) => {
@@ -983,8 +1013,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((Expression::NotEqual(
-                Box::new(implicit_cast(&l.loc(), left, &left_type, &ty, ns, errors)?),
-                Box::new(implicit_cast(&r.loc(), right, &right_type, &ty, ns, errors)?)),
+                Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
 
@@ -993,7 +1023,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
             Ok((Expression::Not(
-                Box::new(implicit_cast(&loc, expr, &expr_type, &resolver::TypeName::new_bool(), ns, errors)?)),
+                Box::new(cast(&loc, expr, &expr_type, &resolver::TypeName::new_bool(), true, ns, errors)?)),
                 resolver::TypeName::new_bool()))
         },
         ast::Expression::Complement(loc, e) => {
@@ -1123,7 +1153,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 
             cfg.add(vartab, Instr::Set{
                 res: var.pos,
-                expr: implicit_cast(&id.loc, expr, &expr_type, &var.ty, ns, errors)?,
+                expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
             });
 
             set_contract_storage(&var, cfg, vartab);
@@ -1156,7 +1186,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 
             let (set, set_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            let set = implicit_cast(&id.loc, set, &set_type, &ty, ns, errors)?;
+            let set = cast(&id.loc, set, &set_type, &ty, true, ns, errors)?;
 
             let set = match expr {
                 ast::Expression::AssignAdd(_, _, _) => {
@@ -1193,7 +1223,62 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
             set_contract_storage(&var, cfg, vartab);
 
             Ok((Expression::Variable(id.loc.clone(), pos), ty))
-        }
+        },
+        ast::Expression::FunctionCall(loc, ty, args) => {
+            let to = match ty {
+                ast::TypeName::Elementary(e) => Some(resolver::TypeName::Elementary(*e)),
+                ast::TypeName::Unresolved(s) => {
+                    match ns.resolve_enum(s) {
+                        Some(v) => Some(resolver::TypeName::Enum(v)),
+                        None => None,
+                    }
+                }
+            };
+
+            // Cast
+            if let Some(to) = to {
+                return if args.is_empty() {
+                    errors.push(Output::error(loc.clone(), format!("missing argument to cast")));
+                    Err(())
+                } else if args.len() > 1 {
+                    errors.push(Output::error(loc.clone(), format!("too many arguments to cast")));
+                    Err(())
+                } else {
+                    let (expr, expr_type) = expression(&args[0], cfg, ns, vartab, errors)?;
+
+                    Ok((cast(loc, expr, &expr_type, &to, false, ns, errors)?, to))
+                };
+            }
+
+            let funcs = if let ast::TypeName::Unresolved(s) = ty {
+                match ns.resolve_func(s) {
+                    Some(v) => v,
+                    None => {
+                        errors.push(Output::error(loc.clone(), format!("unknown function or type")));
+                        return Err(())
+                    }
+                }
+            } else {
+                unreachable!();
+            };
+
+            // function call
+            for f in funcs {
+                let f = &ns.functions[f.1];
+
+                if f.params.len() != args.len() {
+                    continue;
+                }
+
+                // check if arguments can be implicitly casted
+
+                // .. what about return value?
+
+                // .. build call
+            }
+
+            Err(())
+        },
         _ => unimplemented!()
     }
 }

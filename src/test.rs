@@ -40,7 +40,7 @@ mod tests {
         // parse
         let (main, _) = build_solidity("
             contract test {
-                function foo() returns (uint32) {
+                function foo() public returns (uint32) {
                     return 2;
                 }
             }");
@@ -54,7 +54,7 @@ mod tests {
     fn simple_loops() {
         let (main, _) = build_solidity(r##"
 contract test3 {
-	function foo(uint32 a) returns (uint32) {
+	function foo(uint32 a) public returns (uint32) {
 		uint32 b = 50 - a;
 		uint32 c;
 		c = 100 * b;
@@ -62,7 +62,7 @@ contract test3 {
 		return a * 1000 + c;
 	}
 
-	function bar(uint32 b, bool x) returns (uint32) {
+	function bar(uint32 b, bool x) public returns (uint32) {
 		uint32 i = 1;
 		if (x) {
 			do {
@@ -78,7 +78,7 @@ contract test3 {
 		return i;
 	}
 
-	function baz(uint32 x) returns (uint32) {
+	function baz(uint32 x) public returns (uint32) {
 		for (uint32 i = 0; i<100; i++) {
 			x *= 7;
 
@@ -142,7 +142,7 @@ contract test3 {
     fn stack_test() {
         let (main, _) = build_solidity(r##"
 contract test3 {
-	function foo() returns (bool) {
+	function foo() public returns (bool) {
 		uint b = 18446744073709551616;
         uint c = 36893488147419103232;
 
@@ -159,7 +159,7 @@ contract test3 {
     fn abi_call_return_test() {
         let (wasm, abi) = build_solidity(r##"
 contract test {
-	function foo() returns (uint32) {
+	function foo() public returns (uint32) {
         return 102;
 	}
 }"##);
@@ -201,7 +201,7 @@ contract test {
     fn abi_call_pass_return_test() {
         let (wasm, abi) = build_solidity(r##"
 contract test {
-	function foo(uint32 a) returns (uint32) {
+	function foo(uint32 a) public returns (uint32) {
         return a;
 	}
 }"##);

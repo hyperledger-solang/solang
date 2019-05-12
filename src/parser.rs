@@ -17,7 +17,7 @@ pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
         errors.push(match e {
             ParseError::InvalidToken{location} => Output::parser_error(ast::Loc(location, location), "invalid token".to_string()),
             ParseError::UnrecognizedToken{token: (l, token, r), expected} => {
-                Output::parser_error(ast::Loc(l, r), format!("unrecognised token `{}', expected {}", token.0, expected.join(", ")))
+                Output::parser_error(ast::Loc(l, r), format!("unrecognised token `{}', expected {}", token.1, expected.join(", ")))
             },
             ParseError::User{error} => {
                 Output::parser_error(ast::Loc(0, 0), error.to_string())

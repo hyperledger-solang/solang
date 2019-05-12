@@ -168,7 +168,7 @@ pub enum Expression {
     New(Loc, ElementaryTypeName),
     IndexAccess(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
-    FunctionCall(Loc, Identifier, Vec<Expression>),
+    FunctionCall(Loc, TypeName, Vec<Expression>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),
     Delete(Loc, Box<Expression>),

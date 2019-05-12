@@ -179,6 +179,20 @@ impl Contract {
         }
     }
 
+    pub fn resolve_enum(&self, id: &ast::Identifier) -> Option<usize> {
+        match self.symbols.get(&id.name) {
+            Some(Symbol::Enum(_, n)) => Some(*n),
+            _ => None
+        }
+    }
+
+    pub fn resolve_func(&self, id: &ast::Identifier) -> Option<&Vec<(ast::Loc, usize)>> {
+        match self.symbols.get(&id.name) {
+            Some(Symbol::Function(v)) => Some(v),
+            _ => None
+        }
+    }
+
     pub fn resolve_var(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Option<usize> {
         match self.symbols.get(&id.name) {
             None => {

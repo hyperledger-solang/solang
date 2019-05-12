@@ -285,6 +285,14 @@ impl<'a> Contract<'a> {
                     LLVMBuildZExt(builder, e, ty, b"\0".as_ptr() as *const _)
                 }
             },
+            cfg::Expression::Trunc(t, e) => {
+                let e = self.expression(builder, e, vartab);
+                let ty = t.LLVMType(self.ns, self.context);
+
+                unsafe {
+                    LLVMBuildTrunc(builder, e, ty, b"\0".as_ptr() as *const _)
+                }
+            },
             _ => {
                 panic!("expression not implemented");
             }
