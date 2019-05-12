@@ -23,4 +23,9 @@ contract bar {
 	function get_x() public returns (uint32) {
 		return uint32(y);
 	}
+
+	function set_enum_x(X b) public {
+		set_x(uint32(b));
+	}
 }
+

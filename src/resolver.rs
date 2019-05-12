@@ -29,13 +29,15 @@ pub struct ABI {
 pub enum TypeName {
     Elementary(ast::ElementaryTypeName),
     Enum(usize),
+    Noreturn
 }
 
 impl TypeName {
     pub fn to_string(&self, ns: &Contract) -> String {
         match self {
             TypeName::Elementary(e) => e.to_string(),
-            TypeName::Enum(n) => format!("enum {}", ns.enums[*n].name)
+            TypeName::Enum(n) => format!("enum {}", ns.enums[*n].name),
+            TypeName::Noreturn => "no return".to_owned(),
         }
     }
 
@@ -49,14 +51,16 @@ impl TypeName {
     pub fn signed(&self) -> bool {
        match self {
             TypeName::Elementary(e) => e.signed(),
-            TypeName::Enum(_) => false
+            TypeName::Enum(_) => false,
+            TypeName::Noreturn => unreachable!()
         }
     }
 
     pub fn ordered(&self) -> bool {
        match self {
             TypeName::Elementary(e) => e.ordered(),
-            TypeName::Enum(_) => false
+            TypeName::Enum(_) => false,
+            TypeName::Noreturn => unreachable!()
         }
     }
 
@@ -82,7 +86,8 @@ impl Parameter {
             name: self.name.to_string(),
             ty: match &self.ty {
                 TypeName::Elementary(e) => e.to_string(),
-                TypeName::Enum(ref i) => ns.enums[*i].ty.to_string()
+                TypeName::Enum(ref i) => ns.enums[*i].ty.to_string(),
+                TypeName::Noreturn => unreachable!()
             }
         }
     }
@@ -716,7 +721,8 @@ pub fn external_signature(name: &Option<String>, params: &Vec<Parameter>, ns: &C
 
         sig.push_str(&match &p.ty {
             TypeName::Elementary(e) => e.to_string(),
-            TypeName::Enum(i) => ns.enums[*i].ty.to_string()
+            TypeName::Enum(i) => ns.enums[*i].ty.to_string(),
+            TypeName::Noreturn => unreachable!()
         });
     }
 

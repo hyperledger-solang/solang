@@ -472,7 +472,8 @@ impl<'a> Contract<'a> {
                 // insert abi decode
                 let ty = match &f.returns[0].ty {
                     resolver::TypeName::Elementary(e) => e,
-                    resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty
+                    resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty,
+                    resolver::TypeName::Noreturn => unreachable!(),
                 };
 
                 self.emit_abi_encode_single_val(builder, &ty, abi_ptr, ret);
@@ -658,7 +659,8 @@ impl<'a> Contract<'a> {
         for arg in &spec.params {
             let ty = match &arg.ty {
                 resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty
+                resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty,
+                resolver::TypeName::Noreturn => unreachable!()
             };
 
             args.push(match ty {
@@ -1021,6 +1023,21 @@ impl<'a> Contract<'a> {
                         unsafe {
                             LLVMBuildCall(builder, *set_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _);
                         }
+                    },
+                    cfg::Instr::Call{ res, func, args } => {
+                        let mut parms = Vec::new();
+
+                        for a in args {
+                            parms.push(self.expression(builder, &a, &w.vars));
+                        }
+
+                        let ret = unsafe {
+                            LLVMBuildCall(builder, self.functions[*func].value_ref, parms.as_mut_ptr(), parms.len() as u32, "\0".as_ptr() as *const _)
+                        };
+
+                        if res.len() > 0 {
+                            w.vars[res[0]].value_ref = ret;
+                        }
                     }
                 }
             }
@@ -1073,6 +1090,7 @@ impl resolver::TypeName {
         match self {
             resolver::TypeName::Elementary(e) => e.LLVMType(context),
             resolver::TypeName::Enum(n) => { ns.enums[*n].ty.LLVMType(context) },
+            resolver::TypeName::Noreturn => unreachable!()
         }
     }
 
@@ -1080,6 +1098,7 @@ impl resolver::TypeName {
         match self {
             resolver::TypeName::Elementary(e) => e.stack_based(),
             resolver::TypeName::Enum(_) => false,
+            resolver::TypeName::Noreturn => unreachable!()
         }
     }
 }

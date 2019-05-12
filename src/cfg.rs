@@ -1,5 +1,4 @@
 
-
 use std::cmp;
 use num_bigint::BigInt;
 use num_bigint::Sign;
@@ -15,6 +14,7 @@ use resolver;
 use output;
 use output::Output;
 
+#[derive(PartialEq,Clone)]
 pub enum Expression {
     BoolLiteral(bool),
     StringLiteral(String),
@@ -42,6 +42,8 @@ pub enum Expression {
     Not(Box<Expression>),
     Complement(Box<Expression>),
     UnaryMinus(Box<Expression>),
+
+    Poison
 }
 
 pub enum Instr {
@@ -49,6 +51,7 @@ pub enum Instr {
     GetStorage{ local: usize, storage: usize },
     SetStorage{ local: usize, storage: usize },
     Set{ res: usize, expr: Expression },
+    Call{ res: Vec<usize>, func: usize, args: Vec<Expression> },
     Return{ value: Vec<Expression> },
     Branch{ bb: usize },
     BranchCond{ cond:  Expression, true_: usize, false_: usize }
@@ -134,6 +137,7 @@ impl ControlFlowGraph {
             Expression::Not(e) => format!("!{}", self.expr_to_string(ns, e)),
             Expression::Complement(e) => format!("~{}", self.expr_to_string(ns, e)),
             Expression::UnaryMinus(e) => format!("-{}", self.expr_to_string(ns, e)),
+
             _ => String::from("")
         }
     }
@@ -160,6 +164,21 @@ impl ControlFlowGraph {
             Instr::FuncArg{ res, arg } => format!("%{} = funcarg({})", self.vars[*res].id.name, arg),
             Instr::SetStorage{ local, storage } => format!("setstorage %{} = %{}", *storage, self.vars[*local].id.name),
             Instr::GetStorage{ local, storage } => format!("getstorage %{} = %{}", *storage, self.vars[*local].id.name),
+            Instr::Call{ res, func, args } => {
+                format!("{} = call {} {}", {
+                    let s : Vec<String> = res.iter().map(|local| format!("%{}", self.vars[*local].id.name)).collect();
+
+                    s.join(", ")
+                },
+                match ns.functions[*func].name {
+                    Some(ref n) => n.to_owned(),
+                    None => "???".to_owned()
+                }, {
+                    let s : Vec<String> = args.iter().map(|expr| self.expr_to_string(ns, expr)).collect();
+
+                    s.join(", ")
+                })
+            }
         }
     }
 
@@ -211,7 +230,7 @@ pub fn generate_cfg(ast_f: &ast::FunctionDefinition, resolve_f: &resolver::Funct
 
     let mut vartab = Vartable::new(ns);
     let mut loops = LoopScopes::new();
-  
+
     // first add function parameters
     for (i, p) in ast_f.params.iter().enumerate() {
         if let Some(ref name) = p.name {
@@ -701,6 +720,9 @@ fn get_int_length(l: &resolver::TypeName, l_loc: &ast::Loc, ns: &resolver::Contr
         resolver::TypeName::Enum(n) => {
             errors.push(Output::error(*l_loc, format!("type enum {} not allowed", ns.enums[*n].name)));
             return Err(());
+        },
+        resolver::TypeName::Noreturn => {
+            unreachable!();
         }
     })
 }
@@ -1219,7 +1241,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 res: pos,
                 expr: set,
             });
-            
+
             set_contract_storage(&var, cfg, vartab);
 
             Ok((Expression::Variable(id.loc.clone(), pos), ty))
@@ -1262,19 +1284,80 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 unreachable!();
             };
 
+            let mut resolved_args = Vec::new();
+            let mut resolved_types = Vec::new();
+
+            for arg in args {
+                let (expr, expr_type) = expression(arg, cfg, ns, vartab, errors)?;
+
+                resolved_args.push(Box::new(expr));
+                resolved_types.push(expr_type);
+            }
+
+            let mut temp_errors = Vec::new();
+
             // function call
             for f in funcs {
-                let f = &ns.functions[f.1];
+                let func = &ns.functions[f.1];
 
-                if f.params.len() != args.len() {
+                if func.params.len() != args.len() {
+                    temp_errors.push(Output::error(loc.clone(), format!("function expects {} arguments, {} provided", func.params.len(), args.len())));
                     continue;
                 }
 
+                let mut matches = true;
+                let mut cast_args = Vec::new();
+
                 // check if arguments can be implicitly casted
+                for (i, param) in func.params.iter().enumerate() {
+                    let arg = &resolved_args[i];
+
+                    match cast(&ast::Loc(0, 0), *arg.clone(), &resolved_types[i], &param.ty, true, ns, &mut temp_errors) {
+                        Ok(expr) => cast_args.push(expr),
+                        Err(()) => {
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+
+                if !matches {
+                    continue;
+                }
 
                 // .. what about return value?
+                if func.returns.len() > 1 {
+                    errors.push(Output::error(loc.clone(), format!("in expression context a function cannot return more than one value")));
+                    return Err(())
+                }
 
-                // .. build call
+                if func.returns.len() > 0 {
+                    let ty = &func.returns[0].ty;
+                    let id = ast::Identifier{ loc: ast::Loc(0, 0), name: "".to_owned() };
+                    let temp_pos = vartab.temp(&id, ty);
+
+                    cfg.add(vartab, Instr::Call{
+                        res: vec![ temp_pos ],
+                        func: f.1,
+                        args: cast_args,
+                    });
+
+                    return Ok((Expression::Variable(id.loc.clone(), temp_pos), ty.clone()));
+                } else {
+                    cfg.add(vartab, Instr::Call{
+                        res: Vec::new(),
+                        func: f.1,
+                        args: cast_args,
+                    });
+
+                    return Ok((Expression::Poison, resolver::TypeName::Noreturn));
+                }
+            }
+
+            if funcs.len() == 1 {
+                errors.append(&mut temp_errors);
+            } else {
+                errors.push(Output::error(loc.clone(), format!("cannot find overloaded function which matches signature")));
             }
 
             Err(())
@@ -1432,7 +1515,6 @@ impl<'a> Vartable<'a> {
     pub fn pop_dirty_tracker(&mut self) -> HashSet<usize> {
         self.dirty.pop().unwrap().set
     }
-
 }
 
 struct LoopScope {
@@ -1461,7 +1543,7 @@ impl LoopScopes {
     fn leave_scope(&mut self) -> LoopScope {
         self.0.pop_front().unwrap()
     }
-  
+
     fn do_break(&mut self) -> Option<usize> {
         match self.0.front_mut() {
             Some(scope) => {
