@@ -19,7 +19,10 @@ pub struct ABI {
     pub ty: String,
     pub inputs: Vec<ABIParam>,
     pub outputs: Vec<ABIParam>,
-    pub constant: bool
+    pub constant: bool,
+    pub payable: bool,
+    #[serde(rename="stateMutability")]
+    pub mutability: &'static str,
 }
 
 #[derive(PartialEq,Clone)]
@@ -248,9 +251,21 @@ impl Contract {
                 None => false,
             };
 
+            let mutability = match &f.mutability {
+                Some(n) => n.to_string(),
+                None => "nonpayable",
+            };
+
+            let payable = match &f.mutability {
+                Some(ast::StateMutability::Payable(_)) => true,
+                _ => false
+            };
+
             abis.push(ABI{
                 name,
                 constant,
+                mutability,
+                payable,
                 ty,
                 inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
                 outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
