@@ -46,6 +46,44 @@ pub enum Expression {
     Poison
 }
 
+impl Expression {
+    pub fn constant(&self) -> bool {
+        match self {
+            Expression::BoolLiteral(_) |
+            Expression::StringLiteral(_) |
+            Expression::HexLiteral(_) |
+            Expression::NumberLiteral(_, _) => true,
+
+            Expression::Add(l, r) |
+            Expression::Subtract(l, r) |
+            Expression::Multiply(l, r) |
+            Expression::UDivide(l, r) |
+            Expression::SDivide(l, r) |
+            Expression::UModulo(l, r) |
+            Expression::SModulo(l, r) |
+            Expression::More(l, r) |
+            Expression::Less(l, r) |
+            Expression::MoreEqual(l, r) |
+            Expression::LessEqual(l, r) |
+            Expression::Equal(l, r) |
+            Expression::NotEqual(l, r) => {
+                l.constant() && r.constant()
+            },
+
+            Expression::Poison |
+            Expression::Variable(_, _) => false,
+
+            Expression::ZeroExt(_, expr) |
+            Expression::SignExt(_, expr) |
+            Expression::Trunc(_, expr) |
+
+            Expression::Not(expr) |
+            Expression::Complement(expr) | 
+            Expression::UnaryMinus(expr) => expr.constant()
+        }
+    }
+}
+
 pub enum Instr {
     FuncArg{ res: usize, arg: usize },
     GetStorage{ local: usize, storage: usize },
@@ -293,13 +331,21 @@ fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut
     }
 }
 
-fn set_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
-    if let Some(offset) = var.storage {
-        cfg.writes_contract_storage = true;
-        cfg.add(vartab, Instr::SetStorage{
-            local: var.pos,
-            storage: offset
-        });
+fn set_contract_storage(id: &ast::Identifier, var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable, errors: &mut Vec<output::Output>) -> Result<(), ()> {
+    match var.storage {
+        Some(offset) => {
+            cfg.writes_contract_storage = true;
+            cfg.add(vartab, Instr::SetStorage{
+                local: var.pos,
+                storage: offset
+            });
+
+            Ok(())
+        },
+        None => {
+            errors.push(Output::type_error(id.loc.clone(), format!("cannot assign to constant {}", id.name)));
+            Err(())
+        }
     }
 }
 
@@ -1103,7 +1149,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                             Box::new(Expression::NumberLiteral(ty.bits(), One::one())))
                     });
 
-                    set_contract_storage(&var, cfg, vartab);
+                    set_contract_storage(id, &var, cfg, vartab, errors)?;
 
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
@@ -1120,7 +1166,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                             Box::new(Expression::NumberLiteral(ty.bits(), One::one())))
                     });
 
-                    set_contract_storage(&var, cfg, vartab);
+                    set_contract_storage(id, &var, cfg, vartab, errors)?;
 
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
@@ -1137,7 +1183,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                         expr: Expression::Variable(id.loc.clone(), pos),
                     });
 
-                    set_contract_storage(&var, cfg, vartab);
+                    set_contract_storage(id, &var, cfg, vartab, errors)?;
 
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
@@ -1154,7 +1200,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                         expr: Expression::Variable(id.loc.clone(), pos),
                     });
 
-                    set_contract_storage(&var, cfg, vartab);
+                    set_contract_storage(id, &var, cfg, vartab, errors)?;
 
                     Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
                 },
@@ -1178,7 +1224,7 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
             });
 
-            set_contract_storage(&var, cfg, vartab);
+            set_contract_storage(id, &var, cfg, vartab, errors)?;
 
             Ok((Expression::Variable(id.loc.clone(), var.pos), var.ty))
         },
@@ -1242,8 +1288,8 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
                 expr: set,
             });
 
-            set_contract_storage(&var, cfg, vartab);
-
+            set_contract_storage(id, &var, cfg, vartab, errors)?;
+            
             Ok((Expression::Variable(id.loc.clone(), pos), ty))
         },
         ast::Expression::FunctionCall(loc, ty, args) => {

@@ -359,19 +359,19 @@ fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>)
 
     // FIXME: next resolve structs/event
 
-    // resolve state variables
-    for parts in &def.parts {
-        if let ast::ContractPart::ContractVariableDefinition(ref s) = parts {
-            if !var_decl(s, &mut ns, errors) {
+    // resolve function signatures
+    for (i, parts) in def.parts.iter().enumerate() {
+        if let ast::ContractPart::FunctionDefinition(ref f) = parts {
+            if !func_decl(f, i, &mut ns, errors) {
                 broken = true;
             }
         }
     }
 
-    // resolve function signatures
-    for (i, parts) in def.parts.iter().enumerate() {
-        if let ast::ContractPart::FunctionDefinition(ref f) = parts {
-            if !func_decl(f, i, &mut ns, errors) {
+    // resolve state variables
+    for parts in &def.parts {
+        if let ast::ContractPart::ContractVariableDefinition(ref s) = parts {
+            if !var_decl(s, &mut ns, errors) {
                 broken = true;
             }
         }
