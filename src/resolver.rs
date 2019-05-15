@@ -4,7 +4,6 @@ use output::{Output,Note};
 use std::collections::HashMap;
 use serde::Serialize;
 
-
 #[derive(Serialize)]
 pub struct ABIParam {
     pub name: String,
@@ -297,7 +296,7 @@ impl Contract {
     }
 
     pub fn to_string(&self) -> String {
-        let mut s = String::new();
+        let mut s = format!("#\n# Contract: {}\n", self.name);
 
         for f in &self.functions {
             if let Some(ref name) = f.name {
@@ -316,18 +315,18 @@ impl Contract {
 }
 
 pub fn resolver(s: ast::SourceUnit) -> (Vec<Contract>, Vec<Output>) {
-    let mut namespace = Vec::new();
+    let mut contracts = Vec::new();
     let mut errors = Vec::new();
 
     for part in s.0 {
         if let ast::SourceUnitPart::ContractDefinition(def) = part {
             if let Some(c) = resolve_contract(def, &mut errors) {
-                namespace.push(c)
+                contracts.push(c)
             }
         }
     }
 
-    (namespace, errors)
+    (contracts, errors)
 }
 
 fn resolve_contract(def: Box<ast::ContractDefinition>, errors: &mut Vec<Output>) -> Option<Contract> {

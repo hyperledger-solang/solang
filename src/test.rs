@@ -5,6 +5,7 @@ mod tests {
     use resolver;
     use emit;
     use link;
+    use output;
     use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue, ModuleRef};
     use std::mem;
 
@@ -12,7 +13,11 @@ mod tests {
         let s = parser::parse(src).expect("parse should succeed");
         
         // resolve
-        let (contracts, _errors) = resolver::resolver(s);
+        let (contracts, errors) = resolver::resolver(s);
+
+        if contracts.is_empty() {
+            output::print_messages("test.sol", src, &errors, false);
+        }
 
         assert_eq!(contracts.len(), 1);
 
