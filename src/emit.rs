@@ -829,20 +829,27 @@ impl<'a> Contract<'a> {
         let mut vars = Vec::new();
 
         for v in &cfg.vars {
-            if v.storage != None || v.ty.stack_based() {
-                let name = CString::new(v.id.name.to_string()).unwrap();
+            match v.storage {
+                cfg::Storage::Local | cfg::Storage::Contract(_) => {
+                    if v.ty.stack_based() {
+                        let name = CString::new(v.id.name.to_string()).unwrap();
 
-                vars.push(Variable{
-                    value_ref: unsafe {
-                        LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
-                    },
-                    stack: true,
-                });
-            } else {
-                vars.push(Variable{
-                    value_ref: null_mut(),
-                    stack: false,
-                });
+                        vars.push(Variable{
+                            value_ref: unsafe {
+                                LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
+                            },
+                            stack: true,
+                        });
+                    } else {
+                        vars.push(Variable{
+                            value_ref: null_mut(),
+                            stack: false,
+                        });
+                    }
+                },
+                cfg::Storage::Constant => {
+                    // nothing to do
+                }
             }
         }
 

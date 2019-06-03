@@ -322,18 +322,19 @@ fn check_return(f: &ast::FunctionDefinition, cfg: &mut ControlFlowGraph, errors:
 }
 
 fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
-    if let Some(offset) = var.storage {
+    if let Storage::Contract(offset) = var.storage {
         cfg.reads_contract_storage = true;
         cfg.add(vartab, Instr::GetStorage{
             local: var.pos,
             storage: offset
         });
     }
+    // FIXME get constant
 }
 
 fn set_contract_storage(id: &ast::Identifier, var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable, errors: &mut Vec<output::Output>) -> Result<(), ()> {
     match var.storage {
-        Some(offset) => {
+        Storage::Contract(offset) => {
             cfg.writes_contract_storage = true;
             cfg.add(vartab, Instr::SetStorage{
                 local: var.pos,
@@ -342,9 +343,13 @@ fn set_contract_storage(id: &ast::Identifier, var: &Variable, cfg: &mut ControlF
 
             Ok(())
         },
-        None => {
+        Storage::Constant => {
             errors.push(Output::type_error(id.loc.clone(), format!("cannot assign to constant {}", id.name)));
             Err(())
+        },
+        Storage::Local => {
+            // nothing to do
+            Ok(())
         }
     }
 }
@@ -1419,13 +1424,19 @@ fn expression(expr: &ast::Expression, cfg: &mut ControlFlowGraph, ns: &resolver:
 // new scope
 // leave scope
 // produce full Vector of all variables
+#[derive(Clone)]
+pub enum Storage {
+    Constant,
+    Contract(usize),
+    Local,
+}
 
 #[derive(Clone)]
 pub struct Variable {
     pub id: ast::Identifier,
     pub ty: resolver::TypeName,
     pub pos: usize,
-    pub storage: Option<usize>,
+    pub storage: Storage,
 }
 
 struct VarScope (
@@ -1466,7 +1477,7 @@ impl<'a> Vartable<'a> {
             id: id.clone(),
             ty,
             pos,
-            storage: None
+            storage: Storage::Local
         });
 
         self.names.front_mut().unwrap().0.insert(id.name.to_string(), pos);
@@ -1503,7 +1514,10 @@ impl<'a> Vartable<'a> {
                 id: id.clone(),
                 ty: var.ty.clone(),
                 pos,
-                storage: var.storage
+                storage: match var.storage {
+                    Some(n) => Storage::Contract(n),
+                    None => Storage::Constant
+                }
             });
 
             self.storage_vars.insert(id.name.to_string(), pos);
@@ -1524,7 +1538,7 @@ impl<'a> Vartable<'a> {
             },
             ty: ty.clone(),
             pos,
-            storage: None
+            storage: Storage::Local
         });
 
         pos
