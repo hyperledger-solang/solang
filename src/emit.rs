@@ -11,6 +11,7 @@ use std::collections::VecDeque;
 use std::collections::HashMap;
 
 use llvm_sys::LLVMIntPredicate;
+use llvm_sys::*;
 use llvm_sys::core::*;
 use llvm_sys::ir_reader::*;
 use llvm_sys::linker::*;
@@ -778,6 +779,10 @@ impl<'a> Contract<'a> {
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
 
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
+
+        unsafe {
+            LLVMSetVisibility(function, LLVMVisibility::LLVMHiddenVisibility);
+        }
 
         let cfg = match f.cfg {
             Some(ref cfg) => cfg,

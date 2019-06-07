@@ -21,6 +21,7 @@ extern void set_contract_storage32(uint32_t key, void *src, int32_t length);
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.
  */
+__attribute__((visibility("hidden")))
 void __memcpy8(void *_dest, void *_src, size_t length)
 {
 	uint64_t *dest = _dest;
@@ -34,6 +35,7 @@ void __memcpy8(void *_dest, void *_src, size_t length)
 /*
  * Fast-ish clear, 8 bytes at a time.
  */
+__attribute__((visibility("hidden")))
 void __bzero8(void *_dest, size_t length)
 {
 	uint64_t *dest = _dest;
@@ -46,6 +48,7 @@ void __bzero8(void *_dest, size_t length)
 /*
  * Fast-ish set, 8 bytes at a time.
  */
+__attribute__((visibility("hidden")))
 void __bset8(void *_dest, size_t length)
 {
 	int64_t *dest = _dest;
@@ -70,6 +73,7 @@ struct chunk {
 	bool allocated;
 };
 
+__attribute__((visibility("hidden")))
 void __init_heap()
 {
 	struct chunk *first = (struct chunk*)0x10000;
@@ -80,6 +84,7 @@ void __init_heap()
 	         (size_t)first - sizeof(struct chunk));
 }
 
+__attribute__((visibility("hidden")))
 void __attribute__((noinline)) __free(void *m)
 {
 	struct chunk *cur = m;
@@ -105,6 +110,7 @@ void __attribute__((noinline)) __free(void *m)
 	}
 }
 
+__attribute__((visibility("hidden")))
 static void shrink_chunk(struct chunk *cur, size_t size)
 {
 	// round up to nearest 8 bytes
@@ -124,6 +130,7 @@ static void shrink_chunk(struct chunk *cur, size_t size)
 	}
 }
 
+__attribute__((visibility("hidden")))
 void* __attribute__((noinline)) __malloc(size_t size)
 {
 	struct chunk *cur = (struct chunk*)0x10000;
@@ -141,6 +148,7 @@ void* __attribute__((noinline)) __malloc(size_t size)
 	}
 }
 
+__attribute__((visibility("hidden")))
 void* __realloc(void *m, size_t size)
 {
 	struct chunk *cur = m;
@@ -170,6 +178,7 @@ void* __realloc(void *m, size_t size)
 // ABI encoding is big endian, and can have integers of 8 to 256 bits
 // (1 to 32 bytes). This function copies length bytes and reverses the
 // order since wasm is little endian.
+__attribute__((visibility("hidden")))
 void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	from += 31;
@@ -181,6 +190,7 @@ void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
 
 // This function is for used for abi encoding integers
 // ABI encoding is big endian.
+__attribute__((visibility("hidden")))
 void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	to += 31;
