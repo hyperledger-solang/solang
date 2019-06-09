@@ -52,7 +52,19 @@ pub fn link(input: &[u8]) -> Vec<u8> {
         }
     }
 
-    module.import_section_mut().unwrap().entries_mut().truncate(0);
+    {
+        let imports = module.import_section_mut().unwrap().entries_mut();
+        let mut ind = 0;
+
+        while ind < imports.len() {
+            if imports[ind].field().starts_with("__") {
+                imports.remove(ind);
+            } else {
+                ind += 1;
+            }
+        }
+    }
+
     module.clear_custom_section("linking");
 
     let mut linked = builder::module().with_module(module);
