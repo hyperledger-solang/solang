@@ -6,10 +6,88 @@ mod tests {
     use emit;
     use link;
     use output;
-    use wasmi::{ImportsBuilder, Module, ModuleInstance, NopExternals, RuntimeValue, ModuleRef};
+    use wasmi::memory_units::Pages;
+    use wasmi::*;
     use std::mem;
+    use std::collections::HashMap;
 
-    fn build_solidity(src: &'static str) -> (ModuleRef, String) {
+    struct ContractStorage {
+        memory: MemoryRef,
+        store: HashMap<u32, Vec<u8>>,
+    }
+
+    const SET_CONTRACT_STORAGE32 : usize = 0;
+    const GET_CONTRACT_STORAGE32 : usize = 1;
+
+    impl ContractStorage {
+        fn new() -> Self {
+            ContractStorage{
+                memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
+                store: HashMap::new(),
+            }
+        }
+    }
+
+    impl Externals for ContractStorage {
+        fn invoke_index(
+            &mut self,
+            index: usize,
+            args: RuntimeArgs,
+        ) -> Result<Option<RuntimeValue>, Trap> {
+            let slot: u32 = args.nth_checked(0)?;
+            let offset: u32 = args.nth_checked(1)?;
+            let len: u32 = args.nth_checked(2)?;
+
+            match index {
+                SET_CONTRACT_STORAGE32 => {
+                    let mut c = Vec::new();
+                    c.resize(len as usize, 0u8);
+                    if let Err(e) = self.memory.get_into(offset, &mut c) {
+                        panic!("set_contract_storage32: {}", e);
+                    }
+                    self.store.insert(slot, c);
+                },
+                GET_CONTRACT_STORAGE32 => {
+                    let mut c = Vec::new();
+                    if let Some(k) = self.store.get(&slot) {
+                        c = k.clone();
+                    }
+                    c.resize(len as usize, 0u8);
+
+                    if let Err(e) = self.memory.set(offset, &c) {
+                        panic!("get_contract_storage32: {}", e);
+                    }
+                },
+                _ => panic!("external {} unknown", index)
+            }
+
+            Ok(Some(RuntimeValue::I32(0 as i32)))
+        }
+    }
+
+    impl ModuleImportResolver for ContractStorage {
+        fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
+            let index = match field_name {
+                "set_contract_storage32" => SET_CONTRACT_STORAGE32,
+                "get_contract_storage32" => GET_CONTRACT_STORAGE32,
+                _ => {
+                    panic!("{} not implemented", field_name);
+                }
+            };
+
+            Ok(FuncInstance::alloc_host(signature.clone(), index))
+        }
+
+        fn resolve_memory(
+            &self,
+            _field_name: &str,
+            _memory_type: &MemoryDescriptor,
+        ) -> Result<MemoryRef, Error> {
+            Ok(self.memory.clone())
+        }
+    }
+
+    fn build_solidity(src: &'static str) -> (ModuleRef, ContractStorage, String) {
         let s = parser::parse(src).expect("parse should succeed");
         
         // resolve
@@ -33,17 +111,20 @@ mod tests {
 
         let module = Module::from_buffer(bc).expect("parse wasm should work");
 
-        (ModuleInstance::new(&module, &ImportsBuilder::default())
+        let store = ContractStorage::new();
+
+        (ModuleInstance::new(&module, &ImportsBuilder::new().with_resolver("env", &store))
             .expect("Failed to instantiate module")
             .run_start(&mut NopExternals)
             .expect("Failed to run start function in module"),
+         store,
          serde_json::to_string(&abi).unwrap())
     }
 
     #[test]
     fn simple_solidiy_compile_and_run() {
         // parse
-        let (main, _) = build_solidity("
+        let (main, _, _) = build_solidity("
             contract test {
                 function foo() public returns (uint32) {
                     return 2;
@@ -57,7 +138,7 @@ mod tests {
 
     #[test]
     fn simple_loops() {
-        let (main, _) = build_solidity(r##"
+        let (main, _, _) = build_solidity(r##"
 contract test3 {
 	function foo(uint32 a) public returns (uint32) {
 		uint32 b = 50 - a;
@@ -145,7 +226,7 @@ contract test3 {
 
     #[test]
     fn stack_test() {
-        let (main, _) = build_solidity(r##"
+        let (main, _, _) = build_solidity(r##"
 contract test3 {
 	function foo() public returns (bool) {
 		uint b = 18446744073709551616;
@@ -162,13 +243,12 @@ contract test3 {
 
     #[test]
     fn abi_call_return_test() {
-        let (wasm, abi) = build_solidity(r##"
+        let (wasm, store, abi) = build_solidity(r##"
 contract test {
 	function foo() public returns (uint32) {
         return 102;
 	}
 }"##);
-
         let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
 
         // call constructor so that heap is initialised
@@ -179,10 +259,7 @@ contract test {
         // create call for foo
         let calldata = abi.functions["foo"].encode_input(&[]).unwrap();
         // need to prepend length
-        let wmem = match wasm.export_by_name("memory") {
-            Some(wasmi::ExternVal::Memory(n)) => n,
-            _ => panic!()
-        };
+        let wmem = store.memory;
 
         wmem.set_value(0, calldata.len() as u32).unwrap();
         wmem.set(mem::size_of::<u32>() as  u32, &calldata).unwrap();
@@ -204,7 +281,7 @@ contract test {
 
     #[test]
     fn abi_call_pass_return_test() {
-        let (wasm, abi) = build_solidity(r##"
+        let (wasm, store, abi) = build_solidity(r##"
 contract test {
 	function foo(uint32 a) public returns (uint32) {
         return a;
@@ -215,6 +292,7 @@ contract test {
 
         // call constructor so that heap is initialised
         let ret = wasm.invoke_export("constructor", &[RuntimeValue::I32(0)], &mut NopExternals).expect("failed to call constructor");
+        let wmem = store.memory;
 
         assert_eq!(ret, None);
 
@@ -223,10 +301,6 @@ contract test {
             // create call for foo
             let calldata = abi.functions["foo"].encode_input(&[ ethabi::Token::Uint(eval) ]).unwrap();
             // need to prepend length
-            let wmem = match wasm.export_by_name("memory") {
-                Some(wasmi::ExternVal::Memory(n)) => n,
-                _ => panic!()
-            };
 
             wmem.set_value(0, calldata.len() as u32).unwrap();
             wmem.set(mem::size_of::<u32>() as  u32, &calldata).unwrap();

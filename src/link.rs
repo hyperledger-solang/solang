@@ -3,7 +3,7 @@ use parity_wasm;
 use parity_wasm::elements::{Internal, Module, ExportEntry, GlobalEntry, GlobalType, ValueType, InitExpr};
 use parity_wasm::builder;
 
-use parity_wasm::elements::{VarUint7, VarUint32, Deserialize};
+use parity_wasm::elements::{VarUint7, VarUint32, Deserialize, ImportEntry};
 use parity_wasm::elements;
 
 #[allow(dead_code)]
@@ -63,6 +63,12 @@ pub fn link(input: &[u8]) -> Vec<u8> {
                 ind += 1;
             }
         }
+
+        imports.push(ImportEntry::new(
+            "env".into(),
+            "memory".into(),
+            elements::External::Memory(elements::MemoryType::new(2, Some(2), false)),
+        ));
     }
 
     module.clear_custom_section("linking");
@@ -76,11 +82,6 @@ pub fn link(input: &[u8]) -> Vec<u8> {
     for e in globals {
         linked = linked.with_global(e);
     }
-
-    linked.push_memory(builder::MemoryBuilder::new().with_min(2).build());
-
-    // FIXME: export our memory so that it's easy to reference in the tests. Shouldn't really be needed.
-    linked.push_export(builder::ExportBuilder::new().field("memory").internal().memory(0).build());
 
     parity_wasm::serialize(linked.build()).expect("cannot serialize linked wasm")
 }
