@@ -185,13 +185,21 @@ impl<'a> Contract<'a> {
             unsafe { LLVMInt32TypeInContext(self.context) },
         ];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as u32, 0) };
+        let func = unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const i8, ftype) };
+        unsafe {
+            LLVMSetLinkage(func, LLVMLinkage::LLVMExternalLinkage);
+        }
         self.externals.insert(
             "get_storage32".to_owned(),
-            unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const i8, ftype) }
+            func,
         );
+        let func = unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const i8, ftype) };
+        unsafe {
+            LLVMSetLinkage(func, LLVMLinkage::LLVMExternalLinkage);
+        }
         self.externals.insert(
             "set_storage32".to_owned(),
-            unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const i8, ftype) }
+            func,
         );
     }
 
@@ -835,22 +843,21 @@ impl<'a> Contract<'a> {
 
         for v in &cfg.vars {
             match v.storage {
+                cfg::Storage::Local if !v.ty.stack_based() => {
+                    vars.push(Variable{
+                        value_ref: null_mut(),
+                        stack: false,
+                    });
+                },
                 cfg::Storage::Local | cfg::Storage::Contract(_) => {
-                    if v.ty.stack_based() {
-                        let name = CString::new(v.id.name.to_string()).unwrap();
+                    let name = CString::new(v.id.name.to_string()).unwrap();
 
-                        vars.push(Variable{
-                            value_ref: unsafe {
-                                LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
-                            },
-                            stack: true,
-                        });
-                    } else {
-                        vars.push(Variable{
-                            value_ref: null_mut(),
-                            stack: false,
-                        });
-                    }
+                    vars.push(Variable{
+                        value_ref: unsafe {
+                            LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
+                        },
+                        stack: true,
+                    });
                 },
                 cfg::Storage::Constant => {
                     // nothing to do
@@ -1026,10 +1033,10 @@ impl<'a> Contract<'a> {
                         let mut args = vec![
                             // key
                             unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), *storage as _, LLVM_FALSE) },
-                            // dest
-                            unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                            // src
+                            unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "src\0".as_ptr() as *const _) },
                             // length
-                            unsafe { LLVMBuildPtrToInt(builder, off1, LLVMInt32TypeInContext(self.context), "\0".as_ptr() as *const i8) }
+                            unsafe { LLVMBuildPtrToInt(builder, off1, LLVMInt32TypeInContext(self.context), "length\0".as_ptr() as *const i8) }
                         ];
 
                         unsafe {

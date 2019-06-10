@@ -10,6 +10,7 @@ mod tests {
     use wasmi::*;
     use std::mem;
     use std::collections::HashMap;
+    use std::convert::TryInto;
 
     struct ContractStorage {
         memory: MemoryRef,
@@ -43,7 +44,7 @@ mod tests {
                     let mut c = Vec::new();
                     c.resize(len as usize, 0u8);
                     if let Err(e) = self.memory.get_into(offset, &mut c) {
-                        panic!("set_contract_storage32: {}", e);
+                        panic!("set_storage32: {}", e);
                     }
                     self.store.insert(slot, c);
                 },
@@ -55,21 +56,21 @@ mod tests {
                     c.resize(len as usize, 0u8);
 
                     if let Err(e) = self.memory.set(offset, &c) {
-                        panic!("get_contract_storage32: {}", e);
+                        panic!("get_storage32: {}", e);
                     }
                 },
                 _ => panic!("external {} unknown", index)
             }
 
-            Ok(Some(RuntimeValue::I32(0 as i32)))
+            Ok(None)
         }
     }
 
     impl ModuleImportResolver for ContractStorage {
         fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
             let index = match field_name {
-                "set_contract_storage32" => SET_CONTRACT_STORAGE32,
-                "get_contract_storage32" => GET_CONTRACT_STORAGE32,
+                "set_storage32" => SET_CONTRACT_STORAGE32,
+                "get_storage32" => GET_CONTRACT_STORAGE32,
                 _ => {
                     panic!("{} not implemented", field_name);
                 }
@@ -313,6 +314,70 @@ contract test {
                 let returndata = wmem.get(offset + mem::size_of::<u32>() as u32, 32).unwrap();
 
                 let returns = abi.functions["foo"].decode_output(&returndata).unwrap();
+
+                assert_eq!(returns, vec![ ethabi::Token::Uint(eval) ]);
+            } else {
+                panic!("expected offset to return data");
+            }
+        }
+    }
+
+    #[test]
+    fn contract_storage_test() {
+        let (wasm, mut store, abi) = build_solidity(r##"
+contract test {
+    uint32 foo;
+    constructor() public {
+        foo = 102;
+    }
+	function getFoo() public returns (uint32) {
+        return foo + 256;
+	}
+	function setFoo(uint32 a) public  {
+        foo = a - 256;
+	}
+}"##);
+
+        let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
+
+        // call constructor so that heap is initialised
+        let ret = wasm.invoke_export("constructor", &[RuntimeValue::I32(0)], &mut store).expect("failed to call constructor");
+        let wmem = store.memory.clone();
+
+        assert_eq!(ret, None);
+
+        for val in [4096u32, 1000u32].iter() {
+            let eval = ethereum_types::U256::from(*val);
+            // create call for foo
+            let mut calldata = abi.functions["setFoo"].encode_input(&[ ethabi::Token::Uint(eval) ]).unwrap();
+            // need to prepend length
+
+            wmem.set_value(0, calldata.len() as u32).unwrap();
+            wmem.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
+
+            wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut store).expect("failed to call function");
+
+            {
+                let v = store.store.get(&0).unwrap();
+                assert_eq!(v.len(), 4);
+                assert_eq!(val - 256, u32::from_le_bytes(v.as_slice().try_into().unwrap()));
+            }
+
+            // now try retrieve
+            calldata = abi.functions["getFoo"].encode_input(&[]).unwrap();
+            // need to prepend length
+
+            wmem.set_value(0, calldata.len() as u32).unwrap();
+            wmem.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
+
+            let ret = wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut store).expect("failed to call function");
+
+            if let Some(RuntimeValue::I32(offset)) = ret {
+                let offset = offset as u32;
+                assert_eq!(wmem.get_value::<u32>(offset).unwrap(), 32);
+                let returndata = wmem.get(offset + mem::size_of::<u32>() as u32, 32).unwrap();
+
+                let returns = abi.functions["getFoo"].decode_output(&returndata).unwrap();
 
                 assert_eq!(returns, vec![ ethabi::Token::Uint(eval) ]);
             } else {

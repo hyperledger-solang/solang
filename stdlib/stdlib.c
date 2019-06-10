@@ -13,8 +13,8 @@
  * set the memory at dest to 0. If the storage is shorter, pad the remaining bytes
  * with 0.
  */
-extern void get_contract_storage32(uint32_t key, void *dest, int32_t length);
-extern void set_contract_storage32(uint32_t key, void *src, int32_t length);
+extern void get_storage32(uint32_t key, void *dest, int32_t length);
+extern void set_storage32(uint32_t key, void *src, int32_t length);
 
 
 /*
