@@ -46,44 +46,6 @@ pub enum Expression {
     Poison
 }
 
-impl Expression {
-    pub fn constant(&self) -> bool {
-        match self {
-            Expression::BoolLiteral(_) |
-            Expression::StringLiteral(_) |
-            Expression::HexLiteral(_) |
-            Expression::NumberLiteral(_, _) => true,
-
-            Expression::Add(l, r) |
-            Expression::Subtract(l, r) |
-            Expression::Multiply(l, r) |
-            Expression::UDivide(l, r) |
-            Expression::SDivide(l, r) |
-            Expression::UModulo(l, r) |
-            Expression::SModulo(l, r) |
-            Expression::More(l, r) |
-            Expression::Less(l, r) |
-            Expression::MoreEqual(l, r) |
-            Expression::LessEqual(l, r) |
-            Expression::Equal(l, r) |
-            Expression::NotEqual(l, r) => {
-                l.constant() && r.constant()
-            },
-
-            Expression::Poison |
-            Expression::Variable(_, _) => false,
-
-            Expression::ZeroExt(_, expr) |
-            Expression::SignExt(_, expr) |
-            Expression::Trunc(_, expr) |
-
-            Expression::Not(expr) |
-            Expression::Complement(expr) | 
-            Expression::UnaryMinus(expr) => expr.constant()
-        }
-    }
-}
-
 pub enum Instr {
     FuncArg{ res: usize, arg: usize },
     GetStorage{ local: usize, storage: usize },
