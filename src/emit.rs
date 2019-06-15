@@ -304,6 +304,12 @@ impl<'a> Contract<'a> {
 
                 unsafe { LLVMBuildZExt(builder, e, ty, b"\0".as_ptr() as *const _) }
             }
+            cfg::Expression::SignExt(t, e) => {
+                let e = self.expression(builder, e, vartab);
+                let ty = t.LLVMType(self.ns, self.context);
+
+                unsafe { LLVMBuildSExt(builder, e, ty, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::Trunc(t, e) => {
                 let e = self.expression(builder, e, vartab);
                 let ty = t.LLVMType(self.ns, self.context);
