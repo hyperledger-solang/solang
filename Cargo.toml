@@ -3,7 +3,9 @@ name = "solang"
 version = "0.1.0"
 authors = ["Sean Young <sean@mess.org>"]
 homepage = "https://github.com/hyperledger-labs/solang"
+license = "Apache-2.0 OR MIT"
 build = "build.rs"
+description = "Solidity to WASM Smart Contracts Compiler"
 
 [build-dependencies]
 lalrpop = "0.17.0"
