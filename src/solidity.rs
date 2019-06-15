@@ -1,9 +1,9 @@
 // auto-generated: "lalrpop 0.17.0"
 // sha256: 6a92124102d652ea5457ffc7778167a483e5faf6f31173b86d87c672a8e5d52
-use std::str::FromStr;
-use num_bigint::BigInt;
 use ast::*;
+use num_bigint::BigInt;
 use parser::box_option;
+use std::str::FromStr;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
@@ -15713,1437 +15713,1046 @@ mod __intern_token {
 pub use self::__intern_token::Token;
 
 #[allow(unused_variables)]
-fn __action0<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, SourceUnit, usize),
-) -> SourceUnit
-{
+fn __action0<'input>(input: &'input str, (_, __0, _): (usize, SourceUnit, usize)) -> SourceUnit {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action1<
-    'input,
->(
+fn __action1<'input>(
     input: &'input str,
     (_, __0, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
-) -> SourceUnit
-{
+) -> SourceUnit {
     SourceUnit(__0)
 }
 
 #[allow(unused_variables)]
-fn __action2<
-    'input,
->(
+fn __action2<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<ContractDefinition>, usize),
-) -> SourceUnitPart
-{
+) -> SourceUnitPart {
     SourceUnitPart::ContractDefinition(__0)
 }
 
 #[allow(unused_variables)]
-fn __action3<
-    'input,
->(
+fn __action3<'input>(
     input: &'input str,
     (_, __0, _): (usize, (Identifier, String), usize),
-) -> SourceUnitPart
-{
+) -> SourceUnitPart {
     SourceUnitPart::PragmaDirective(__0.0, __0.1)
 }
 
 #[allow(unused_variables)]
-fn __action4<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, String, usize),
-) -> SourceUnitPart
-{
+fn __action4<'input>(input: &'input str, (_, __0, _): (usize, String, usize)) -> SourceUnitPart {
     SourceUnitPart::ImportDirective(__0)
 }
 
 #[allow(unused_variables)]
-fn __action5<
-    'input,
->(
+fn __action5<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, s, _): (usize, String, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> String
-{
+) -> String {
     s
 }
 
 #[allow(unused_variables)]
-fn __action6<
-    'input,
->(
+fn __action6<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, i, _): (usize, Identifier, usize),
     (_, s, _): (usize, String, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> (Identifier, String)
-{
+) -> (Identifier, String) {
     (i, s)
 }
 
 #[allow(unused_variables)]
-fn __action7<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, &'input str, usize),
-) -> String
-{
+fn __action7<'input>(input: &'input str, (_, __0, _): (usize, &'input str, usize)) -> String {
     __0.to_string()
 }
 
 #[allow(unused_variables)]
-fn __action8<
-    'input,
->(
+fn __action8<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bool
 }
 
 #[allow(unused_variables)]
-fn __action9<
-    'input,
->(
+fn __action9<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Address
 }
 
 #[allow(unused_variables)]
-fn __action10<
-    'input,
->(
+fn __action10<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::String
 }
 
 #[allow(unused_variables)]
-fn __action11<
-    'input,
->(
+fn __action11<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(256)
 }
 
 #[allow(unused_variables)]
-fn __action12<
-    'input,
->(
+fn __action12<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(8)
 }
 
 #[allow(unused_variables)]
-fn __action13<
-    'input,
->(
+fn __action13<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(16)
 }
 
 #[allow(unused_variables)]
-fn __action14<
-    'input,
->(
+fn __action14<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(24)
 }
 
 #[allow(unused_variables)]
-fn __action15<
-    'input,
->(
+fn __action15<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(32)
 }
 
 #[allow(unused_variables)]
-fn __action16<
-    'input,
->(
+fn __action16<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(40)
 }
 
 #[allow(unused_variables)]
-fn __action17<
-    'input,
->(
+fn __action17<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(48)
 }
 
 #[allow(unused_variables)]
-fn __action18<
-    'input,
->(
+fn __action18<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(56)
 }
 
 #[allow(unused_variables)]
-fn __action19<
-    'input,
->(
+fn __action19<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(64)
 }
 
 #[allow(unused_variables)]
-fn __action20<
-    'input,
->(
+fn __action20<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(72)
 }
 
 #[allow(unused_variables)]
-fn __action21<
-    'input,
->(
+fn __action21<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(80)
 }
 
 #[allow(unused_variables)]
-fn __action22<
-    'input,
->(
+fn __action22<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(88)
 }
 
 #[allow(unused_variables)]
-fn __action23<
-    'input,
->(
+fn __action23<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(96)
 }
 
 #[allow(unused_variables)]
-fn __action24<
-    'input,
->(
+fn __action24<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(104)
 }
 
 #[allow(unused_variables)]
-fn __action25<
-    'input,
->(
+fn __action25<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(112)
 }
 
 #[allow(unused_variables)]
-fn __action26<
-    'input,
->(
+fn __action26<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(120)
 }
 
 #[allow(unused_variables)]
-fn __action27<
-    'input,
->(
+fn __action27<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(128)
 }
 
 #[allow(unused_variables)]
-fn __action28<
-    'input,
->(
+fn __action28<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(136)
 }
 
 #[allow(unused_variables)]
-fn __action29<
-    'input,
->(
+fn __action29<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(144)
 }
 
 #[allow(unused_variables)]
-fn __action30<
-    'input,
->(
+fn __action30<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(152)
 }
 
 #[allow(unused_variables)]
-fn __action31<
-    'input,
->(
+fn __action31<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(160)
 }
 
 #[allow(unused_variables)]
-fn __action32<
-    'input,
->(
+fn __action32<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(168)
 }
 
 #[allow(unused_variables)]
-fn __action33<
-    'input,
->(
+fn __action33<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(176)
 }
 
 #[allow(unused_variables)]
-fn __action34<
-    'input,
->(
+fn __action34<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(184)
 }
 
 #[allow(unused_variables)]
-fn __action35<
-    'input,
->(
+fn __action35<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(192)
 }
 
 #[allow(unused_variables)]
-fn __action36<
-    'input,
->(
+fn __action36<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(200)
 }
 
 #[allow(unused_variables)]
-fn __action37<
-    'input,
->(
+fn __action37<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(208)
 }
 
 #[allow(unused_variables)]
-fn __action38<
-    'input,
->(
+fn __action38<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(216)
 }
 
 #[allow(unused_variables)]
-fn __action39<
-    'input,
->(
+fn __action39<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(224)
 }
 
 #[allow(unused_variables)]
-fn __action40<
-    'input,
->(
+fn __action40<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(232)
 }
 
 #[allow(unused_variables)]
-fn __action41<
-    'input,
->(
+fn __action41<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(240)
 }
 
 #[allow(unused_variables)]
-fn __action42<
-    'input,
->(
+fn __action42<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(248)
 }
 
 #[allow(unused_variables)]
-fn __action43<
-    'input,
->(
+fn __action43<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Uint(256)
 }
 
 #[allow(unused_variables)]
-fn __action44<
-    'input,
->(
+fn __action44<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(256)
 }
 
 #[allow(unused_variables)]
-fn __action45<
-    'input,
->(
+fn __action45<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(8)
 }
 
 #[allow(unused_variables)]
-fn __action46<
-    'input,
->(
+fn __action46<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(16)
 }
 
 #[allow(unused_variables)]
-fn __action47<
-    'input,
->(
+fn __action47<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(24)
 }
 
 #[allow(unused_variables)]
-fn __action48<
-    'input,
->(
+fn __action48<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(32)
 }
 
 #[allow(unused_variables)]
-fn __action49<
-    'input,
->(
+fn __action49<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(40)
 }
 
 #[allow(unused_variables)]
-fn __action50<
-    'input,
->(
+fn __action50<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(48)
 }
 
 #[allow(unused_variables)]
-fn __action51<
-    'input,
->(
+fn __action51<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(56)
 }
 
 #[allow(unused_variables)]
-fn __action52<
-    'input,
->(
+fn __action52<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(64)
 }
 
 #[allow(unused_variables)]
-fn __action53<
-    'input,
->(
+fn __action53<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(72)
 }
 
 #[allow(unused_variables)]
-fn __action54<
-    'input,
->(
+fn __action54<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(80)
 }
 
 #[allow(unused_variables)]
-fn __action55<
-    'input,
->(
+fn __action55<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(88)
 }
 
 #[allow(unused_variables)]
-fn __action56<
-    'input,
->(
+fn __action56<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(96)
 }
 
 #[allow(unused_variables)]
-fn __action57<
-    'input,
->(
+fn __action57<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(104)
 }
 
 #[allow(unused_variables)]
-fn __action58<
-    'input,
->(
+fn __action58<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(112)
 }
 
 #[allow(unused_variables)]
-fn __action59<
-    'input,
->(
+fn __action59<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(120)
 }
 
 #[allow(unused_variables)]
-fn __action60<
-    'input,
->(
+fn __action60<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(128)
 }
 
 #[allow(unused_variables)]
-fn __action61<
-    'input,
->(
+fn __action61<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(136)
 }
 
 #[allow(unused_variables)]
-fn __action62<
-    'input,
->(
+fn __action62<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(144)
 }
 
 #[allow(unused_variables)]
-fn __action63<
-    'input,
->(
+fn __action63<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(152)
 }
 
 #[allow(unused_variables)]
-fn __action64<
-    'input,
->(
+fn __action64<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(160)
 }
 
 #[allow(unused_variables)]
-fn __action65<
-    'input,
->(
+fn __action65<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(168)
 }
 
 #[allow(unused_variables)]
-fn __action66<
-    'input,
->(
+fn __action66<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(176)
 }
 
 #[allow(unused_variables)]
-fn __action67<
-    'input,
->(
+fn __action67<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(184)
 }
 
 #[allow(unused_variables)]
-fn __action68<
-    'input,
->(
+fn __action68<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(192)
 }
 
 #[allow(unused_variables)]
-fn __action69<
-    'input,
->(
+fn __action69<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(200)
 }
 
 #[allow(unused_variables)]
-fn __action70<
-    'input,
->(
+fn __action70<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(208)
 }
 
 #[allow(unused_variables)]
-fn __action71<
-    'input,
->(
+fn __action71<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(216)
 }
 
 #[allow(unused_variables)]
-fn __action72<
-    'input,
->(
+fn __action72<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(224)
 }
 
 #[allow(unused_variables)]
-fn __action73<
-    'input,
->(
+fn __action73<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(232)
 }
 
 #[allow(unused_variables)]
-fn __action74<
-    'input,
->(
+fn __action74<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(240)
 }
 
 #[allow(unused_variables)]
-fn __action75<
-    'input,
->(
+fn __action75<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(248)
 }
 
 #[allow(unused_variables)]
-fn __action76<
-    'input,
->(
+fn __action76<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Int(256)
 }
 
 #[allow(unused_variables)]
-fn __action77<
-    'input,
->(
+fn __action77<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(1)
 }
 
 #[allow(unused_variables)]
-fn __action78<
-    'input,
->(
+fn __action78<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::DynamicBytes
 }
 
 #[allow(unused_variables)]
-fn __action79<
-    'input,
->(
+fn __action79<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(1)
 }
 
 #[allow(unused_variables)]
-fn __action80<
-    'input,
->(
+fn __action80<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(2)
 }
 
 #[allow(unused_variables)]
-fn __action81<
-    'input,
->(
+fn __action81<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(3)
 }
 
 #[allow(unused_variables)]
-fn __action82<
-    'input,
->(
+fn __action82<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(4)
 }
 
 #[allow(unused_variables)]
-fn __action83<
-    'input,
->(
+fn __action83<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(5)
 }
 
 #[allow(unused_variables)]
-fn __action84<
-    'input,
->(
+fn __action84<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(6)
 }
 
 #[allow(unused_variables)]
-fn __action85<
-    'input,
->(
+fn __action85<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(7)
 }
 
 #[allow(unused_variables)]
-fn __action86<
-    'input,
->(
+fn __action86<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(8)
 }
 
 #[allow(unused_variables)]
-fn __action87<
-    'input,
->(
+fn __action87<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(9)
 }
 
 #[allow(unused_variables)]
-fn __action88<
-    'input,
->(
+fn __action88<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(10)
 }
 
 #[allow(unused_variables)]
-fn __action89<
-    'input,
->(
+fn __action89<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(11)
 }
 
 #[allow(unused_variables)]
-fn __action90<
-    'input,
->(
+fn __action90<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(12)
 }
 
 #[allow(unused_variables)]
-fn __action91<
-    'input,
->(
+fn __action91<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(13)
 }
 
 #[allow(unused_variables)]
-fn __action92<
-    'input,
->(
+fn __action92<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(14)
 }
 
 #[allow(unused_variables)]
-fn __action93<
-    'input,
->(
+fn __action93<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(15)
 }
 
 #[allow(unused_variables)]
-fn __action94<
-    'input,
->(
+fn __action94<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(16)
 }
 
 #[allow(unused_variables)]
-fn __action95<
-    'input,
->(
+fn __action95<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(17)
 }
 
 #[allow(unused_variables)]
-fn __action96<
-    'input,
->(
+fn __action96<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(18)
 }
 
 #[allow(unused_variables)]
-fn __action97<
-    'input,
->(
+fn __action97<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(19)
 }
 
 #[allow(unused_variables)]
-fn __action98<
-    'input,
->(
+fn __action98<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(20)
 }
 
 #[allow(unused_variables)]
-fn __action99<
-    'input,
->(
+fn __action99<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(21)
 }
 
 #[allow(unused_variables)]
-fn __action100<
-    'input,
->(
+fn __action100<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(22)
 }
 
 #[allow(unused_variables)]
-fn __action101<
-    'input,
->(
+fn __action101<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(23)
 }
 
 #[allow(unused_variables)]
-fn __action102<
-    'input,
->(
+fn __action102<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(24)
 }
 
 #[allow(unused_variables)]
-fn __action103<
-    'input,
->(
+fn __action103<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(25)
 }
 
 #[allow(unused_variables)]
-fn __action104<
-    'input,
->(
+fn __action104<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(26)
 }
 
 #[allow(unused_variables)]
-fn __action105<
-    'input,
->(
+fn __action105<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(27)
 }
 
 #[allow(unused_variables)]
-fn __action106<
-    'input,
->(
+fn __action106<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(28)
 }
 
 #[allow(unused_variables)]
-fn __action107<
-    'input,
->(
+fn __action107<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(29)
 }
 
 #[allow(unused_variables)]
-fn __action108<
-    'input,
->(
+fn __action108<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(30)
 }
 
 #[allow(unused_variables)]
-fn __action109<
-    'input,
->(
+fn __action109<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(31)
 }
 
 #[allow(unused_variables)]
-fn __action110<
-    'input,
->(
+fn __action110<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ElementaryTypeName
-{
+) -> ElementaryTypeName {
     ElementaryTypeName::Bytes(32)
 }
 
 #[allow(unused_variables)]
-fn __action111<
-    'input,
->(
+fn __action111<'input>(
     input: &'input str,
     (_, __0, _): (usize, ElementaryTypeName, usize),
-) -> TypeName
-{
+) -> TypeName {
     TypeName::Elementary(__0)
 }
 
 #[allow(unused_variables)]
-fn __action112<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Identifier, usize),
-) -> TypeName
-{
+fn __action112<'input>(input: &'input str, (_, __0, _): (usize, Identifier, usize)) -> TypeName {
     TypeName::Unresolved(__0)
 }
 
 #[allow(unused_variables)]
-fn __action113<
-    'input,
->(
+fn __action113<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> StorageLocation
-{
+) -> StorageLocation {
     StorageLocation::Memory
 }
 
 #[allow(unused_variables)]
-fn __action114<
-    'input,
->(
+fn __action114<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> StorageLocation
-{
+) -> StorageLocation {
     StorageLocation::Storage
 }
 
 #[allow(unused_variables)]
-fn __action115<
-    'input,
->(
+fn __action115<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> StorageLocation
-{
+) -> StorageLocation {
     StorageLocation::Calldata
 }
 
 #[allow(unused_variables)]
-fn __action116<
-    'input,
->(
+fn __action116<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, n, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Identifier
-{
-    Identifier{loc: Loc(l, r), name: n.to_string()}
+) -> Identifier {
+    Identifier {
+        loc: Loc(l, r),
+        name: n.to_string(),
+    }
 }
 
 #[allow(unused_variables)]
-fn __action117<
-    'input,
->(
+fn __action117<'input>(
     input: &'input str,
     (_, t, _): (usize, TypeName, usize),
     (_, s, _): (usize, StorageLocation, usize),
     (_, i, _): (usize, Identifier, usize),
-) -> Box<VariableDeclaration>
-{
-    Box::new(VariableDeclaration{
-        typ: t, storage: s, name: i
+) -> Box<VariableDeclaration> {
+    Box::new(VariableDeclaration {
+        typ: t,
+        storage: s,
+        name: i,
     })
 }
 
 #[allow(unused_variables)]
-fn __action118<
-    'input,
->(
+fn __action118<'input>(
     input: &'input str,
     (_, t, _): (usize, TypeName, usize),
     (_, i, _): (usize, Identifier, usize),
-) -> Box<VariableDeclaration>
-{
-    Box::new(VariableDeclaration{ 
-        typ: t, storage: StorageLocation::Default, name: i
+) -> Box<VariableDeclaration> {
+    Box::new(VariableDeclaration {
+        typ: t,
+        storage: StorageLocation::Default,
+        name: i,
     })
 }
 
 #[allow(unused_variables)]
-fn __action119<
-    'input,
->(
+fn __action119<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, n, _): (usize, Identifier, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, v, _): (usize, ::std::vec::Vec<Box<VariableDeclaration>>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Box<StructDefinition>
-{
+) -> Box<StructDefinition> {
     {
-        Box::new(StructDefinition{name: n, fields: v})
+        Box::new(StructDefinition { name: n, fields: v })
     }
 }
 
 #[allow(unused_variables)]
-fn __action120<
-    'input,
->(
+fn __action120<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ContractType
-{
+) -> ContractType {
     ContractType::Contract
 }
 
 #[allow(unused_variables)]
-fn __action121<
-    'input,
->(
+fn __action121<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ContractType
-{
+) -> ContractType {
     ContractType::Interface
 }
 
 #[allow(unused_variables)]
-fn __action122<
-    'input,
->(
+fn __action122<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ContractType
-{
+) -> ContractType {
     ContractType::Library
 }
 
 #[allow(unused_variables)]
-fn __action123<
-    'input,
->(
+fn __action123<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<StructDefinition>, usize),
-) -> ContractPart
-{
+) -> ContractPart {
     ContractPart::StructDefinition(__0)
 }
 
 #[allow(unused_variables)]
-fn __action124<
-    'input,
->(
+fn __action124<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<EventDefinition>, usize),
-) -> ContractPart
-{
+) -> ContractPart {
     ContractPart::EventDefinition(__0)
 }
 
 #[allow(unused_variables)]
-fn __action125<
-    'input,
->(
+fn __action125<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<EnumDefinition>, usize),
-) -> ContractPart
-{
+) -> ContractPart {
     ContractPart::EnumDefinition(__0)
 }
 
 #[allow(unused_variables)]
-fn __action126<
-    'input,
->(
+fn __action126<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<ContractVariableDefinition>, usize),
-) -> ContractPart
-{
+) -> ContractPart {
     ContractPart::ContractVariableDefinition(__0)
 }
 
 #[allow(unused_variables)]
-fn __action127<
-    'input,
->(
+fn __action127<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<FunctionDefinition>, usize),
-) -> ContractPart
-{
+) -> ContractPart {
     ContractPart::FunctionDefinition(__0)
 }
 
 #[allow(unused_variables)]
-fn __action128<
-    'input,
->(
+fn __action128<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, t, _): (usize, ContractType, usize),
@@ -17152,32 +16761,36 @@ fn __action128<
     (_, p, _): (usize, ::std::vec::Vec<ContractPart>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Box<ContractDefinition>
-{
+) -> Box<ContractDefinition> {
     {
-        Box::new(ContractDefinition{loc: Loc(l, r), ty: t, name: n, parts: p})
+        Box::new(ContractDefinition {
+            loc: Loc(l, r),
+            ty: t,
+            name: n,
+            parts: p,
+        })
     }
 }
 
 #[allow(unused_variables)]
-fn __action129<
-    'input,
->(
+fn __action129<'input>(
     input: &'input str,
     (_, t, _): (usize, TypeName, usize),
     (_, i, _): (usize, ::std::option::Option<&'input str>, usize),
     (_, n, _): (usize, ::std::option::Option<Identifier>, usize),
-) -> EventParameter
-{
-    EventParameter{
-        typ: t, indexed: match i { Some(_) => true, _ => false }, name:n
+) -> EventParameter {
+    EventParameter {
+        typ: t,
+        indexed: match i {
+            Some(_) => true,
+            _ => false,
+        },
+        name: n,
     }
 }
 
 #[allow(unused_variables)]
-fn __action130<
-    'input,
->(
+fn __action130<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, n, _): (usize, Identifier, usize),
@@ -17187,21 +16800,23 @@ fn __action130<
     (_, _, _): (usize, &'input str, usize),
     (_, a, _): (usize, ::std::option::Option<&'input str>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     {
         let mut v = v;
         v.push(e);
-        Box::new(EventDefinition{
-            name: n, fields: v, anonymous: match a { Some(_) => true, _ => false}
+        Box::new(EventDefinition {
+            name: n,
+            fields: v,
+            anonymous: match a {
+                Some(_) => true,
+                _ => false,
+            },
         })
     }
 }
 
 #[allow(unused_variables)]
-fn __action131<
-    'input,
->(
+fn __action131<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, n, _): (usize, Identifier, usize),
@@ -17209,19 +16824,16 @@ fn __action131<
     (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
     (_, e, _): (usize, Identifier, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Box<EnumDefinition>
-{
+) -> Box<EnumDefinition> {
     {
         let mut v = v;
         v.push(e);
-        Box::new(EnumDefinition{name: n, values: v})
+        Box::new(EnumDefinition { name: n, values: v })
     }
 }
 
 #[allow(unused_variables)]
-fn __action132<
-    'input,
->(
+fn __action132<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, t, _): (usize, TypeName, usize),
@@ -17230,282 +16842,220 @@ fn __action132<
     (_, e, _): (usize, ::std::option::Option<Expression>, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     {
-        Box::new(ContractVariableDefinition{
-            loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
+        Box::new(ContractVariableDefinition {
+            loc: Loc(l, r),
+            ty: t,
+            attrs: a,
+            name: i,
+            initializer: e,
         })
     }
 }
 
 #[allow(unused_variables)]
-fn __action133<
-    'input,
->(
+fn __action133<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     Visibility::Public(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action134<
-    'input,
->(
+fn __action134<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     Visibility::External(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action135<
-    'input,
->(
+fn __action135<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     Visibility::Internal(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action136<
-    'input,
->(
+fn __action136<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     Visibility::Private(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action137<
-    'input,
->(
+fn __action137<'input>(
     input: &'input str,
     (_, __0, _): (usize, Visibility, usize),
-) -> VariableAttribute
-{
+) -> VariableAttribute {
     VariableAttribute::Visibility(__0)
 }
 
 #[allow(unused_variables)]
-fn __action138<
-    'input,
->(
+fn __action138<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> VariableAttribute
-{
+) -> VariableAttribute {
     VariableAttribute::Constant(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action139<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action139<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action140<
-    'input,
->(
+fn __action140<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Assign(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action141<
-    'input,
->(
+fn __action141<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignOr(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action142<
-    'input,
->(
+fn __action142<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignXor(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action143<
-    'input,
->(
+fn __action143<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignAnd(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action144<
-    'input,
->(
+fn __action144<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignShiftLeft(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action145<
-    'input,
->(
+fn __action145<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignShiftRight(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action146<
-    'input,
->(
+fn __action146<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignAdd(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action147<
-    'input,
->(
+fn __action147<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignSubtract(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action148<
-    'input,
->(
+fn __action148<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignMultiply(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action149<
-    'input,
->(
+fn __action149<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignDivide(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action150<
-    'input,
->(
+fn __action150<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::AssignModulo(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action151<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action151<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action152<
-    'input,
->(
+fn __action152<'input>(
     input: &'input str,
     (_, c, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
@@ -17514,583 +17064,415 @@ fn __action152<
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Ternary(Loc(a, b), Box::new(c), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action153<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action153<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action154<
-    'input,
->(
+fn __action154<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Or(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action155<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action155<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action156<
-    'input,
->(
+fn __action156<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::And(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action157<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action157<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action158<
-    'input,
->(
+fn __action158<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Equal(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action159<
-    'input,
->(
+fn __action159<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::NotEqual(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action160<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action160<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action161<
-    'input,
->(
+fn __action161<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Less(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action162<
-    'input,
->(
+fn __action162<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::More(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action163<
-    'input,
->(
+fn __action163<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::LessEqual(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action164<
-    'input,
->(
+fn __action164<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::MoreEqual(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action165<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action165<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action166<
-    'input,
->(
+fn __action166<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::BitwiseOr(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action167<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action167<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action168<
-    'input,
->(
+fn __action168<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::BitwiseXor(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action169<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action169<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action170<
-    'input,
->(
+fn __action170<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::BitwiseAnd(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action171<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action171<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action172<
-    'input,
->(
+fn __action172<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::ShiftLeft(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action173<
-    'input,
->(
+fn __action173<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::ShiftRight(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action174<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action174<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action175<
-    'input,
->(
+fn __action175<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Add(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action176<
-    'input,
->(
+fn __action176<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Subtract(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action177<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action177<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action178<
-    'input,
->(
+fn __action178<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Multiply(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action179<
-    'input,
->(
+fn __action179<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Divide(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action180<
-    'input,
->(
+fn __action180<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Modulo(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action181<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action181<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action182<
-    'input,
->(
+fn __action182<'input>(
     input: &'input str,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, r, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Power(Loc(a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
-fn __action183<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action183<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action184<
-    'input,
->(
+fn __action184<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Not(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action185<
-    'input,
->(
+fn __action185<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Complement(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action186<
-    'input,
->(
+fn __action186<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::Delete(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action187<
-    'input,
->(
+fn __action187<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::PreIncrement(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action188<
-    'input,
->(
+fn __action188<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::PreDecrement(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action189<
-    'input,
->(
+fn __action189<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::UnaryPlus(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action190<
-    'input,
->(
+fn __action190<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::UnaryMinus(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action191<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+fn __action191<'input>(input: &'input str, (_, __0, _): (usize, Expression, usize)) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action192<
-    'input,
->(
+fn __action192<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::PostIncrement(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action193<
-    'input,
->(
+fn __action193<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::PostDecrement(Loc(a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
-fn __action194<
-    'input,
->(
+fn __action194<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, t, _): (usize, ElementaryTypeName, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::New(Loc(a, b), t)
 }
 
 #[allow(unused_variables)]
-fn __action195<
-    'input,
->(
+fn __action195<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
@@ -18098,47 +17480,38 @@ fn __action195<
     (_, i, _): (usize, ::std::option::Option<Expression>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i))
 }
 
 #[allow(unused_variables)]
-fn __action196<
-    'input,
->(
+fn __action196<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, i, _): (usize, Identifier, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::MemberAccess(Loc(a, b), Box::new(e), i)
 }
 
 #[allow(unused_variables)]
-fn __action197<
-    'input,
->(
+fn __action197<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, i, _): (usize, TypeName, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     {
         Expression::FunctionCall(Loc(a, b), i, Vec::new())
     }
 }
 
 #[allow(unused_variables)]
-fn __action198<
-    'input,
->(
+fn __action198<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, i, _): (usize, TypeName, usize),
@@ -18147,8 +17520,7 @@ fn __action198<
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     {
         let mut v = v;
         v.push(e);
@@ -18157,102 +17529,72 @@ fn __action198<
 }
 
 #[allow(unused_variables)]
-fn __action199<
-    'input,
->(
+fn __action199<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::BoolLiteral(Loc(a, b), true)
 }
 
 #[allow(unused_variables)]
-fn __action200<
-    'input,
->(
+fn __action200<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::BoolLiteral(Loc(a, b), false)
 }
 
 #[allow(unused_variables)]
-fn __action201<
-    'input,
->(
+fn __action201<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, s, _): (usize, String, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::StringLiteral(Loc(a, b), s.to_string())
 }
 
 #[allow(unused_variables)]
-fn __action202<
-    'input,
->(
+fn __action202<'input>(
     input: &'input str,
     (_, a, _): (usize, usize, usize),
     (_, s, _): (usize, String, usize),
     (_, b, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::HexLiteral(Loc(a, b), s.to_string())
 }
 
 #[allow(unused_variables)]
-fn __action203<
-    'input,
->(
-    input: &'input str,
-    (_, i, _): (usize, Identifier, usize),
-) -> Expression
-{
+fn __action203<'input>(input: &'input str, (_, i, _): (usize, Identifier, usize)) -> Expression {
     Expression::Variable(i)
 }
 
 #[allow(unused_variables)]
-fn __action204<
-    'input,
->(
+fn __action204<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     e
 }
 
 #[allow(unused_variables)]
-fn __action205<
-    'input,
->(
+fn __action205<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, n, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     Expression::NumberLiteral(Loc(l, r), BigInt::from_str(n).unwrap())
 }
 
 #[allow(unused_variables)]
-fn __action206<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, &'input str, usize),
-) -> String
-{
+fn __action206<'input>(input: &'input str, (_, __0, _): (usize, &'input str, usize)) -> String {
     {
         let mut v = __0.to_string();
         v.remove(0);
@@ -18263,13 +17605,7 @@ fn __action206<
 }
 
 #[allow(unused_variables)]
-fn __action207<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, &'input str, usize),
-) -> String
-{
+fn __action207<'input>(input: &'input str, (_, __0, _): (usize, &'input str, usize)) -> String {
     {
         let v = __0.to_string();
         let hex_len = v.len() - 5;
@@ -18278,43 +17614,38 @@ fn __action207<
 }
 
 #[allow(unused_variables)]
-fn __action208<
-    'input,
->(
+fn __action208<'input>(
     input: &'input str,
     (_, e, _): (usize, TypeName, usize),
     (_, s, _): (usize, ::std::option::Option<StorageLocation>, usize),
     (_, i, _): (usize, ::std::option::Option<Identifier>, usize),
-) -> Parameter
-{
+) -> Parameter {
     {
-        Parameter{typ: e, storage: s, name: i}
+        Parameter {
+            typ: e,
+            storage: s,
+            name: i,
+        }
     }
 }
 
 #[allow(unused_variables)]
-fn __action209<
-    'input,
->(
+fn __action209<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
     (_, __1, _): (usize, &'input str, usize),
-) -> Vec<Parameter>
-{
+) -> Vec<Parameter> {
     Vec::new()
 }
 
 #[allow(unused_variables)]
-fn __action210<
-    'input,
->(
+fn __action210<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, v, _): (usize, ::std::vec::Vec<Parameter>, usize),
     (_, e, _): (usize, Parameter, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Vec<Parameter>
-{
+) -> Vec<Parameter> {
     {
         let mut v = v;
         v.push(e);
@@ -18323,70 +17654,53 @@ fn __action210<
 }
 
 #[allow(unused_variables)]
-fn __action211<
-    'input,
->(
+fn __action211<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> StateMutability
-{
+) -> StateMutability {
     StateMutability::Pure(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action212<
-    'input,
->(
+fn __action212<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> StateMutability
-{
+) -> StateMutability {
     StateMutability::View(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action213<
-    'input,
->(
+fn __action213<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
-) -> StateMutability
-{
+) -> StateMutability {
     StateMutability::Payable(Loc(l, r))
 }
 
 #[allow(unused_variables)]
-fn __action214<
-    'input,
->(
+fn __action214<'input>(
     input: &'input str,
     (_, __0, _): (usize, StateMutability, usize),
-) -> FunctionAttribute
-{
+) -> FunctionAttribute {
     FunctionAttribute::StateMutability(__0)
 }
 
 #[allow(unused_variables)]
-fn __action215<
-    'input,
->(
+fn __action215<'input>(
     input: &'input str,
     (_, __0, _): (usize, Visibility, usize),
-) -> FunctionAttribute
-{
+) -> FunctionAttribute {
     FunctionAttribute::Visibility(__0)
 }
 
 #[allow(unused_variables)]
-fn __action216<
-    'input,
->(
+fn __action216<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18395,15 +17709,14 @@ fn __action216<
     (_, r, _): (usize, ::std::option::Option<Vec<Parameter>>, usize),
     (_, b, _): (usize, BlockStatement, usize),
     (_, e, _): (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     {
         let returns = match r {
-            None => vec!(),
+            None => vec![],
             Some(v) => v,
         };
-        
-        Box::new(FunctionDefinition{
+
+        Box::new(FunctionDefinition {
             loc: Loc(l, e),
             constructor: true,
             name: None,
@@ -18416,9 +17729,7 @@ fn __action216<
 }
 
 #[allow(unused_variables)]
-fn __action217<
-    'input,
->(
+fn __action217<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18428,15 +17739,14 @@ fn __action217<
     (_, r, _): (usize, ::std::option::Option<Vec<Parameter>>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, e, _): (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     {
         let returns = match r {
-            None => vec!(),
+            None => vec![],
             Some(v) => v,
         };
-        
-        Box::new(FunctionDefinition{
+
+        Box::new(FunctionDefinition {
             loc: Loc(l, e),
             constructor: false,
             name: n,
@@ -18449,9 +17759,7 @@ fn __action217<
 }
 
 #[allow(unused_variables)]
-fn __action218<
-    'input,
->(
+fn __action218<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18461,15 +17769,14 @@ fn __action218<
     (_, r, _): (usize, ::std::option::Option<Vec<Parameter>>, usize),
     (_, b, _): (usize, BlockStatement, usize),
     (_, e, _): (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     {
         let returns = match r {
-            None => vec!(),
+            None => vec![],
             Some(v) => v,
         };
-        
-        Box::new(FunctionDefinition{
+
+        Box::new(FunctionDefinition {
             loc: Loc(l, e),
             constructor: false,
             name: n,
@@ -18482,41 +17789,33 @@ fn __action218<
 }
 
 #[allow(unused_variables)]
-fn __action219<
-    'input,
->(
+fn __action219<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, s, _): (usize, ::std::vec::Vec<Statement>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> BlockStatement
-{
+) -> BlockStatement {
     {
         BlockStatement(s)
     }
 }
 
 #[allow(unused_variables)]
-fn __action220<
-    'input,
->(
+fn __action220<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, cond, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, body, _): (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::If(cond, Box::new(body), None)
     }
 }
 
 #[allow(unused_variables)]
-fn __action221<
-    'input,
->(
+fn __action221<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18525,45 +17824,33 @@ fn __action221<
     (_, body, _): (usize, Statement, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, o, _): (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::If(cond, Box::new(body), Some(Box::new(o)))
     }
 }
 
 #[allow(unused_variables)]
-fn __action222<
-    'input,
->(
+fn __action222<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::While(e, Box::new(b))
     }
 }
 
 #[allow(unused_variables)]
-fn __action223<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Statement, usize),
-) -> Statement
-{
+fn __action223<'input>(input: &'input str, (_, __0, _): (usize, Statement, usize)) -> Statement {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action224<
-    'input,
->(
+fn __action224<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18572,34 +17859,28 @@ fn __action224<
     (_, body, _): (usize, Statement, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, o, _): (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::If(cond, Box::new(body), Some(Box::new(o)))
     }
 }
 
 #[allow(unused_variables)]
-fn __action225<
-    'input,
->(
+fn __action225<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::While(e, Box::new(b))
     }
 }
 
 #[allow(unused_variables)]
-fn __action226<
-    'input,
->(
+fn __action226<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18610,17 +17891,19 @@ fn __action226<
     (_, n, _): (usize, ::std::option::Option<Statement>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, block, _): (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     {
-        Statement::For(box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+        Statement::For(
+            box_option(b),
+            box_option(c),
+            box_option(n),
+            Some(Box::new(block)),
+        )
     }
 }
 
 #[allow(unused_variables)]
-fn __action227<
-    'input,
->(
+fn __action227<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18631,105 +17914,72 @@ fn __action227<
     (_, n, _): (usize, ::std::option::Option<Statement>, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::For(box_option(b), box_option(c), box_option(n), None)
     }
 }
 
 #[allow(unused_variables)]
-fn __action228<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Statement, usize),
-) -> Statement
-{
+fn __action228<'input>(input: &'input str, (_, __0, _): (usize, Statement, usize)) -> Statement {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action229<
-    'input,
->(
-    input: &'input str,
-    (_, __0, _): (usize, Statement, usize),
-) -> Statement
-{
+fn __action229<'input>(input: &'input str, (_, __0, _): (usize, Statement, usize)) -> Statement {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action230<
-    'input,
->(
+fn __action230<'input>(
     input: &'input str,
     (_, v, _): (usize, Box<VariableDeclaration>, usize),
     (_, e, _): (usize, ::std::option::Option<Expression>, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::VariableDefinition(v, e)
     }
 }
 
 #[allow(unused_variables)]
-fn __action231<
-    'input,
->(
-    input: &'input str,
-    (_, e, _): (usize, Expression, usize),
-) -> Statement
-{
+fn __action231<'input>(input: &'input str, (_, e, _): (usize, Expression, usize)) -> Statement {
     {
         Statement::Expression(e)
     }
 }
 
 #[allow(unused_variables)]
-fn __action232<
-    'input,
->(
+fn __action232<'input>(
     input: &'input str,
     (_, __0, _): (usize, BlockStatement, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::BlockStatement(__0)
     }
 }
 
 #[allow(unused_variables)]
-fn __action233<
-    'input,
->(
+fn __action233<'input>(
     input: &'input str,
     (_, b, _): (usize, Statement, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     b
 }
 
 #[allow(unused_variables)]
-fn __action234<
-    'input,
->(
+fn __action234<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
     (_, __1, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::PlaceHolder
     }
 }
 
 #[allow(unused_variables)]
-fn __action235<
-    'input,
->(
+fn __action235<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, b, _): (usize, Statement, usize),
@@ -18738,78 +17988,63 @@ fn __action235<
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::DoWhile(Box::new(b), e)
     }
 }
 
 #[allow(unused_variables)]
-fn __action236<
-    'input,
->(
+fn __action236<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
     (_, __1, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::Continue
     }
 }
 
 #[allow(unused_variables)]
-fn __action237<
-    'input,
->(
+fn __action237<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
     (_, __1, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::Break
     }
 }
 
 #[allow(unused_variables)]
-fn __action238<
-    'input,
->(
+fn __action238<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::Return(Loc(l, r), Vec::new())
     }
 }
 
 #[allow(unused_variables)]
-fn __action239<
-    'input,
->(
+fn __action239<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, e, _): (usize, Expression, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
-        Statement::Return(Loc(l, r), vec!(e))
+        Statement::Return(Loc(l, r), vec![e])
     }
 }
 
 #[allow(unused_variables)]
-fn __action240<
-    'input,
->(
+fn __action240<'input>(
     input: &'input str,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
@@ -18819,8 +18054,7 @@ fn __action240<
     (_, _, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         let mut v = v;
         v.push(e);
@@ -18829,40 +18063,32 @@ fn __action240<
 }
 
 #[allow(unused_variables)]
-fn __action241<
-    'input,
->(
+fn __action241<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
     (_, __1, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::Throw
     }
 }
 
 #[allow(unused_variables)]
-fn __action242<
-    'input,
->(
+fn __action242<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, n, _): (usize, Identifier, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         Statement::Emit(n, Vec::new())
     }
 }
 
 #[allow(unused_variables)]
-fn __action243<
-    'input,
->(
+fn __action243<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, n, _): (usize, Identifier, usize),
@@ -18871,8 +18097,7 @@ fn __action243<
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     {
         let mut v = v;
         v.push(e);
@@ -18881,703 +18106,553 @@ fn __action243<
 }
 
 #[allow(unused_variables)]
-fn __action244<
-    'input,
->(
+fn __action244<'input>(
     input: &'input str,
     (_, __0, _): (usize, Expression, usize),
-) -> ::std::vec::Vec<Expression>
-{
+) -> ::std::vec::Vec<Expression> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action245<
-    'input,
->(
+fn __action245<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
     (_, e, _): (usize, Expression, usize),
-) -> ::std::vec::Vec<Expression>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<Expression> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action246<
-    'input,
->(
+fn __action246<'input>(
     input: &'input str,
     (_, __0, _): (usize, Statement, usize),
-) -> ::std::option::Option<Statement>
-{
+) -> ::std::option::Option<Statement> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action247<
-    'input,
->(
+fn __action247<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Statement>
-{
+) -> ::std::option::Option<Statement> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action248<
-    'input,
->(
+fn __action248<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Statement>
-{
+) -> ::std::vec::Vec<Statement> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action249<
-    'input,
->(
+fn __action249<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Statement>, usize),
-) -> ::std::vec::Vec<Statement>
-{
+) -> ::std::vec::Vec<Statement> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action250<
-    'input,
->(
+fn __action250<'input>(
     input: &'input str,
     (_, __0, _): (usize, Vec<Parameter>, usize),
-) -> ::std::option::Option<Vec<Parameter>>
-{
+) -> ::std::option::Option<Vec<Parameter>> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action251<
-    'input,
->(
+fn __action251<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Vec<Parameter>>
-{
+) -> ::std::option::Option<Vec<Parameter>> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action252<
-    'input,
->(
+fn __action252<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, __0, _): (usize, Vec<Parameter>, usize),
-) -> Vec<Parameter>
-{
+) -> Vec<Parameter> {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action253<
-    'input,
->(
+fn __action253<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<FunctionAttribute>
-{
+) -> ::std::vec::Vec<FunctionAttribute> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action254<
-    'input,
->(
+fn __action254<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
-{
+) -> ::std::vec::Vec<FunctionAttribute> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action255<
-    'input,
->(
+fn __action255<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Parameter>
-{
+) -> ::std::vec::Vec<Parameter> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action256<
-    'input,
->(
+fn __action256<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Parameter>, usize),
-) -> ::std::vec::Vec<Parameter>
-{
+) -> ::std::vec::Vec<Parameter> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action257<
-    'input,
->(
+fn __action257<'input>(
     input: &'input str,
     (_, __0, _): (usize, Parameter, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Parameter
-{
+) -> Parameter {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action258<
-    'input,
->(
+fn __action258<'input>(
     input: &'input str,
     (_, __0, _): (usize, StorageLocation, usize),
-) -> ::std::option::Option<StorageLocation>
-{
+) -> ::std::option::Option<StorageLocation> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action259<
-    'input,
->(
+fn __action259<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<StorageLocation>
-{
+) -> ::std::option::Option<StorageLocation> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action260<
-    'input,
->(
+fn __action260<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Expression>
-{
+) -> ::std::vec::Vec<Expression> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action261<
-    'input,
->(
+fn __action261<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
-) -> ::std::vec::Vec<Expression>
-{
+) -> ::std::vec::Vec<Expression> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action262<
-    'input,
->(
+fn __action262<'input>(
     input: &'input str,
     (_, __0, _): (usize, Expression, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action263<
-    'input,
->(
+fn __action263<'input>(
     input: &'input str,
     (_, __0, _): (usize, Expression, usize),
-) -> ::std::option::Option<Expression>
-{
+) -> ::std::option::Option<Expression> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action264<
-    'input,
->(
+fn __action264<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Expression>
-{
+) -> ::std::option::Option<Expression> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action265<
-    'input,
->(
+fn __action265<'input>(
     input: &'input str,
     (_, __0, _): (usize, Expression, usize),
-) -> ::std::option::Option<Expression>
-{
+) -> ::std::option::Option<Expression> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action266<
-    'input,
->(
+fn __action266<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Expression>
-{
+) -> ::std::option::Option<Expression> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action267<
-    'input,
->(
+fn __action267<'input>(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
     (_, __0, _): (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action268<
-    'input,
->(
+fn __action268<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<VariableAttribute>
-{
+) -> ::std::vec::Vec<VariableAttribute> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action269<
-    'input,
->(
+fn __action269<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
-) -> ::std::vec::Vec<VariableAttribute>
-{
+) -> ::std::vec::Vec<VariableAttribute> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action270<
-    'input,
->(
+fn __action270<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Identifier>
-{
+) -> ::std::vec::Vec<Identifier> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action271<
-    'input,
->(
+fn __action271<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
-) -> ::std::vec::Vec<Identifier>
-{
+) -> ::std::vec::Vec<Identifier> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action272<
-    'input,
->(
+fn __action272<'input>(
     input: &'input str,
     (_, __0, _): (usize, Identifier, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Identifier
-{
+) -> Identifier {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action273<
-    'input,
->(
+fn __action273<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ::std::option::Option<&'input str>
-{
+) -> ::std::option::Option<&'input str> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action274<
-    'input,
->(
+fn __action274<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<&'input str>
-{
+) -> ::std::option::Option<&'input str> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action275<
-    'input,
->(
+fn __action275<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<EventParameter>
-{
+) -> ::std::vec::Vec<EventParameter> {
     vec![]
 }
 
 #[allow(unused_variables)]
-fn __action276<
-    'input,
->(
+fn __action276<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
-) -> ::std::vec::Vec<EventParameter>
-{
+) -> ::std::vec::Vec<EventParameter> {
     v
 }
 
 #[allow(unused_variables)]
-fn __action277<
-    'input,
->(
+fn __action277<'input>(
     input: &'input str,
     (_, __0, _): (usize, EventParameter, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> EventParameter
-{
+) -> EventParameter {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action278<
-    'input,
->(
+fn __action278<'input>(
     input: &'input str,
     (_, __0, _): (usize, Identifier, usize),
-) -> ::std::option::Option<Identifier>
-{
+) -> ::std::option::Option<Identifier> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action279<
-    'input,
->(
+fn __action279<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Identifier>
-{
+) -> ::std::option::Option<Identifier> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action280<
-    'input,
->(
+fn __action280<'input>(
     input: &'input str,
     (_, __0, _): (usize, &'input str, usize),
-) -> ::std::option::Option<&'input str>
-{
+) -> ::std::option::Option<&'input str> {
     Some(__0)
 }
 
 #[allow(unused_variables)]
-fn __action281<
-    'input,
->(
+fn __action281<'input>(
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<&'input str>
-{
+) -> ::std::option::Option<&'input str> {
     None
 }
 
 #[allow(unused_variables)]
-fn __action282<
-    'input,
->(
+fn __action282<'input>(
     input: &'input str,
     (_, __0, _): (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
-{
+) -> ::std::vec::Vec<ContractPart> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action283<
-    'input,
->(
+fn __action283<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<ContractPart>, usize),
     (_, e, _): (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<ContractPart> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action284<
-    'input,
->(
+fn __action284<'input>(
     input: &'input str,
     (_, __0, _): (usize, ContractPart, usize),
-) -> ContractPart
-{
+) -> ContractPart {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action285<
-    'input,
->(
+fn __action285<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<VariableDeclaration>, usize),
-) -> ::std::vec::Vec<Box<VariableDeclaration>>
-{
+) -> ::std::vec::Vec<Box<VariableDeclaration>> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action286<
-    'input,
->(
+fn __action286<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Box<VariableDeclaration>>, usize),
     (_, e, _): (usize, Box<VariableDeclaration>, usize),
-) -> ::std::vec::Vec<Box<VariableDeclaration>>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<Box<VariableDeclaration>> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action287<
-    'input,
->(
+fn __action287<'input>(
     input: &'input str,
     (_, __0, _): (usize, Box<VariableDeclaration>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Box<VariableDeclaration>
-{
+) -> Box<VariableDeclaration> {
     (__0)
 }
 
 #[allow(unused_variables)]
-fn __action288<
-    'input,
->(
-    input: &'input str,
-    __lookbehind: &usize,
-    __lookahead: &usize,
-) -> usize
-{
+fn __action288<'input>(input: &'input str, __lookbehind: &usize, __lookahead: &usize) -> usize {
     __lookbehind.clone()
 }
 
 #[allow(unused_variables)]
-fn __action289<
-    'input,
->(
-    input: &'input str,
-    __lookbehind: &usize,
-    __lookahead: &usize,
-) -> usize
-{
+fn __action289<'input>(input: &'input str, __lookbehind: &usize, __lookahead: &usize) -> usize {
     __lookahead.clone()
 }
 
 #[allow(unused_variables)]
-fn __action290<
-    'input,
->(
+fn __action290<'input>(
     input: &'input str,
     (_, __0, _): (usize, SourceUnitPart, usize),
-) -> ::std::vec::Vec<SourceUnitPart>
-{
+) -> ::std::vec::Vec<SourceUnitPart> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action291<
-    'input,
->(
+fn __action291<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
     (_, e, _): (usize, SourceUnitPart, usize),
-) -> ::std::vec::Vec<SourceUnitPart>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<SourceUnitPart> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action292<
-    'input,
->(
+fn __action292<'input>(
     input: &'input str,
     (_, __0, _): (usize, EventParameter, usize),
-) -> ::std::vec::Vec<EventParameter>
-{
+) -> ::std::vec::Vec<EventParameter> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action293<
-    'input,
->(
+fn __action293<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
     (_, e, _): (usize, EventParameter, usize),
-) -> ::std::vec::Vec<EventParameter>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<EventParameter> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action294<
-    'input,
->(
+fn __action294<'input>(
     input: &'input str,
     (_, __0, _): (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
-{
+) -> ::std::vec::Vec<Identifier> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action295<
-    'input,
->(
+fn __action295<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
     (_, e, _): (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<Identifier> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action296<
-    'input,
->(
+fn __action296<'input>(
     input: &'input str,
     (_, __0, _): (usize, VariableAttribute, usize),
-) -> ::std::vec::Vec<VariableAttribute>
-{
+) -> ::std::vec::Vec<VariableAttribute> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action297<
-    'input,
->(
+fn __action297<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
     (_, e, _): (usize, VariableAttribute, usize),
-) -> ::std::vec::Vec<VariableAttribute>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<VariableAttribute> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action298<
-    'input,
->(
+fn __action298<'input>(
     input: &'input str,
     (_, __0, _): (usize, Parameter, usize),
-) -> ::std::vec::Vec<Parameter>
-{
+) -> ::std::vec::Vec<Parameter> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action299<
-    'input,
->(
+fn __action299<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Parameter>, usize),
     (_, e, _): (usize, Parameter, usize),
-) -> ::std::vec::Vec<Parameter>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<Parameter> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action300<
-    'input,
->(
+fn __action300<'input>(
     input: &'input str,
     (_, __0, _): (usize, FunctionAttribute, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
-{
+) -> ::std::vec::Vec<FunctionAttribute> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action301<
-    'input,
->(
+fn __action301<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     (_, e, _): (usize, FunctionAttribute, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<FunctionAttribute> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action302<
-    'input,
->(
+fn __action302<'input>(
     input: &'input str,
     (_, __0, _): (usize, Statement, usize),
-) -> ::std::vec::Vec<Statement>
-{
+) -> ::std::vec::Vec<Statement> {
     vec![__0]
 }
 
 #[allow(unused_variables)]
-fn __action303<
-    'input,
->(
+fn __action303<'input>(
     input: &'input str,
     (_, v, _): (usize, ::std::vec::Vec<Statement>, usize),
     (_, e, _): (usize, Statement, usize),
-) -> ::std::vec::Vec<Statement>
-{
-    { let mut v = v; v.push(e); v }
+) -> ::std::vec::Vec<Statement> {
+    {
+        let mut v = v;
+        v.push(e);
+        v
+    }
 }
 
 #[allow(unused_variables)]
-fn __action304<
-    'input,
->(
+fn __action304<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -19587,32 +18662,16 @@ fn __action304<
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     let __start0 = __6.0.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action273(
-        input,
-        __6,
-    );
+    let __temp0 = __action273(input, __6);
     let __temp0 = (__start0, __temp0, __end0);
-    __action130(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __temp0,
-        __7,
-    )
+    __action130(input, __0, __1, __2, __3, __4, __5, __temp0, __7)
 }
 
 #[allow(unused_variables)]
-fn __action305<
-    'input,
->(
+fn __action305<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -19621,106 +18680,56 @@ fn __action305<
     __4: (usize, EventParameter, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     let __start0 = __5.2.clone();
     let __end0 = __6.0.clone();
-    let __temp0 = __action274(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action274(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action130(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __temp0,
-        __6,
-    )
+    __action130(input, __0, __1, __2, __3, __4, __5, __temp0, __6)
 }
 
 #[allow(unused_variables)]
-fn __action306<
-    'input,
->(
+fn __action306<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
-) -> EventParameter
-{
+) -> EventParameter {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action280(
-        input,
-        __1,
-    );
+    let __temp0 = __action280(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action129(
-        input,
-        __0,
-        __temp0,
-        __2,
-    )
+    __action129(input, __0, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action307<
-    'input,
->(
+fn __action307<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
-) -> EventParameter
-{
+) -> EventParameter {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action281(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action281(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action129(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action129(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action308<
-    'input,
->(
+fn __action308<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> ::std::option::Option<Expression>
-{
+) -> ::std::option::Option<Expression> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action267(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action267(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action265(
-        input,
-        __temp0,
-    )
+    __action265(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action309<
-    'input,
->(
+fn __action309<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, TypeName, usize),
@@ -19730,32 +18739,16 @@ fn __action309<
     __5: (usize, Expression, usize),
     __6: (usize, usize, usize),
     __7: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __4.0.clone();
     let __end0 = __5.2.clone();
-    let __temp0 = __action308(
-        input,
-        __4,
-        __5,
-    );
+    let __temp0 = __action308(input, __4, __5);
     let __temp0 = (__start0, __temp0, __end0);
-    __action132(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __6,
-        __7,
-    )
+    __action132(input, __0, __1, __2, __3, __temp0, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action310<
-    'input,
->(
+fn __action310<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, TypeName, usize),
@@ -19763,103 +18756,55 @@ fn __action310<
     __3: (usize, Identifier, usize),
     __4: (usize, usize, usize),
     __5: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __3.2.clone();
     let __end0 = __4.0.clone();
-    let __temp0 = __action266(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action266(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action132(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-        __5,
-    )
+    __action132(input, __0, __1, __2, __3, __temp0, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action311<
-    'input,
->(
+fn __action311<'input>(
     input: &'input str,
     __0: (usize, Box<VariableDeclaration>, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action308(
-        input,
-        __1,
-        __2,
-    );
+    let __temp0 = __action308(input, __1, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action230(
-        input,
-        __0,
-        __temp0,
-    )
+    __action230(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action312<
-    'input,
->(
+fn __action312<'input>(
     input: &'input str,
     __0: (usize, Box<VariableDeclaration>, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action266(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action266(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action230(
-        input,
-        __0,
-        __temp0,
-    )
+    __action230(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action313<
-    'input,
->(
+fn __action313<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
-) -> ::std::option::Option<Vec<Parameter>>
-{
+) -> ::std::option::Option<Vec<Parameter>> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action252(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action252(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action250(
-        input,
-        __temp0,
-    )
+    __action250(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action314<
-    'input,
->(
+fn __action314<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, &'input str, usize),
@@ -19869,32 +18814,16 @@ fn __action314<
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, BlockStatement, usize),
     __7: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __4.0.clone();
     let __end0 = __5.2.clone();
-    let __temp0 = __action313(
-        input,
-        __4,
-        __5,
-    );
+    let __temp0 = __action313(input, __4, __5);
     let __temp0 = (__start0, __temp0, __end0);
-    __action216(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __6,
-        __7,
-    )
+    __action216(input, __0, __1, __2, __3, __temp0, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action315<
-    'input,
->(
+fn __action315<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, &'input str, usize),
@@ -19902,32 +18831,16 @@ fn __action315<
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, BlockStatement, usize),
     __5: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __3.2.clone();
     let __end0 = __4.0.clone();
-    let __temp0 = __action251(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action251(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action216(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-        __5,
-    )
+    __action216(input, __0, __1, __2, __3, __temp0, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action316<
-    'input,
->(
+fn __action316<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, &'input str, usize),
@@ -19938,33 +18851,16 @@ fn __action316<
     __6: (usize, Vec<Parameter>, usize),
     __7: (usize, &'input str, usize),
     __8: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __5.0.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action313(
-        input,
-        __5,
-        __6,
-    );
+    let __temp0 = __action313(input, __5, __6);
     let __temp0 = (__start0, __temp0, __end0);
-    __action217(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-        __7,
-        __8,
-    )
+    __action217(input, __0, __1, __2, __3, __4, __temp0, __7, __8)
 }
 
 #[allow(unused_variables)]
-fn __action317<
-    'input,
->(
+fn __action317<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, &'input str, usize),
@@ -19973,33 +18869,16 @@ fn __action317<
     __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __4.2.clone();
     let __end0 = __5.0.clone();
-    let __temp0 = __action251(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action251(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action217(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-        __5,
-        __6,
-    )
+    __action217(input, __0, __1, __2, __3, __4, __temp0, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action318<
-    'input,
->(
+fn __action318<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, &'input str, usize),
@@ -20010,33 +18889,16 @@ fn __action318<
     __6: (usize, Vec<Parameter>, usize),
     __7: (usize, BlockStatement, usize),
     __8: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __5.0.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action313(
-        input,
-        __5,
-        __6,
-    );
+    let __temp0 = __action313(input, __5, __6);
     let __temp0 = (__start0, __temp0, __end0);
-    __action218(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-        __7,
-        __8,
-    )
+    __action218(input, __0, __1, __2, __3, __4, __temp0, __7, __8)
 }
 
 #[allow(unused_variables)]
-fn __action319<
-    'input,
->(
+fn __action319<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, &'input str, usize),
@@ -20045,125 +18907,68 @@ fn __action319<
     __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, BlockStatement, usize),
     __6: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __4.2.clone();
     let __end0 = __5.0.clone();
-    let __temp0 = __action251(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action251(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action218(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-        __5,
-        __6,
-    )
+    __action218(input, __0, __1, __2, __3, __4, __temp0, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action320<
-    'input,
->(
+fn __action320<'input>(
     input: &'input str,
     __0: (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
-{
+) -> ::std::vec::Vec<ContractPart> {
     let __start0 = __0.0.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action284(
-        input,
-        __0,
-    );
+    let __temp0 = __action284(input, __0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action282(
-        input,
-        __temp0,
-    )
+    __action282(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action321<
-    'input,
->(
+fn __action321<'input>(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<ContractPart>, usize),
     __1: (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
-{
+) -> ::std::vec::Vec<ContractPart> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action284(
-        input,
-        __1,
-    );
+    let __temp0 = __action284(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action283(
-        input,
-        __0,
-        __temp0,
-    )
+    __action283(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action322<
-    'input,
->(
+fn __action322<'input>(
     input: &'input str,
     __0: (usize, EventParameter, usize),
     __1: (usize, &'input str, usize),
-) -> ::std::vec::Vec<EventParameter>
-{
+) -> ::std::vec::Vec<EventParameter> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action277(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action277(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action292(
-        input,
-        __temp0,
-    )
+    __action292(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action323<
-    'input,
->(
+fn __action323<'input>(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<EventParameter>, usize),
     __1: (usize, EventParameter, usize),
     __2: (usize, &'input str, usize),
-) -> ::std::vec::Vec<EventParameter>
-{
+) -> ::std::vec::Vec<EventParameter> {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action277(
-        input,
-        __1,
-        __2,
-    );
+    let __temp0 = __action277(input, __1, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action293(
-        input,
-        __0,
-        __temp0,
-    )
+    __action293(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action324<
-    'input,
->(
+fn __action324<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -20172,33 +18977,16 @@ fn __action324<
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action275(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action275(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action304(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __6,
-    )
+    __action304(input, __0, __1, __2, __temp0, __3, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action325<
-    'input,
->(
+fn __action325<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -20208,32 +18996,16 @@ fn __action325<
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action276(
-        input,
-        __3,
-    );
+    let __temp0 = __action276(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action304(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
+    __action304(input, __0, __1, __2, __temp0, __4, __5, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action326<
-    'input,
->(
+fn __action326<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -20241,32 +19013,16 @@ fn __action326<
     __3: (usize, EventParameter, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action275(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action275(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action305(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-        __4,
-        __5,
-    )
+    __action305(input, __0, __1, __2, __temp0, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action327<
-    'input,
->(
+fn __action327<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -20275,79 +19031,43 @@ fn __action327<
     __4: (usize, EventParameter, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
-) -> Box<EventDefinition>
-{
+) -> Box<EventDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action276(
-        input,
-        __3,
-    );
+    let __temp0 = __action276(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action305(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-        __5,
-        __6,
-    )
+    __action305(input, __0, __1, __2, __temp0, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action328<
-    'input,
->(
+fn __action328<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Expression>
-{
+) -> ::std::vec::Vec<Expression> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action262(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action262(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action244(
-        input,
-        __temp0,
-    )
+    __action244(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action329<
-    'input,
->(
+fn __action329<'input>(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<Expression>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Expression>
-{
+) -> ::std::vec::Vec<Expression> {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action262(
-        input,
-        __1,
-        __2,
-    );
+    let __temp0 = __action262(input, __1, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action245(
-        input,
-        __0,
-        __temp0,
-    )
+    __action245(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action330<
-    'input,
->(
+fn __action330<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, TypeName, usize),
@@ -20355,32 +19075,16 @@ fn __action330<
     __3: (usize, Expression, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action260(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action260(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action198(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-        __4,
-        __5,
-    )
+    __action198(input, __0, __1, __2, __temp0, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action331<
-    'input,
->(
+fn __action331<'input>(
     input: &'input str,
     __0: (usize, usize, usize),
     __1: (usize, TypeName, usize),
@@ -20389,110 +19093,59 @@ fn __action331<
     __4: (usize, Expression, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action261(
-        input,
-        __3,
-    );
+    let __temp0 = __action261(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action198(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-        __5,
-        __6,
-    )
+    __action198(input, __0, __1, __2, __temp0, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action332<
-    'input,
->(
+fn __action332<'input>(
     input: &'input str,
     __0: (usize, Identifier, usize),
     __1: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Identifier>
-{
+) -> ::std::vec::Vec<Identifier> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action272(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action272(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action294(
-        input,
-        __temp0,
-    )
+    __action294(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action333<
-    'input,
->(
+fn __action333<'input>(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<Identifier>, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Identifier>
-{
+) -> ::std::vec::Vec<Identifier> {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action272(
-        input,
-        __1,
-        __2,
-    );
+    let __temp0 = __action272(input, __1, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action295(
-        input,
-        __0,
-        __temp0,
-    )
+    __action295(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action334<
-    'input,
->(
+fn __action334<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, &'input str, usize),
-) -> Box<EnumDefinition>
-{
+) -> Box<EnumDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action270(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action270(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action131(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-        __4,
-    )
+    __action131(input, __0, __1, __2, __temp0, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action335<
-    'input,
->(
+fn __action335<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -20500,180 +19153,99 @@ fn __action335<
     __3: (usize, ::std::vec::Vec<Identifier>, usize),
     __4: (usize, Identifier, usize),
     __5: (usize, &'input str, usize),
-) -> Box<EnumDefinition>
-{
+) -> Box<EnumDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action271(
-        input,
-        __3,
-    );
+    let __temp0 = __action271(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action131(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-        __5,
-    )
+    __action131(input, __0, __1, __2, __temp0, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action336<
-    'input,
->(
+fn __action336<'input>(
     input: &'input str,
     __0: (usize, Parameter, usize),
     __1: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Parameter>
-{
+) -> ::std::vec::Vec<Parameter> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action257(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action257(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action298(
-        input,
-        __temp0,
-    )
+    __action298(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action337<
-    'input,
->(
+fn __action337<'input>(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<Parameter>, usize),
     __1: (usize, Parameter, usize),
     __2: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Parameter>
-{
+) -> ::std::vec::Vec<Parameter> {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action257(
-        input,
-        __1,
-        __2,
-    );
+    let __temp0 = __action257(input, __1, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action299(
-        input,
-        __0,
-        __temp0,
-    )
+    __action299(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action338<
-    'input,
->(
+fn __action338<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Parameter, usize),
     __2: (usize, &'input str, usize),
-) -> Vec<Parameter>
-{
+) -> Vec<Parameter> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action255(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action255(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action210(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-    )
+    __action210(input, __0, __temp0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action339<
-    'input,
->(
+fn __action339<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::vec::Vec<Parameter>, usize),
     __2: (usize, Parameter, usize),
     __3: (usize, &'input str, usize),
-) -> Vec<Parameter>
-{
+) -> Vec<Parameter> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action256(
-        input,
-        __1,
-    );
+    let __temp0 = __action256(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action210(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-    )
+    __action210(input, __0, __temp0, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action340<
-    'input,
->(
+fn __action340<'input>(
     input: &'input str,
     __0: (usize, Box<VariableDeclaration>, usize),
     __1: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Box<VariableDeclaration>>
-{
+) -> ::std::vec::Vec<Box<VariableDeclaration>> {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action287(
-        input,
-        __0,
-        __1,
-    );
+    let __temp0 = __action287(input, __0, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action285(
-        input,
-        __temp0,
-    )
+    __action285(input, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action341<
-    'input,
->(
+fn __action341<'input>(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<Box<VariableDeclaration>>, usize),
     __1: (usize, Box<VariableDeclaration>, usize),
     __2: (usize, &'input str, usize),
-) -> ::std::vec::Vec<Box<VariableDeclaration>>
-{
+) -> ::std::vec::Vec<Box<VariableDeclaration>> {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action287(
-        input,
-        __1,
-        __2,
-    );
+    let __temp0 = __action287(input, __1, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action286(
-        input,
-        __0,
-        __temp0,
-    )
+    __action286(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action342<
-    'input,
->(
+fn __action342<'input>(
     input: &'input str,
     __0: (usize, ContractType, usize),
     __1: (usize, Identifier, usize),
@@ -20681,32 +19253,16 @@ fn __action342<
     __3: (usize, ::std::vec::Vec<ContractPart>, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, usize, usize),
-) -> Box<ContractDefinition>
-{
+) -> Box<ContractDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action128(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action128(input, __temp0, __0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action343<
-    'input,
->(
+fn __action343<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -20715,64 +19271,32 @@ fn __action343<
     __4: (usize, Expression, usize),
     __5: (usize, usize, usize),
     __6: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action309(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-    )
+    __action309(input, __temp0, __0, __1, __2, __3, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action344<
-    'input,
->(
+fn __action344<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
     __4: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action310(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action310(input, __temp0, __0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action345<
-    'input,
->(
+fn __action345<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
@@ -20781,64 +19305,32 @@ fn __action345<
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, BlockStatement, usize),
     __6: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action314(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-    )
+    __action314(input, __temp0, __0, __1, __2, __3, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action346<
-    'input,
->(
+fn __action346<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, BlockStatement, usize),
     __4: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action315(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action315(input, __temp0, __0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action347<
-    'input,
->(
+fn __action347<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -20848,34 +19340,16 @@ fn __action347<
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action316(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
+    __action316(input, __temp0, __0, __1, __2, __3, __4, __5, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action348<
-    'input,
->(
+fn __action348<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -20883,32 +19357,16 @@ fn __action348<
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action317(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action317(input, __temp0, __0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action349<
-    'input,
->(
+fn __action349<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -20918,34 +19376,16 @@ fn __action349<
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, BlockStatement, usize),
     __7: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action318(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
+    __action318(input, __temp0, __0, __1, __2, __3, __4, __5, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action350<
-    'input,
->(
+fn __action350<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -20953,113 +19393,58 @@ fn __action350<
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, BlockStatement, usize),
     __5: (usize, usize, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action319(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action319(input, __temp0, __0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action351<
-    'input,
->(
+fn __action351<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Identifier
-{
+) -> Identifier {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action116(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action116(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action352<
-    'input,
->(
+fn __action352<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action238(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action238(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action353<
-    'input,
->(
+fn __action353<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
     __2: (usize, usize, usize),
     __3: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action239(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-    )
+    __action239(input, __temp0, __0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action354<
-    'input,
->(
+fn __action354<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -21068,234 +19453,120 @@ fn __action354<
     __4: (usize, &'input str, usize),
     __5: (usize, usize, usize),
     __6: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action240(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-    )
+    __action240(input, __temp0, __0, __1, __2, __3, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action355<
-    'input,
->(
+fn __action355<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action192(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action192(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action356<
-    'input,
->(
+fn __action356<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action193(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action193(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action357<
-    'input,
->(
+fn __action357<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ElementaryTypeName, usize),
     __2: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action194(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action194(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action358<
-    'input,
->(
+fn __action358<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, ::std::option::Option<Expression>, usize),
     __3: (usize, &'input str, usize),
     __4: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action195(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action195(input, __temp0, __0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action359<
-    'input,
->(
+fn __action359<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action196(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-    )
+    __action196(input, __temp0, __0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action360<
-    'input,
->(
+fn __action360<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action197(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-    )
+    __action197(input, __temp0, __0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action361<
-    'input,
->(
+fn __action361<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
     __3: (usize, &'input str, usize),
     __4: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action330(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action330(input, __temp0, __0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action362<
-    'input,
->(
+fn __action362<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
@@ -21303,389 +19574,201 @@ fn __action362<
     __3: (usize, Expression, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action331(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action331(input, __temp0, __0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action363<
-    'input,
->(
+fn __action363<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action199(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action199(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action364<
-    'input,
->(
+fn __action364<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action200(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action200(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action365<
-    'input,
->(
+fn __action365<'input>(
     input: &'input str,
     __0: (usize, String, usize),
     __1: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action201(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action201(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action366<
-    'input,
->(
+fn __action366<'input>(
     input: &'input str,
     __0: (usize, String, usize),
     __1: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action202(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action202(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action367<
-    'input,
->(
+fn __action367<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action205(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action205(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action368<
-    'input,
->(
+fn __action368<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action161(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action161(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action369<
-    'input,
->(
+fn __action369<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action162(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action162(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action370<
-    'input,
->(
+fn __action370<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action163(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action163(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action371<
-    'input,
->(
+fn __action371<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action164(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action164(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action372<
-    'input,
->(
+fn __action372<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action158(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action158(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action373<
-    'input,
->(
+fn __action373<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action159(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action159(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action374<
-    'input,
->(
+fn __action374<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action156(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action156(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action375<
-    'input,
->(
+fn __action375<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action154(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action154(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action376<
-    'input,
->(
+fn __action376<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
@@ -21693,1090 +19776,564 @@ fn __action376<
     __3: (usize, &'input str, usize),
     __4: (usize, usize, usize),
     __5: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action152(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action152(input, __0, __temp0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action377<
-    'input,
->(
+fn __action377<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action140(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action140(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action378<
-    'input,
->(
+fn __action378<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action141(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action141(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action379<
-    'input,
->(
+fn __action379<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action142(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action142(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action380<
-    'input,
->(
+fn __action380<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action143(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action143(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action381<
-    'input,
->(
+fn __action381<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action144(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action144(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action382<
-    'input,
->(
+fn __action382<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action145(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action145(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action383<
-    'input,
->(
+fn __action383<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action146(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action146(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action384<
-    'input,
->(
+fn __action384<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action147(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action147(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action385<
-    'input,
->(
+fn __action385<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action148(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action148(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action386<
-    'input,
->(
+fn __action386<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action149(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action149(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action387<
-    'input,
->(
+fn __action387<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action150(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action150(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action388<
-    'input,
->(
+fn __action388<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action184(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action184(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action389<
-    'input,
->(
+fn __action389<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action185(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action185(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action390<
-    'input,
->(
+fn __action390<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action186(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action186(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action391<
-    'input,
->(
+fn __action391<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action187(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action187(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action392<
-    'input,
->(
+fn __action392<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action188(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action188(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action393<
-    'input,
->(
+fn __action393<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action189(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action189(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action394<
-    'input,
->(
+fn __action394<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action190(
-        input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
+    __action190(input, __temp0, __0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action395<
-    'input,
->(
+fn __action395<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action182(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action182(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action396<
-    'input,
->(
+fn __action396<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action178(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action178(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action397<
-    'input,
->(
+fn __action397<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action179(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action179(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action398<
-    'input,
->(
+fn __action398<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action180(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action180(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action399<
-    'input,
->(
+fn __action399<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action175(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action175(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action400<
-    'input,
->(
+fn __action400<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action176(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action176(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action401<
-    'input,
->(
+fn __action401<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action172(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action172(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action402<
-    'input,
->(
+fn __action402<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action173(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action173(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action403<
-    'input,
->(
+fn __action403<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action170(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action170(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action404<
-    'input,
->(
+fn __action404<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action168(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action168(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action405<
-    'input,
->(
+fn __action405<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, usize, usize),
     __3: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action166(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action166(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action406<
-    'input,
->(
+fn __action406<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> StateMutability
-{
+) -> StateMutability {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action211(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action211(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action407<
-    'input,
->(
+fn __action407<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> StateMutability
-{
+) -> StateMutability {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action212(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action212(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action408<
-    'input,
->(
+fn __action408<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> StateMutability
-{
+) -> StateMutability {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action213(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action213(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action409<
-    'input,
->(
+fn __action409<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> VariableAttribute
-{
+) -> VariableAttribute {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action138(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action138(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action410<
-    'input,
->(
+fn __action410<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action133(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action133(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action411<
-    'input,
->(
+fn __action411<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action134(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action134(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action412<
-    'input,
->(
+fn __action412<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action135(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action135(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action413<
-    'input,
->(
+fn __action413<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
-) -> Visibility
-{
+) -> Visibility {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action289(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action289(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action136(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
+    __action136(input, __temp0, __0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action414<
-    'input,
->(
+fn __action414<'input>(
     input: &'input str,
     __0: (usize, ContractType, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, ::std::vec::Vec<ContractPart>, usize),
     __4: (usize, &'input str, usize),
-) -> Box<ContractDefinition>
-{
+) -> Box<ContractDefinition> {
     let __start0 = __4.2.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action342(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-    )
+    __action342(input, __0, __1, __2, __3, __4, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action415<
-    'input,
->(
+fn __action415<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -22784,61 +20341,31 @@ fn __action415<
     __3: (usize, &'input str, usize),
     __4: (usize, Expression, usize),
     __5: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __4.2.clone();
     let __end0 = __5.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action343(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-        __5,
-    )
+    __action343(input, __0, __1, __2, __3, __4, __temp0, __5)
 }
 
 #[allow(unused_variables)]
-fn __action416<
-    'input,
->(
+fn __action416<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action344(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-    )
+    __action344(input, __0, __1, __2, __temp0, __3)
 }
 
 #[allow(unused_variables)]
-fn __action417<
-    'input,
->(
+fn __action417<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
@@ -22846,61 +20373,31 @@ fn __action417<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __5.2.clone();
     let __end0 = __5.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action345(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __temp0,
-    )
+    __action345(input, __0, __1, __2, __3, __4, __5, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action418<
-    'input,
->(
+fn __action418<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action346(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-    )
+    __action346(input, __0, __1, __2, __3, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action419<
-    'input,
->(
+fn __action419<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -22909,64 +20406,32 @@ fn __action419<
     __4: (usize, &'input str, usize),
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __6.2.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action347(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-        __temp0,
-    )
+    __action347(input, __0, __1, __2, __3, __4, __5, __6, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action420<
-    'input,
->(
+fn __action420<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __4.2.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action348(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-    )
+    __action348(input, __0, __1, __2, __3, __4, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action421<
-    'input,
->(
+fn __action421<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -22975,139 +20440,68 @@ fn __action421<
     __4: (usize, &'input str, usize),
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __6.2.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action349(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-        __temp0,
-    )
+    __action349(input, __0, __1, __2, __3, __4, __5, __6, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action422<
-    'input,
->(
+fn __action422<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __4.2.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action350(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-    )
+    __action350(input, __0, __1, __2, __3, __4, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action423<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Identifier
-{
+fn __action423<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Identifier {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action351(
-        input,
-        __0,
-        __temp0,
-    )
+    __action351(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action424<
-    'input,
->(
+fn __action424<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action352(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action352(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action425<
-    'input,
->(
+fn __action425<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
     __2: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action353(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action353(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action426<
-    'input,
->(
+fn __action426<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -23115,1565 +20509,773 @@ fn __action426<
     __3: (usize, Expression, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __4.2.clone();
     let __end0 = __5.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action354(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-        __5,
-    )
+    __action354(input, __0, __1, __2, __3, __4, __temp0, __5)
 }
 
 #[allow(unused_variables)]
-fn __action427<
-    'input,
->(
+fn __action427<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action355(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action355(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action428<
-    'input,
->(
+fn __action428<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action356(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action356(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action429<
-    'input,
->(
+fn __action429<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ElementaryTypeName, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action357(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action357(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action430<
-    'input,
->(
+fn __action430<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, ::std::option::Option<Expression>, usize),
     __3: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action358(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-    )
+    __action358(input, __0, __1, __2, __3, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action431<
-    'input,
->(
+fn __action431<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Identifier, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action359(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-    )
+    __action359(input, __0, __1, __2, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action432<
-    'input,
->(
+fn __action432<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action360(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-    )
+    __action360(input, __0, __1, __2, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action433<
-    'input,
->(
+fn __action433<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
     __3: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action361(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-    )
+    __action361(input, __0, __1, __2, __3, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action434<
-    'input,
->(
+fn __action434<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, ::std::vec::Vec<Expression>, usize),
     __3: (usize, Expression, usize),
     __4: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __4.2.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action362(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __temp0,
-    )
+    __action362(input, __0, __1, __2, __3, __4, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action435<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Expression
-{
+fn __action435<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action363(
-        input,
-        __0,
-        __temp0,
-    )
+    __action363(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action436<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Expression
-{
+fn __action436<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action364(
-        input,
-        __0,
-        __temp0,
-    )
+    __action364(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action437<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, String, usize),
-) -> Expression
-{
+fn __action437<'input>(input: &'input str, __0: (usize, String, usize)) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action365(
-        input,
-        __0,
-        __temp0,
-    )
+    __action365(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action438<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, String, usize),
-) -> Expression
-{
+fn __action438<'input>(input: &'input str, __0: (usize, String, usize)) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action366(
-        input,
-        __0,
-        __temp0,
-    )
+    __action366(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action439<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Expression
-{
+fn __action439<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action367(
-        input,
-        __0,
-        __temp0,
-    )
+    __action367(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action440<
-    'input,
->(
+fn __action440<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action368(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action368(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action441<
-    'input,
->(
+fn __action441<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action369(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action369(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action442<
-    'input,
->(
+fn __action442<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action370(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action370(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action443<
-    'input,
->(
+fn __action443<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action371(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action371(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action444<
-    'input,
->(
+fn __action444<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action372(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action372(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action445<
-    'input,
->(
+fn __action445<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action373(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action373(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action446<
-    'input,
->(
+fn __action446<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action374(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action374(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action447<
-    'input,
->(
+fn __action447<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action375(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action375(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action448<
-    'input,
->(
+fn __action448<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
     __3: (usize, &'input str, usize),
     __4: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __3.2.clone();
     let __end0 = __4.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action376(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-    )
+    __action376(input, __0, __1, __2, __3, __temp0, __4)
 }
 
 #[allow(unused_variables)]
-fn __action449<
-    'input,
->(
+fn __action449<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action377(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action377(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action450<
-    'input,
->(
+fn __action450<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action378(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action378(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action451<
-    'input,
->(
+fn __action451<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action379(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action379(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action452<
-    'input,
->(
+fn __action452<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action380(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action380(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action453<
-    'input,
->(
+fn __action453<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action381(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action381(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action454<
-    'input,
->(
+fn __action454<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action382(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action382(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action455<
-    'input,
->(
+fn __action455<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action383(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action383(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action456<
-    'input,
->(
+fn __action456<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action384(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action384(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action457<
-    'input,
->(
+fn __action457<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action385(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action385(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action458<
-    'input,
->(
+fn __action458<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action386(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action386(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action459<
-    'input,
->(
+fn __action459<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action387(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action387(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action460<
-    'input,
->(
+fn __action460<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action388(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action388(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action461<
-    'input,
->(
+fn __action461<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action389(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action389(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action462<
-    'input,
->(
+fn __action462<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action390(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action390(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action463<
-    'input,
->(
+fn __action463<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action391(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action391(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action464<
-    'input,
->(
+fn __action464<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action392(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action392(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action465<
-    'input,
->(
+fn __action465<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action393(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action393(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action466<
-    'input,
->(
+fn __action466<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action394(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action394(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action467<
-    'input,
->(
+fn __action467<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action395(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action395(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action468<
-    'input,
->(
+fn __action468<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action396(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action396(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action469<
-    'input,
->(
+fn __action469<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action397(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action397(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action470<
-    'input,
->(
+fn __action470<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action398(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action398(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action471<
-    'input,
->(
+fn __action471<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action399(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action399(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action472<
-    'input,
->(
+fn __action472<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action400(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action400(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action473<
-    'input,
->(
+fn __action473<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action401(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action401(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action474<
-    'input,
->(
+fn __action474<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action402(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action402(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action475<
-    'input,
->(
+fn __action475<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action403(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action403(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action476<
-    'input,
->(
+fn __action476<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action404(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action404(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action477<
-    'input,
->(
+fn __action477<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action405(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action405(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action478<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> StateMutability
-{
+fn __action478<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> StateMutability {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action406(
-        input,
-        __0,
-        __temp0,
-    )
+    __action406(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action479<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> StateMutability
-{
+fn __action479<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> StateMutability {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action407(
-        input,
-        __0,
-        __temp0,
-    )
+    __action407(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action480<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> StateMutability
-{
+fn __action480<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> StateMutability {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action408(
-        input,
-        __0,
-        __temp0,
-    )
+    __action408(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action481<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> VariableAttribute
-{
+fn __action481<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> VariableAttribute {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action409(
-        input,
-        __0,
-        __temp0,
-    )
+    __action409(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action482<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Visibility
-{
+fn __action482<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Visibility {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action410(
-        input,
-        __0,
-        __temp0,
-    )
+    __action410(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action483<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Visibility
-{
+fn __action483<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Visibility {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action411(
-        input,
-        __0,
-        __temp0,
-    )
+    __action411(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action484<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Visibility
-{
+fn __action484<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Visibility {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action412(
-        input,
-        __0,
-        __temp0,
-    )
+    __action412(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action485<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Visibility
-{
+fn __action485<'input>(input: &'input str, __0: (usize, &'input str, usize)) -> Visibility {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action288(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action288(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action413(
-        input,
-        __0,
-        __temp0,
-    )
+    __action413(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action486<
-    'input,
->(
+fn __action486<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -24684,33 +21286,16 @@ fn __action486<
     __6: (usize, ::std::option::Option<Statement>, usize),
     __7: (usize, &'input str, usize),
     __8: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __4.0.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action263(
-        input,
-        __4,
-    );
+    let __temp0 = __action263(input, __4);
     let __temp0 = (__start0, __temp0, __end0);
-    __action226(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __5,
-        __6,
-        __7,
-        __8,
-    )
+    __action226(input, __0, __1, __2, __3, __temp0, __5, __6, __7, __8)
 }
 
 #[allow(unused_variables)]
-fn __action487<
-    'input,
->(
+fn __action487<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -24720,34 +21305,16 @@ fn __action487<
     __5: (usize, ::std::option::Option<Statement>, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __3.2.clone();
     let __end0 = __4.0.clone();
-    let __temp0 = __action264(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action264(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action226(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
+    __action226(input, __0, __1, __2, __3, __temp0, __4, __5, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action488<
-    'input,
->(
+fn __action488<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -24758,33 +21325,16 @@ fn __action488<
     __6: (usize, ::std::option::Option<Statement>, usize),
     __7: (usize, &'input str, usize),
     __8: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __4.0.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action263(
-        input,
-        __4,
-    );
+    let __temp0 = __action263(input, __4);
     let __temp0 = (__start0, __temp0, __end0);
-    __action227(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __5,
-        __6,
-        __7,
-        __8,
-    )
+    __action227(input, __0, __1, __2, __3, __temp0, __5, __6, __7, __8)
 }
 
 #[allow(unused_variables)]
-fn __action489<
-    'input,
->(
+fn __action489<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -24794,119 +21344,61 @@ fn __action489<
     __5: (usize, ::std::option::Option<Statement>, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __3.2.clone();
     let __end0 = __4.0.clone();
-    let __temp0 = __action264(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action264(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action227(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
+    __action227(input, __0, __1, __2, __3, __temp0, __4, __5, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action490<
-    'input,
->(
+fn __action490<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Expression, usize),
     __3: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action263(
-        input,
-        __2,
-    );
+    let __temp0 = __action263(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action430(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-    )
+    __action430(input, __0, __1, __temp0, __3)
 }
 
 #[allow(unused_variables)]
-fn __action491<
-    'input,
->(
+fn __action491<'input>(
     input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, &'input str, usize),
-) -> Expression
-{
+) -> Expression {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action264(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action264(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action430(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action430(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action492<
-    'input,
->(
+fn __action492<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, Vec<Parameter>, usize),
     __4: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action253(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action253(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action417(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-    )
+    __action417(input, __0, __1, __temp0, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action493<
-    'input,
->(
+fn __action493<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
@@ -24914,84 +21406,45 @@ fn __action493<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action254(
-        input,
-        __2,
-    );
+    let __temp0 = __action254(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action417(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-    )
+    __action417(input, __0, __1, __temp0, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action494<
-    'input,
->(
+fn __action494<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action253(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action253(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action418(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
+    __action418(input, __0, __1, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action495<
-    'input,
->(
+fn __action495<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action254(
-        input,
-        __2,
-    );
+    let __temp0 = __action254(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action418(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-    )
+    __action418(input, __0, __1, __temp0, __3)
 }
 
 #[allow(unused_variables)]
-fn __action496<
-    'input,
->(
+fn __action496<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -24999,32 +21452,16 @@ fn __action496<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action253(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action253(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action419(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-        __4,
-        __5,
-    )
+    __action419(input, __0, __1, __2, __temp0, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action497<
-    'input,
->(
+fn __action497<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -25033,89 +21470,47 @@ fn __action497<
     __4: (usize, &'input str, usize),
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action254(
-        input,
-        __3,
-    );
+    let __temp0 = __action254(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action419(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-        __5,
-        __6,
-    )
+    __action419(input, __0, __1, __2, __temp0, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action498<
-    'input,
->(
+fn __action498<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action253(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action253(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action420(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-    )
+    __action420(input, __0, __1, __2, __temp0, __3)
 }
 
 #[allow(unused_variables)]
-fn __action499<
-    'input,
->(
+fn __action499<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action254(
-        input,
-        __3,
-    );
+    let __temp0 = __action254(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action420(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-    )
+    __action420(input, __0, __1, __2, __temp0, __4)
 }
 
 #[allow(unused_variables)]
-fn __action500<
-    'input,
->(
+fn __action500<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -25123,32 +21518,16 @@ fn __action500<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action253(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action253(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action421(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-        __4,
-        __5,
-    )
+    __action421(input, __0, __1, __2, __temp0, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action501<
-    'input,
->(
+fn __action501<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
@@ -25157,185 +21536,96 @@ fn __action501<
     __4: (usize, &'input str, usize),
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action254(
-        input,
-        __3,
-    );
+    let __temp0 = __action254(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action421(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-        __5,
-        __6,
-    )
+    __action421(input, __0, __1, __2, __temp0, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action502<
-    'input,
->(
+fn __action502<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __2.2.clone();
     let __end0 = __3.0.clone();
-    let __temp0 = __action253(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action253(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action422(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __3,
-    )
+    __action422(input, __0, __1, __2, __temp0, __3)
 }
 
 #[allow(unused_variables)]
-fn __action503<
-    'input,
->(
+fn __action503<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __3.0.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action254(
-        input,
-        __3,
-    );
+    let __temp0 = __action254(input, __3);
     let __temp0 = (__start0, __temp0, __end0);
-    __action422(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-        __4,
-    )
+    __action422(input, __0, __1, __2, __temp0, __4)
 }
 
 #[allow(unused_variables)]
-fn __action504<
-    'input,
->(
+fn __action504<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
     __2: (usize, Identifier, usize),
-) -> EventParameter
-{
+) -> EventParameter {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action278(
-        input,
-        __2,
-    );
+    let __temp0 = __action278(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action306(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action306(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action505<
-    'input,
->(
+fn __action505<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, &'input str, usize),
-) -> EventParameter
-{
+) -> EventParameter {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action306(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action306(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action506<
-    'input,
->(
+fn __action506<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, Identifier, usize),
-) -> EventParameter
-{
+) -> EventParameter {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action307(
-        input,
-        __0,
-        __temp0,
-    )
+    __action307(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action507<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, TypeName, usize),
-) -> EventParameter
-{
+fn __action507<'input>(input: &'input str, __0: (usize, TypeName, usize)) -> EventParameter {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action307(
-        input,
-        __0,
-        __temp0,
-    )
+    __action307(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action508<
-    'input,
->(
+fn __action508<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -25343,61 +21633,32 @@ fn __action508<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action496(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action496(input, __0, __temp0, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action509<
-    'input,
->(
+fn __action509<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, Vec<Parameter>, usize),
     __4: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action496(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action496(input, __0, __temp0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action510<
-    'input,
->(
+fn __action510<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -25406,31 +21667,16 @@ fn __action510<
     __4: (usize, &'input str, usize),
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action497(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-    )
+    __action497(input, __0, __temp0, __2, __3, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action511<
-    'input,
->(
+fn __action511<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
@@ -25438,144 +21684,76 @@ fn __action511<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action497(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action497(input, __0, __temp0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action512<
-    'input,
->(
+fn __action512<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action498(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-    )
+    __action498(input, __0, __temp0, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action513<
-    'input,
->(
+fn __action513<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action498(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-    )
+    __action498(input, __0, __temp0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action514<
-    'input,
->(
+fn __action514<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action499(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-    )
+    __action499(input, __0, __temp0, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action515<
-    'input,
->(
+fn __action515<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, &'input str, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action499(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action499(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action516<
-    'input,
->(
+fn __action516<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -25583,61 +21761,32 @@ fn __action516<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action500(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action500(input, __0, __temp0, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action517<
-    'input,
->(
+fn __action517<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, Vec<Parameter>, usize),
     __4: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action500(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action500(input, __0, __temp0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action518<
-    'input,
->(
+fn __action518<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
@@ -25646,31 +21795,16 @@ fn __action518<
     __4: (usize, &'input str, usize),
     __5: (usize, Vec<Parameter>, usize),
     __6: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action501(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-    )
+    __action501(input, __0, __temp0, __2, __3, __4, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action519<
-    'input,
->(
+fn __action519<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
@@ -25678,194 +21812,103 @@ fn __action519<
     __3: (usize, &'input str, usize),
     __4: (usize, Vec<Parameter>, usize),
     __5: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action501(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action501(input, __0, __temp0, __1, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action520<
-    'input,
->(
+fn __action520<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action502(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-    )
+    __action502(input, __0, __temp0, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action521<
-    'input,
->(
+fn __action521<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action502(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-    )
+    __action502(input, __0, __temp0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action522<
-    'input,
->(
+fn __action522<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action278(
-        input,
-        __1,
-    );
+    let __temp0 = __action278(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action503(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-    )
+    __action503(input, __0, __temp0, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action523<
-    'input,
->(
+fn __action523<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, Vec<Parameter>, usize),
     __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
+) -> Box<FunctionDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action503(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
+    __action503(input, __0, __temp0, __1, __2, __3)
 }
 
 #[allow(unused_variables)]
-fn __action524<
-    'input,
->(
+fn __action524<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::option::Option<StorageLocation>, usize),
     __2: (usize, Identifier, usize),
-) -> Parameter
-{
+) -> Parameter {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action278(
-        input,
-        __2,
-    );
+    let __temp0 = __action278(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    __action208(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action208(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action525<
-    'input,
->(
+fn __action525<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::option::Option<StorageLocation>, usize),
-) -> Parameter
-{
+) -> Parameter {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action279(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action279(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action208(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
+    __action208(input, __0, __1, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action526<
-    'input,
->(
+fn __action526<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -25876,40 +21919,20 @@ fn __action526<
     __6: (usize, Statement, usize),
     __7: (usize, &'input str, usize),
     __8: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __6.0.clone();
     let __end1 = __6.2.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __6,
-    );
+    let __temp1 = __action246(input, __6);
     let __temp1 = (__start1, __temp1, __end1);
-    __action486(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __temp1,
-        __7,
-        __8,
-    )
+    __action486(input, __0, __1, __temp0, __3, __4, __5, __temp1, __7, __8)
 }
 
 #[allow(unused_variables)]
-fn __action527<
-    'input,
->(
+fn __action527<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -25919,41 +21942,20 @@ fn __action527<
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __5.2.clone();
     let __end1 = __6.0.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action486(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __temp1,
-        __6,
-        __7,
-    )
+    __action486(input, __0, __1, __temp0, __3, __4, __5, __temp1, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action528<
-    'input,
->(
+fn __action528<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -25963,41 +21965,20 @@ fn __action528<
     __5: (usize, Statement, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __5.0.clone();
     let __end1 = __5.2.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __5,
-    );
+    let __temp1 = __action246(input, __5);
     let __temp1 = (__start1, __temp1, __end1);
-    __action486(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
+    __action486(input, __0, __1, __temp0, __2, __3, __4, __temp1, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action529<
-    'input,
->(
+fn __action529<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26006,42 +21987,20 @@ fn __action529<
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __4.2.clone();
     let __end1 = __5.0.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action486(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
+    __action486(input, __0, __1, __temp0, __2, __3, __4, __temp1, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action530<
-    'input,
->(
+fn __action530<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26051,39 +22010,20 @@ fn __action530<
     __5: (usize, Statement, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __5.0.clone();
     let __end1 = __5.2.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __5,
-    );
+    let __temp1 = __action246(input, __5);
     let __temp1 = (__start1, __temp1, __end1);
-    __action487(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
+    __action487(input, __0, __1, __temp0, __3, __4, __temp1, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action531<
-    'input,
->(
+fn __action531<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26092,40 +22032,20 @@ fn __action531<
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __4.2.clone();
     let __end1 = __5.0.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action487(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
+    __action487(input, __0, __1, __temp0, __3, __4, __temp1, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action532<
-    'input,
->(
+fn __action532<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26134,40 +22054,20 @@ fn __action532<
     __4: (usize, Statement, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __4.0.clone();
     let __end1 = __4.2.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __4,
-    );
+    let __temp1 = __action246(input, __4);
     let __temp1 = (__start1, __temp1, __end1);
-    __action487(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __temp1,
-        __5,
-        __6,
-    )
+    __action487(input, __0, __1, __temp0, __2, __3, __temp1, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action533<
-    'input,
->(
+fn __action533<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26175,41 +22075,20 @@ fn __action533<
     __3: (usize, &'input str, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, Statement, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __3.2.clone();
     let __end1 = __4.0.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action487(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __temp1,
-        __4,
-        __5,
-    )
+    __action487(input, __0, __1, __temp0, __2, __3, __temp1, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action534<
-    'input,
->(
+fn __action534<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26220,40 +22099,20 @@ fn __action534<
     __6: (usize, Statement, usize),
     __7: (usize, &'input str, usize),
     __8: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __6.0.clone();
     let __end1 = __6.2.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __6,
-    );
+    let __temp1 = __action246(input, __6);
     let __temp1 = (__start1, __temp1, __end1);
-    __action488(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __temp1,
-        __7,
-        __8,
-    )
+    __action488(input, __0, __1, __temp0, __3, __4, __5, __temp1, __7, __8)
 }
 
 #[allow(unused_variables)]
-fn __action535<
-    'input,
->(
+fn __action535<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26263,41 +22122,20 @@ fn __action535<
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __5.2.clone();
     let __end1 = __6.0.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action488(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __temp1,
-        __6,
-        __7,
-    )
+    __action488(input, __0, __1, __temp0, __3, __4, __5, __temp1, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action536<
-    'input,
->(
+fn __action536<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26307,41 +22145,20 @@ fn __action536<
     __5: (usize, Statement, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __5.0.clone();
     let __end1 = __5.2.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __5,
-    );
+    let __temp1 = __action246(input, __5);
     let __temp1 = (__start1, __temp1, __end1);
-    __action488(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
+    __action488(input, __0, __1, __temp0, __2, __3, __4, __temp1, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action537<
-    'input,
->(
+fn __action537<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26350,42 +22167,20 @@ fn __action537<
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __4.2.clone();
     let __end1 = __5.0.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action488(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
+    __action488(input, __0, __1, __temp0, __2, __3, __4, __temp1, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action538<
-    'input,
->(
+fn __action538<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26395,39 +22190,20 @@ fn __action538<
     __5: (usize, Statement, usize),
     __6: (usize, &'input str, usize),
     __7: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __5.0.clone();
     let __end1 = __5.2.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __5,
-    );
+    let __temp1 = __action246(input, __5);
     let __temp1 = (__start1, __temp1, __end1);
-    __action489(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
+    __action489(input, __0, __1, __temp0, __3, __4, __temp1, __6, __7)
 }
 
 #[allow(unused_variables)]
-fn __action539<
-    'input,
->(
+fn __action539<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26436,40 +22212,20 @@ fn __action539<
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
     let __start1 = __4.2.clone();
     let __end1 = __5.0.clone();
-    let __temp0 = __action246(
-        input,
-        __2,
-    );
+    let __temp0 = __action246(input, __2);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action489(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
+    __action489(input, __0, __1, __temp0, __3, __4, __temp1, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action540<
-    'input,
->(
+fn __action540<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26478,40 +22234,20 @@ fn __action540<
     __4: (usize, Statement, usize),
     __5: (usize, &'input str, usize),
     __6: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __4.0.clone();
     let __end1 = __4.2.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action246(
-        input,
-        __4,
-    );
+    let __temp1 = __action246(input, __4);
     let __temp1 = (__start1, __temp1, __end1);
-    __action489(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __temp1,
-        __5,
-        __6,
-    )
+    __action489(input, __0, __1, __temp0, __2, __3, __temp1, __5, __6)
 }
 
 #[allow(unused_variables)]
-fn __action541<
-    'input,
->(
+fn __action541<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
@@ -26519,218 +22255,112 @@ fn __action541<
     __3: (usize, &'input str, usize),
     __4: (usize, &'input str, usize),
     __5: (usize, &'input str, usize),
-) -> Statement
-{
+) -> Statement {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
     let __start1 = __3.2.clone();
     let __end1 = __4.0.clone();
-    let __temp0 = __action247(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action247(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action247(
-        input,
-        &__start1,
-        &__end1,
-    );
+    let __temp1 = __action247(input, &__start1, &__end1);
     let __temp1 = (__start1, __temp1, __end1);
-    __action489(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __temp1,
-        __4,
-        __5,
-    )
+    __action489(input, __0, __1, __temp0, __2, __3, __temp1, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action542<
-    'input,
->(
+fn __action542<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, &'input str, usize),
-) -> BlockStatement
-{
+) -> BlockStatement {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action248(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action248(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action219(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action219(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action543<
-    'input,
->(
+fn __action543<'input>(
     input: &'input str,
     __0: (usize, &'input str, usize),
     __1: (usize, ::std::vec::Vec<Statement>, usize),
     __2: (usize, &'input str, usize),
-) -> BlockStatement
-{
+) -> BlockStatement {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action249(
-        input,
-        __1,
-    );
+    let __temp0 = __action249(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action219(
-        input,
-        __0,
-        __temp0,
-        __2,
-    )
+    __action219(input, __0, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action544<
-    'input,
->(
+fn __action544<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, StorageLocation, usize),
     __2: (usize, Identifier, usize),
-) -> Parameter
-{
+) -> Parameter {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action258(
-        input,
-        __1,
-    );
+    let __temp0 = __action258(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action524(
-        input,
-        __0,
-        __temp0,
-        __2,
-    )
+    __action524(input, __0, __temp0, __2)
 }
 
 #[allow(unused_variables)]
-fn __action545<
-    'input,
->(
+fn __action545<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, Identifier, usize),
-) -> Parameter
-{
+) -> Parameter {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action259(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action259(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action524(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
+    __action524(input, __0, __temp0, __1)
 }
 
 #[allow(unused_variables)]
-fn __action546<
-    'input,
->(
+fn __action546<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, StorageLocation, usize),
-) -> Parameter
-{
+) -> Parameter {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action258(
-        input,
-        __1,
-    );
+    let __temp0 = __action258(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action525(
-        input,
-        __0,
-        __temp0,
-    )
+    __action525(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action547<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, TypeName, usize),
-) -> Parameter
-{
+fn __action547<'input>(input: &'input str, __0: (usize, TypeName, usize)) -> Parameter {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action259(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action259(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action525(
-        input,
-        __0,
-        __temp0,
-    )
+    __action525(input, __0, __temp0)
 }
 
 #[allow(unused_variables)]
-fn __action548<
-    'input,
->(
+fn __action548<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, Expression, usize),
     __4: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action268(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action268(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action415(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-        __4,
-    )
+    __action415(input, __0, __temp0, __1, __2, __3, __4)
 }
 
 #[allow(unused_variables)]
-fn __action549<
-    'input,
->(
+fn __action549<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -26738,91 +22368,69 @@ fn __action549<
     __3: (usize, &'input str, usize),
     __4: (usize, Expression, usize),
     __5: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action269(
-        input,
-        __1,
-    );
+    let __temp0 = __action269(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action415(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __5,
-    )
+    __action415(input, __0, __temp0, __2, __3, __4, __5)
 }
 
 #[allow(unused_variables)]
-fn __action550<
-    'input,
->(
+fn __action550<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action268(
-        input,
-        &__start0,
-        &__end0,
-    );
+    let __temp0 = __action268(input, &__start0, &__end0);
     let __temp0 = (__start0, __temp0, __end0);
-    __action416(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-    )
+    __action416(input, __0, __temp0, __1, __2)
 }
 
 #[allow(unused_variables)]
-fn __action551<
-    'input,
->(
+fn __action551<'input>(
     input: &'input str,
     __0: (usize, TypeName, usize),
     __1: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, &'input str, usize),
-) -> Box<ContractVariableDefinition>
-{
+) -> Box<ContractVariableDefinition> {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action269(
-        input,
-        __1,
-    );
+    let __temp0 = __action269(input, __1);
     let __temp0 = (__start0, __temp0, __end0);
-    __action416(
-        input,
-        __0,
-        __temp0,
-        __2,
-        __3,
-    )
+    __action416(input, __0, __temp0, __2, __3)
 }
 
-pub trait __ToTriple<'input, > {
-    fn to_triple(value: Self) -> Result<(usize,Token<'input>,usize), __lalrpop_util::ParseError<usize, Token<'input>, &'static str>>;
+pub trait __ToTriple<'input> {
+    fn to_triple(
+        value: Self,
+    ) -> Result<
+        (usize, Token<'input>, usize),
+        __lalrpop_util::ParseError<usize, Token<'input>, &'static str>,
+    >;
 }
 
-impl<'input, > __ToTriple<'input, > for (usize, Token<'input>, usize) {
-    fn to_triple(value: Self) -> Result<(usize,Token<'input>,usize), __lalrpop_util::ParseError<usize, Token<'input>, &'static str>> {
+impl<'input> __ToTriple<'input> for (usize, Token<'input>, usize) {
+    fn to_triple(
+        value: Self,
+    ) -> Result<
+        (usize, Token<'input>, usize),
+        __lalrpop_util::ParseError<usize, Token<'input>, &'static str>,
+    > {
         Ok(value)
     }
 }
-impl<'input, > __ToTriple<'input, > for Result<(usize, Token<'input>, usize), &'static str> {
-    fn to_triple(value: Self) -> Result<(usize,Token<'input>,usize), __lalrpop_util::ParseError<usize, Token<'input>, &'static str>> {
+impl<'input> __ToTriple<'input> for Result<(usize, Token<'input>, usize), &'static str> {
+    fn to_triple(
+        value: Self,
+    ) -> Result<
+        (usize, Token<'input>, usize),
+        __lalrpop_util::ParseError<usize, Token<'input>, &'static str>,
+    > {
         match value {
             Ok(v) => Ok(v),
             Err(error) => Err(__lalrpop_util::ParseError::User { error }),

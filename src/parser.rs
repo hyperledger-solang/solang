@@ -1,33 +1,41 @@
-
-use output::Output;
-use solidity;
 use ast;
 use lalrpop_util::ParseError;
+use output::Output;
+use solidity;
 
 pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
     // parse phase
     let nocomments = strip_comments(src);
 
-    let s = solidity::SourceUnitParser::new()
-        .parse(&nocomments);
+    let s = solidity::SourceUnitParser::new().parse(&nocomments);
 
     let mut errors = Vec::new();
 
     if let Err(e) = s {
         errors.push(match e {
-            ParseError::InvalidToken{location} => Output::parser_error(ast::Loc(location, location), "invalid token".to_string()),
-            ParseError::UnrecognizedToken{token: (l, token, r), expected} => {
-                Output::parser_error(ast::Loc(l, r), format!("unrecognised token `{}', expected {}", token.1, expected.join(", ")))
-            },
-            ParseError::User{error} => {
-                Output::parser_error(ast::Loc(0, 0), error.to_string())
-            },
-            ParseError::ExtraToken{token} => {
-                Output::parser_error(ast::Loc(token.0, token.2), format!("extra token `{}' encountered", token.0))
-            },
-            ParseError::UnrecognizedEOF{location, expected} => {
-                Output::parser_error(ast::Loc(location, location), format!("unexpected end of file, expecting {}", expected.join(", ")))
+            ParseError::InvalidToken { location } => {
+                Output::parser_error(ast::Loc(location, location), "invalid token".to_string())
             }
+            ParseError::UnrecognizedToken {
+                token: (l, token, r),
+                expected,
+            } => Output::parser_error(
+                ast::Loc(l, r),
+                format!(
+                    "unrecognised token `{}', expected {}",
+                    token.1,
+                    expected.join(", ")
+                ),
+            ),
+            ParseError::User { error } => Output::parser_error(ast::Loc(0, 0), error.to_string()),
+            ParseError::ExtraToken { token } => Output::parser_error(
+                ast::Loc(token.0, token.2),
+                format!("extra token `{}' encountered", token.0),
+            ),
+            ParseError::UnrecognizedEOF { location, expected } => Output::parser_error(
+                ast::Loc(location, location),
+                format!("unexpected end of file, expecting {}", expected.join(", ")),
+            ),
         });
 
         Err(errors)
@@ -62,10 +70,10 @@ fn strip_comments(s: &str) -> String {
             if last != '\n' {
                 last = ' ';
             }
-        } else if last == '/' && c == '/'  {
+        } else if last == '/' && c == '/' {
             single_line = true;
             last = ' ';
-        } else if last == '/' && c == '*'  {
+        } else if last == '/' && c == '*' {
             multi_line = true;
             last = ' ';
         }
@@ -86,15 +94,18 @@ fn strip_comments(s: &str) -> String {
 pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
     match o {
         None => None,
-        Some(x) => Some(Box::new(x))
+        Some(x) => Some(Box::new(x)),
     }
 }
 
 #[test]
 fn strip_comments_test() {
-    assert_eq!(strip_comments(&("foo //Zabc\nbar".to_string())),
-                              "foo       \nbar");
-    assert_eq!(strip_comments(&("foo /*|x\ny&*/ bar".to_string())),
-                              "foo     \n     bar");
+    assert_eq!(
+        strip_comments(&("foo //Zabc\nbar".to_string())),
+        "foo       \nbar"
+    );
+    assert_eq!(
+        strip_comments(&("foo /*|x\ny&*/ bar".to_string())),
+        "foo     \n     bar"
+    );
 }
-

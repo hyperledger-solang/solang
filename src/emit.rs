@@ -1,24 +1,23 @@
-
-use resolver;
 use ast;
 use cfg;
+use resolver;
+use std::ffi::{CStr, CString};
 use std::ptr::null_mut;
-use std::ffi::{CString, CStr};
-use std::str;
 use std::slice;
+use std::str;
 
-use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 
-use llvm_sys::LLVMIntPredicate;
-use llvm_sys::*;
+use llvm_sys::bit_writer::*;
 use llvm_sys::core::*;
 use llvm_sys::ir_reader::*;
 use llvm_sys::linker::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
-use llvm_sys::bit_writer::*;
 use llvm_sys::target_machine::*;
+use llvm_sys::LLVMIntPredicate;
+use llvm_sys::*;
 use tiny_keccak::keccak256;
 
 const TRIPLE: &'static [u8] = b"wasm32-unknown-unknown-wasm\0";
@@ -42,7 +41,9 @@ fn target_machine() -> LLVMTargetMachineRef {
     let mut target = null_mut();
     let mut err_msg_ptr = null_mut();
     unsafe {
-        if LLVMGetTargetFromTriple(TRIPLE.as_ptr() as *const _, &mut target, &mut err_msg_ptr) == LLVM_TRUE {
+        if LLVMGetTargetFromTriple(TRIPLE.as_ptr() as *const _, &mut target, &mut err_msg_ptr)
+            == LLVM_TRUE
+        {
             let err_msg_cstr = CStr::from_ptr(err_msg_ptr as *const _);
             let err_msg = str::from_utf8(err_msg_cstr.to_bytes()).unwrap();
             panic!("failed to create llvm target: {}", err_msg);
@@ -50,13 +51,15 @@ fn target_machine() -> LLVMTargetMachineRef {
     }
 
     unsafe {
-        LLVMCreateTargetMachine(target,
-                                TRIPLE.as_ptr() as *const _,
-                                b"generic\0".as_ptr() as *const _,
-                                b"\0".as_ptr() as *const _,
-                                LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
-                                LLVMRelocMode::LLVMRelocDefault,
-                                LLVMCodeModel::LLVMCodeModelDefault)
+        LLVMCreateTargetMachine(
+            target,
+            TRIPLE.as_ptr() as *const _,
+            b"generic\0".as_ptr() as *const _,
+            b"\0".as_ptr() as *const _,
+            LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
+            LLVMRelocMode::LLVMRelocDefault,
+            LLVMCodeModel::LLVMCodeModelDefault,
+        )
     }
 }
 
@@ -94,18 +97,22 @@ impl<'a> Contract<'a> {
         let mut memory_buffer = null_mut();
 
         unsafe {
-            let result = LLVMTargetMachineEmitToMemoryBuffer(self.tm,
-                                                    self.module,
-                                                    LLVMCodeGenFileType::LLVMObjectFile,
-                                                    &mut obj_error,
-                                                    &mut memory_buffer);
+            let result = LLVMTargetMachineEmitToMemoryBuffer(
+                self.tm,
+                self.module,
+                LLVMCodeGenFileType::LLVMObjectFile,
+                &mut obj_error,
+                &mut memory_buffer,
+            );
 
             if result != 0 {
-                Err(CStr::from_ptr(obj_error as *const _).to_string_lossy().to_string())
+                Err(CStr::from_ptr(obj_error as *const _)
+                    .to_string_lossy()
+                    .to_string())
             } else {
                 let obj = slice::from_raw_parts(
                     LLVMGetBufferStart(memory_buffer) as *const u8,
-                    LLVMGetBufferSize(memory_buffer) as usize
+                    LLVMGetBufferSize(memory_buffer) as usize,
                 );
                 let res = obj.to_vec();
                 LLVMDisposeMemoryBuffer(memory_buffer);
@@ -115,14 +122,12 @@ impl<'a> Contract<'a> {
     }
 
     pub fn bitcode(&self) -> Vec<u8> {
-        let memory_buffer = unsafe {
-            LLVMWriteBitcodeToMemoryBuffer(self.module)
-        };
+        let memory_buffer = unsafe { LLVMWriteBitcodeToMemoryBuffer(self.module) };
 
         let bc = unsafe {
             slice::from_raw_parts(
                 LLVMGetBufferStart(memory_buffer) as *const u8,
-                LLVMGetBufferSize(memory_buffer) as usize
+                LLVMGetBufferSize(memory_buffer) as usize,
             )
         };
         let res = bc.to_vec();
@@ -139,7 +144,7 @@ impl<'a> Contract<'a> {
 
         let contractname = CString::new(contract.name.to_string()).unwrap();
 
-        let mut e = Contract{
+        let mut e = Contract {
             name: contract.name.to_string(),
             module: unsafe { LLVMModuleCreateWithName(contractname.as_ptr()) },
             context: unsafe { LLVMContextCreate() },
@@ -185,98 +190,105 @@ impl<'a> Contract<'a> {
             unsafe { LLVMInt32TypeInContext(self.context) },
         ];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as u32, 0) };
-        let func = unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const i8, ftype) };
+        let func =
+            unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const i8, ftype) };
         unsafe {
             LLVMSetLinkage(func, LLVMLinkage::LLVMExternalLinkage);
         }
-        self.externals.insert(
-            "get_storage32".to_owned(),
-            func,
-        );
-        let func = unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const i8, ftype) };
+        self.externals.insert("get_storage32".to_owned(), func);
+        let func =
+            unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const i8, ftype) };
         unsafe {
             LLVMSetLinkage(func, LLVMLinkage::LLVMExternalLinkage);
         }
-        self.externals.insert(
-            "set_storage32".to_owned(),
-            func,
-        );
+        self.externals.insert("set_storage32".to_owned(), func);
     }
 
-    fn expression(&self, builder: LLVMBuilderRef, e: &cfg::Expression, vartab: &Vec<Variable>) -> LLVMValueRef {
+    fn expression(
+        &self,
+        builder: LLVMBuilderRef,
+        e: &cfg::Expression,
+        vartab: &Vec<Variable>,
+    ) -> LLVMValueRef {
         match e {
             cfg::Expression::NumberLiteral(bits, n) => {
                 let ty = unsafe { LLVMIntTypeInContext(self.context, *bits as _) };
                 let s = n.to_string();
 
-                unsafe {
-                    LLVMConstIntOfStringAndSize(ty, s.as_ptr() as *const _, s.len() as _, 10)
-                }
-            },
+                unsafe { LLVMConstIntOfStringAndSize(ty, s.as_ptr() as *const _, s.len() as _, 10) }
+            }
             cfg::Expression::Add(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
-                unsafe {
-                    LLVMBuildAdd(builder, left, right, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildAdd(builder, left, right, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::Subtract(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
-                unsafe {
-                    LLVMBuildSub(builder, left, right, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildSub(builder, left, right, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::Multiply(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
-                unsafe {
-                    LLVMBuildMul(builder, left, right, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildMul(builder, left, right, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::UDivide(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
-                unsafe {
-                    LLVMBuildUDiv(builder, left, right, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildUDiv(builder, left, right, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::SDivide(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
-                unsafe {
-                    LLVMBuildSDiv(builder, left, right, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildSDiv(builder, left, right, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::Equal(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
                 unsafe {
-                    LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, left, right, b"\0".as_ptr() as *const _)
+                    LLVMBuildICmp(
+                        builder,
+                        LLVMIntPredicate::LLVMIntEQ,
+                        left,
+                        right,
+                        b"\0".as_ptr() as *const _,
+                    )
                 }
-            },
+            }
             cfg::Expression::More(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
                 unsafe {
-                    LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntSGT, left, right, b"\0".as_ptr() as *const _)
+                    LLVMBuildICmp(
+                        builder,
+                        LLVMIntPredicate::LLVMIntSGT,
+                        left,
+                        right,
+                        b"\0".as_ptr() as *const _,
+                    )
                 }
-            },
+            }
             cfg::Expression::Less(l, r) => {
                 let left = self.expression(builder, l, vartab);
                 let right = self.expression(builder, r, vartab);
 
                 unsafe {
-                    LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntSLT, left, right, b"\0".as_ptr() as *const _)
+                    LLVMBuildICmp(
+                        builder,
+                        LLVMIntPredicate::LLVMIntSLT,
+                        left,
+                        right,
+                        b"\0".as_ptr() as *const _,
+                    )
                 }
-            },
+            }
             cfg::Expression::Variable(_, s) => {
                 if vartab[*s].stack {
                     unsafe {
@@ -285,23 +297,19 @@ impl<'a> Contract<'a> {
                 } else {
                     vartab[*s].value_ref
                 }
-            },
+            }
             cfg::Expression::ZeroExt(t, e) => {
                 let e = self.expression(builder, e, vartab);
                 let ty = t.LLVMType(self.ns, self.context);
 
-                unsafe {
-                    LLVMBuildZExt(builder, e, ty, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildZExt(builder, e, ty, b"\0".as_ptr() as *const _) }
+            }
             cfg::Expression::Trunc(t, e) => {
                 let e = self.expression(builder, e, vartab);
                 let ty = t.LLVMType(self.ns, self.context);
 
-                unsafe {
-                    LLVMBuildTrunc(builder, e, ty, b"\0".as_ptr() as *const _)
-                }
-            },
+                unsafe { LLVMBuildTrunc(builder, e, ty, b"\0".as_ptr() as *const _) }
+            }
             _ => {
                 panic!("expression not implemented");
             }
@@ -311,16 +319,19 @@ impl<'a> Contract<'a> {
     fn emit_constructor_dispatch(&self, contract: &resolver::Contract, builder: LLVMBuilderRef) {
         // create start function
         let ret = unsafe { LLVMVoidType() };
-        let mut args = vec![ unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) } ];
+        let mut args = vec![unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) }];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
         let fname = CString::new("constructor").unwrap();
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
-        let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
+        let entry = unsafe {
+            LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _)
+        };
 
         unsafe {
             LLVMPositionBuilderAtEnd(builder, entry);
-            let init_heap = LLVMGetNamedFunction(self.module, "__init_heap\0".as_ptr() as *const i8);
-            LLVMBuildCall(builder, init_heap,  null_mut(), 0, "\0".as_ptr() as *const _);
+            let init_heap =
+                LLVMGetNamedFunction(self.module, "__init_heap\0".as_ptr() as *const i8);
+            LLVMBuildCall(builder, init_heap, null_mut(), 0, "\0".as_ptr() as *const _);
         }
 
         if let Some(n) = contract.constructor_function() {
@@ -330,14 +341,36 @@ impl<'a> Contract<'a> {
             let length = unsafe { LLVMBuildLoad(builder, arg, "length\0".as_ptr() as *const _) };
 
             // step over length
-            let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
-            let args_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_one, 1 as _, "fid_ptr\0".as_ptr() as *const _) };
+            let mut index_one =
+                unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+            let args_ptr = unsafe {
+                LLVMBuildGEP(
+                    builder,
+                    arg,
+                    &mut index_one,
+                    1 as _,
+                    "fid_ptr\0".as_ptr() as *const _,
+                )
+            };
 
             // insert abi decode
-            self.emit_abi_decode(builder, function, &mut args, args_ptr, length, &contract.functions[n]);
+            self.emit_abi_decode(
+                builder,
+                function,
+                &mut args,
+                args_ptr,
+                length,
+                &contract.functions[n],
+            );
 
             unsafe {
-                LLVMBuildCall(builder, self.functions[n].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                LLVMBuildCall(
+                    builder,
+                    self.functions[n].value_ref,
+                    args.as_mut_ptr(),
+                    args.len() as _,
+                    "\0".as_ptr() as *const _,
+                );
             }
         }
 
@@ -349,44 +382,95 @@ impl<'a> Contract<'a> {
     fn emit_function_dispatch(&self, contract: &resolver::Contract, builder: LLVMBuilderRef) {
         // create start function
         let ret = unsafe { LLVMPointerType(LLVMInt32TypeInContext(self.context), 0) };
-        let mut args = vec![ ret ];
+        let mut args = vec![ret];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as _, 0) };
-        let fname  = CString::new("function").unwrap();
+        let fname = CString::new("function").unwrap();
         let function = unsafe { LLVMAddFunction(self.module, fname.as_ptr(), ftype) };
-        let entry = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _) };
-        let fallback_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "fallback\0".as_ptr() as *const _) };
-        let switch_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "switch\0".as_ptr() as *const _) };
-        unsafe { LLVMPositionBuilderAtEnd(builder, entry); }
+        let entry = unsafe {
+            LLVMAppendBasicBlockInContext(self.context, function, "entry\0".as_ptr() as *const _)
+        };
+        let fallback_bb = unsafe {
+            LLVMAppendBasicBlockInContext(self.context, function, "fallback\0".as_ptr() as *const _)
+        };
+        let switch_bb = unsafe {
+            LLVMAppendBasicBlockInContext(self.context, function, "switch\0".as_ptr() as *const _)
+        };
+        unsafe {
+            LLVMPositionBuilderAtEnd(builder, entry);
+        }
         let arg = unsafe { LLVMGetParam(function, 0) };
         let length = unsafe { LLVMBuildLoad(builder, arg, "length\0".as_ptr() as *const _) };
 
-        let not_fallback = unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntUGE,
-                    length, LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE),
-                    "not_fallback\0".as_ptr() as *const _) };
-
-        unsafe { LLVMBuildCondBr(builder, not_fallback, switch_bb, fallback_bb); }
-
-        unsafe { LLVMPositionBuilderAtEnd(builder, switch_bb); }
-
-        // step over length
-        let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
-        let fid_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_one, 1 as _, "fid_ptr\0".as_ptr() as *const _) };
-        let id = unsafe { LLVMBuildLoad(builder, fid_ptr, "fid\0".as_ptr() as *const _) };
-        let nomatch_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "no_match\0".as_ptr() as *const _) };
-
-        // pointer/size for abi decoding
-        let mut index_two = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 2, LLVM_FALSE) };
-        let args_ptr = unsafe { LLVMBuildGEP(builder, arg, &mut index_two, 1 as _, "args_ptr\0".as_ptr() as *const _) };
-        let args_len = unsafe { LLVMBuildSub(builder,
-                                    length,
-                                    LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE),
-                                    "args_len\0".as_ptr() as *const _) };
-        let switch = unsafe {
-            LLVMBuildSwitch(builder, id, nomatch_bb, contract.functions.iter().filter(|x| x.name != None).count() as _)
+        let not_fallback = unsafe {
+            LLVMBuildICmp(
+                builder,
+                LLVMIntPredicate::LLVMIntUGE,
+                length,
+                LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE),
+                "not_fallback\0".as_ptr() as *const _,
+            )
         };
 
-        unsafe { LLVMPositionBuilderAtEnd(builder, nomatch_bb); }
-        unsafe { LLVMBuildUnreachable(builder); }
+        unsafe {
+            LLVMBuildCondBr(builder, not_fallback, switch_bb, fallback_bb);
+        }
+
+        unsafe {
+            LLVMPositionBuilderAtEnd(builder, switch_bb);
+        }
+
+        // step over length
+        let mut index_one =
+            unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+        let fid_ptr = unsafe {
+            LLVMBuildGEP(
+                builder,
+                arg,
+                &mut index_one,
+                1 as _,
+                "fid_ptr\0".as_ptr() as *const _,
+            )
+        };
+        let id = unsafe { LLVMBuildLoad(builder, fid_ptr, "fid\0".as_ptr() as *const _) };
+        let nomatch_bb = unsafe {
+            LLVMAppendBasicBlockInContext(self.context, function, "no_match\0".as_ptr() as *const _)
+        };
+
+        // pointer/size for abi decoding
+        let mut index_two =
+            unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 2, LLVM_FALSE) };
+        let args_ptr = unsafe {
+            LLVMBuildGEP(
+                builder,
+                arg,
+                &mut index_two,
+                1 as _,
+                "args_ptr\0".as_ptr() as *const _,
+            )
+        };
+        let args_len = unsafe {
+            LLVMBuildSub(
+                builder,
+                length,
+                LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE),
+                "args_len\0".as_ptr() as *const _,
+            )
+        };
+        let switch = unsafe {
+            LLVMBuildSwitch(
+                builder,
+                id,
+                nomatch_bb,
+                contract.functions.iter().filter(|x| x.name != None).count() as _,
+            )
+        };
+
+        unsafe {
+            LLVMPositionBuilderAtEnd(builder, nomatch_bb);
+        }
+        unsafe {
+            LLVMBuildUnreachable(builder);
+        }
 
         for (i, f) in contract.functions.iter().enumerate() {
             // ignore constructors and fallback
@@ -395,25 +479,30 @@ impl<'a> Contract<'a> {
             }
 
             match &f.visibility {
-                ast::Visibility::Internal(_) |
-                ast::Visibility::Private(_) => {
+                ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
                     continue;
-                },
+                }
                 _ => (),
             }
 
             let mut res = keccak256(f.sig.as_bytes());
 
-            let bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "\0".as_ptr() as *const _) };
-            let fid = u32::from_le_bytes([ res[0], res[1], res[2], res[3] ]);
+            let bb = unsafe {
+                LLVMAppendBasicBlockInContext(self.context, function, "\0".as_ptr() as *const _)
+            };
+            let fid = u32::from_le_bytes([res[0], res[1], res[2], res[3]]);
 
             unsafe {
-                LLVMAddCase(switch,
+                LLVMAddCase(
+                    switch,
                     LLVMConstInt(LLVMIntTypeInContext(self.context, 32), fid as _, LLVM_FALSE),
-                    bb);
+                    bb,
+                );
             }
 
-            unsafe { LLVMPositionBuilderAtEnd(builder, bb); }
+            unsafe {
+                LLVMPositionBuilderAtEnd(builder, bb);
+            }
 
             let mut args = Vec::new();
 
@@ -421,31 +510,50 @@ impl<'a> Contract<'a> {
             self.emit_abi_decode(builder, function, &mut args, args_ptr, args_len, f);
 
             let ret = unsafe {
-                LLVMBuildCall(builder, self.functions[i].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _)
+                LLVMBuildCall(
+                    builder,
+                    self.functions[i].value_ref,
+                    args.as_mut_ptr(),
+                    args.len() as _,
+                    "\0".as_ptr() as *const _,
+                )
             };
 
             if f.returns.is_empty() {
                 // return ABI of length 0
 
                 // malloc 4 bytes
-                let mut four = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) };
-                let mut args = [ four ];
+                let mut four =
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) };
+                let mut args = [four];
                 let malloc = unsafe {
                     LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
                 };
                 let dest = unsafe {
-                    LLVMBuildCall(builder, malloc, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                    LLVMBuildCall(
+                        builder,
+                        malloc,
+                        args.as_mut_ptr(),
+                        args.len() as u32,
+                        "\0".as_ptr() as *const i8,
+                    )
                 };
 
                 // write length
                 let dest = unsafe {
-                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt32TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    LLVMBuildPointerCast(
+                        builder,
+                        dest,
+                        LLVMPointerType(LLVMInt32TypeInContext(self.context), 0),
+                        "\0".as_ptr() as *const _,
+                    )
                 };
 
                 unsafe {
-                    LLVMBuildStore(builder,
+                    LLVMBuildStore(
+                        builder,
                         LLVMConstInt(LLVMInt32TypeInContext(self.context), 0, LLVM_FALSE),
-                        dest
+                        dest,
                     );
                 }
 
@@ -454,29 +562,51 @@ impl<'a> Contract<'a> {
                 }
             } else if self.functions[i].wasm_return {
                 // malloc 36 bytes
-                let mut c36 = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 36, LLVM_FALSE) };
-                let mut args = [ c36 ];
+                let mut c36 =
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 36, LLVM_FALSE) };
+                let mut args = [c36];
                 let malloc = unsafe {
                     LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
                 };
                 let dest = unsafe {
-                    LLVMBuildCall(builder, malloc, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                    LLVMBuildCall(
+                        builder,
+                        malloc,
+                        args.as_mut_ptr(),
+                        args.len() as u32,
+                        "\0".as_ptr() as *const i8,
+                    )
                 };
 
                 // write length
                 let dest = unsafe {
-                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt32TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    LLVMBuildPointerCast(
+                        builder,
+                        dest,
+                        LLVMPointerType(LLVMInt32TypeInContext(self.context), 0),
+                        "\0".as_ptr() as *const _,
+                    )
                 };
 
                 unsafe {
-                    LLVMBuildStore(builder,
+                    LLVMBuildStore(
+                        builder,
                         LLVMConstInt(LLVMInt32TypeInContext(self.context), 32, LLVM_FALSE),
-                        dest
+                        dest,
                     );
                 }
 
-                let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
-                let abi_ptr = unsafe { LLVMBuildGEP(builder, dest, &mut index_one, 1 as _, "abi_ptr\0".as_ptr() as *const _) };
+                let mut index_one =
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
+                let abi_ptr = unsafe {
+                    LLVMBuildGEP(
+                        builder,
+                        dest,
+                        &mut index_one,
+                        1 as _,
+                        "abi_ptr\0".as_ptr() as *const _,
+                    )
+                };
 
                 // insert abi decode
                 let ty = match &f.returns[0].ty {
@@ -498,104 +628,195 @@ impl<'a> Contract<'a> {
         // FIXME: emit code for public contract variables
 
         // emit fallback code
-        unsafe { LLVMPositionBuilderAtEnd(builder, fallback_bb); }
+        unsafe {
+            LLVMPositionBuilderAtEnd(builder, fallback_bb);
+        }
         match contract.fallback_function() {
             Some(n) => {
                 let mut args = Vec::new();
 
                 unsafe {
-                    LLVMBuildCall(builder, self.functions[n].value_ref, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                    LLVMBuildCall(
+                        builder,
+                        self.functions[n].value_ref,
+                        args.as_mut_ptr(),
+                        args.len() as _,
+                        "\0".as_ptr() as *const _,
+                    );
                     LLVMBuildRetVoid(builder);
                 }
-            },
-            None => {
-                unsafe {
-                    LLVMBuildUnreachable(builder);
-                }
             }
+            None => unsafe {
+                LLVMBuildUnreachable(builder);
+            },
         }
     }
 
-    fn emit_abi_encode_single_val(&self, builder: LLVMBuilderRef,  ty: &ast::ElementaryTypeName, dest: LLVMValueRef, val: LLVMValueRef) {
+    fn emit_abi_encode_single_val(
+        &self,
+        builder: LLVMBuilderRef,
+        ty: &ast::ElementaryTypeName,
+        dest: LLVMValueRef,
+        val: LLVMValueRef,
+    ) {
         match ty {
             ast::ElementaryTypeName::Bool => {
                 let bzero8 = unsafe {
                     LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
                 };
                 let mut args = [
-                    unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
-                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) }
+                    unsafe {
+                        LLVMBuildPointerCast(
+                            builder,
+                            dest,
+                            LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                            "\0".as_ptr() as *const _,
+                        )
+                    },
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) },
                 ];
                 unsafe {
-                    LLVMBuildCall(builder, bzero8, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                    LLVMBuildCall(
+                        builder,
+                        bzero8,
+                        args.as_mut_ptr(),
+                        args.len() as u32,
+                        "\0".as_ptr() as *const i8,
+                    )
                 };
 
-                let zero = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
-                let one = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 1, LLVM_FALSE) };
+                let zero =
+                    unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
+                let one =
+                    unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 1, LLVM_FALSE) };
                 let val = unsafe {
                     LLVMBuildSelect(builder, val, one, zero, "bool\0".as_ptr() as *const i8)
                 };
 
                 let mut int8_ptr = unsafe {
-                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    LLVMBuildPointerCast(
+                        builder,
+                        dest,
+                        LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                        "\0".as_ptr() as *const _,
+                    )
                 };
-                let mut thirtyone = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
-                int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
+                let mut thirtyone =
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
+                int8_ptr = unsafe {
+                    LLVMBuildGEP(
+                        builder,
+                        int8_ptr,
+                        &mut thirtyone,
+                        1 as _,
+                        "int8_ptr\0".as_ptr() as *const _,
+                    )
+                };
                 unsafe {
                     LLVMBuildStore(builder, val, int8_ptr);
                 }
-            },
-            ast::ElementaryTypeName::Int(8) |
-            ast::ElementaryTypeName::Uint(8) => {
+            }
+            ast::ElementaryTypeName::Int(8) | ast::ElementaryTypeName::Uint(8) => {
                 let func = if let ast::ElementaryTypeName::Int(8) = ty {
-                    let zero = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
+                    let zero =
+                        unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
                     let negative = unsafe {
-                        LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntSLT, val, zero, "neg\0".as_ptr() as *const _)
+                        LLVMBuildICmp(
+                            builder,
+                            LLVMIntPredicate::LLVMIntSLT,
+                            val,
+                            zero,
+                            "neg\0".as_ptr() as *const _,
+                        )
                     };
 
                     unsafe {
-                        LLVMBuildSelect(builder, negative,
+                        LLVMBuildSelect(
+                            builder,
+                            negative,
                             LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8),
                             LLVMGetNamedFunction(self.module, "__bset8\0".as_ptr() as *const i8),
-                            "clearfunc\0".as_ptr() as *const _)
+                            "clearfunc\0".as_ptr() as *const _,
+                        )
                     }
                 } else {
-                    unsafe {
-                        LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
-                    }
+                    unsafe { LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8) }
                 };
 
                 let mut args = [
-                    unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
-                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) }
+                    unsafe {
+                        LLVMBuildPointerCast(
+                            builder,
+                            dest,
+                            LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                            "\0".as_ptr() as *const _,
+                        )
+                    },
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) },
                 ];
                 let dest = unsafe {
-                    LLVMBuildCall(builder, func, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                    LLVMBuildCall(
+                        builder,
+                        func,
+                        args.as_mut_ptr(),
+                        args.len() as u32,
+                        "\0".as_ptr() as *const i8,
+                    )
                 };
 
                 let mut int8_ptr = unsafe {
-                    LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                    LLVMBuildPointerCast(
+                        builder,
+                        dest,
+                        LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                        "\0".as_ptr() as *const _,
+                    )
                 };
-                let mut thirtyone = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
-                int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
+                let mut thirtyone =
+                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
+                int8_ptr = unsafe {
+                    LLVMBuildGEP(
+                        builder,
+                        int8_ptr,
+                        &mut thirtyone,
+                        1 as _,
+                        "int8_ptr\0".as_ptr() as *const _,
+                    )
+                };
                 unsafe {
                     LLVMBuildStore(builder, val, int8_ptr);
                 }
-            },
-            ast::ElementaryTypeName::Uint(n) |
-            ast::ElementaryTypeName::Int(n) => {
+            }
+            ast::ElementaryTypeName::Uint(n) | ast::ElementaryTypeName::Int(n) => {
                 if *n < 256 {
                     let func = if let ast::ElementaryTypeName::Int(_) = ty {
-                        let zero = unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE) };
+                        let zero = unsafe {
+                            LLVMConstInt(LLVMInt8TypeInContext(self.context), 0, LLVM_FALSE)
+                        };
                         let negative = unsafe {
-                            LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntSLT, val, zero, "neg\0".as_ptr() as *const _)
+                            LLVMBuildICmp(
+                                builder,
+                                LLVMIntPredicate::LLVMIntSLT,
+                                val,
+                                zero,
+                                "neg\0".as_ptr() as *const _,
+                            )
                         };
 
                         unsafe {
-                            LLVMBuildSelect(builder, negative,
-                                LLVMGetNamedFunction(self.module, "__bset8\0".as_ptr() as *const i8),
-                                LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8),
-                                "clearfunc\0".as_ptr() as *const _)
+                            LLVMBuildSelect(
+                                builder,
+                                negative,
+                                LLVMGetNamedFunction(
+                                    self.module,
+                                    "__bset8\0".as_ptr() as *const i8,
+                                ),
+                                LLVMGetNamedFunction(
+                                    self.module,
+                                    "__bzero8\0".as_ptr() as *const i8,
+                                ),
+                                "clearfunc\0".as_ptr() as *const _,
+                            )
                         }
                     } else {
                         unsafe {
@@ -604,12 +825,27 @@ impl<'a> Contract<'a> {
                     };
 
                     let mut args = [
-                        unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
-                        unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) }
+                        unsafe {
+                            LLVMBuildPointerCast(
+                                builder,
+                                dest,
+                                LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                                "\0".as_ptr() as *const _,
+                            )
+                        },
+                        unsafe {
+                            LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE)
+                        },
                     ];
 
                     unsafe {
-                        LLVMBuildCall(builder, func, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const i8)
+                        LLVMBuildCall(
+                            builder,
+                            func,
+                            args.as_mut_ptr(),
+                            args.len() as u32,
+                            "\0".as_ptr() as *const i8,
+                        )
                     };
                 }
                 // no need to allocate space for each uint64
@@ -617,9 +853,8 @@ impl<'a> Contract<'a> {
                 let int_type = unsafe { LLVMIntTypeInContext(self.context, *n as u32) };
                 let type_size = unsafe { LLVMSizeOf(int_type) };
 
-                let store = unsafe {
-                    LLVMBuildAlloca(builder, int_type, "stack\0".as_ptr() as *const _)
-                };
+                let store =
+                    unsafe { LLVMBuildAlloca(builder, int_type, "stack\0".as_ptr() as *const _) };
 
                 unsafe {
                     LLVMBuildStore(builder, val, store);
@@ -628,36 +863,88 @@ impl<'a> Contract<'a> {
                 let mut args = vec![
                     // from
                     unsafe {
-                        LLVMBuildPointerCast(builder, store, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                        LLVMBuildPointerCast(
+                            builder,
+                            store,
+                            LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                            "\0".as_ptr() as *const _,
+                        )
                     },
                     // to
                     unsafe {
-                        LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                        LLVMBuildPointerCast(
+                            builder,
+                            dest,
+                            LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                            "\0".as_ptr() as *const _,
+                        )
                     },
                     // type_size
                     unsafe {
-                        LLVMBuildTrunc(builder, type_size, LLVMInt32TypeInContext(self.context), "size\0".as_ptr() as *const _)
-                    }
+                        LLVMBuildTrunc(
+                            builder,
+                            type_size,
+                            LLVMInt32TypeInContext(self.context),
+                            "size\0".as_ptr() as *const _,
+                        )
+                    },
                 ];
                 unsafe {
-                    let le_ntobe32 = LLVMGetNamedFunction(self.module, "__leNtobe32\0".as_ptr() as *const i8);
+                    let le_ntobe32 =
+                        LLVMGetNamedFunction(self.module, "__leNtobe32\0".as_ptr() as *const i8);
 
-                    LLVMBuildCall(builder, le_ntobe32, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                    LLVMBuildCall(
+                        builder,
+                        le_ntobe32,
+                        args.as_mut_ptr(),
+                        args.len() as _,
+                        "\0".as_ptr() as *const _,
+                    );
                 }
-            },
-            _ => unimplemented!()
+            }
+            _ => unimplemented!(),
         }
     }
 
-    fn emit_abi_decode(&self, builder: LLVMBuilderRef, function: LLVMValueRef, args: &mut Vec<LLVMValueRef>, data: LLVMValueRef, length: LLVMValueRef, spec: &resolver::FunctionDecl) {
+    fn emit_abi_decode(
+        &self,
+        builder: LLVMBuilderRef,
+        function: LLVMValueRef,
+        args: &mut Vec<LLVMValueRef>,
+        data: LLVMValueRef,
+        length: LLVMValueRef,
+        spec: &resolver::FunctionDecl,
+    ) {
         let mut data = data;
 
-        let decode_bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "abi_decode\0".as_ptr() as *const _) };
-        let wrong_length_bb  = unsafe { LLVMAppendBasicBlockInContext(self.context, function, "wrong_abi_length\0".as_ptr() as *const _) };
+        let decode_bb = unsafe {
+            LLVMAppendBasicBlockInContext(
+                self.context,
+                function,
+                "abi_decode\0".as_ptr() as *const _,
+            )
+        };
+        let wrong_length_bb = unsafe {
+            LLVMAppendBasicBlockInContext(
+                self.context,
+                function,
+                "wrong_abi_length\0".as_ptr() as *const _,
+            )
+        };
 
         let is_ok = unsafe {
-            let correct_length = LLVMConstInt(LLVMInt32TypeInContext(self.context), (32 * spec.params.len()) as _, LLVM_FALSE);
-            LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, length, correct_length, "abilength\0".as_ptr() as *const _)
+            let correct_length = LLVMConstInt(
+                LLVMInt32TypeInContext(self.context),
+                (32 * spec.params.len()) as _,
+                LLVM_FALSE,
+            );
+            LLVMBuildICmp(
+                builder,
+                LLVMIntPredicate::LLVMIntEQ,
+                length,
+                correct_length,
+                "abilength\0".as_ptr() as *const _,
+            )
         };
 
         unsafe {
@@ -669,7 +956,7 @@ impl<'a> Contract<'a> {
             let ty = match &arg.ty {
                 resolver::TypeName::Elementary(e) => e,
                 resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty,
-                resolver::TypeName::Noreturn => unreachable!()
+                resolver::TypeName::Noreturn => unreachable!(),
             };
 
             args.push(match ty {
@@ -678,25 +965,65 @@ impl<'a> Contract<'a> {
                     // which is unneeded (hopefully)
                     // cast to 64 bit pointer
                     let bool_ptr = unsafe {
-                        LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt64TypeInContext(self.context), 0), "\0".as_ptr() as *const _) };
-                    // get third 64 bit value
-                    let mut three = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 3, LLVM_FALSE) };
-                    let mut zero = unsafe { LLVMConstInt(LLVMInt64TypeInContext(self.context), 0, LLVM_FALSE) };
-                    let bool_ptr = unsafe { LLVMBuildGEP(builder, bool_ptr, &mut three, 1 as _, "bool_ptr\0".as_ptr() as *const _) };
-                    let bool_ = unsafe { LLVMBuildLoad(builder, bool_ptr, "bool\0".as_ptr() as *const _) };
-                    unsafe { LLVMBuildICmp(builder, LLVMIntPredicate::LLVMIntEQ, bool_, zero, "iszero\0".as_ptr() as *const _) }
-                },
-                ast::ElementaryTypeName::Uint(8) |
-                ast::ElementaryTypeName::Int(8) => {
-                    let mut int8_ptr = unsafe {
-                        LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                        LLVMBuildPointerCast(
+                            builder,
+                            data,
+                            LLVMPointerType(LLVMInt64TypeInContext(self.context), 0),
+                            "\0".as_ptr() as *const _,
+                        )
                     };
-                    let mut thirtyone = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE) };
-                    int8_ptr = unsafe { LLVMBuildGEP(builder, int8_ptr, &mut thirtyone, 1 as _, "int8_ptr\0".as_ptr() as *const _) };
+                    // get third 64 bit value
+                    let mut three = unsafe {
+                        LLVMConstInt(LLVMInt32TypeInContext(self.context), 3, LLVM_FALSE)
+                    };
+                    let mut zero = unsafe {
+                        LLVMConstInt(LLVMInt64TypeInContext(self.context), 0, LLVM_FALSE)
+                    };
+                    let bool_ptr = unsafe {
+                        LLVMBuildGEP(
+                            builder,
+                            bool_ptr,
+                            &mut three,
+                            1 as _,
+                            "bool_ptr\0".as_ptr() as *const _,
+                        )
+                    };
+                    let bool_ =
+                        unsafe { LLVMBuildLoad(builder, bool_ptr, "bool\0".as_ptr() as *const _) };
+                    unsafe {
+                        LLVMBuildICmp(
+                            builder,
+                            LLVMIntPredicate::LLVMIntEQ,
+                            bool_,
+                            zero,
+                            "iszero\0".as_ptr() as *const _,
+                        )
+                    }
+                }
+                ast::ElementaryTypeName::Uint(8) | ast::ElementaryTypeName::Int(8) => {
+                    let mut int8_ptr = unsafe {
+                        LLVMBuildPointerCast(
+                            builder,
+                            data,
+                            LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                            "\0".as_ptr() as *const _,
+                        )
+                    };
+                    let mut thirtyone = unsafe {
+                        LLVMConstInt(LLVMInt32TypeInContext(self.context), 31, LLVM_FALSE)
+                    };
+                    int8_ptr = unsafe {
+                        LLVMBuildGEP(
+                            builder,
+                            int8_ptr,
+                            &mut thirtyone,
+                            1 as _,
+                            "int8_ptr\0".as_ptr() as *const _,
+                        )
+                    };
                     unsafe { LLVMBuildLoad(builder, int8_ptr, "int8\0".as_ptr() as *const _) }
-                },
-                ast::ElementaryTypeName::Uint(n) |
-                ast::ElementaryTypeName::Int(n) => {
+                }
+                ast::ElementaryTypeName::Uint(n) | ast::ElementaryTypeName::Int(n) => {
                     // no need to allocate space for each uint64
                     // allocate enough for type
                     let int_type = unsafe { LLVMIntTypeInContext(self.context, *n as u32) };
@@ -709,36 +1036,67 @@ impl<'a> Contract<'a> {
                     let mut args = vec![
                         // from
                         unsafe {
-                            LLVMBuildPointerCast(builder, data, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                            LLVMBuildPointerCast(
+                                builder,
+                                data,
+                                LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                                "\0".as_ptr() as *const _,
+                            )
                         },
                         // to
                         unsafe {
-                            LLVMBuildPointerCast(builder, store, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _)
+                            LLVMBuildPointerCast(
+                                builder,
+                                store,
+                                LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                                "\0".as_ptr() as *const _,
+                            )
                         },
                         // type_size
                         unsafe {
-                            LLVMBuildTrunc(builder, type_size, LLVMInt32TypeInContext(self.context), "size\0".as_ptr() as *const _)
-                        }
+                            LLVMBuildTrunc(
+                                builder,
+                                type_size,
+                                LLVMInt32TypeInContext(self.context),
+                                "size\0".as_ptr() as *const _,
+                            )
+                        },
                     ];
                     unsafe {
-                        let be32tolen = LLVMGetNamedFunction(self.module, "__be32toleN\0".as_ptr() as *const i8);
+                        let be32tolen = LLVMGetNamedFunction(
+                            self.module,
+                            "__be32toleN\0".as_ptr() as *const i8,
+                        );
 
-                        LLVMBuildCall(builder, be32tolen, args.as_mut_ptr(), args.len() as _, "\0".as_ptr() as *const _);
+                        LLVMBuildCall(
+                            builder,
+                            be32tolen,
+                            args.as_mut_ptr(),
+                            args.len() as _,
+                            "\0".as_ptr() as *const _,
+                        );
                     }
 
                     if *n <= 64 {
-                        unsafe {
-                            LLVMBuildLoad(builder, store, "\0".as_ptr() as *const _)
-                        }
+                        unsafe { LLVMBuildLoad(builder, store, "\0".as_ptr() as *const _) }
                     } else {
                         store
                     }
-                },
-                _ => panic!()
+                }
+                _ => panic!(),
             });
 
-            let mut eight = unsafe { LLVMConstInt(LLVMInt64TypeInContext(self.context), 8, LLVM_FALSE) };
-            data = unsafe { LLVMBuildGEP(builder, data, &mut eight, 1 as _, "data_next\0".as_ptr() as *const _) };
+            let mut eight =
+                unsafe { LLVMConstInt(LLVMInt64TypeInContext(self.context), 8, LLVM_FALSE) };
+            data = unsafe {
+                LLVMBuildGEP(
+                    builder,
+                    data,
+                    &mut eight,
+                    1 as _,
+                    "data_next\0".as_ptr() as *const _,
+                )
+            };
         }
 
         unsafe {
@@ -753,7 +1111,7 @@ impl<'a> Contract<'a> {
     }
 
     fn emit_func(&self, f: &resolver::FunctionDecl, builder: LLVMBuilderRef) -> Function {
-        let mut args = vec!();
+        let mut args = vec![];
         let mut wasm_return = false;
 
         for p in &f.params {
@@ -794,7 +1152,7 @@ impl<'a> Contract<'a> {
 
         let cfg = match f.cfg {
             Some(ref cfg) => cfg,
-            None => panic!()
+            None => panic!(),
         };
 
         // recurse through basic blocks
@@ -805,19 +1163,23 @@ impl<'a> Contract<'a> {
 
         struct Work {
             bb_no: usize,
-            vars: Vec<Variable>
+            vars: Vec<Variable>,
         }
 
-        let mut blocks : HashMap<usize, BasicBlock> = HashMap::new();
+        let mut blocks: HashMap<usize, BasicBlock> = HashMap::new();
 
         let create_bb = |bb_no| -> BasicBlock {
-            let cfg_bb : &cfg::BasicBlock = &cfg.bb[bb_no];
+            let cfg_bb: &cfg::BasicBlock = &cfg.bb[bb_no];
             let mut phis = HashMap::new();
 
             let bb_name = CString::new(cfg_bb.name.to_string()).unwrap();
-            let bb = unsafe { LLVMAppendBasicBlockInContext(self.context, function, bb_name.as_ptr() as *const _) };
+            let bb = unsafe {
+                LLVMAppendBasicBlockInContext(self.context, function, bb_name.as_ptr() as *const _)
+            };
 
-            unsafe { LLVMPositionBuilderAtEnd(builder, bb); }
+            unsafe {
+                LLVMPositionBuilderAtEnd(builder, bb);
+            }
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
@@ -831,7 +1193,7 @@ impl<'a> Contract<'a> {
                 }
             }
 
-            BasicBlock{bb, phis}
+            BasicBlock { bb, phis }
         };
 
         let mut work = VecDeque::new();
@@ -844,28 +1206,32 @@ impl<'a> Contract<'a> {
         for v in &cfg.vars {
             match v.storage {
                 cfg::Storage::Local if !v.ty.stack_based() => {
-                    vars.push(Variable{
+                    vars.push(Variable {
                         value_ref: null_mut(),
                         stack: false,
                     });
-                },
+                }
                 cfg::Storage::Local | cfg::Storage::Contract(_) => {
                     let name = CString::new(v.id.name.to_string()).unwrap();
 
-                    vars.push(Variable{
+                    vars.push(Variable {
                         value_ref: unsafe {
-                            LLVMBuildAlloca(builder, v.ty.LLVMType(self.ns, self.context), name.as_ptr() as *const _)
+                            LLVMBuildAlloca(
+                                builder,
+                                v.ty.LLVMType(self.ns, self.context),
+                                name.as_ptr() as *const _,
+                            )
                         },
                         stack: true,
                     });
-                },
+                }
                 cfg::Storage::Constant => {
                     // nothing to do
                 }
             }
         }
 
-        work.push_back(Work{
+        work.push_back(Work {
             bb_no: 0,
             vars: vars,
         });
@@ -880,7 +1246,9 @@ impl<'a> Contract<'a> {
             let mut ll_bb = {
                 let bb = blocks.get(&w.bb_no).unwrap();
 
-                unsafe { LLVMPositionBuilderAtEnd(builder, bb.bb); }
+                unsafe {
+                    LLVMPositionBuilderAtEnd(builder, bb.bb);
+                }
 
                 for (v, phi) in bb.phis.iter() {
                     w.vars[*v].value_ref = *phi;
@@ -891,21 +1259,19 @@ impl<'a> Contract<'a> {
 
             for ins in &cfg.bb[w.bb_no].instr {
                 match ins {
-                    cfg::Instr::FuncArg{ res, arg } => {
+                    cfg::Instr::FuncArg { res, arg } => {
                         w.vars[*res].value_ref = unsafe { LLVMGetParam(function, *arg as u32) };
+                    }
+                    cfg::Instr::Return { value } if value.is_empty() => unsafe {
+                        LLVMBuildRetVoid(builder);
                     },
-                    cfg::Instr::Return{ value } if value.is_empty() => {
-                        unsafe {
-                            LLVMBuildRetVoid(builder);
-                        }
-                    },
-                    cfg::Instr::Return{ value } if wasm_return => {
+                    cfg::Instr::Return { value } if wasm_return => {
                         let retval = self.expression(builder, &value[0], &w.vars);
                         unsafe {
                             LLVMBuildRet(builder, retval);
                         }
-                    },
-                    cfg::Instr::Return{ value } => {
+                    }
+                    cfg::Instr::Return { value } => {
                         let mut returns_offset = f.params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = unsafe { LLVMGetParam(function, (returns_offset + i) as _) };
@@ -917,22 +1283,23 @@ impl<'a> Contract<'a> {
                         unsafe {
                             LLVMBuildRetVoid(builder);
                         }
-                    },
-                    cfg::Instr::Set{ res, expr } => {
+                    }
+                    cfg::Instr::Set { res, expr } => {
                         let value_ref = self.expression(builder, expr, &w.vars);
                         if w.vars[*res].stack {
-                            unsafe { LLVMBuildStore(builder, value_ref, w.vars[*res].value_ref); }
-
+                            unsafe {
+                                LLVMBuildStore(builder, value_ref, w.vars[*res].value_ref);
+                            }
                         } else {
                             w.vars[*res].value_ref = value_ref;
                         }
-                    },
-                    cfg::Instr::Branch{ bb: dest } => {
+                    }
+                    cfg::Instr::Branch { bb: dest } => {
                         if !blocks.contains_key(&dest) {
                             blocks.insert(*dest, create_bb(*dest));
-                            work.push_back(Work{
+                            work.push_back(Work {
                                 bb_no: *dest,
-                                vars: w.vars.clone()
+                                vars: w.vars.clone(),
                             });
                         }
 
@@ -948,16 +1315,20 @@ impl<'a> Contract<'a> {
                             LLVMPositionBuilderAtEnd(builder, ll_bb);
                             LLVMBuildBr(builder, bb.bb);
                         }
-                    },
-                    cfg::Instr::BranchCond{ cond, true_, false_ } => {
+                    }
+                    cfg::Instr::BranchCond {
+                        cond,
+                        true_,
+                        false_,
+                    } => {
                         let cond = self.expression(builder, cond, &w.vars);
 
                         let bb_true = {
                             if !blocks.contains_key(&true_) {
                                 blocks.insert(*true_, create_bb(*true_));
-                                work.push_back(Work{
+                                work.push_back(Work {
                                     bb_no: *true_,
-                                    vars: w.vars.clone()
+                                    vars: w.vars.clone(),
                                 });
                             }
 
@@ -975,9 +1346,9 @@ impl<'a> Contract<'a> {
                         let bb_false = {
                             if !blocks.contains_key(&false_) {
                                 blocks.insert(*false_, create_bb(*false_));
-                                work.push_back(Work{
+                                work.push_back(Work {
                                     bb_no: *false_,
-                                    vars: w.vars.clone()
+                                    vars: w.vars.clone(),
                                 });
                             }
 
@@ -996,54 +1367,122 @@ impl<'a> Contract<'a> {
                             LLVMPositionBuilderAtEnd(builder, ll_bb);
                             LLVMBuildCondBr(builder, cond, bb_true, bb_false);
                         }
-                    },
-                    cfg::Instr::GetStorage{ local, storage } => {
+                    }
+                    cfg::Instr::GetStorage { local, storage } => {
                         let get_storage = &self.externals["get_storage32"];
                         let dest = w.vars[*local].value_ref;
                         // calculate type
-                        let nil = unsafe {
-                            LLVMConstNull(LLVMTypeOf(dest))
+                        let nil = unsafe { LLVMConstNull(LLVMTypeOf(dest)) };
+                        let mut index_one = unsafe {
+                            LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE)
                         };
-                        let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
-                        let off1 = unsafe { LLVMBuildGEP(builder, nil, &mut index_one, 1 as _, "offset 1\0".as_ptr() as *const _) };
+                        let off1 = unsafe {
+                            LLVMBuildGEP(
+                                builder,
+                                nil,
+                                &mut index_one,
+                                1 as _,
+                                "offset 1\0".as_ptr() as *const _,
+                            )
+                        };
 
                         let mut args = vec![
                             // key
-                            unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), *storage as _, LLVM_FALSE) },
+                            unsafe {
+                                LLVMConstInt(
+                                    LLVMInt32TypeInContext(self.context),
+                                    *storage as _,
+                                    LLVM_FALSE,
+                                )
+                            },
                             // dest
-                            unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "\0".as_ptr() as *const _) },
+                            unsafe {
+                                LLVMBuildPointerCast(
+                                    builder,
+                                    dest,
+                                    LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                                    "\0".as_ptr() as *const _,
+                                )
+                            },
                             // length
-                            unsafe { LLVMBuildPtrToInt(builder, off1, LLVMInt32TypeInContext(self.context), "\0".as_ptr() as *const i8) }
+                            unsafe {
+                                LLVMBuildPtrToInt(
+                                    builder,
+                                    off1,
+                                    LLVMInt32TypeInContext(self.context),
+                                    "\0".as_ptr() as *const i8,
+                                )
+                            },
                         ];
 
                         unsafe {
-                            LLVMBuildCall(builder, *get_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _);
+                            LLVMBuildCall(
+                                builder,
+                                *get_storage,
+                                args.as_mut_ptr(),
+                                args.len() as u32,
+                                "\0".as_ptr() as *const _,
+                            );
                         }
-                    },
-                    cfg::Instr::SetStorage{ local, storage } => {
+                    }
+                    cfg::Instr::SetStorage { local, storage } => {
                         let set_storage = &self.externals["set_storage32"];
                         let dest = w.vars[*local].value_ref;
                         // calculate type
-                        let nil = unsafe {
-                            LLVMConstNull(LLVMTypeOf(dest))
+                        let nil = unsafe { LLVMConstNull(LLVMTypeOf(dest)) };
+                        let mut index_one = unsafe {
+                            LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE)
                         };
-                        let mut index_one = unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 1, LLVM_FALSE) };
-                        let off1 = unsafe { LLVMBuildGEP(builder, nil, &mut index_one, 1 as _, "offset 1\0".as_ptr() as *const _) };
+                        let off1 = unsafe {
+                            LLVMBuildGEP(
+                                builder,
+                                nil,
+                                &mut index_one,
+                                1 as _,
+                                "offset 1\0".as_ptr() as *const _,
+                            )
+                        };
 
                         let mut args = vec![
                             // key
-                            unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), *storage as _, LLVM_FALSE) },
+                            unsafe {
+                                LLVMConstInt(
+                                    LLVMInt32TypeInContext(self.context),
+                                    *storage as _,
+                                    LLVM_FALSE,
+                                )
+                            },
                             // src
-                            unsafe { LLVMBuildPointerCast(builder, dest, LLVMPointerType(LLVMInt8TypeInContext(self.context), 0), "src\0".as_ptr() as *const _) },
+                            unsafe {
+                                LLVMBuildPointerCast(
+                                    builder,
+                                    dest,
+                                    LLVMPointerType(LLVMInt8TypeInContext(self.context), 0),
+                                    "src\0".as_ptr() as *const _,
+                                )
+                            },
                             // length
-                            unsafe { LLVMBuildPtrToInt(builder, off1, LLVMInt32TypeInContext(self.context), "length\0".as_ptr() as *const i8) }
+                            unsafe {
+                                LLVMBuildPtrToInt(
+                                    builder,
+                                    off1,
+                                    LLVMInt32TypeInContext(self.context),
+                                    "length\0".as_ptr() as *const i8,
+                                )
+                            },
                         ];
 
                         unsafe {
-                            LLVMBuildCall(builder, *set_storage, args.as_mut_ptr(), args.len() as u32, "\0".as_ptr() as *const _);
+                            LLVMBuildCall(
+                                builder,
+                                *set_storage,
+                                args.as_mut_ptr(),
+                                args.len() as u32,
+                                "\0".as_ptr() as *const _,
+                            );
                         }
-                    },
-                    cfg::Instr::Call{ res, func, args } => {
+                    }
+                    cfg::Instr::Call { res, func, args } => {
                         let mut parms = Vec::new();
 
                         for a in args {
@@ -1051,7 +1490,13 @@ impl<'a> Contract<'a> {
                         }
 
                         let ret = unsafe {
-                            LLVMBuildCall(builder, self.functions[*func].value_ref, parms.as_mut_ptr(), parms.len() as u32, "\0".as_ptr() as *const _)
+                            LLVMBuildCall(
+                                builder,
+                                self.functions[*func].value_ref,
+                                parms.as_mut_ptr(),
+                                parms.len() as u32,
+                                "\0".as_ptr() as *const _,
+                            )
                         };
 
                         if res.len() > 0 {
@@ -1062,7 +1507,10 @@ impl<'a> Contract<'a> {
             }
         }
 
-        Function{value_ref: function, wasm_return}
+        Function {
+            value_ref: function,
+            wasm_return,
+        }
     }
 }
 
@@ -1083,8 +1531,10 @@ impl ast::ElementaryTypeName {
             ast::ElementaryTypeName::Bool => unsafe { LLVMInt1TypeInContext(context) },
             ast::ElementaryTypeName::Int(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
             ast::ElementaryTypeName::Uint(n) => unsafe { LLVMIntTypeInContext(context, *n as _) },
-            ast::ElementaryTypeName::Address => unsafe { LLVMIntTypeInContext(context, 20*8) },
-            ast::ElementaryTypeName::Bytes(n) => unsafe { LLVMIntTypeInContext(context, (*n * 8) as _) },
+            ast::ElementaryTypeName::Address => unsafe { LLVMIntTypeInContext(context, 20 * 8) },
+            ast::ElementaryTypeName::Bytes(n) => unsafe {
+                LLVMIntTypeInContext(context, (*n * 8) as _)
+            },
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
@@ -1098,7 +1548,7 @@ impl ast::ElementaryTypeName {
             ast::ElementaryTypeName::Uint(n) => *n > 64,
             ast::ElementaryTypeName::Address => true,
             ast::ElementaryTypeName::Bytes(n) => *n > 8,
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
@@ -1108,8 +1558,8 @@ impl resolver::TypeName {
     fn LLVMType(&self, ns: &resolver::Contract, context: LLVMContextRef) -> LLVMTypeRef {
         match self {
             resolver::TypeName::Elementary(e) => e.LLVMType(context),
-            resolver::TypeName::Enum(n) => { ns.enums[*n].ty.LLVMType(context) },
-            resolver::TypeName::Noreturn => unreachable!()
+            resolver::TypeName::Enum(n) => ns.enums[*n].ty.LLVMType(context),
+            resolver::TypeName::Noreturn => unreachable!(),
         }
     }
 
@@ -1117,7 +1567,7 @@ impl resolver::TypeName {
         match self {
             resolver::TypeName::Elementary(e) => e.stack_based(),
             resolver::TypeName::Enum(_) => false,
-            resolver::TypeName::Noreturn => unreachable!()
+            resolver::TypeName::Noreturn => unreachable!(),
         }
     }
 }
@@ -1126,16 +1576,23 @@ static STDLIB_IR: &'static [u8] = include_bytes!("../stdlib/stdlib.bc");
 
 fn load_stdlib(context: LLVMContextRef) -> LLVMModuleRef {
     let llmembuf = unsafe {
-        LLVMCreateMemoryBufferWithMemoryRange(STDLIB_IR.as_ptr() as *const i8, STDLIB_IR.len(), "stdlib.c\0".as_ptr() as *const i8, LLVM_FALSE)
+        LLVMCreateMemoryBufferWithMemoryRange(
+            STDLIB_IR.as_ptr() as *const i8,
+            STDLIB_IR.len(),
+            "stdlib.c\0".as_ptr() as *const i8,
+            LLVM_FALSE,
+        )
     };
     let mut module = null_mut();
     let mut err_msg_ptr = null_mut();
 
-    if unsafe { LLVMParseIRInContext(context, llmembuf, &mut module, &mut err_msg_ptr) } == LLVM_TRUE {
+    if unsafe { LLVMParseIRInContext(context, llmembuf, &mut module, &mut err_msg_ptr) }
+        == LLVM_TRUE
+    {
         let err_msg_cstr = unsafe { CStr::from_ptr(err_msg_ptr as *const _) };
         let err_msg = str::from_utf8(err_msg_cstr.to_bytes()).unwrap();
         panic!("failed to read stdlib.bc: {}", err_msg);
-     }
+    }
 
     module
 }

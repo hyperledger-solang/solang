@@ -1,28 +1,27 @@
-
 #[cfg(test)]
 mod tests {
-    use parser;
-    use resolver;
     use emit;
     use link;
     use output;
-    use wasmi::memory_units::Pages;
-    use wasmi::*;
-    use std::mem;
+    use parser;
+    use resolver;
     use std::collections::HashMap;
     use std::convert::TryInto;
+    use std::mem;
+    use wasmi::memory_units::Pages;
+    use wasmi::*;
 
     struct ContractStorage {
         memory: MemoryRef,
         store: HashMap<u32, Vec<u8>>,
     }
 
-    const SET_CONTRACT_STORAGE32 : usize = 0;
-    const GET_CONTRACT_STORAGE32 : usize = 1;
+    const SET_CONTRACT_STORAGE32: usize = 0;
+    const GET_CONTRACT_STORAGE32: usize = 1;
 
     impl ContractStorage {
         fn new() -> Self {
-            ContractStorage{
+            ContractStorage {
                 memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
                 store: HashMap::new(),
             }
@@ -47,7 +46,7 @@ mod tests {
                         panic!("set_storage32: {}", e);
                     }
                     self.store.insert(slot, c);
-                },
+                }
                 GET_CONTRACT_STORAGE32 => {
                     let mut c = Vec::new();
                     if let Some(k) = self.store.get(&slot) {
@@ -58,8 +57,8 @@ mod tests {
                     if let Err(e) = self.memory.set(offset, &c) {
                         panic!("get_storage32: {}", e);
                     }
-                },
-                _ => panic!("external {} unknown", index)
+                }
+                _ => panic!("external {} unknown", index),
             }
 
             Ok(None)
@@ -90,7 +89,7 @@ mod tests {
 
     fn build_solidity(src: &'static str) -> (ModuleRef, ContractStorage, String) {
         let s = parser::parse(src).expect("parse should succeed");
-        
+
         // resolve
         let (contracts, errors) = resolver::resolver(s);
 
@@ -114,32 +113,39 @@ mod tests {
 
         let store = ContractStorage::new();
 
-        (ModuleInstance::new(&module, &ImportsBuilder::new().with_resolver("env", &store))
-            .expect("Failed to instantiate module")
-            .run_start(&mut NopExternals)
-            .expect("Failed to run start function in module"),
-         store,
-         serde_json::to_string(&abi).unwrap())
+        (
+            ModuleInstance::new(&module, &ImportsBuilder::new().with_resolver("env", &store))
+                .expect("Failed to instantiate module")
+                .run_start(&mut NopExternals)
+                .expect("Failed to run start function in module"),
+            store,
+            serde_json::to_string(&abi).unwrap(),
+        )
     }
 
     #[test]
     fn simple_solidiy_compile_and_run() {
         // parse
-        let (main, _, _) = build_solidity("
+        let (main, _, _) = build_solidity(
+            "
             contract test {
                 function foo() public returns (uint32) {
                     return 2;
                 }
-            }");
+            }",
+        );
 
-        let ret = main.invoke_export("sol::foo", &[], &mut NopExternals).expect("failed to call function");
+        let ret = main
+            .invoke_export("sol::foo", &[], &mut NopExternals)
+            .expect("failed to call function");
 
         assert_eq!(ret, Some(RuntimeValue::I32(2)));
     }
 
     #[test]
     fn simple_loops() {
-        let (main, _, _) = build_solidity(r##"
+        let (main, _, _) = build_solidity(
+            r##"
 contract test3 {
 	function foo(uint32 a) public returns (uint32) {
 		uint32 b = 50 - a;
@@ -178,12 +184,15 @@ contract test3 {
 
 		return x;
 	}
-}"##);
+}"##,
+        );
 
         for i in 0..=50 {
             let res = ((50 - i) * 100 + 5) + i * 1000;
 
-            let ret = main.invoke_export("sol::foo", &[RuntimeValue::I32(i)], &mut NopExternals).expect("failed to call function");
+            let ret = main
+                .invoke_export("sol::foo", &[RuntimeValue::I32(i)], &mut NopExternals)
+                .expect("failed to call function");
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
@@ -191,7 +200,13 @@ contract test3 {
         for i in 0..=50 {
             let res = (i + 1) * 10 + 1;
 
-            let ret = main.invoke_export("sol::bar", &[RuntimeValue::I32(i), RuntimeValue::I32(1)], &mut NopExternals).expect("failed to call function");
+            let ret = main
+                .invoke_export(
+                    "sol::bar",
+                    &[RuntimeValue::I32(i), RuntimeValue::I32(1)],
+                    &mut NopExternals,
+                )
+                .expect("failed to call function");
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
@@ -203,7 +218,13 @@ contract test3 {
                 res *= 3;
             }
 
-            let ret = main.invoke_export("sol::bar", &[RuntimeValue::I32(i), RuntimeValue::I32(0)], &mut NopExternals).expect("failed to call function");
+            let ret = main
+                .invoke_export(
+                    "sol::bar",
+                    &[RuntimeValue::I32(i), RuntimeValue::I32(0)],
+                    &mut NopExternals,
+                )
+                .expect("failed to call function");
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
@@ -219,7 +240,9 @@ contract test3 {
                 res += 1;
             }
 
-            let ret = main.invoke_export("sol::baz", &[RuntimeValue::I32(i)], &mut NopExternals).expect("failed to call function");
+            let ret = main
+                .invoke_export("sol::baz", &[RuntimeValue::I32(i)], &mut NopExternals)
+                .expect("failed to call function");
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
         }
@@ -227,7 +250,8 @@ contract test3 {
 
     #[test]
     fn stack_test() {
-        let (main, _, _) = build_solidity(r##"
+        let (main, _, _) = build_solidity(
+            r##"
 contract test3 {
 	function foo() public returns (bool) {
 		uint b = 18446744073709551616;
@@ -235,25 +259,32 @@ contract test3 {
 
         return b * 2 == c;
 	}
-}"##);
+}"##,
+        );
 
-        let ret = main.invoke_export("sol::foo", &[], &mut NopExternals).expect("failed to call function");
+        let ret = main
+            .invoke_export("sol::foo", &[], &mut NopExternals)
+            .expect("failed to call function");
 
         assert_eq!(ret, Some(RuntimeValue::I32(1)));
     }
 
     #[test]
     fn abi_call_return_test() {
-        let (wasm, store, abi) = build_solidity(r##"
+        let (wasm, store, abi) = build_solidity(
+            r##"
 contract test {
 	function foo() public returns (uint32) {
         return 102;
 	}
-}"##);
+}"##,
+        );
         let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
 
         // call constructor so that heap is initialised
-        let ret = wasm.invoke_export("constructor", &[RuntimeValue::I32(0)], &mut NopExternals).expect("failed to call constructor");
+        let ret = wasm
+            .invoke_export("constructor", &[RuntimeValue::I32(0)], &mut NopExternals)
+            .expect("failed to call constructor");
 
         assert_eq!(ret, None);
 
@@ -263,9 +294,11 @@ contract test {
         let wmem = store.memory;
 
         wmem.set_value(0, calldata.len() as u32).unwrap();
-        wmem.set(mem::size_of::<u32>() as  u32, &calldata).unwrap();
+        wmem.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
 
-        let ret = wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut NopExternals).expect("failed to call function");
+        let ret = wasm
+            .invoke_export("function", &[RuntimeValue::I32(0)], &mut NopExternals)
+            .expect("failed to call function");
 
         if let Some(RuntimeValue::I32(offset)) = ret {
             let offset = offset as u32;
@@ -274,7 +307,12 @@ contract test {
 
             let returns = abi.functions["foo"].decode_output(&returndata).unwrap();
 
-            assert_eq!(returns, vec![ ethabi::Token::Uint(ethereum_types::U256::from_dec_str("102").unwrap()) ]);
+            assert_eq!(
+                returns,
+                vec![ethabi::Token::Uint(
+                    ethereum_types::U256::from_dec_str("102").unwrap()
+                )]
+            );
         } else {
             panic!("expected offset to return data");
         }
@@ -282,17 +320,21 @@ contract test {
 
     #[test]
     fn abi_call_pass_return_test() {
-        let (wasm, store, abi) = build_solidity(r##"
+        let (wasm, store, abi) = build_solidity(
+            r##"
 contract test {
 	function foo(uint32 a) public returns (uint32) {
         return a;
 	}
-}"##);
+}"##,
+        );
 
         let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
 
         // call constructor so that heap is initialised
-        let ret = wasm.invoke_export("constructor", &[RuntimeValue::I32(0)], &mut NopExternals).expect("failed to call constructor");
+        let ret = wasm
+            .invoke_export("constructor", &[RuntimeValue::I32(0)], &mut NopExternals)
+            .expect("failed to call constructor");
         let wmem = store.memory;
 
         assert_eq!(ret, None);
@@ -300,13 +342,17 @@ contract test {
         for val in [102i32, 255, 256, 0x7fffffff].iter() {
             let eval = ethereum_types::U256::from(*val);
             // create call for foo
-            let calldata = abi.functions["foo"].encode_input(&[ ethabi::Token::Uint(eval) ]).unwrap();
+            let calldata = abi.functions["foo"]
+                .encode_input(&[ethabi::Token::Uint(eval)])
+                .unwrap();
             // need to prepend length
 
             wmem.set_value(0, calldata.len() as u32).unwrap();
-            wmem.set(mem::size_of::<u32>() as  u32, &calldata).unwrap();
+            wmem.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
 
-            let ret = wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut NopExternals).expect("failed to call function");
+            let ret = wasm
+                .invoke_export("function", &[RuntimeValue::I32(0)], &mut NopExternals)
+                .expect("failed to call function");
 
             if let Some(RuntimeValue::I32(offset)) = ret {
                 let offset = offset as u32;
@@ -315,7 +361,7 @@ contract test {
 
                 let returns = abi.functions["foo"].decode_output(&returndata).unwrap();
 
-                assert_eq!(returns, vec![ ethabi::Token::Uint(eval) ]);
+                assert_eq!(returns, vec![ethabi::Token::Uint(eval)]);
             } else {
                 panic!("expected offset to return data");
             }
@@ -324,7 +370,8 @@ contract test {
 
     #[test]
     fn contract_storage_test() {
-        let (wasm, mut store, abi) = build_solidity(r##"
+        let (wasm, mut store, abi) = build_solidity(
+            r##"
 contract test {
     uint32 foo;
     constructor() public {
@@ -336,12 +383,15 @@ contract test {
 	function setFoo(uint32 a) public  {
         foo = a - 256;
 	}
-}"##);
+}"##,
+        );
 
         let abi = ethabi::Contract::load(abi.as_bytes()).unwrap();
 
         // call constructor so that heap is initialised
-        let ret = wasm.invoke_export("constructor", &[RuntimeValue::I32(0)], &mut store).expect("failed to call constructor");
+        let ret = wasm
+            .invoke_export("constructor", &[RuntimeValue::I32(0)], &mut store)
+            .expect("failed to call constructor");
         let wmem = store.memory.clone();
 
         assert_eq!(ret, None);
@@ -349,18 +399,24 @@ contract test {
         for val in [4096u32, 1000u32].iter() {
             let eval = ethereum_types::U256::from(*val);
             // create call for foo
-            let mut calldata = abi.functions["setFoo"].encode_input(&[ ethabi::Token::Uint(eval) ]).unwrap();
+            let mut calldata = abi.functions["setFoo"]
+                .encode_input(&[ethabi::Token::Uint(eval)])
+                .unwrap();
             // need to prepend length
 
             wmem.set_value(0, calldata.len() as u32).unwrap();
             wmem.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
 
-            wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut store).expect("failed to call function");
+            wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut store)
+                .expect("failed to call function");
 
             {
                 let v = store.store.get(&0).unwrap();
                 assert_eq!(v.len(), 4);
-                assert_eq!(val - 256, u32::from_le_bytes(v.as_slice().try_into().unwrap()));
+                assert_eq!(
+                    val - 256,
+                    u32::from_le_bytes(v.as_slice().try_into().unwrap())
+                );
             }
 
             // now try retrieve
@@ -370,7 +426,9 @@ contract test {
             wmem.set_value(0, calldata.len() as u32).unwrap();
             wmem.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
 
-            let ret = wasm.invoke_export("function", &[RuntimeValue::I32(0)], &mut store).expect("failed to call function");
+            let ret = wasm
+                .invoke_export("function", &[RuntimeValue::I32(0)], &mut store)
+                .expect("failed to call function");
 
             if let Some(RuntimeValue::I32(offset)) = ret {
                 let offset = offset as u32;
@@ -379,7 +437,7 @@ contract test {
 
                 let returns = abi.functions["getFoo"].decode_output(&returndata).unwrap();
 
-                assert_eq!(returns, vec![ ethabi::Token::Uint(eval) ]);
+                assert_eq!(returns, vec![ethabi::Token::Uint(eval)]);
             } else {
                 panic!("expected offset to return data");
             }

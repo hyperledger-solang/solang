@@ -1,44 +1,43 @@
-
-extern crate num_bigint;
-extern crate lalrpop_util;
-extern crate llvm_sys;
-extern crate num_traits;
-extern crate parity_wasm;
-extern crate wasmi;
 extern crate clap;
-extern crate lazy_static;
-extern crate hex;
-extern crate unescape;
-extern crate tiny_keccak;
-extern crate serde;
 extern crate ethabi;
 extern crate ethereum_types;
+extern crate hex;
+extern crate lalrpop_util;
+extern crate lazy_static;
+extern crate llvm_sys;
+extern crate num_bigint;
+extern crate num_traits;
+extern crate parity_wasm;
+extern crate serde;
+extern crate tiny_keccak;
+extern crate unescape;
+extern crate wasmi;
 
 use clap::{App, Arg};
 mod ast;
-mod solidity;
-mod resolver;
+mod cfg;
 mod emit;
 mod link;
-mod test;
 mod output;
 mod parser;
-mod cfg;
+mod resolver;
+mod solidity;
+mod test;
 
-use std::fs::File;
-use std::io::prelude::*;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::prelude::*;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
-    pub wasm: String
+    pub wasm: String,
 }
 
 #[derive(Serialize)]
 pub struct JsonContract {
     abi: Vec<resolver::ABI>,
-    ewasm: EwasmContract
+    ewasm: EwasmContract,
 }
 
 #[derive(Serialize)]
@@ -52,33 +51,47 @@ fn main() {
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about("Solidity to WASM Compiler")
-        .arg(Arg::with_name("INPUT")
-            .help("Solidity input files")
-            .required(true)
-            .multiple(true))
-        .arg(Arg::with_name("CFG")
-            .help("emit control flow graph")
-            .long("emit-cfg"))
-        .arg(Arg::with_name("VERBOSE")
-            .help("show verbose messages")
-            .short("v")
-            .long("verbose"))
-        .arg(Arg::with_name("LLVM")
-            .help("emit llvm IR rather than wasm")
-            .long("emit-llvm"))
-        .arg(Arg::with_name("BC")
-            .help("emit llvm BC rather than wasm")
-            .long("emit-bc"))
-        .arg(Arg::with_name("JSON")
-            .help("mimic solidity output json output on stdout")
-            .long("standard-json"))
-        .arg(Arg::with_name("NOLINK")
-            .help("Skip linking, emit wasm object file")
-            .long("no-link"))
+        .arg(
+            Arg::with_name("INPUT")
+                .help("Solidity input files")
+                .required(true)
+                .multiple(true),
+        )
+        .arg(
+            Arg::with_name("CFG")
+                .help("emit control flow graph")
+                .long("emit-cfg"),
+        )
+        .arg(
+            Arg::with_name("VERBOSE")
+                .help("show verbose messages")
+                .short("v")
+                .long("verbose"),
+        )
+        .arg(
+            Arg::with_name("LLVM")
+                .help("emit llvm IR rather than wasm")
+                .long("emit-llvm"),
+        )
+        .arg(
+            Arg::with_name("BC")
+                .help("emit llvm BC rather than wasm")
+                .long("emit-bc"),
+        )
+        .arg(
+            Arg::with_name("JSON")
+                .help("mimic solidity output json output on stdout")
+                .long("standard-json"),
+        )
+        .arg(
+            Arg::with_name("NOLINK")
+                .help("Skip linking, emit wasm object file")
+                .long("no-link"),
+        )
         .get_matches();
 
     let mut fatal = false;
-    let mut json = JsonResult{
+    let mut json = JsonResult {
         errors: Vec::new(),
         contracts: HashMap::new(),
     };
@@ -97,7 +110,12 @@ fn main() {
                     let mut out = output::message_as_json(filename, &contents, &errors);
                     json.errors.append(&mut out);
                 } else {
-                    output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
+                    output::print_messages(
+                        filename,
+                        &contents,
+                        &errors,
+                        matches.is_present("VERBOSE"),
+                    );
                     fatal = true;
                 }
                 continue;
@@ -111,7 +129,7 @@ fn main() {
             let mut out = output::message_as_json(filename, &contents, &errors);
             json.errors.append(&mut out);
         } else {
-            output::print_messages(filename, &contents, &errors,  matches.is_present("VERBOSE"));
+            output::print_messages(filename, &contents, &errors, matches.is_present("VERBOSE"));
         }
 
         if contracts.is_empty() {
@@ -158,23 +176,26 @@ fn main() {
             }
 
             if matches.is_present("JSON") {
-                json_contracts.insert(contract.name.to_owned(), JsonContract{
-                    abi,
-                    ewasm: EwasmContract{
-                        wasm: hex::encode_upper(obj)
-                    }
-                });
+                json_contracts.insert(
+                    contract.name.to_owned(),
+                    JsonContract {
+                        abi,
+                        ewasm: EwasmContract {
+                            wasm: hex::encode_upper(obj),
+                        },
+                    },
+                );
             } else {
                 let wasm_filename = contract.name.to_string() + ".wasm";
 
                 let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&obj).unwrap();
 
-
                 let abi_filename = contract.name.to_string() + ".abi";
 
                 file = File::create(abi_filename).unwrap();
-                file.write_all(serde_json::to_string(&abi).unwrap().as_bytes()).unwrap();
+                file.write_all(serde_json::to_string(&abi).unwrap().as_bytes())
+                    .unwrap();
             }
         }
 
