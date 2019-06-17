@@ -1,30 +1,25 @@
 use num_bigint::BigInt;
 
-#[derive(Debug,PartialEq,Clone,Copy)]
-pub struct Loc(
-    pub usize,
-    pub usize
-);
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Loc(pub usize, pub usize);
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
     pub loc: Loc,
-    pub name: String
+    pub name: String,
 }
 
-#[derive(Debug,PartialEq)]
-pub struct SourceUnit(
-    pub Vec<SourceUnitPart>
-);
+#[derive(Debug, PartialEq)]
+pub struct SourceUnit(pub Vec<SourceUnitPart>);
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
     PragmaDirective(Identifier, String),
-    ImportDirective(String)
+    ImportDirective(String),
 }
 
-#[derive(Debug,PartialEq,Clone,Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ElementaryTypeName {
     Address,
     Bool,
@@ -35,17 +30,17 @@ pub enum ElementaryTypeName {
     DynamicBytes,
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TypeName {
     Elementary(ElementaryTypeName),
-    Unresolved(Identifier)
+    Unresolved(Identifier),
 }
 
 impl ElementaryTypeName {
     pub fn signed(&self) -> bool {
         match self {
             ElementaryTypeName::Int(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -53,7 +48,7 @@ impl ElementaryTypeName {
         match self {
             ElementaryTypeName::Int(_) => true,
             ElementaryTypeName::Uint(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -64,7 +59,7 @@ impl ElementaryTypeName {
             ElementaryTypeName::Int(n) => *n,
             ElementaryTypeName::Uint(n) => *n,
             ElementaryTypeName::Bytes(n) => (*n * 8) as u16,
-            _ => panic!("{} not fixed size", self.to_string())
+            _ => panic!("{} not fixed size", self.to_string()),
         }
     }
 
@@ -81,7 +76,7 @@ impl ElementaryTypeName {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum StorageLocation {
     Default,
     Memory,
@@ -89,20 +84,20 @@ pub enum StorageLocation {
     Calldata,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct VariableDeclaration {
     pub typ: TypeName,
     pub storage: StorageLocation,
-    pub name: Identifier
+    pub name: Identifier,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct StructDefinition {
     pub name: Identifier,
-    pub fields: Vec<Box<VariableDeclaration>>
+    pub fields: Vec<Box<VariableDeclaration>>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ContractPart {
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
@@ -111,14 +106,14 @@ pub enum ContractPart {
     FunctionDefinition(Box<FunctionDefinition>),
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ContractType {
     Contract,
     Interface,
     Library,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ContractDefinition {
     pub loc: Loc,
     pub ty: ContractType,
@@ -126,33 +121,33 @@ pub struct ContractDefinition {
     pub parts: Vec<ContractPart>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct EventParameter {
     pub typ: TypeName,
     pub indexed: bool,
     pub name: Option<Identifier>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct EventDefinition {
     pub name: Identifier,
     pub fields: Vec<EventParameter>,
     pub anonymous: bool,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct EnumDefinition {
     pub name: Identifier,
     pub values: Vec<Identifier>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum VariableAttribute {
     Visibility(Visibility),
-    Constant(Loc)
+    Constant(Loc),
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ContractVariableDefinition {
     pub loc: Loc,
     pub ty: TypeName,
@@ -161,7 +156,7 @@ pub struct ContractVariableDefinition {
     pub initializer: Option<Expression>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -217,67 +212,67 @@ pub enum Expression {
 impl Expression {
     pub fn loc(&self) -> Loc {
         match self {
-            Expression::PostIncrement(loc, _) |
-            Expression::PostDecrement(loc, _) |
-            Expression::New(loc, _) |
-            Expression::IndexAccess(loc, _, _) |
-            Expression::MemberAccess(loc, _, _) |
-            Expression::FunctionCall(loc, _, _) |
-            Expression::Not(loc, _) |
-            Expression::Complement(loc, _) |
-            Expression::Delete(loc, _) |
-            Expression::PreIncrement(loc, _) |
-            Expression::PreDecrement(loc, _) |
-            Expression::UnaryPlus(loc, _) |
-            Expression::UnaryMinus(loc, _) |
-            Expression::Power(loc, _, _) |
-            Expression::Multiply(loc, _, _) |
-            Expression::Divide(loc, _, _) |
-            Expression::Modulo(loc, _, _) |
-            Expression::Add(loc, _, _) |
-            Expression::Subtract(loc, _, _) |
-            Expression::ShiftLeft(loc, _, _) |
-            Expression::ShiftRight(loc, _, _) |
-            Expression::BitwiseAnd(loc, _, _) |
-            Expression::BitwiseXor(loc, _, _) |
-            Expression::BitwiseOr(loc, _, _) |
-            Expression::Less(loc, _, _) |
-            Expression::More(loc, _, _) |
-            Expression::LessEqual(loc, _, _) |
-            Expression::MoreEqual(loc, _, _) |
-            Expression::Equal(loc, _, _) |
-            Expression::NotEqual(loc, _, _) |
-            Expression::And(loc, _, _) |
-            Expression::Or(loc, _, _) |
-            Expression::Ternary(loc, _, _, _) |
-            Expression::Assign(loc, _, _) |
-            Expression::AssignOr(loc, _, _) |
-            Expression::AssignAnd(loc, _, _) |
-            Expression::AssignXor(loc, _, _) |
-            Expression::AssignShiftLeft(loc, _, _) |
-            Expression::AssignShiftRight(loc, _, _) |
-            Expression::AssignAdd(loc, _, _) |
-            Expression::AssignSubtract(loc, _, _) |
-            Expression::AssignMultiply(loc, _, _) |
-            Expression::AssignDivide(loc, _, _) |
-            Expression::AssignModulo(loc, _, _) |
-            Expression::BoolLiteral(loc, _) |
-            Expression::NumberLiteral(loc, _) |
-            Expression::StringLiteral(loc, _) |
-            Expression::HexLiteral(loc, _) |
-            Expression::Variable(Identifier{ loc, name: _ })  => loc.clone()
+            Expression::PostIncrement(loc, _)
+            | Expression::PostDecrement(loc, _)
+            | Expression::New(loc, _)
+            | Expression::IndexAccess(loc, _, _)
+            | Expression::MemberAccess(loc, _, _)
+            | Expression::FunctionCall(loc, _, _)
+            | Expression::Not(loc, _)
+            | Expression::Complement(loc, _)
+            | Expression::Delete(loc, _)
+            | Expression::PreIncrement(loc, _)
+            | Expression::PreDecrement(loc, _)
+            | Expression::UnaryPlus(loc, _)
+            | Expression::UnaryMinus(loc, _)
+            | Expression::Power(loc, _, _)
+            | Expression::Multiply(loc, _, _)
+            | Expression::Divide(loc, _, _)
+            | Expression::Modulo(loc, _, _)
+            | Expression::Add(loc, _, _)
+            | Expression::Subtract(loc, _, _)
+            | Expression::ShiftLeft(loc, _, _)
+            | Expression::ShiftRight(loc, _, _)
+            | Expression::BitwiseAnd(loc, _, _)
+            | Expression::BitwiseXor(loc, _, _)
+            | Expression::BitwiseOr(loc, _, _)
+            | Expression::Less(loc, _, _)
+            | Expression::More(loc, _, _)
+            | Expression::LessEqual(loc, _, _)
+            | Expression::MoreEqual(loc, _, _)
+            | Expression::Equal(loc, _, _)
+            | Expression::NotEqual(loc, _, _)
+            | Expression::And(loc, _, _)
+            | Expression::Or(loc, _, _)
+            | Expression::Ternary(loc, _, _, _)
+            | Expression::Assign(loc, _, _)
+            | Expression::AssignOr(loc, _, _)
+            | Expression::AssignAnd(loc, _, _)
+            | Expression::AssignXor(loc, _, _)
+            | Expression::AssignShiftLeft(loc, _, _)
+            | Expression::AssignShiftRight(loc, _, _)
+            | Expression::AssignAdd(loc, _, _)
+            | Expression::AssignSubtract(loc, _, _)
+            | Expression::AssignMultiply(loc, _, _)
+            | Expression::AssignDivide(loc, _, _)
+            | Expression::AssignModulo(loc, _, _)
+            | Expression::BoolLiteral(loc, _)
+            | Expression::NumberLiteral(loc, _)
+            | Expression::StringLiteral(loc, _)
+            | Expression::HexLiteral(loc, _)
+            | Expression::Variable(Identifier { loc, name: _ }) => loc.clone(),
         }
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Parameter {
     pub typ: TypeName,
     pub storage: Option<StorageLocation>,
-    pub name: Option<Identifier>
+    pub name: Option<Identifier>,
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum StateMutability {
     Pure(Loc),
     View(Loc),
@@ -295,14 +290,14 @@ impl StateMutability {
 
     pub fn loc(&self) -> Loc {
         match self {
-            StateMutability::Pure(loc) |
-            StateMutability::View(loc) |
-            StateMutability::Payable(loc) => loc.clone(),
+            StateMutability::Pure(loc)
+            | StateMutability::View(loc)
+            | StateMutability::Payable(loc) => loc.clone(),
         }
     }
 }
 
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Visibility {
     External(Loc),
     Public(Loc),
@@ -322,21 +317,21 @@ impl Visibility {
 
     pub fn loc(&self) -> Loc {
         match self {
-            Visibility::Public(loc) |
-            Visibility::External(loc) |
-            Visibility::Internal(loc) |
-            Visibility::Private(loc) => loc.clone()
+            Visibility::Public(loc)
+            | Visibility::External(loc)
+            | Visibility::Internal(loc)
+            | Visibility::Private(loc) => loc.clone(),
         }
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum FunctionAttribute {
     StateMutability(StateMutability),
-    Visibility(Visibility)
+    Visibility(Visibility),
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct FunctionDefinition {
     pub loc: Loc,
     pub constructor: bool,
@@ -347,12 +342,10 @@ pub struct FunctionDefinition {
     pub body: Statement,
 }
 
-#[derive(Debug,PartialEq)]
-pub struct BlockStatement(
-    pub Vec<Statement>
-);
+#[derive(Debug, PartialEq)]
+pub struct BlockStatement(pub Vec<Statement>);
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     BlockStatement(BlockStatement),
     If(Expression, Box<Statement>, Option<Box<Statement>>),
@@ -360,14 +353,19 @@ pub enum Statement {
     PlaceHolder,
     Expression(Expression),
     VariableDefinition(Box<VariableDeclaration>, Option<Expression>),
-    For(Option<Box<Statement>>, Option<Box<Expression>>, Option<Box<Statement>>, Option<Box<Statement>>),
+    For(
+        Option<Box<Statement>>,
+        Option<Box<Expression>>,
+        Option<Box<Statement>>,
+        Option<Box<Statement>>,
+    ),
     DoWhile(Box<Statement>, Expression),
     Continue,
     Break,
     Return(Loc, Vec<Expression>),
     Throw,
     Emit(Identifier, Vec<Expression>),
-    Empty
+    Empty,
 }
 
 impl Statement {
@@ -379,13 +377,14 @@ impl Statement {
 
 #[cfg(test)]
 mod test {
-    use solidity;
     use super::*;
-    
+    use solidity;
+
     #[test]
     fn parse_test() {
         let e = solidity::SourceUnitParser::new()
-                .parse("contract foo {
+            .parse(
+                "contract foo {
                     struct Jurisdiction {
                         bool exists;
                         uint keyIdx;
@@ -394,34 +393,86 @@ mod test {
                     }
                     string __abba_$;
                     int64 $thing_102;
-                }")
-                .unwrap();
+                }",
+            )
+            .unwrap();
 
-        let a = SourceUnit(vec![
-            SourceUnitPart::ContractDefinition(
-                Box::new(ContractDefinition{loc: Loc(0, 325), ty: ContractType::Contract, name: Identifier{loc: Loc(9, 12), name: "foo".to_string()}, parts: vec![
-                    ContractPart::StructDefinition(Box::new(StructDefinition{name: Identifier{loc: Loc(42, 54), name: "Jurisdiction".to_string()}, fields: vec![
-                        Box::new(VariableDeclaration{
-                            typ: TypeName::Elementary(ElementaryTypeName::Bool), storage: StorageLocation::Default, name: Identifier{loc: Loc(86, 92), name: "exists".to_string()}
-                        }),
-                        Box::new(VariableDeclaration{
-                            typ: TypeName::Elementary(ElementaryTypeName::Uint(256)), storage: StorageLocation::Default, name: Identifier{loc: Loc(123, 129), name: "keyIdx".to_string()}
-                        }),
-                        Box::new(VariableDeclaration{
-                            typ: TypeName::Elementary(ElementaryTypeName::Bytes(2)), storage: StorageLocation::Default, name: Identifier{loc: Loc(162, 169), name: "country".to_string()}
-                        }),
-                        Box::new(VariableDeclaration{
-                            typ: TypeName::Elementary(ElementaryTypeName::Bytes(32)), storage: StorageLocation::Default, name: Identifier{loc: Loc(203, 209), name: "region".to_string()}
-                        })
-                    ]})),
-                    ContractPart::ContractVariableDefinition(Box::new(ContractVariableDefinition{
-                        ty: TypeName::Elementary(ElementaryTypeName::String), attrs: vec![], name: Identifier{loc: Loc(260, 268), name: "__abba_$".to_string()}, loc: Loc(253, 268), initializer: None
+        let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
+            ContractDefinition {
+                loc: Loc(0, 325),
+                ty: ContractType::Contract,
+                name: Identifier {
+                    loc: Loc(9, 12),
+                    name: "foo".to_string(),
+                },
+                parts: vec![
+                    ContractPart::StructDefinition(Box::new(StructDefinition {
+                        name: Identifier {
+                            loc: Loc(42, 54),
+                            name: "Jurisdiction".to_string(),
+                        },
+                        fields: vec![
+                            Box::new(VariableDeclaration {
+                                typ: TypeName::Elementary(ElementaryTypeName::Bool),
+                                storage: StorageLocation::Default,
+                                name: Identifier {
+                                    loc: Loc(86, 92),
+                                    name: "exists".to_string(),
+                                },
+                            }),
+                            Box::new(VariableDeclaration {
+                                typ: TypeName::Elementary(ElementaryTypeName::Uint(256)),
+                                storage: StorageLocation::Default,
+                                name: Identifier {
+                                    loc: Loc(123, 129),
+                                    name: "keyIdx".to_string(),
+                                },
+                            }),
+                            Box::new(VariableDeclaration {
+                                typ: TypeName::Elementary(ElementaryTypeName::Bytes(2)),
+                                storage: StorageLocation::Default,
+                                name: Identifier {
+                                    loc: Loc(162, 169),
+                                    name: "country".to_string(),
+                                },
+                            }),
+                            Box::new(VariableDeclaration {
+                                typ: TypeName::Elementary(ElementaryTypeName::Bytes(32)),
+                                storage: StorageLocation::Default,
+                                name: Identifier {
+                                    loc: Loc(203, 209),
+                                    name: "region".to_string(),
+                                },
+                            }),
+                        ],
                     })),
-                    ContractPart::ContractVariableDefinition(Box::new(ContractVariableDefinition{
-                        ty: TypeName::Elementary(ElementaryTypeName::Int(64)), attrs: vec![], name: Identifier{loc: Loc(296, 306), name: "$thing_102".to_string()}, loc: Loc(290, 306), initializer: None
-                    }))
-            ]}))
-        ]);
+                    ContractPart::ContractVariableDefinition(Box::new(
+                        ContractVariableDefinition {
+                            ty: TypeName::Elementary(ElementaryTypeName::String),
+                            attrs: vec![],
+                            name: Identifier {
+                                loc: Loc(260, 268),
+                                name: "__abba_$".to_string(),
+                            },
+                            loc: Loc(253, 268),
+                            initializer: None,
+                        },
+                    )),
+                    ContractPart::ContractVariableDefinition(Box::new(
+                        ContractVariableDefinition {
+                            ty: TypeName::Elementary(ElementaryTypeName::Int(64)),
+                            attrs: vec![],
+                            name: Identifier {
+                                loc: Loc(296, 306),
+                                name: "$thing_102".to_string(),
+                            },
+                            loc: Loc(290, 306),
+                            initializer: None,
+                        },
+                    )),
+                ],
+            },
+        ))]);
 
         assert_eq!(e, a);
     }

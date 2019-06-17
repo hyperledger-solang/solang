@@ -1,37 +1,36 @@
-
 use ast;
 use serde::Serialize;
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Level {
     Info,
     Warning,
     Error,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ErrorType {
     None,
     ParserError,
     SyntaxError,
     DeclarationError,
     TypeError,
-    Warning
+    Warning,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Note {
     pub pos: ast::Loc,
-    pub message: String
+    pub message: String,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Output {
     pub level: Level,
     pub ty: ErrorType,
     pub pos: ast::Loc,
     pub message: String,
-    pub notes: Vec<Note>
+    pub notes: Vec<Note>,
 }
 
 impl Level {
@@ -46,54 +45,139 @@ impl Level {
 
 impl Output {
     pub fn info(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Info, ty: ErrorType::None, pos, message, notes: Vec::new()}
+        Output {
+            level: Level::Info,
+            ty: ErrorType::None,
+            pos,
+            message,
+            notes: Vec::new(),
+        }
     }
 
     pub fn parser_error(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Error, ty: ErrorType::ParserError, pos, message, notes: Vec::new()}
+        Output {
+            level: Level::Error,
+            ty: ErrorType::ParserError,
+            pos,
+            message,
+            notes: Vec::new(),
+        }
     }
 
     pub fn error(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Error, ty: ErrorType::SyntaxError, pos, message, notes: Vec::new()}
+        Output {
+            level: Level::Error,
+            ty: ErrorType::SyntaxError,
+            pos,
+            message,
+            notes: Vec::new(),
+        }
     }
 
     pub fn decl_error(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Error, ty: ErrorType::DeclarationError, pos, message, notes: Vec::new()}
+        Output {
+            level: Level::Error,
+            ty: ErrorType::DeclarationError,
+            pos,
+            message,
+            notes: Vec::new(),
+        }
     }
 
     pub fn type_error(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Error, ty: ErrorType::TypeError, pos, message, notes: Vec::new()}
+        Output {
+            level: Level::Error,
+            ty: ErrorType::TypeError,
+            pos,
+            message,
+            notes: Vec::new(),
+        }
     }
 
     pub fn warning(pos: ast::Loc, message: String) -> Self {
-        Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes: Vec::new()}
+        Output {
+            level: Level::Warning,
+            ty: ErrorType::Warning,
+            pos,
+            message,
+            notes: Vec::new(),
+        }
     }
 
-    pub fn warning_with_note(pos: ast::Loc, message: String, note_pos: ast::Loc, note: String) -> Self {
-        Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
+    pub fn warning_with_note(
+        pos: ast::Loc,
+        message: String,
+        note_pos: ast::Loc,
+        note: String,
+    ) -> Self {
+        Output {
+            level: Level::Warning,
+            ty: ErrorType::Warning,
+            pos,
+            message,
+            notes: vec![Note {
+                pos: note_pos,
+                message: note,
+            }],
+        }
     }
 
     pub fn warning_with_notes(pos: ast::Loc, message: String, notes: Vec<Note>) -> Self {
-        Output{level: Level::Warning, ty: ErrorType::Warning, pos, message, notes}
+        Output {
+            level: Level::Warning,
+            ty: ErrorType::Warning,
+            pos,
+            message,
+            notes,
+        }
     }
 
-    pub fn error_with_note(pos: ast::Loc, message: String, note_pos: ast::Loc, note: String) -> Self {
-        Output{level: Level::Error, ty: ErrorType::None, pos, message, notes: vec!(Note{pos: note_pos, message: note})}
+    pub fn error_with_note(
+        pos: ast::Loc,
+        message: String,
+        note_pos: ast::Loc,
+        note: String,
+    ) -> Self {
+        Output {
+            level: Level::Error,
+            ty: ErrorType::None,
+            pos,
+            message,
+            notes: vec![Note {
+                pos: note_pos,
+                message: note,
+            }],
+        }
     }
 
     pub fn error_with_notes(pos: ast::Loc, message: String, notes: Vec<Note>) -> Self {
-        Output{level: Level::Error, ty: ErrorType::None, pos, message, notes}
+        Output {
+            level: Level::Error,
+            ty: ErrorType::None,
+            pos,
+            message,
+            notes,
+        }
     }
 
     fn formated_message(&self, filename: &str, pos: &FilePostitions) -> String {
         let loc = pos.to_string(self.pos);
 
-        let mut s = format!("{}:{}: {}: {}", filename, loc, self.level.to_string(), self.message);
+        let mut s = format!(
+            "{}:{}: {}: {}",
+            filename,
+            loc,
+            self.level.to_string(),
+            self.message
+        );
 
         for note in &self.notes {
             let loc = pos.to_string(note.pos);
 
-            s.push_str(&format!("\n\t{}:{}: {}: {}", filename, loc, "note", note.message));
+            s.push_str(&format!(
+                "\n\t{}:{}: {}: {}",
+                filename, loc, "note", note.message
+            ));
         }
 
         s
@@ -123,7 +207,7 @@ pub struct LocJson {
 #[allow(non_snake_case)]
 pub struct OutputJson {
     pub sourceLocation: LocJson,
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub ty: String,
     pub component: String,
     pub severity: String,
@@ -141,13 +225,17 @@ pub fn message_as_json(filename: &str, src: &str, messages: &Vec<Output>) -> Vec
             continue;
         }
 
-        json.push(OutputJson{
-            sourceLocation: LocJson{ file: filename.to_string(), start: msg.pos.0, end: msg.pos.1 },
+        json.push(OutputJson {
+            sourceLocation: LocJson {
+                file: filename.to_string(),
+                start: msg.pos.0,
+                end: msg.pos.1,
+            },
             ty: format!("{:?}", msg.ty),
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(filename, &pos)
+            formattedMessage: msg.formated_message(filename, &pos),
         });
     }
 
