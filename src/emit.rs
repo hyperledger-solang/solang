@@ -491,7 +491,7 @@ impl<'a> Contract<'a> {
                 _ => (),
             }
 
-            let mut res = keccak256(f.sig.as_bytes());
+            let res = keccak256(f.sig.as_bytes());
 
             let bb = unsafe {
                 LLVMAppendBasicBlockInContext(self.context, function, "\0".as_ptr() as *const _)
@@ -529,8 +529,9 @@ impl<'a> Contract<'a> {
                 // return ABI of length 0
 
                 // malloc 4 bytes
-                let mut four =
-                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE) };
+                let four = unsafe {
+                    LLVMConstInt(LLVMInt32TypeInContext(self.context), 4, LLVM_FALSE)
+                };
                 let mut args = [four];
                 let malloc = unsafe {
                     LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
@@ -568,8 +569,9 @@ impl<'a> Contract<'a> {
                 }
             } else if self.functions[i].wasm_return {
                 // malloc 36 bytes
-                let mut c36 =
-                    unsafe { LLVMConstInt(LLVMInt32TypeInContext(self.context), 36, LLVM_FALSE) };
+                let c36 = unsafe {
+                    LLVMConstInt(LLVMInt32TypeInContext(self.context), 36, LLVM_FALSE)
+                };
                 let mut args = [c36];
                 let malloc = unsafe {
                     LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
@@ -982,7 +984,7 @@ impl<'a> Contract<'a> {
                     let mut three = unsafe {
                         LLVMConstInt(LLVMInt32TypeInContext(self.context), 3, LLVM_FALSE)
                     };
-                    let mut zero = unsafe {
+                    let zero = unsafe {
                         LLVMConstInt(LLVMInt64TypeInContext(self.context), 0, LLVM_FALSE)
                     };
                     let bool_ptr = unsafe {
@@ -1278,7 +1280,7 @@ impl<'a> Contract<'a> {
                         }
                     }
                     cfg::Instr::Return { value } => {
-                        let mut returns_offset = f.params.len();
+                        let returns_offset = f.params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = unsafe { LLVMGetParam(function, (returns_offset + i) as _) };
                             let retval = self.expression(builder, val, &w.vars);

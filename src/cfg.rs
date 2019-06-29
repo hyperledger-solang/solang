@@ -769,7 +769,7 @@ fn statement(
             vartab.new_dirty_tracker();
             loops.new_scope(end, cond);
 
-            let mut body_reachable = statement(body_stmt, f, cfg, ns, vartab, loops, errors)?;
+            let body_reachable = statement(body_stmt, f, cfg, ns, vartab, loops, errors)?;
 
             if body_reachable {
                 cfg.add(vartab, Instr::Branch { bb: cond });

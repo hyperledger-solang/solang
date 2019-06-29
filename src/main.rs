@@ -108,7 +108,7 @@ fn main() {
         f.read_to_string(&mut contents)
             .expect("something went wrong reading the file");
 
-        let mut past = match parser::parse(&contents) {
+        let past = match parser::parse(&contents) {
             Ok(s) => s,
             Err(errors) => {
                 if matches.is_present("STD-JSON") {
@@ -168,7 +168,7 @@ fn main() {
                 continue;
             }
 
-            let mut obj = match contract.wasm() {
+            let obj = match contract.wasm() {
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);
