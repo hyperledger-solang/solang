@@ -50,7 +50,7 @@ fn main() {
     let matches = App::new("solang")
         .version(env!("CARGO_PKG_VERSION"))
         .author(env!("CARGO_PKG_AUTHORS"))
-        .about("Solidity to WASM Compiler")
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
             Arg::with_name("INPUT")
                 .help("Solidity input files")
@@ -59,34 +59,39 @@ fn main() {
         )
         .arg(
             Arg::with_name("CFG")
-                .help("emit control flow graph")
-                .long("emit-cfg"),
+                .help("emit Control Flow Graph")
+                .long("emit-cfg")
+                .group("EMIT"),
+        )
+        .arg(
+            Arg::with_name("LLVM")
+                .help("emit llvm IR rather than WASM")
+                .long("emit-llvm")
+                .group("EMIT"),
+        )
+        .arg(
+            Arg::with_name("LLVM-BC")
+                .help("emit llvm BC rather than WASM")
+                .long("emit-bc")
+                .group("EMIT"),
+        )
+        .arg(
+            Arg::with_name("OBJECT")
+                .help("emit WASM object file")
+                .long("emit-object")
+                .group("EMIT"),
+        )
+        .arg(
+            Arg::with_name("STD-JSON")
+                .help("mimic solidity json output on stdout")
+                .long("standard-json")
+                .group("EMIT"),
         )
         .arg(
             Arg::with_name("VERBOSE")
                 .help("show verbose messages")
                 .short("v")
                 .long("verbose"),
-        )
-        .arg(
-            Arg::with_name("LLVM")
-                .help("emit llvm IR rather than wasm")
-                .long("emit-llvm"),
-        )
-        .arg(
-            Arg::with_name("BC")
-                .help("emit llvm BC rather than wasm")
-                .long("emit-bc"),
-        )
-        .arg(
-            Arg::with_name("JSON")
-                .help("mimic solidity output json output on stdout")
-                .long("standard-json"),
-        )
-        .arg(
-            Arg::with_name("NOLINK")
-                .help("Skip linking, emit wasm object file")
-                .long("no-link"),
         )
         .get_matches();
 
@@ -103,10 +108,10 @@ fn main() {
         f.read_to_string(&mut contents)
             .expect("something went wrong reading the file");
 
-        let mut past = match parser::parse(&contents) {
+        let past = match parser::parse(&contents) {
             Ok(s) => s,
             Err(errors) => {
-                if matches.is_present("JSON") {
+                if matches.is_present("STD-JSON") {
                     let mut out = output::message_as_json(filename, &contents, &errors);
                     json.errors.append(&mut out);
                 } else {
@@ -125,7 +130,7 @@ fn main() {
         // resolve phase
         let (contracts, errors) = resolver::resolver(past);
 
-        if matches.is_present("JSON") {
+        if matches.is_present("STD-JSON") {
             let mut out = output::message_as_json(filename, &contents, &errors);
             json.errors.append(&mut out);
         } else {
@@ -154,7 +159,7 @@ fn main() {
                 continue;
             }
 
-            if matches.is_present("BC") {
+            if matches.is_present("LLVM-BC") {
                 let bc = contract.bitcode();
                 let bc_filename = contract.name.to_string() + ".bc";
 
@@ -163,7 +168,7 @@ fn main() {
                 continue;
             }
 
-            let mut obj = match contract.wasm() {
+            let obj = match contract.wasm() {
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);
@@ -171,17 +176,23 @@ fn main() {
                 }
             };
 
-            if !matches.is_present("NOLINK") {
-                obj = link::link(&obj);
+            if matches.is_present("OBJECT") {
+                let obj_filename = contract.name.to_string() + ".o";
+
+                let mut file = File::create(obj_filename).unwrap();
+                file.write_all(&obj).unwrap();
+                continue;
             }
 
-            if matches.is_present("JSON") {
+            let wasm = link::link(&obj);
+
+            if matches.is_present("STD-JSON") {
                 json_contracts.insert(
                     contract.name.to_owned(),
                     JsonContract {
                         abi,
                         ewasm: EwasmContract {
-                            wasm: hex::encode_upper(obj),
+                            wasm: hex::encode_upper(wasm),
                         },
                     },
                 );
@@ -189,7 +200,7 @@ fn main() {
                 let wasm_filename = contract.name.to_string() + ".wasm";
 
                 let mut file = File::create(wasm_filename).unwrap();
-                file.write_all(&obj).unwrap();
+                file.write_all(&wasm).unwrap();
 
                 let abi_filename = contract.name.to_string() + ".abi";
 
@@ -202,7 +213,7 @@ fn main() {
         json.contracts.insert(filename.to_owned(), json_contracts);
     }
 
-    if matches.is_present("JSON") {
+    if matches.is_present("STD-JSON") {
         println!("{}", serde_json::to_string(&json).unwrap());
     } else if fatal {
         std::process::exit(1);
