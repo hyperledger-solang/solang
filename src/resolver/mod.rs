@@ -1,3 +1,4 @@
+
 use ast;
 use cfg;
 use output::{Note, Output};
@@ -181,26 +182,26 @@ impl Contract {
         true
     }
 
-    pub fn resolve_type(&self, id: &ast::TypeName, errors: &mut Vec<Output>) -> Option<TypeName> {
+    pub fn resolve_type(&self, id: &ast::TypeName, errors: &mut Vec<Output>) -> Result<TypeName, ()> {
         match id {
-            ast::TypeName::Elementary(e) => Some(TypeName::Elementary(*e)),
+            ast::TypeName::Elementary(e) => Ok(TypeName::Elementary(*e)),
             ast::TypeName::Unresolved(s) => match self.symbols.get(&s.name) {
                 None => {
                     errors.push(Output::decl_error(
                         s.loc,
                         format!("`{}' is not declared", s.name),
                     ));
-                    None
+                    Err(())
                 }
-                Some(Symbol::Enum(_, n)) => Some(TypeName::Enum(*n)),
+                Some(Symbol::Enum(_, n)) => Ok(TypeName::Enum(*n)),
                 Some(Symbol::Function(_)) => {
                     errors.push(Output::decl_error(
                         s.loc,
                         format!("`{}' is a function", s.name),
                     ));
-                    None
+                    Err(())
                 }
-                Some(Symbol::Variable(_, n)) => Some(self.variables[*n].ty.clone()),
+                Some(Symbol::Variable(_, n)) => Ok(self.variables[*n].ty.clone()),
             },
         }
     }
@@ -212,37 +213,44 @@ impl Contract {
         }
     }
 
-    pub fn resolve_func(&self, id: &ast::Identifier) -> Option<&Vec<(ast::Loc, usize)>> {
+    pub fn resolve_func(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Result<&Vec<(ast::Loc, usize)>, ()> {
         match self.symbols.get(&id.name) {
-            Some(Symbol::Function(v)) => Some(v),
-            _ => None,
+            Some(Symbol::Function(v)) => Ok(v),
+            _ => {
+                errors.push(Output::error(
+                    id.loc.clone(),
+                    format!("unknown function or type"),
+                ));
+
+                Err(())
+            }
         }
     }
 
-    pub fn resolve_var(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Option<usize> {
+    pub fn resolve_var(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Result<usize, ()> {
         match self.symbols.get(&id.name) {
             None => {
                 errors.push(Output::decl_error(
                     id.loc.clone(),
                     format!("`{}' is not declared", id.name),
                 ));
-                None
+                Err(())
             }
             Some(Symbol::Enum(_, _)) => {
                 errors.push(Output::decl_error(
                     id.loc.clone(),
                     format!("`{}' is an enum", id.name),
                 ));
-                None
+                Err(())
             }
             Some(Symbol::Function(_)) => {
                 errors.push(Output::decl_error(
                     id.loc.clone(),
                     format!("`{}' is a function", id.name),
                 ));
-                None
+                Err(())
             }
-            Some(Symbol::Variable(_, n)) => Some(*n),
+            Some(Symbol::Variable(_, n)) => Ok(*n),
         }
     }
 
@@ -579,8 +587,8 @@ fn var_decl(
     errors: &mut Vec<Output>,
 ) -> bool {
     let ty = match ns.resolve_type(&s.ty, errors) {
-        Some(s) => s,
-        None => {
+        Ok(s) => s,
+        Err(()) => {
             return false;
         }
     };
@@ -696,14 +704,14 @@ fn func_decl(
 
     for p in &f.params {
         match ns.resolve_type(&p.typ, errors) {
-            Some(s) => params.push(Parameter {
+            Ok(s) => params.push(Parameter {
                 name: p
                     .name
                     .as_ref()
                     .map_or("".to_string(), |id| id.name.to_string()),
                 ty: s,
             }),
-            None => success = false,
+            Err(()) => success = false,
         }
     }
 
@@ -716,14 +724,14 @@ fn func_decl(
         }
 
         match ns.resolve_type(&r.typ, errors) {
-            Some(s) => returns.push(Parameter {
+            Ok(s) => returns.push(Parameter {
                 name: r
                     .name
                     .as_ref()
                     .map_or("".to_string(), |id| id.name.to_string()),
                 ty: s,
             }),
-            None => success = false,
+            Err(()) => success = false,
         }
     }
 
