@@ -87,7 +87,7 @@ pub struct BasicBlock {
 }
 
 impl BasicBlock {
-    pub fn add(&mut self, ins: Instr) {
+    fn add(&mut self, ins: Instr) {
         self.instr.push(ins);
     }
 }
@@ -101,7 +101,7 @@ pub struct ControlFlowGraph {
 }
 
 impl ControlFlowGraph {
-    pub fn new_basic_block(&mut self, name: String) -> usize {
+    fn new_basic_block(&mut self, name: String) -> usize {
         let pos = self.bb.len();
 
         self.bb.push(BasicBlock {
@@ -113,17 +113,17 @@ impl ControlFlowGraph {
         pos
     }
 
-    pub fn set_phis(&mut self, bb: usize, phis: HashSet<usize>) {
+    fn set_phis(&mut self, bb: usize, phis: HashSet<usize>) {
         if !phis.is_empty() {
             self.bb[bb].phis = Some(phis);
         }
     }
 
-    pub fn set_basic_block(&mut self, pos: usize) {
+    fn set_basic_block(&mut self, pos: usize) {
         self.current = pos;
     }
 
-    pub fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
+    fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
@@ -451,10 +451,7 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let var_ty = match ns.resolve_type(&decl.typ, errors) {
-                Some(ty) => ty,
-                None => return Err(()),
-            };
+            let var_ty = ns.resolve_type(&decl.typ, errors)?;
 
             let e_t = if let Some(init) = init {
                 let (expr, init_ty) = expression(init, cfg, ns, vartab, errors)?;
@@ -1709,16 +1706,7 @@ fn expression(
             }
 
             let funcs = if let ast::TypeName::Unresolved(s) = ty {
-                match ns.resolve_func(s) {
-                    Some(v) => v,
-                    None => {
-                        errors.push(Output::error(
-                            loc.clone(),
-                            format!("unknown function or type"),
-                        ));
-                        return Err(());
-                    }
-                }
+                ns.resolve_func(s, errors)?
             } else {
                 unreachable!();
             };
@@ -1946,26 +1934,23 @@ impl<'a> Vartable<'a> {
             return Ok(self.vars[*n].clone());
         }
 
-        if let Some(v) = self.contract.resolve_var(&id, errors) {
-            let var = &self.contract.variables[v];
-            let pos = self.vars.len();
+        let v = self.contract.resolve_var(&id, errors)?;
+        let var = &self.contract.variables[v];
+        let pos = self.vars.len();
 
-            self.vars.push(Variable {
-                id: id.clone(),
-                ty: var.ty.clone(),
-                pos,
-                storage: match var.storage {
-                    Some(n) => Storage::Contract(n),
-                    None => Storage::Constant,
-                },
-            });
+        self.vars.push(Variable {
+            id: id.clone(),
+            ty: var.ty.clone(),
+            pos,
+            storage: match var.storage {
+                Some(n) => Storage::Contract(n),
+                None => Storage::Constant,
+            },
+        });
 
-            self.storage_vars.insert(id.name.to_string(), pos);
+        self.storage_vars.insert(id.name.to_string(), pos);
 
-            Ok(self.vars[pos].clone())
-        } else {
-            Err(())
-        }
+        Ok(self.vars[pos].clone())
     }
 
     pub fn temp(&mut self, id: &ast::Identifier, ty: &resolver::TypeName) -> usize {
