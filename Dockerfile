@@ -1,21 +1,29 @@
-FROM fedora:30 as builder
+# On Alpine linux, the build fails with:
+# error: cannot produce proc-macro for `serde_derive v1.0.102` as the target `x86_64-unknown-linux-musl` does not support these crate types
+# See https://github.com/rust-lang/cargo/issues/5266
+
+# Debian buster does not have llvm 8.
+
+# Fedora 30 produces a builder image 2.01 GiB and solang image of 294 MiB
+
+# Ubuntu 18.04 produces a builder images 1.53 GiB and solang image of 84 MiB
+
+FROM ubuntu:18.04 as builder
 MAINTAINER Sean Young <sean@mess.org>
-# Alpine Linux ships with ancient llvm/clang versions, so we pick Fedora
-# for being much more up to date (8.0). Obviously we could build our own
-# llvm and clang, but that takes ages.
-RUN dnf -y install cargo llvm-static llvm-devel zlib-devel clang glibc-devel.i686
+RUN apt-get update
+RUN apt-get install -y cargo llvm-8-dev clang-8 libz-dev
 
 RUN mkdir -p src/
 COPY . src/
 WORKDIR /src/stdlib/
-RUN clang --target=wasm32 -c -emit-llvm -O3 -fno-builtin -Wall stdlib.c
+RUN clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c
 
 WORKDIR /src/
 RUN cargo build --release
 
 # Something more minimal than Fedora would be nice. Alphine won't work
 # since we built solang with glibc, not musl.
-FROM fedora:30
+FROM ubuntu:18.04
 COPY --from=builder /src/target/release/solang /usr/local/bin/solang
 
 ENTRYPOINT ["/usr/local/bin/solang"]
