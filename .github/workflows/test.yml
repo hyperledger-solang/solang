@@ -1,14 +1,14 @@
 name: test
 on: [push, pull_request]
 jobs:
-  build:
-    name: Yo
+  test:
+    name: Test
     runs-on: ubuntu-latest
 
     steps:
+    - name: Install LLVM
+      run: sudo apt-get install llvm-8-dev
     - uses: actions/checkout@v1
-    - name: Install llvm 8.0
-      run: apt-get -y install llvm-8-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
