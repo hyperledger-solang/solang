@@ -13,7 +13,7 @@ lalrpop = "0.17.0"
 [dependencies]
 lalrpop-util = "0.17.0"
 regex = "0.2.1"
-llvm-sys = "80.0.0"
+llvm-sys = "80"
 num-bigint = "0.2"
 num-traits = "0.2.6"
 parity-wasm = "0.35"
