@@ -191,13 +191,13 @@ impl<'a> Contract<'a> {
         ];
         let ftype = unsafe { LLVMFunctionType(ret, args.as_mut_ptr(), args.len() as u32, 0) };
         let func =
-            unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const i8, ftype) };
+            unsafe { LLVMAddFunction(self.module, "get_storage32\0".as_ptr() as *const _, ftype) };
         unsafe {
             LLVMSetLinkage(func, LLVMLinkage::LLVMExternalLinkage);
         }
         self.externals.insert("get_storage32".to_owned(), func);
         let func =
-            unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const i8, ftype) };
+            unsafe { LLVMAddFunction(self.module, "set_storage32\0".as_ptr() as *const _, ftype) };
         unsafe {
             LLVMSetLinkage(func, LLVMLinkage::LLVMExternalLinkage);
         }
@@ -336,7 +336,7 @@ impl<'a> Contract<'a> {
         unsafe {
             LLVMPositionBuilderAtEnd(builder, entry);
             let init_heap =
-                LLVMGetNamedFunction(self.module, "__init_heap\0".as_ptr() as *const i8);
+                LLVMGetNamedFunction(self.module, "__init_heap\0".as_ptr() as *const _);
             LLVMBuildCall(builder, init_heap, null_mut(), 0, "\0".as_ptr() as *const _);
         }
 
@@ -534,7 +534,7 @@ impl<'a> Contract<'a> {
                 };
                 let mut args = [four];
                 let malloc = unsafe {
-                    LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
+                    LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const _)
                 };
                 let dest = unsafe {
                     LLVMBuildCall(
@@ -542,7 +542,7 @@ impl<'a> Contract<'a> {
                         malloc,
                         args.as_mut_ptr(),
                         args.len() as u32,
-                        "\0".as_ptr() as *const i8,
+                        "\0".as_ptr() as *const _,
                     )
                 };
 
@@ -574,7 +574,7 @@ impl<'a> Contract<'a> {
                 };
                 let mut args = [c36];
                 let malloc = unsafe {
-                    LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const i8)
+                    LLVMGetNamedFunction(self.module, "__malloc\0".as_ptr() as *const _)
                 };
                 let dest = unsafe {
                     LLVMBuildCall(
@@ -582,7 +582,7 @@ impl<'a> Contract<'a> {
                         malloc,
                         args.as_mut_ptr(),
                         args.len() as u32,
-                        "\0".as_ptr() as *const i8,
+                        "\0".as_ptr() as *const _,
                     )
                 };
 
@@ -670,7 +670,7 @@ impl<'a> Contract<'a> {
         match ty {
             ast::ElementaryTypeName::Bool => {
                 let bzero8 = unsafe {
-                    LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
+                    LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const _)
                 };
                 let mut args = [
                     unsafe {
@@ -689,7 +689,7 @@ impl<'a> Contract<'a> {
                         bzero8,
                         args.as_mut_ptr(),
                         args.len() as u32,
-                        "\0".as_ptr() as *const i8,
+                        "\0".as_ptr() as *const _,
                     )
                 };
 
@@ -698,7 +698,7 @@ impl<'a> Contract<'a> {
                 let one =
                     unsafe { LLVMConstInt(LLVMInt8TypeInContext(self.context), 1, LLVM_FALSE) };
                 let val = unsafe {
-                    LLVMBuildSelect(builder, val, one, zero, "bool\0".as_ptr() as *const i8)
+                    LLVMBuildSelect(builder, val, one, zero, "bool\0".as_ptr() as *const _)
                 };
 
                 let mut int8_ptr = unsafe {
@@ -742,13 +742,13 @@ impl<'a> Contract<'a> {
                         LLVMBuildSelect(
                             builder,
                             negative,
-                            LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8),
-                            LLVMGetNamedFunction(self.module, "__bset8\0".as_ptr() as *const i8),
+                            LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const _),
+                            LLVMGetNamedFunction(self.module, "__bset8\0".as_ptr() as *const _),
                             "clearfunc\0".as_ptr() as *const _,
                         )
                     }
                 } else {
-                    unsafe { LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8) }
+                    unsafe { LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const _) }
                 };
 
                 let mut args = [
@@ -768,7 +768,7 @@ impl<'a> Contract<'a> {
                         func,
                         args.as_mut_ptr(),
                         args.len() as u32,
-                        "\0".as_ptr() as *const i8,
+                        "\0".as_ptr() as *const _,
                     )
                 };
 
@@ -817,18 +817,18 @@ impl<'a> Contract<'a> {
                                 negative,
                                 LLVMGetNamedFunction(
                                     self.module,
-                                    "__bset8\0".as_ptr() as *const i8,
+                                    "__bset8\0".as_ptr() as *const _,
                                 ),
                                 LLVMGetNamedFunction(
                                     self.module,
-                                    "__bzero8\0".as_ptr() as *const i8,
+                                    "__bzero8\0".as_ptr() as *const _,
                                 ),
                                 "clearfunc\0".as_ptr() as *const _,
                             )
                         }
                     } else {
                         unsafe {
-                            LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const i8)
+                            LLVMGetNamedFunction(self.module, "__bzero8\0".as_ptr() as *const _)
                         }
                     };
 
@@ -852,7 +852,7 @@ impl<'a> Contract<'a> {
                             func,
                             args.as_mut_ptr(),
                             args.len() as u32,
-                            "\0".as_ptr() as *const i8,
+                            "\0".as_ptr() as *const _,
                         )
                     };
                 }
@@ -899,7 +899,7 @@ impl<'a> Contract<'a> {
                 ];
                 unsafe {
                     let le_ntobe32 =
-                        LLVMGetNamedFunction(self.module, "__leNtobe32\0".as_ptr() as *const i8);
+                        LLVMGetNamedFunction(self.module, "__leNtobe32\0".as_ptr() as *const _);
 
                     LLVMBuildCall(
                         builder,
@@ -1073,7 +1073,7 @@ impl<'a> Contract<'a> {
                     unsafe {
                         let be32tolen = LLVMGetNamedFunction(
                             self.module,
-                            "__be32toleN\0".as_ptr() as *const i8,
+                            "__be32toleN\0".as_ptr() as *const _,
                         );
 
                         LLVMBuildCall(
@@ -1418,7 +1418,7 @@ impl<'a> Contract<'a> {
                                     builder,
                                     off1,
                                     LLVMInt32TypeInContext(self.context),
-                                    "\0".as_ptr() as *const i8,
+                                    "\0".as_ptr() as *const _,
                                 )
                             },
                         ];
@@ -1475,7 +1475,7 @@ impl<'a> Contract<'a> {
                                     builder,
                                     off1,
                                     LLVMInt32TypeInContext(self.context),
-                                    "length\0".as_ptr() as *const i8,
+                                    "length\0".as_ptr() as *const _,
                                 )
                             },
                         ];
@@ -1585,9 +1585,9 @@ static STDLIB_IR: &'static [u8] = include_bytes!("../stdlib/stdlib.bc");
 fn load_stdlib(context: LLVMContextRef) -> LLVMModuleRef {
     let llmembuf = unsafe {
         LLVMCreateMemoryBufferWithMemoryRange(
-            STDLIB_IR.as_ptr() as *const i8,
+            STDLIB_IR.as_ptr() as *const _,
             STDLIB_IR.len(),
-            "stdlib.c\0".as_ptr() as *const i8,
+            "stdlib.c\0".as_ptr() as *const _,
             LLVM_FALSE,
         )
     };
