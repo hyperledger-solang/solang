@@ -7,8 +7,11 @@ jobs:
 
     steps:
     - name: Install LLVM
-      run: sudo apt-get install llvm-8-dev
+      run: sudo apt-get install llvm-8-dev clang-8
     - uses: actions/checkout@v1
+    - name: Compile stdlib
+      run: clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c
+      working-directory:  ./stdlib
     - name: Build
       run: cargo build --verbose
     - name: Run tests

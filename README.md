@@ -1,8 +1,10 @@
-# solang - A new Solidity to wasm compiler written in rust
+# solang - A Solidity to wasm compiler written in rust
+
+[![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)]
 
 <img align="right" width="400" height="400" src="doc/solang.svg">
 
-This is solang, a new proof of concept
+This is solang, a proof of concept
 [solidity](https://en.wikipedia.org/wiki/Solidity) compiler. The
 [existing solidity compiler](https://solidity.readthedocs.io/) is a huge C++
 code base which implements its own parser, optimizer and handling of binary
