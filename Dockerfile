@@ -24,6 +24,6 @@ RUN cargo build --release
 # Something more minimal than Fedora would be nice. Alphine won't work
 # since we built solang with glibc, not musl.
 FROM ubuntu:18.04
-COPY --from=builder /src/target/release/solang /usr/local/bin/solang
+COPY --from=builder /src/target/release/solang /usr/bin/solang
 
-ENTRYPOINT ["/usr/local/bin/solang"]
+ENTRYPOINT ["/usr/bin/solang"]

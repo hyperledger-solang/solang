@@ -28,6 +28,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -58,34 +59,16 @@ fn main() {
                 .multiple(true),
         )
         .arg(
-            Arg::with_name("CFG")
-                .help("emit Control Flow Graph")
-                .long("emit-cfg")
-                .group("EMIT"),
-        )
-        .arg(
-            Arg::with_name("LLVM")
-                .help("emit llvm IR rather than WASM")
-                .long("emit-llvm")
-                .group("EMIT"),
-        )
-        .arg(
-            Arg::with_name("LLVM-BC")
-                .help("emit llvm BC rather than WASM")
-                .long("emit-bc")
-                .group("EMIT"),
-        )
-        .arg(
-            Arg::with_name("OBJECT")
-                .help("emit WASM object file")
-                .long("emit-object")
-                .group("EMIT"),
+            Arg::with_name("EMIT")
+                .help("Emit compiler state at early stage")
+                .long("emit")
+                .takes_value(true)
+                .possible_values(&["cfg", "llvm", "bc", "object"]),
         )
         .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
                 .long("standard-json")
-                .group("EMIT"),
         )
         .arg(
             Arg::with_name("VERBOSE")
@@ -93,12 +76,24 @@ fn main() {
                 .short("v")
                 .long("verbose"),
         )
+        .arg(
+            Arg::with_name("OUTPUT")
+                .help("output directory")
+                .short("o")
+                .long("output")
+                .takes_value(true),
+        )
         .get_matches();
 
     let mut fatal = false;
     let mut json = JsonResult {
         errors: Vec::new(),
         contracts: HashMap::new(),
+    };
+
+    let output_file = |stem: &str, ext: &str| -> PathBuf {
+        Path::new(matches.value_of("OUTPUT").unwrap_or("."))
+            .join(format!("{}.{}", stem, ext))
     };
 
     for filename in matches.values_of("INPUT").unwrap() {
@@ -145,7 +140,7 @@ fn main() {
 
         // emit phase
         for contract in &contracts {
-            if matches.is_present("CFG") {
+            if let Some("cfg") = matches.value_of("EMIT") {
                 println!("{}", contract.to_string());
                 continue;
             }
@@ -154,14 +149,14 @@ fn main() {
 
             let contract = emit::Contract::new(contract, &filename);
 
-            if matches.is_present("LLVM") {
+            if let Some("llvm") = matches.value_of("EMIT") {
                 contract.dump_llvm();
                 continue;
             }
 
-            if matches.is_present("LLVM-BC") {
+            if let Some("bc") = matches.value_of("EMIT") {
                 let bc = contract.bitcode();
-                let bc_filename = contract.name.to_string() + ".bc";
+                let bc_filename = output_file(&contract.name, "bc");
 
                 let mut file = File::create(bc_filename).unwrap();
                 file.write_all(&bc).unwrap();
@@ -176,8 +171,8 @@ fn main() {
                 }
             };
 
-            if matches.is_present("OBJECT") {
-                let obj_filename = contract.name.to_string() + ".o";
+            if let Some("object") = matches.value_of("EMIT") {
+                let obj_filename = output_file(&contract.name, "o");
 
                 let mut file = File::create(obj_filename).unwrap();
                 file.write_all(&obj).unwrap();
@@ -197,12 +192,12 @@ fn main() {
                     },
                 );
             } else {
-                let wasm_filename = contract.name.to_string() + ".wasm";
+                let wasm_filename = output_file(&contract.name, "wasm");
 
                 let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&wasm).unwrap();
 
-                let abi_filename = contract.name.to_string() + ".abi";
+                let abi_filename = output_file(&contract.name, "abi");
 
                 file = File::create(abi_filename).unwrap();
                 file.write_all(serde_json::to_string(&abi).unwrap().as_bytes())
