@@ -13,16 +13,15 @@ MAINTAINER Sean Young <sean@mess.org>
 RUN apt-get update
 RUN apt-get install -y cargo llvm-8-dev clang-8 libz-dev
 
-RUN mkdir -p src/
-COPY . src/
+COPY src src/src/
+COPY stdlib src/stdlib/
+COPY build.rs Cargo.toml src/
 WORKDIR /src/stdlib/
 RUN clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c
 
 WORKDIR /src/
 RUN cargo build --release
 
-# Something more minimal than Fedora would be nice. Alphine won't work
-# since we built solang with glibc, not musl.
 FROM ubuntu:18.04
 COPY --from=builder /src/target/release/solang /usr/bin/solang
 
