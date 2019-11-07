@@ -28,6 +28,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -93,12 +94,24 @@ fn main() {
                 .short("v")
                 .long("verbose"),
         )
+        .arg(
+            Arg::with_name("OUTPUT")
+                .help("output directory")
+                .short("o")
+                .long("output")
+                .takes_value(true),
+        )
         .get_matches();
 
     let mut fatal = false;
     let mut json = JsonResult {
         errors: Vec::new(),
         contracts: HashMap::new(),
+    };
+
+    let output_file = |stem: &str, ext: &str| -> PathBuf {
+        Path::new(matches.value_of("OUTPUT").unwrap_or("."))
+            .join(format!("{}.{}", stem, ext))
     };
 
     for filename in matches.values_of("INPUT").unwrap() {
@@ -161,7 +174,7 @@ fn main() {
 
             if matches.is_present("LLVM-BC") {
                 let bc = contract.bitcode();
-                let bc_filename = contract.name.to_string() + ".bc";
+                let bc_filename = output_file(&contract.name, "bc");
 
                 let mut file = File::create(bc_filename).unwrap();
                 file.write_all(&bc).unwrap();
@@ -177,7 +190,7 @@ fn main() {
             };
 
             if matches.is_present("OBJECT") {
-                let obj_filename = contract.name.to_string() + ".o";
+                let obj_filename = output_file(&contract.name, "o");
 
                 let mut file = File::create(obj_filename).unwrap();
                 file.write_all(&obj).unwrap();
@@ -197,12 +210,12 @@ fn main() {
                     },
                 );
             } else {
-                let wasm_filename = contract.name.to_string() + ".wasm";
+                let wasm_filename = output_file(&contract.name, "wasm");
 
                 let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&wasm).unwrap();
 
-                let abi_filename = contract.name.to_string() + ".abi";
+                let abi_filename = output_file(&contract.name, "abi");
 
                 file = File::create(abi_filename).unwrap();
                 file.write_all(serde_json::to_string(&abi).unwrap().as_bytes())
