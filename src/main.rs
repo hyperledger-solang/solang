@@ -66,6 +66,14 @@ fn main() {
                 .possible_values(&["cfg", "llvm", "bc", "object"]),
         )
         .arg(
+            Arg::with_name("OPT")
+                .help("Set optimizer level")
+                .short("O")
+                .takes_value(true)
+                .possible_values(&["none", "less", "default", "aggressive"])
+                .default_value("default"),
+        )
+        .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
                 .long("standard-json")
@@ -159,7 +167,7 @@ fn main() {
                 continue;
             }
 
-            let obj = match contract.wasm() {
+            let obj = match contract.wasm(matches.value_of("OPT").unwrap()) {
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);

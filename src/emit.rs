@@ -52,8 +52,16 @@ pub struct Contract<'a> {
 }
 
 impl<'a> Contract<'a> {
-    pub fn wasm(&self) -> Result<Vec<u8>, String> {
-        let target_machine = self.target.create_target_machine(WASMTRIPLE, "", "", OptimizationLevel::None, RelocMode::Default, CodeModel::Default).unwrap();
+    pub fn wasm(&self, opt: &str) -> Result<Vec<u8>, String> {
+        let opt = match opt {
+            "none" => OptimizationLevel::None,
+            "less" => OptimizationLevel::Less,
+            "default" => OptimizationLevel::Default,
+            "aggressive" => OptimizationLevel::Aggressive,
+            _ => unreachable!()
+        };
+
+        let target_machine = self.target.create_target_machine(WASMTRIPLE, "", "", opt, RelocMode::Default, CodeModel::Default).unwrap();
 
         match target_machine.write_to_memory_buffer(&self.module, FileType::Object) {
             Ok(o) => Ok(o.as_slice().to_vec()),

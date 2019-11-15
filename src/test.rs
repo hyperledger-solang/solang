@@ -105,7 +105,7 @@ mod tests {
         // codegen
         let contract = emit::Contract::new(&contracts[0], &"foo.sol");
 
-        let obj = contract.wasm().expect("llvm wasm emit should work");
+        let obj = contract.wasm("default").expect("llvm wasm emit should work");
 
         let bc = link::link(&obj);
 
