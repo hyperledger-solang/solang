@@ -18,6 +18,18 @@ extern void set_storage32(uint32_t key, void *src, int32_t length);
 
 
 /*
+ */
+__attribute__((visibility("hidden")))
+void __memset8(void *_dest, uint64_t val, size_t length)
+{
+	uint64_t *dest = _dest;
+
+	do {
+		*dest++ = val;
+	} while (--length);
+}
+
+/*
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.
  */

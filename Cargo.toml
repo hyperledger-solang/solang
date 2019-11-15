@@ -5,7 +5,7 @@ authors = ["Sean Young <sean@mess.org>"]
 homepage = "https://github.com/hyperledger-labs/solang"
 license = "Apache-2.0 OR MIT"
 build = "build.rs"
-description = "Solidity to WASM Smart Contracts Compiler"
+description = "Solidity to WASM Smart Contract Compiler"
 
 [build-dependencies]
 lalrpop = "0.17.0"
@@ -13,7 +13,7 @@ lalrpop = "0.17.0"
 [dependencies]
 lalrpop-util = "0.17.0"
 regex = "0.2.1"
-llvm-sys = "80"
+inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "llvm8-0" }
 num-bigint = "0.2"
 num-traits = "0.2.6"
 parity-wasm = "0.35"

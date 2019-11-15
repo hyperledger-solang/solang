@@ -4,7 +4,6 @@ extern crate ethereum_types;
 extern crate hex;
 extern crate lalrpop_util;
 extern crate lazy_static;
-extern crate llvm_sys;
 extern crate num_bigint;
 extern crate num_traits;
 extern crate parity_wasm;
@@ -12,6 +11,7 @@ extern crate serde;
 extern crate tiny_keccak;
 extern crate unescape;
 extern crate wasmi;
+extern crate inkwell;
 
 use clap::{App, Arg};
 mod ast;
@@ -150,16 +150,12 @@ fn main() {
             let contract = emit::Contract::new(contract, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {
-                contract.dump_llvm();
+                contract.dump_llvm(&output_file(&contract.name, "ll")).unwrap();
                 continue;
             }
 
             if let Some("bc") = matches.value_of("EMIT") {
-                let bc = contract.bitcode();
-                let bc_filename = output_file(&contract.name, "bc");
-
-                let mut file = File::create(bc_filename).unwrap();
-                file.write_all(&bc).unwrap();
+                contract.bitcode(&output_file(&contract.name, "bc"));
                 continue;
             }
 
