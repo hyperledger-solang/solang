@@ -370,7 +370,10 @@ impl<'a> Contract<'a> {
                     ""
                 ).try_as_basic_value().left().unwrap().into_pointer_value();
 
-                builder.build_store(dest,
+                builder.build_store(
+                    builder.build_pointer_cast(dest,
+                        self.context.i32_type().ptr_type(AddressSpace::Generic),
+                        ""),
                     self.context.i32_type().const_zero());
 
                 builder.build_return(Some(&dest));
@@ -383,7 +386,10 @@ impl<'a> Contract<'a> {
                 ).try_as_basic_value().left().unwrap().into_pointer_value();
 
                 // write length
-                builder.build_store(dest,
+                builder.build_store(
+                    builder.build_pointer_cast(dest,
+                        self.context.i32_type().ptr_type(AddressSpace::Generic),
+                        ""),
                     self.context.i32_type().const_int(32, false));
 
                 // malloc returns u8*
@@ -890,8 +896,8 @@ impl<'a> Contract<'a> {
                                 self.context.i32_type().const_int(*storage as u64, false).into(),
                                 builder.build_pointer_cast(dest,
                                     self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                                builder.build_bitcast(dest.get_type().size_of(),
-                                    self.context.i32_type(), "size").into()
+                                dest.get_type().size_of().const_cast(
+                                    self.context.i32_type(), false).into()
                             ],
                             "");
                     }
@@ -904,8 +910,8 @@ impl<'a> Contract<'a> {
                                 self.context.i32_type().const_int(*storage as u64, false).into(),
                                 builder.build_pointer_cast(dest,
                                     self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                                builder.build_bitcast(dest.get_type().size_of(),
-                                    self.context.i32_type(), "size").into()
+                                dest.get_type().size_of().const_cast(
+                                    self.context.i32_type(), false).into()
                             ],
                             "");
                     }
