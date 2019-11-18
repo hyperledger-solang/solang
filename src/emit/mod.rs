@@ -987,7 +987,7 @@ impl resolver::TypeName {
     }
 }
 
-static STDLIB_IR: &'static [u8] = include_bytes!("../stdlib/stdlib.bc");
+static STDLIB_IR: &'static [u8] = include_bytes!("../../stdlib/stdlib.bc");
 
 fn load_stdlib(context: &Context) -> Module {
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
