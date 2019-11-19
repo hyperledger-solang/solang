@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::collections::LinkedList;
 use unescape::unescape;
 
-use ast;
+use parser::ast;
 use hex;
 use output;
 use output::Output;

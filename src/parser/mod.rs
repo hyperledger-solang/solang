@@ -1,7 +1,8 @@
-use ast;
+pub mod ast;
+pub mod solidity;
+
 use lalrpop_util::ParseError;
 use output::Output;
-use solidity;
 
 pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
     // parse phase

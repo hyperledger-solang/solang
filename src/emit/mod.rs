@@ -1,5 +1,5 @@
 
-use ast;
+use parser::ast;
 use resolver;
 use resolver::cfg;
 use std::str;

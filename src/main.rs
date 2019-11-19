@@ -14,13 +14,11 @@ extern crate wasmi;
 extern crate inkwell;
 
 use clap::{App, Arg};
-mod ast;
 mod emit;
 mod link;
 mod output;
 mod parser;
 mod resolver;
-mod solidity;
 mod test;
 
 use serde::Serialize;

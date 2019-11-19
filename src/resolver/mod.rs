@@ -1,5 +1,5 @@
 
-use ast;
+use parser::ast;
 use output::{Note, Output};
 use serde::Serialize;
 use std::collections::HashMap;

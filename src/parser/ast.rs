@@ -378,7 +378,7 @@ impl Statement {
 #[cfg(test)]
 mod test {
     use super::*;
-    use solidity;
+    use parser::solidity;
 
     #[test]
     fn parse_test() {

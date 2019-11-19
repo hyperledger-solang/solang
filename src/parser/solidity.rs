@@ -1,8 +1,8 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: 6a92124102d652ea5457ffc7778167a483e5faf6f31173b86d87c672a8e5d52
+// sha256: 3256a684bd7eca0e6bbe52cc37391c66fda8cdcf19a55c4b75d50c43e1d17f6
 use std::str::FromStr;
 use num_bigint::BigInt;
-use ast::*;
+use parser::ast::*;
 use parser::box_option;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
@@ -15,7 +15,7 @@ mod __parse__SourceUnit {
 
     use std::str::FromStr;
     use num_bigint::BigInt;
-    use ast::*;
+    use parser::ast::*;
     use parser::box_option;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
@@ -15237,7 +15237,7 @@ mod __intern_token {
     #![allow(unused_imports)]
     use std::str::FromStr;
     use num_bigint::BigInt;
-    use ast::*;
+    use parser::ast::*;
     use parser::box_option;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
