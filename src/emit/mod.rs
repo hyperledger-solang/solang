@@ -1,6 +1,7 @@
+
 use ast;
-use cfg;
 use resolver;
+use resolver::cfg;
 use std::str;
 use std::path::Path;
 

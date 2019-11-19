@@ -15,7 +15,6 @@ extern crate inkwell;
 
 use clap::{App, Arg};
 mod ast;
-mod cfg;
 mod emit;
 mod link;
 mod output;
