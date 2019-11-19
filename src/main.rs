@@ -101,6 +101,8 @@ fn main() {
             .join(format!("{}.{}", stem, ext))
     };
 
+    let context = inkwell::context::Context::create();
+
     for filename in matches.values_of("INPUT").unwrap() {
         let mut f = File::open(&filename).expect("file not found");
 
@@ -152,7 +154,7 @@ fn main() {
 
             let abi = contract.generate_abi();
 
-            let contract = emit::Contract::new(contract, &filename);
+            let contract = emit::Contract::new(&context, contract, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {
                 contract.dump_llvm(&output_file(&contract.name, "ll")).unwrap();
