@@ -87,7 +87,7 @@ mod tests {
         }
     }
 
-    fn build_solidity(src: &'static str) -> (ModuleRef, ContractStorage, String) {
+    fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (ModuleRef, ContractStorage, String) {
         let s = parser::parse(src).expect("parse should succeed");
 
         // resolve
@@ -103,7 +103,7 @@ mod tests {
         let abi = contracts[0].generate_abi();
 
         // codegen
-        let contract = emit::Contract::new(&contracts[0], &"foo.sol");
+        let contract = emit::Contract::new(ctx, &contracts[0], &"foo.sol");
 
         let obj = contract.wasm("default").expect("llvm wasm emit should work");
 
@@ -125,8 +125,10 @@ mod tests {
 
     #[test]
     fn simple_solidiy_compile_and_run() {
+        let ctx = inkwell::context::Context::create();
+
         // parse
-        let (main, _, _) = build_solidity(
+        let (main, _, _) = build_solidity(&ctx,
             "
             contract test {
                 function foo() public returns (uint32) {
@@ -144,7 +146,9 @@ mod tests {
 
     #[test]
     fn simple_loops() {
-        let (main, _, _) = build_solidity(
+        let ctx = inkwell::context::Context::create();
+
+        let (main, _, _) = build_solidity(&ctx,
             r##"
 contract test3 {
 	function foo(uint32 a) public returns (uint32) {
@@ -250,7 +254,9 @@ contract test3 {
 
     #[test]
     fn stack_test() {
-        let (main, _, _) = build_solidity(
+        let ctx = inkwell::context::Context::create();
+
+        let (main, _, _) = build_solidity(&ctx,
             r##"
 contract test3 {
 	function foo() public returns (bool) {
@@ -271,7 +277,9 @@ contract test3 {
 
     #[test]
     fn abi_call_return_test() {
-        let (wasm, store, abi) = build_solidity(
+        let ctx = inkwell::context::Context::create();
+
+        let (wasm, store, abi) = build_solidity(&ctx,
             r##"
 contract test {
 	function foo() public returns (uint32) {
@@ -320,7 +328,9 @@ contract test {
 
     #[test]
     fn abi_call_pass_return_test() {
-        let (wasm, store, abi) = build_solidity(
+        let ctx = inkwell::context::Context::create();
+
+        let (wasm, store, abi) = build_solidity(&ctx,
             r##"
 contract test {
 	function foo(uint32 a) public returns (uint32) {
@@ -370,7 +380,9 @@ contract test {
 
     #[test]
     fn contract_storage_test() {
-        let (wasm, mut store, abi) = build_solidity(
+        let ctx = inkwell::context::Context::create();
+
+        let (wasm, mut store, abi) = build_solidity(&ctx,
             r##"
 contract test {
     uint32 foo;

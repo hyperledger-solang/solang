@@ -13,7 +13,7 @@ lalrpop = "0.17.0"
 [dependencies]
 lalrpop-util = "0.17.0"
 regex = "0.2.1"
-inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "llvm8-0" }
+inkwell = { git = "https://github.com/seanyoung/inkwell", branch = "llvm8-0" }
 num-bigint = "0.2"
 num-traits = "0.2.6"
 parity-wasm = "0.35"

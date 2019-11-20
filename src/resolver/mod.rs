@@ -1,9 +1,10 @@
 
-use ast;
-use cfg;
+use parser::ast;
 use output::{Note, Output};
 use serde::Serialize;
 use std::collections::HashMap;
+
+pub mod cfg;
 
 #[derive(Serialize)]
 pub struct ABIParam {

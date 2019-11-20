@@ -1,4 +1,4 @@
-use ast;
+use parser::ast;
 use serde::Serialize;
 
 #[derive(Debug, PartialEq)]

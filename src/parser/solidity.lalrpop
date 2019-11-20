@@ -1,7 +1,7 @@
 
 use std::str::FromStr;
 use num_bigint::BigInt;
-use ast::*;
+use parser::ast::*;
 use parser::box_option;
 
 grammar;
