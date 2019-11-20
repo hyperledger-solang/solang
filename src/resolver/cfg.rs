@@ -261,10 +261,7 @@ impl ControlFlowGraph {
 
                     s.join(", ")
                 },
-                match ns.functions[*func].name {
-                    Some(ref n) => n.to_owned(),
-                    None => "???".to_owned(),
-                },
+                ns.functions[*func].name.to_owned(),
                 {
                     let s: Vec<String> = args
                         .iter()

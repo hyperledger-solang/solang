@@ -49,6 +49,7 @@ pub struct Contract<'a> {
     context: &'a Context,
     target: Target,
     ns: &'a resolver::Contract,
+    constructors: Vec<Function<'a>>,
     functions: Vec<Function<'a>>,
     externals: HashMap<String, FunctionValue<'a>>,
 }
@@ -103,6 +104,7 @@ impl<'a> Contract<'a> {
             target: target,
             context: context,
             ns: contract,
+            constructors: Vec::new(),
             functions: Vec::new(),
             externals: HashMap::new(),
         };
@@ -110,8 +112,19 @@ impl<'a> Contract<'a> {
         // externals
         e.declare_externals();
 
+        e.constructors = contract.constructors.iter()
+            .map(|func| e.emit_func(&format!("sol::constructor::{}", func.wasm_symbol(&contract)), func))
+            .collect();
+
         for func in &contract.functions {
-            e.emit_func(func);
+            let name = if func.name != "" {
+                format!("sol::function::{}", func.wasm_symbol(&contract))
+            } else {
+                "sol::fallback".to_owned()
+            };
+
+            let f = e.emit_func(&name, func);
+            e.functions.push(f);
         }
 
         e.emit_constructor_dispatch(contract);
@@ -243,7 +256,7 @@ impl<'a> Contract<'a> {
             &[],
             "");
 
-        if let Some(n) = contract.constructor_function() {
+        if let Some(con) = contract.constructors.get(0) {
             let mut args = Vec::new();
 
             let arg = function.get_first_param().unwrap().into_pointer_value();
@@ -262,10 +275,10 @@ impl<'a> Contract<'a> {
                 &mut args,
                 args_ptr,
                 length.into_int_value(),
-                &contract.functions[n],
+                con,
             );
 
-            self.builder.build_call(self.functions[n].value_ref, &args, "");
+            self.builder.build_call(self.constructors[0].value_ref, &args, "");
         }
 
         self.builder.build_return(None);
@@ -278,8 +291,8 @@ impl<'a> Contract<'a> {
         let function = self.module.add_function("function", ftype, None);
 
         let entry = self.context.append_basic_block(function, "entry");
-        let fallback = self.context.append_basic_block(function, "fallback");
-        let switch = self.context.append_basic_block(function, "switch");
+        let fallback_block = self.context.append_basic_block(function, "fallback");
+        let switch_block = self.context.append_basic_block(function, "switch");
 
         self.builder.position_at_end(&entry);
 
@@ -292,9 +305,9 @@ impl<'a> Contract<'a> {
             self.context.i32_type().const_int(4, false).into(),
             "");
 
-        self.builder.build_conditional_branch(not_fallback, &switch, &fallback);
+        self.builder.build_conditional_branch(not_fallback, &switch_block, &fallback_block);
 
-        self.builder.position_at_end(&switch);
+        self.builder.position_at_end(&switch_block);
 
         let fid_ptr = unsafe {
             self.builder.build_gep(
@@ -327,12 +340,9 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (i, f) in contract.functions.iter().enumerate() {
-            // ignore constructors and fallback
-            if f.name == None {
-                continue;
-            }
+        let mut fallback = None;
 
+        for (i, f) in contract.functions.iter().enumerate() {
             match &f.visibility {
                 ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
                     continue;
@@ -340,7 +350,12 @@ impl<'a> Contract<'a> {
                 _ => (),
             }
 
-            let res = keccak256(f.sig.as_bytes());
+            if f.name == "" {
+                fallback = Some(i);
+                continue;
+            }
+
+            let res = keccak256(f.signature.as_bytes());
 
             let bb = self.context.append_basic_block(function, "");
             let id = u32::from_le_bytes([res[0], res[1], res[2], res[3]]);
@@ -414,7 +429,7 @@ impl<'a> Contract<'a> {
             cases.push((self.context.i32_type().const_int(id as u64, false), bb));
         }
 
-        self.builder.position_at_end(&switch);
+        self.builder.position_at_end(&switch_block);
 
         let mut c = Vec::new();
 
@@ -431,12 +446,12 @@ impl<'a> Contract<'a> {
         // FIXME: emit code for public contract variables
 
         // emit fallback code
-        self.builder.position_at_end(&fallback);
+        self.builder.position_at_end(&fallback_block);
 
-        match contract.fallback_function() {
-            Some(n) => {
+        match fallback {
+            Some(f) => {
                 self.builder.build_call(
-                    self.functions[n].value_ref,
+                    self.functions[f].value_ref,
                     &[],
                     "");
 
@@ -664,28 +679,18 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(&decode_block);
     }
 
-    fn emit_func(&mut self, f: &resolver::FunctionDecl) {
+    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl) -> Function<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
         let mut wasm_return = false;
 
         for p in &f.params {
-            let ty = p.ty.LLVMType(self.ns, &self.context);
+            let ty = p.ty.LLVMType(self.ns, self.context);
             args.push(if p.ty.stack_based() {
                 ty.ptr_type(AddressSpace::Generic).into()
             } else {
                 ty.into()
             });
         }
-
-        // FIXME: Substrate can have multiple overloaded constructors
-        // FIXME: Solidity can have multiple overloaded functions by the same name
-        let fname = if f.constructor {
-            "sol::__constructor".to_string()
-        } else if let Some(ref name) = f.name {
-            format!("sol::{}", name)
-        } else {
-            "sol::__fallback".to_string()
-        };
 
         let ftype = if f.returns.len() == 1 && !f.returns[0].ty.stack_based() {
             wasm_return = true;
@@ -931,10 +936,10 @@ impl<'a> Contract<'a> {
             }
         }
 
-        self.functions.push(Function {
+        Function {
             value_ref: function,
             wasm_return,
-        });
+        }
     }
 }
 

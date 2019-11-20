@@ -91,7 +91,7 @@ mod tests {
         let s = parser::parse(src).expect("parse should succeed");
 
         // resolve
-        let (contracts, errors) = resolver::resolver(s);
+        let (contracts, errors) = resolver::resolver(s, &resolver::Target::Burrow);
 
         if contracts.is_empty() {
             output::print_messages("test.sol", src, &errors, false);
@@ -138,7 +138,7 @@ mod tests {
         );
 
         let ret = main
-            .invoke_export("sol::foo", &[], &mut NopExternals)
+            .invoke_export("sol::function::foo", &[], &mut NopExternals)
             .expect("failed to call function");
 
         assert_eq!(ret, Some(RuntimeValue::I32(2)));
@@ -195,7 +195,7 @@ contract test3 {
             let res = ((50 - i) * 100 + 5) + i * 1000;
 
             let ret = main
-                .invoke_export("sol::foo", &[RuntimeValue::I32(i)], &mut NopExternals)
+                .invoke_export("sol::function::foo__uint32", &[RuntimeValue::I32(i)], &mut NopExternals)
                 .expect("failed to call function");
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
@@ -206,7 +206,7 @@ contract test3 {
 
             let ret = main
                 .invoke_export(
-                    "sol::bar",
+                    "sol::function::bar__uint32_bool",
                     &[RuntimeValue::I32(i), RuntimeValue::I32(1)],
                     &mut NopExternals,
                 )
@@ -224,7 +224,7 @@ contract test3 {
 
             let ret = main
                 .invoke_export(
-                    "sol::bar",
+                    "sol::function::bar__uint32_bool",
                     &[RuntimeValue::I32(i), RuntimeValue::I32(0)],
                     &mut NopExternals,
                 )
@@ -245,7 +245,7 @@ contract test3 {
             }
 
             let ret = main
-                .invoke_export("sol::baz", &[RuntimeValue::I32(i)], &mut NopExternals)
+                .invoke_export("sol::function::baz__uint32", &[RuntimeValue::I32(i)], &mut NopExternals)
                 .expect("failed to call function");
 
             assert_eq!(ret, Some(RuntimeValue::I32(res)));
@@ -269,7 +269,7 @@ contract test3 {
         );
 
         let ret = main
-            .invoke_export("sol::foo", &[], &mut NopExternals)
+            .invoke_export("sol::function::foo", &[], &mut NopExternals)
             .expect("failed to call function");
 
         assert_eq!(ret, Some(RuntimeValue::I32(1)));
