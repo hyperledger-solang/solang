@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 pub mod cfg;
 
+// FIXME: Burrow ABIs do not belong here
 #[derive(Serialize)]
 pub struct ABIParam {
     pub name: String,
@@ -24,6 +25,12 @@ pub struct ABI {
     pub payable: bool,
     #[serde(rename = "stateMutability")]
     pub mutability: &'static str,
+}
+
+#[derive(PartialEq, Clone)]
+pub enum Target {
+    Substrate,
+    Burrow
 }
 
 #[derive(PartialEq, Clone)]
@@ -96,15 +103,63 @@ impl Parameter {
 
 pub struct FunctionDecl {
     pub loc: ast::Loc,
-    pub constructor: bool,
-    pub name: Option<String>,
-    pub sig: String,
+    pub name: String,
+    pub signature: String,
     pub ast_index: usize,
     pub mutability: Option<ast::StateMutability>,
     pub visibility: ast::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
+}
+
+impl FunctionDecl {
+    fn new(loc: ast::Loc, name: String, ast_index: usize, mutability: Option<ast::StateMutability>,
+        visibility: ast::Visibility, params: Vec<Parameter>, returns: Vec<Parameter>, ns: &Contract) -> Self {
+        let mut signature = name.to_owned();
+
+        signature.push('(');
+    
+        for (i, p) in params.iter().enumerate() {
+            if i > 0 {
+                signature.push(',');
+            }
+    
+            signature.push_str(&match &p.ty {
+                TypeName::Elementary(e) => e.to_string(),
+                TypeName::Enum(i) => ns.enums[*i].ty.to_string(),
+                TypeName::Noreturn => unreachable!(),
+            });
+        }
+    
+        signature.push(')');
+
+        FunctionDecl{
+            loc, name, signature, ast_index, mutability, visibility, params, returns, cfg: None
+        }
+    }
+
+    pub fn wasm_symbol(&self, ns: &Contract) -> String {
+        let mut sig = self.name.to_owned();
+
+        if !self.params.is_empty() {
+            sig.push_str("__");
+
+            for (i, p) in self.params.iter().enumerate() {
+                if i > 0 {
+                    sig.push('_');
+                }
+
+                sig.push_str(&match &p.ty {
+                    TypeName::Elementary(e) => e.to_string(),
+                    TypeName::Enum(i) => ns.enums[*i].name.to_owned(),
+                    TypeName::Noreturn => unreachable!(),
+                });
+            }
+        }
+
+        sig
+    }
 }
 
 pub struct ContractVariable {
@@ -124,8 +179,10 @@ pub struct Contract {
     pub name: String,
     pub enums: Vec<EnumDecl>,
     // structs/events
+    pub constructors: Vec<FunctionDecl>,
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<ContractVariable>,
+    pub target: Target,
     top_of_contract_storage: usize,
     symbols: HashMap<String, Symbol>,
 }
@@ -293,16 +350,7 @@ impl Contract {
 
     pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
-            if !f.constructor && None == f.name {
-                return Some(i);
-            }
-        }
-        return None;
-    }
-
-    pub fn constructor_function(&self) -> Option<usize> {
-        for (i, f) in self.functions.iter().enumerate() {
-            if f.constructor {
+            if f.name == "" {
                 return Some(i);
             }
         }
@@ -312,37 +360,48 @@ impl Contract {
     pub fn generate_abi(&self) -> Vec<ABI> {
         let mut abis = Vec::new();
 
-        for f in &self.functions {
-            let (ty, name) = if f.constructor {
-                ("constructor".to_string(), "".to_string())
-            } else {
-                match &f.name {
-                    Some(n) => ("function".to_string(), n.to_string()),
-                    None => ("fallback".to_string(), "".to_string()),
-                }
-            };
-
-            let constant = match &f.cfg {
-                Some(cfg) => !cfg.writes_contract_storage,
-                None => false,
-            };
-
-            let mutability = match &f.mutability {
-                Some(n) => n.to_string(),
-                None => "nonpayable",
-            };
-
-            let payable = match &f.mutability {
-                Some(ast::StateMutability::Payable(_)) => true,
-                _ => false,
-            };
-
+        for f in &self.constructors {
             abis.push(ABI {
-                name,
-                constant,
-                mutability,
-                payable,
-                ty,
+                name: "".to_owned(),
+                constant: match &f.cfg {
+                    Some(cfg) => !cfg.writes_contract_storage,
+                    None => false,
+                },
+                mutability: match &f.mutability {
+                    Some(n) => n.to_string(),
+                    None => "nonpayable",
+                },
+                payable: match &f.mutability {
+                    Some(ast::StateMutability::Payable(_)) => true,
+                    _ => false,
+                },
+                ty: "constructor".to_owned(),
+                inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
+                outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
+            })
+
+        }
+
+        for f in &self.functions {
+            abis.push(ABI {
+                name: f.name.to_owned(),
+                constant: match &f.cfg {
+                    Some(cfg) => !cfg.writes_contract_storage,
+                    None => false,
+                },
+                mutability: match &f.mutability {
+                    Some(n) => n.to_string(),
+                    None => "nonpayable",
+                },
+                payable: match &f.mutability {
+                    Some(ast::StateMutability::Payable(_)) => true,
+                    _ => false,
+                },
+                ty: if f.name == "" {
+                    "fallback".to_owned()
+                } else {
+                    "function".to_owned()
+                },
                 inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
                 outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
             })
@@ -354,11 +413,19 @@ impl Contract {
     pub fn to_string(&self) -> String {
         let mut s = format!("#\n# Contract: {}\n", self.name);
 
+        for f in &self.constructors {
+            s.push_str(&format!("# constructor {}\n", f.signature));
+
+            if let Some(ref cfg) = f.cfg {
+                s.push_str(&cfg.to_string(self));
+            }
+        }
+
         for f in &self.functions {
-            if let Some(ref name) = f.name {
-                s.push_str(&format!("# function {}\n", name));
+            if f.name != "" {
+                s.push_str(&format!("# function {}\n", f.signature));
             } else {
-                s.push_str(&format!("# constructor\n"));
+                s.push_str(&format!("# fallback\n"));
             }
 
             if let Some(ref cfg) = f.cfg {
@@ -370,13 +437,13 @@ impl Contract {
     }
 }
 
-pub fn resolver(s: ast::SourceUnit) -> (Vec<Contract>, Vec<Output>) {
+pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Output>) {
     let mut contracts = Vec::new();
     let mut errors = Vec::new();
 
     for part in s.0 {
         if let ast::SourceUnitPart::ContractDefinition(def) = part {
-            if let Some(c) = resolve_contract(def, &mut errors) {
+            if let Some(c) = resolve_contract(def, &target, &mut errors) {
                 contracts.push(c)
             }
         }
@@ -387,13 +454,16 @@ pub fn resolver(s: ast::SourceUnit) -> (Vec<Contract>, Vec<Output>) {
 
 fn resolve_contract(
     def: Box<ast::ContractDefinition>,
+    target: &Target,
     errors: &mut Vec<Output>,
 ) -> Option<Contract> {
     let mut ns = Contract {
         name: def.name.name.to_string(),
         enums: Vec::new(),
+        constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
+        target: target.clone(),
         top_of_contract_storage: 0,
         symbols: HashMap::new(),
     };
@@ -434,6 +504,17 @@ fn resolve_contract(
         if let ast::ContractPart::ContractVariableDefinition(ref s) = parts {
             if !var_decl(s, &mut ns, errors) {
                 broken = true;
+            }
+        }
+    }
+
+    // resolve constructor bodies
+    for f in 0..ns.constructors.len() {
+        let ast_index = ns.constructors[f].ast_index;
+        if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
+            match cfg::generate_cfg(ast_f, &ns.constructors[f], &ns, errors) {
+                Ok(c) =>  ns.constructors[f].cfg = Some(c),
+                Err(_) => broken = true
             }
         }
     }
@@ -495,7 +576,7 @@ fn resolve_contract(
                     }
                     ns.functions[f].cfg = Some(c);
                 }
-                Err(_) => broken = true,
+                Err(_) => broken = true
             }
         }
     }
@@ -717,6 +798,7 @@ fn func_decl(
     }
 
     for r in &f.returns {
+        // FIXME: these should be allowed
         if let Some(ref n) = r.name {
             errors.push(Output::warning(
                 n.loc,
@@ -772,6 +854,26 @@ fn func_decl(
         }
     }
 
+    if f.constructor {
+        match mutability {
+            Some(ast::StateMutability::Pure(loc)) => {
+                errors.push(Output::error(
+                    loc,
+                    format!("constructor cannot be declared pure"),
+                ));
+                success = false;
+            },
+            Some(ast::StateMutability::View(loc)) => {
+                errors.push(Output::error(
+                    loc,
+                    format!("constructor cannot be declared view"),
+                ));
+                success = false;
+            },
+            _ => ()
+        }
+    }
+
     if visibility == None {
         errors.push(Output::error(
             f.loc,
@@ -780,34 +882,21 @@ fn func_decl(
         success = false;
     }
 
-    // FIXME: check visibility of constructor.
-
     if !success {
         return false;
     }
 
     let name = match f.name {
-        Some(ref n) => Some(n.name.to_string()),
-        None => None,
+        Some(ref n) => n.name.to_owned(),
+        None => "".to_owned()
     };
 
-    let fdecl = FunctionDecl {
-        loc: f.loc,
-        sig: external_signature(&name, &params, &ns),
-        name: name,
-        mutability,
-        visibility: visibility.unwrap(),
-        constructor: f.constructor,
-        ast_index: i,
-        params,
-        returns,
-        cfg: None,
-    };
+    let fdecl = FunctionDecl::new(f.loc, name, i, mutability, visibility.unwrap(), params, returns, &ns);
 
     if f.constructor {
-        // fallback function
-        if let Some(i) = ns.constructor_function() {
-            let prev = &ns.functions[i];
+        // In the eth solidity, only one constructor is allowed
+        if ns.target == Target::Burrow && !ns.constructors.is_empty() {
+            let prev = &ns.constructors[i];
             errors.push(Output::error_with_note(
                 f.loc,
                 "constructor already defined".to_string(),
@@ -817,14 +906,39 @@ fn func_decl(
             return false;
         }
 
-        ns.functions.push(fdecl);
+        // FIXME: Internal visibility is allowed on inherented contract, but we don't support those yet
+        match fdecl.visibility {
+            ast::Visibility::Public(_) => (),
+            _ => {
+                errors.push(Output::error(
+                    f.loc,
+                    "constructor function must be declared public".to_owned()
+                ));
+                return false;
+            }
+        }
+
+        for v in ns.constructors.iter() {
+            if v.signature == fdecl.signature {
+                errors.push(Output::error_with_note(
+                    f.loc,
+                    "constructor with this signature already exists".to_string(),
+                    v.loc,
+                    "location of previous definition".to_string(),
+                ));
+
+                return false;
+            }
+        }
+
+        ns.constructors.push(fdecl);
 
         true
     } else if let Some(ref id) = f.name {
         if let Some(Symbol::Function(ref mut v)) = ns.symbols.get_mut(&id.name) {
             // check if signature already present
             for o in v.iter() {
-                if fdecl.sig == ns.functions[o.1].sig {
+                if ns.functions[o.1].signature == fdecl.signature {
                     errors.push(Output::error_with_note(
                         f.loc,
                         "overloaded function with this signature already exist".to_string(),
@@ -852,6 +966,7 @@ fn func_decl(
         // fallback function
         if let Some(i) = ns.fallback_function() {
             let prev = &ns.functions[i];
+            
             errors.push(Output::error_with_note(
                 f.loc,
                 "fallback function already defined".to_string(),
@@ -861,35 +976,20 @@ fn func_decl(
             return false;
         }
 
+        if let ast::Visibility::External(_) = fdecl.visibility {
+            // ok
+        } else {
+            errors.push(Output::error(
+                f.loc,
+                "fallback function must be declared external".to_owned()
+            ));
+            return false;
+        }
+        
         ns.functions.push(fdecl);
 
         true
     }
-}
-
-pub fn external_signature(name: &Option<String>, params: &Vec<Parameter>, ns: &Contract) -> String {
-    let mut sig = match name {
-        Some(ref n) => n.to_string(),
-        None => "".to_string(),
-    };
-
-    sig.push('(');
-
-    for (i, p) in params.iter().enumerate() {
-        if i > 0 {
-            sig.push(',');
-        }
-
-        sig.push_str(&match &p.ty {
-            TypeName::Elementary(e) => e.to_string(),
-            TypeName::Enum(i) => ns.enums[*i].ty.to_string(),
-            TypeName::Noreturn => unreachable!(),
-        });
-    }
-
-    sig.push(')');
-
-    sig
 }
 
 #[test]
@@ -897,27 +997,26 @@ fn signatures() {
     let ns = Contract {
         name: String::from("foo"),
         enums: Vec::new(),
+        constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
+        target: crate::resolver::Target::Burrow,
         top_of_contract_storage: 0,
         symbols: HashMap::new(),
     };
 
-    assert_eq!(
-        external_signature(
-            &Some("foo".to_string()),
-            &vec!(
-                Parameter {
-                    name: "".to_string(),
-                    ty: TypeName::Elementary(ast::ElementaryTypeName::Uint(8))
-                },
-                Parameter {
-                    name: "".to_string(),
-                    ty: TypeName::Elementary(ast::ElementaryTypeName::Address)
-                },
-            ),
-            &ns
-        ),
-        "foo(uint8,address)"
-    );
+    let fdecl = FunctionDecl::new(
+        ast::Loc(0, 0), "foo".to_owned(), 0, None, ast::Visibility::Public(ast::Loc(0, 0)),
+        vec!(
+            Parameter {
+                name: "".to_string(),
+                ty: TypeName::Elementary(ast::ElementaryTypeName::Uint(8))
+            },
+            Parameter {
+                name: "".to_string(),
+                ty: TypeName::Elementary(ast::ElementaryTypeName::Address)
+            },
+        ), Vec::new(), &ns);
+
+    assert_eq!(fdecl.signature, "foo(uint8,address)");
 }

@@ -71,6 +71,14 @@ fn main() {
                 .default_value("default"),
         )
         .arg(
+            Arg::with_name("TARGET")
+                .help("Target to build for")
+                .long("target")
+                .takes_value(true)
+                .possible_values(&["substrate", "burrow"])
+                .default_value("substrate")
+        )
+        .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
                 .long("standard-json")
@@ -102,6 +110,11 @@ fn main() {
     };
 
     let context = inkwell::context::Context::create();
+    let target = match matches.value_of("TARGET") {
+        Some("substrate") => resolver::Target::Substrate,
+        Some("burrow") => resolver::Target::Burrow,
+        _ => unreachable!()
+    };
 
     for filename in matches.values_of("INPUT").unwrap() {
         let mut f = File::open(&filename).expect("file not found");
@@ -110,7 +123,7 @@ fn main() {
         f.read_to_string(&mut contents)
             .expect("something went wrong reading the file");
 
-        let past = match parser::parse(&contents) {
+        let ast = match parser::parse(&contents) {
             Ok(s) => s,
             Err(errors) => {
                 if matches.is_present("STD-JSON") {
@@ -130,7 +143,7 @@ fn main() {
         };
 
         // resolve phase
-        let (contracts, errors) = resolver::resolver(past);
+        let (contracts, errors) = resolver::resolver(ast, &target);
 
         if matches.is_present("STD-JSON") {
             let mut out = output::message_as_json(filename, &contents, &errors);
