@@ -11,7 +11,7 @@
 FROM ubuntu:18.04 as builder
 MAINTAINER Sean Young <sean@mess.org>
 RUN apt-get update
-RUN apt-get install -y cargo llvm-8-dev clang-8 libz-dev pkg-config
+RUN apt-get install -y cargo llvm-8-dev clang-8 libz-dev pkg-config libssl-dev
 
 COPY src src/src/
 COPY stdlib src/stdlib/
