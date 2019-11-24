@@ -120,12 +120,12 @@ pub fn function_decl(
         return false;
     }
 
-    let name = match f.name {
-        Some(ref n) => n.name.to_owned(),
-        None => "".to_owned()
+    let (name, fallback) = match f.name {
+        Some(ref n) => (n.name.to_owned(), false),
+        None => ("".to_owned(), !f.constructor),
     };
 
-    let fdecl = FunctionDecl::new(f.loc, name, i, mutability, visibility.unwrap(), params, returns, &ns);
+    let fdecl = FunctionDecl::new(f.loc, name, fallback, i, mutability, visibility.unwrap(), params, returns, &ns);
 
     if f.constructor {
         // In the eth solidity, only one constructor is allowed
@@ -260,7 +260,7 @@ fn signatures() {
     };
 
     let fdecl = FunctionDecl::new(
-        ast::Loc(0, 0), "foo".to_owned(), 0, None, ast::Visibility::Public(ast::Loc(0, 0)),
+        ast::Loc(0, 0), "foo".to_owned(), false, 0, None, ast::Visibility::Public(ast::Loc(0, 0)),
         vec!(
             Parameter {
                 name: "".to_string(),

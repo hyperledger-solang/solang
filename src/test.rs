@@ -103,7 +103,7 @@ mod tests {
         let abi = contracts[0].generate_abi();
 
         // codegen
-        let contract = emit::burrow::BurrowTarget::build(ctx, &contracts[0], &"foo.sol");
+        let contract = emit::Contract::build(ctx, &contracts[0], &"foo.sol");
 
         let obj = contract.wasm("default").expect("llvm wasm emit should work");
 
