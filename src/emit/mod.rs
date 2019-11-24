@@ -24,6 +24,8 @@ use inkwell::IntPredicate;
 
 const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
+pub mod burrow;
+
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
         Target::initialize_webassembly(&Default::default());
@@ -40,6 +42,11 @@ struct Variable<'a> {
 struct Function<'a> {
     value_ref: FunctionValue<'a>,
     wasm_return: bool,
+}
+
+pub trait TargetRuntime {
+    fn set_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>);
+    fn get_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>);
 }
 
 pub struct Contract<'a> {
@@ -97,7 +104,7 @@ impl<'a> Contract<'a> {
         let intr = load_stdlib(&context);
         module.link_in_module(intr).unwrap();
 
-        let mut e = Contract {
+        Contract {
             name: contract.name.to_owned(),
             module: module,
             builder: context.create_builder(),
@@ -107,46 +114,24 @@ impl<'a> Contract<'a> {
             constructors: Vec::new(),
             functions: Vec::new(),
             externals: HashMap::new(),
-        };
+        }
+    }
 
-        // externals
-        e.declare_externals();
-
-        e.constructors = contract.constructors.iter()
-            .map(|func| e.emit_func(&format!("sol::constructor::{}", func.wasm_symbol(&contract)), func))
+    fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
+        self.constructors = self.ns.constructors.iter()
+            .map(|func| self.emit_func(&format!("sol::constructor::{}", func.wasm_symbol(&self.ns)), func, runtime))
             .collect();
 
-        for func in &contract.functions {
+        for func in &self.ns.functions {
             let name = if func.name != "" {
-                format!("sol::function::{}", func.wasm_symbol(&contract))
+                format!("sol::function::{}", func.wasm_symbol(&self.ns))
             } else {
                 "sol::fallback".to_owned()
             };
 
-            let f = e.emit_func(&name, func);
-            e.functions.push(f);
+            let f = self.emit_func(&name, func, runtime);
+            self.functions.push(f);
         }
-
-        e.emit_constructor_dispatch(contract);
-        e.emit_function_dispatch(contract);
-
-        e
-    }
-
-    fn declare_externals(&mut self) {
-        let ret = self.context.void_type();
-        let args: Vec<BasicTypeEnum> = vec![
-            self.context.i32_type().into(),
-            self.context.i8_type().ptr_type(AddressSpace::Generic).into(),
-            self.context.i32_type().into(),
-        ];
-
-        let ftype = ret.fn_type(&args, false);
-        let func = self.module.add_function("get_storage32", ftype, Some(Linkage::External));
-        self.externals.insert("get_storage32".to_owned(), func);
-
-        let func = self.module.add_function("set_storage32", ftype, Some(Linkage::External));
-        self.externals.insert("set_storage32".to_owned(), func);
     }
 
     fn expression(
@@ -238,50 +223,6 @@ impl<'a> Contract<'a> {
                 panic!("expression not implemented");
             }
         }
-    }
-
-    fn emit_constructor_dispatch(&self, contract: &resolver::Contract) {
-        // create start function
-        let ret = self.context.void_type();
-        let ftype = ret.fn_type(&[self.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = self.module.add_function("constructor", ftype, None);
-
-        let entry = self.context.append_basic_block(function, "entry");
-
-        self.builder.position_at_end(&entry);
-
-        // init our heap
-        self.builder.build_call(
-            self.module.get_function("__init_heap").unwrap(),
-            &[],
-            "");
-
-        if let Some(con) = contract.constructors.get(0) {
-            let mut args = Vec::new();
-
-            let arg = function.get_first_param().unwrap().into_pointer_value();
-            let length = self.builder.build_load(arg, "length");
-
-            // step over length
-            let args_ptr = unsafe {
-                self.builder.build_gep(arg,
-                    &[self.context.i32_type().const_int(1, false).into()],
-                    "args_ptr")
-            };
-
-            // insert abi decode
-            self.emit_abi_decode(
-                function,
-                &mut args,
-                args_ptr,
-                length.into_int_value(),
-                con,
-            );
-
-            self.builder.build_call(self.constructors[0].value_ref, &args, "");
-        }
-
-        self.builder.build_return(None);
     }
 
     fn emit_function_dispatch(&self, contract: &resolver::Contract) {
@@ -679,7 +620,7 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(&decode_block);
     }
 
-    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl) -> Function<'a> {
+    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl, runtime: &dyn TargetRuntime) -> Function<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
         let mut wasm_return = false;
 
@@ -892,30 +833,12 @@ impl<'a> Contract<'a> {
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        self.builder.build_call(
-                            self.externals["get_storage32"],
-                            &[
-                                self.context.i32_type().const_int(*storage as u64, false).into(),
-                                self.builder.build_pointer_cast(dest,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                                dest.get_type().size_of().const_cast(
-                                    self.context.i32_type(), false).into()
-                            ],
-                            "");
+                        runtime.get_storage(&self, *storage as u32, dest);
                     }
                     cfg::Instr::SetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        self.builder.build_call(
-                            self.externals["set_storage32"],
-                            &[
-                                self.context.i32_type().const_int(*storage as u64, false).into(),
-                                self.builder.build_pointer_cast(dest,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                                dest.get_type().size_of().const_cast(
-                                    self.context.i32_type(), false).into()
-                            ],
-                            "");
+                        runtime.set_storage(&self, *storage as u32, dest);
                     }
                     cfg::Instr::Call { res, func, args } => {
                         let mut parms: Vec<BasicValueEnum> = Vec::new();

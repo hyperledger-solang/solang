@@ -167,7 +167,7 @@ fn main() {
 
             let abi = contract.generate_abi();
 
-            let contract = emit::Contract::new(&context, contract, &filename);
+            let contract = emit::burrow::BurrowTarget::build(&context, contract, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {
                 contract.dump_llvm(&output_file(&contract.name, "ll")).unwrap();
