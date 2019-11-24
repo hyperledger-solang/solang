@@ -105,6 +105,7 @@ impl Parameter {
 pub struct FunctionDecl {
     pub loc: ast::Loc,
     pub name: String,
+    pub fallback: bool,
     pub signature: String,
     pub ast_index: usize,
     pub mutability: Option<ast::StateMutability>,
@@ -115,7 +116,7 @@ pub struct FunctionDecl {
 }
 
 impl FunctionDecl {
-    fn new(loc: ast::Loc, name: String, ast_index: usize, mutability: Option<ast::StateMutability>,
+    fn new(loc: ast::Loc, name: String, fallback: bool, ast_index: usize, mutability: Option<ast::StateMutability>,
         visibility: ast::Visibility, params: Vec<Parameter>, returns: Vec<Parameter>, ns: &Contract) -> Self {
         let mut signature = name.to_owned();
 
@@ -136,7 +137,7 @@ impl FunctionDecl {
         signature.push(')');
 
         FunctionDecl{
-            loc, name, signature, ast_index, mutability, visibility, params, returns, cfg: None
+            loc, name, fallback, signature, ast_index, mutability, visibility, params, returns, cfg: None
         }
     }
 
@@ -351,7 +352,7 @@ impl Contract {
 
     pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
-            if f.name == "" {
+            if f.fallback {
                 return Some(i);
             }
         }

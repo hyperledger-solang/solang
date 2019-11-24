@@ -24,6 +24,9 @@ use inkwell::IntPredicate;
 
 const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
+mod burrow;
+mod substrate;
+
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
         Target::initialize_webassembly(&Default::default());
@@ -42,6 +45,31 @@ struct Function<'a> {
     wasm_return: bool,
 }
 
+pub trait TargetRuntime {
+    //
+    fn set_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>);
+    fn get_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>);
+    
+    fn abi_decode<'b>(
+        &self,
+        contract: &'b Contract,
+        function: FunctionValue,
+        args: &mut Vec<BasicValueEnum<'b>>,
+        data: PointerValue<'b>,
+        length: IntValue,
+        spec: &resolver::FunctionDecl,
+    );
+    fn abi_encode<'b>(
+        &self,
+        contract: &'b Contract,
+        args: &[BasicValueEnum<'b>],
+        spec: &resolver::FunctionDecl,
+    ) -> (PointerValue<'b>, IntValue<'b>);
+
+    fn return_empty_abi(&self, contract: &Contract);
+    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue);
+}
+
 pub struct Contract<'a> {
     pub name: String,
     pub module: Module<'a>,
@@ -51,10 +79,16 @@ pub struct Contract<'a> {
     ns: &'a resolver::Contract,
     constructors: Vec<Function<'a>>,
     functions: Vec<Function<'a>>,
-    externals: HashMap<String, FunctionValue<'a>>,
 }
 
 impl<'a> Contract<'a> {
+    pub fn build(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Self {
+        match contract.target {
+            resolver::Target::Burrow => burrow::BurrowTarget::build(context, contract, filename),
+            resolver::Target::Substrate => substrate::SubstrateTarget::build(context, contract, filename),
+        }
+    }
+
     pub fn wasm(&self, opt: &str) -> Result<Vec<u8>, String> {
         let opt = match opt {
             "none" => OptimizationLevel::None,
@@ -97,7 +131,7 @@ impl<'a> Contract<'a> {
         let intr = load_stdlib(&context);
         module.link_in_module(intr).unwrap();
 
-        let mut e = Contract {
+        Contract {
             name: contract.name.to_owned(),
             module: module,
             builder: context.create_builder(),
@@ -106,47 +140,24 @@ impl<'a> Contract<'a> {
             ns: contract,
             constructors: Vec::new(),
             functions: Vec::new(),
-            externals: HashMap::new(),
-        };
+        }
+    }
 
-        // externals
-        e.declare_externals();
-
-        e.constructors = contract.constructors.iter()
-            .map(|func| e.emit_func(&format!("sol::constructor::{}", func.wasm_symbol(&contract)), func))
+    fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
+        self.constructors = self.ns.constructors.iter()
+            .map(|func| self.emit_func(&format!("sol::constructor::{}", func.wasm_symbol(&self.ns)), func, runtime))
             .collect();
 
-        for func in &contract.functions {
+        for func in &self.ns.functions {
             let name = if func.name != "" {
-                format!("sol::function::{}", func.wasm_symbol(&contract))
+                format!("sol::function::{}", func.wasm_symbol(&self.ns))
             } else {
                 "sol::fallback".to_owned()
             };
 
-            let f = e.emit_func(&name, func);
-            e.functions.push(f);
+            let f = self.emit_func(&name, func, runtime);
+            self.functions.push(f);
         }
-
-        e.emit_constructor_dispatch(contract);
-        e.emit_function_dispatch(contract);
-
-        e
-    }
-
-    fn declare_externals(&mut self) {
-        let ret = self.context.void_type();
-        let args: Vec<BasicTypeEnum> = vec![
-            self.context.i32_type().into(),
-            self.context.i8_type().ptr_type(AddressSpace::Generic).into(),
-            self.context.i32_type().into(),
-        ];
-
-        let ftype = ret.fn_type(&args, false);
-        let func = self.module.add_function("get_storage32", ftype, Some(Linkage::External));
-        self.externals.insert("get_storage32".to_owned(), func);
-
-        let func = self.module.add_function("set_storage32", ftype, Some(Linkage::External));
-        self.externals.insert("set_storage32".to_owned(), func);
     }
 
     fn expression(
@@ -240,446 +251,7 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_constructor_dispatch(&self, contract: &resolver::Contract) {
-        // create start function
-        let ret = self.context.void_type();
-        let ftype = ret.fn_type(&[self.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = self.module.add_function("constructor", ftype, None);
-
-        let entry = self.context.append_basic_block(function, "entry");
-
-        self.builder.position_at_end(&entry);
-
-        // init our heap
-        self.builder.build_call(
-            self.module.get_function("__init_heap").unwrap(),
-            &[],
-            "");
-
-        if let Some(con) = contract.constructors.get(0) {
-            let mut args = Vec::new();
-
-            let arg = function.get_first_param().unwrap().into_pointer_value();
-            let length = self.builder.build_load(arg, "length");
-
-            // step over length
-            let args_ptr = unsafe {
-                self.builder.build_gep(arg,
-                    &[self.context.i32_type().const_int(1, false).into()],
-                    "args_ptr")
-            };
-
-            // insert abi decode
-            self.emit_abi_decode(
-                function,
-                &mut args,
-                args_ptr,
-                length.into_int_value(),
-                con,
-            );
-
-            self.builder.build_call(self.constructors[0].value_ref, &args, "");
-        }
-
-        self.builder.build_return(None);
-    }
-
-    fn emit_function_dispatch(&self, contract: &resolver::Contract) {
-        // create start function
-        let ret = self.context.i32_type().ptr_type(AddressSpace::Generic);
-        let ftype = ret.fn_type(&[self.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = self.module.add_function("function", ftype, None);
-
-        let entry = self.context.append_basic_block(function, "entry");
-        let fallback_block = self.context.append_basic_block(function, "fallback");
-        let switch_block = self.context.append_basic_block(function, "switch");
-
-        self.builder.position_at_end(&entry);
-
-        let arg = function.get_first_param().unwrap().into_pointer_value();
-        let length = self.builder.build_load(arg, "length").into_int_value();
-
-        let not_fallback = self.builder.build_int_compare(
-            IntPredicate::UGE,
-            length,
-            self.context.i32_type().const_int(4, false).into(),
-            "");
-
-        self.builder.build_conditional_branch(not_fallback, &switch_block, &fallback_block);
-
-        self.builder.position_at_end(&switch_block);
-
-        let fid_ptr = unsafe {
-            self.builder.build_gep(
-                arg,
-                &[self.context.i32_type().const_int(1, false).into()],
-                "fid_ptr")
-        };
-
-        let fid = self.builder.build_load(fid_ptr, "fid");
-
-        // pointer/size for abi decoding
-        let args_ptr = unsafe {
-            self.builder.build_gep(
-                arg,
-                &[self.context.i32_type().const_int(2, false).into()],
-                "fid_ptr")
-        };
-
-        let args_len = self.builder.build_int_sub(
-            length.into(),
-            self.context.i32_type().const_int(4, false).into(),
-            "args_len"
-        );
-
-        let nomatch = self.context.append_basic_block(function, "nomatch");
-
-        self.builder.position_at_end(&nomatch);
-
-        self.builder.build_unreachable();
-
-        let mut cases = Vec::new();
-
-        let mut fallback = None;
-
-        for (i, f) in contract.functions.iter().enumerate() {
-            match &f.visibility {
-                ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
-                    continue;
-                }
-                _ => (),
-            }
-
-            if f.name == "" {
-                fallback = Some(i);
-                continue;
-            }
-
-            let res = keccak256(f.signature.as_bytes());
-
-            let bb = self.context.append_basic_block(function, "");
-            let id = u32::from_le_bytes([res[0], res[1], res[2], res[3]]);
-
-            self.builder.position_at_end(&bb);
-
-            let mut args = Vec::new();
-
-            // insert abi decode
-            self.emit_abi_decode(function, &mut args, args_ptr, args_len, f);
-
-            let ret = self.builder.build_call(
-                self.functions[i].value_ref,
-                &args,
-                "").try_as_basic_value().left();
-
-            if f.returns.is_empty() {
-                // return ABI of length 0
-
-                // malloc 4 bytes
-                let dest = self.builder.build_call(
-                    self.module.get_function("__malloc").unwrap(),
-                    &[self.context.i32_type().const_int(4, false).into()],
-                    ""
-                ).try_as_basic_value().left().unwrap().into_pointer_value();
-
-                self.builder.build_store(
-                    self.builder.build_pointer_cast(dest,
-                        self.context.i32_type().ptr_type(AddressSpace::Generic),
-                        ""),
-                    self.context.i32_type().const_zero());
-
-                self.builder.build_return(Some(&dest));
-            } else if self.functions[i].wasm_return {
-                // malloc 36 bytes
-                let dest = self.builder.build_call(
-                    self.module.get_function("__malloc").unwrap(),
-                    &[self.context.i32_type().const_int(36, false).into()],
-                    ""
-                ).try_as_basic_value().left().unwrap().into_pointer_value();
-
-                // write length
-                self.builder.build_store(
-                    self.builder.build_pointer_cast(dest,
-                        self.context.i32_type().ptr_type(AddressSpace::Generic),
-                        ""),
-                    self.context.i32_type().const_int(32, false));
-
-                // malloc returns u8*
-                let abi_ptr = unsafe {
-                    self.builder.build_gep(
-                        dest,
-                        &[ self.context.i32_type().const_int(4, false).into()],
-                        "abi_ptr")
-                };
-
-                // insert abi decode
-                let ty = match &f.returns[0].ty {
-                    resolver::TypeName::Elementary(e) => e,
-                    resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty,
-                    resolver::TypeName::Noreturn => unreachable!(),
-                };
-
-                self.emit_abi_encode_single_val(&ty, abi_ptr, ret.unwrap().into_int_value());
-
-                self.builder.build_return(Some(&dest));
-            } else {
-                // FIXME: abi encode all the arguments
-            }
-
-            cases.push((self.context.i32_type().const_int(id as u64, false), bb));
-        }
-
-        self.builder.position_at_end(&switch_block);
-
-        let mut c = Vec::new();
-
-        for (id, bb) in cases.iter() {
-            c.push((*id, bb));
-        }
-
-        //let c = cases.into_iter().map(|(id, bb)| (id, &bb)).collect();
-
-        self.builder.build_switch(
-            fid.into_int_value(), &nomatch,
-            &c);
-
-        // FIXME: emit code for public contract variables
-
-        // emit fallback code
-        self.builder.position_at_end(&fallback_block);
-
-        match fallback {
-            Some(f) => {
-                self.builder.build_call(
-                    self.functions[f].value_ref,
-                    &[],
-                    "");
-
-                self.builder.build_return(None);
-            }
-            None => {
-                self.builder.build_unreachable();
-            },
-        }
-    }
-
-    fn emit_abi_encode_single_val(
-        &self,
-        ty: &ast::ElementaryTypeName,
-        dest: PointerValue,
-        val: IntValue,
-    ) {
-        match ty {
-            ast::ElementaryTypeName::Bool => {
-                // first clear
-                let dest8 = self.builder.build_pointer_cast(dest,
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid");
-
-                self.builder.build_call(
-                    self.module.get_function("__bzero8").unwrap(),
-                    &[ dest8.into(),
-                       self.context.i32_type().const_int(4, false).into() ],
-                    "");
-
-                let value = self.builder.build_select(val,
-                    self.context.i8_type().const_int(1, false),
-                    self.context.i8_type().const_zero(),
-                    "bool_val");
-
-                let dest = unsafe {
-                    self.builder.build_gep(
-                        dest8,
-                        &[ self.context.i32_type().const_int(31, false).into() ],
-                        "")
-                };
-
-                self.builder.build_store(dest, value);
-            }
-            ast::ElementaryTypeName::Int(8) | ast::ElementaryTypeName::Uint(8) => {
-                let signval = if let ast::ElementaryTypeName::Int(8) = ty {
-                    let negative = self.builder.build_int_compare(IntPredicate::SLT,
-                            val, self.context.i8_type().const_zero(), "neg");
-
-                            self.builder.build_select(negative,
-                        self.context.i64_type().const_zero(),
-                        self.context.i64_type().const_int(std::u64::MAX, true),
-                        "val").into_int_value()
-                } else {
-                    self.context.i64_type().const_zero()
-                };
-
-                let dest8 = self.builder.build_pointer_cast(dest,
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid");
-
-                    self.builder.build_call(
-                    self.module.get_function("__memset8").unwrap(),
-                    &[ dest8.into(), signval.into(),
-                       self.context.i32_type().const_int(4, false).into() ],
-                    "");
-
-                let dest = unsafe {
-                    self.builder.build_gep(
-                        dest8,
-                        &[ self.context.i32_type().const_int(31, false).into() ],
-                        "")
-                };
-
-                self.builder.build_store(dest, val);
-            }
-            ast::ElementaryTypeName::Uint(n) | ast::ElementaryTypeName::Int(n) => {
-                // first clear/set the upper bits
-                if *n < 256 {
-                    let signval = if let ast::ElementaryTypeName::Int(8) = ty {
-                        let negative = self.builder.build_int_compare(IntPredicate::SLT,
-                                val, self.context.i8_type().const_zero(), "neg");
-
-                        self.builder.build_select(negative,
-                            self.context.i64_type().const_zero(),
-                            self.context.i64_type().const_int(std::u64::MAX, true),
-                            "val").into_int_value()
-                    } else {
-                        self.context.i64_type().const_zero()
-                    };
-
-                    let dest8 = self.builder.build_pointer_cast(dest,
-                        self.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "destvoid");
-
-                    self.builder.build_call(
-                        self.module.get_function("__memset8").unwrap(),
-                        &[ dest8.into(), signval.into(),
-                            self.context.i32_type().const_int(4, false).into() ],
-                        "");
-                }
-
-                // no need to allocate space for each uint64
-                // allocate enough for type
-                let int_type = self.context.custom_width_int_type(*n as u32);
-                let type_size = int_type.size_of();
-
-                let store = self.builder.build_alloca(int_type, "stack");
-
-                self.builder.build_store(store, val);
-
-                self.builder.build_call(
-                    self.module.get_function("__leNtobe32").unwrap(),
-                    &[ self.builder.build_pointer_cast(store,
-                            self.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "destvoid").into(),
-                        self.builder.build_pointer_cast(dest,
-                            self.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "destvoid").into(),
-                        self.builder.build_int_truncate(type_size,
-                            self.context.i32_type(), "").into()
-                    ],
-                    "");
-            }
-            _ => unimplemented!(),
-        }
-    }
-
-    fn emit_abi_decode(
-        &self,
-        function: FunctionValue,
-        args: &mut Vec<BasicValueEnum<'a>>,
-        data: PointerValue<'a>,
-        length: IntValue,
-        spec: &resolver::FunctionDecl,
-    ) {
-        let mut data = data;
-        let decode_block = self.context.append_basic_block(function, "abi_decode");
-        let wrong_length_block = self.context.append_basic_block(function, "wrong_abi_length");
-
-        let is_ok = self.builder.build_int_compare(IntPredicate::EQ, length,
-            self.context.i32_type().const_int(32  * spec.params.len() as u64, false),
-            "correct_length");
-
-        self.builder.build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
-
-        self.builder.position_at_end(&decode_block);
-
-        for arg in &spec.params {
-            let ty = match &arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => &self.ns.enums[*n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
-            };
-
-            args.push(match ty {
-                ast::ElementaryTypeName::Bool => {
-                    // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
-                    // which is unneeded (hopefully)
-                    // cast to 64 bit pointer
-                    let bool_ptr = self.builder.build_pointer_cast(data,
-                        self.context.i64_type().ptr_type(AddressSpace::Generic), "");
-
-                    let bool_ptr = unsafe {
-                        self.builder.build_gep(bool_ptr,
-                            &[ self.context.i32_type().const_int(3, false) ],
-                            "bool_ptr")
-                    };
-
-                    self.builder.build_int_compare(IntPredicate::EQ,
-                        self.builder.build_load(bool_ptr, "abi_bool").into_int_value(),
-                        self.context.i64_type().const_zero(), "bool").into()
-                }
-                ast::ElementaryTypeName::Uint(8) | ast::ElementaryTypeName::Int(8) => {
-                    let int8_ptr = self.builder.build_pointer_cast(data,
-                        self.context.i8_type().ptr_type(AddressSpace::Generic), "");
-
-                    let int8_ptr = unsafe {
-                        self.builder.build_gep(int8_ptr,
-                        &[ self.context.i32_type().const_int(31, false) ],
-                        "bool_ptr")
-                    };
-
-                    self.builder.build_load(int8_ptr, "abi_int8")
-                }
-                ast::ElementaryTypeName::Uint(n) | ast::ElementaryTypeName::Int(n) => {
-                    let int_type = self.context.custom_width_int_type(*n as u32);
-                    let type_size = int_type.size_of();
-
-                    let store = self.builder.build_alloca(int_type, "stack");
-
-                    self.builder.build_call(
-                        self.module.get_function("__be32toleN").unwrap(),
-                        &[
-                            self.builder.build_pointer_cast(data,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                            self.builder.build_pointer_cast(store,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                            self.builder.build_int_truncate(type_size,
-                                self.context.i32_type(), "size").into()
-                        ],
-                        ""
-                    );
-
-                    if *n <= 64 {
-                        self.builder.build_load(store, &format!("abi_int{}", *n))
-                    } else {
-                        store.into()
-                    }
-                }
-                _ => panic!(),
-            });
-
-            data = unsafe {
-                self.builder.build_gep(data,
-                    &[ self.context.i32_type().const_int(8, false)],
-                    "data_next")
-            };
-        }
-
-        // FIXME: generate a call to revert/abort with some human readable error or error code
-        self.builder.position_at_end(&wrong_length_block);
-        self.builder.build_unreachable();
-
-        self.builder.position_at_end(&decode_block);
-    }
-
-    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl) -> Function<'a> {
+    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl, runtime: &dyn TargetRuntime) -> Function<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
         let mut wasm_return = false;
 
@@ -892,30 +464,12 @@ impl<'a> Contract<'a> {
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        self.builder.build_call(
-                            self.externals["get_storage32"],
-                            &[
-                                self.context.i32_type().const_int(*storage as u64, false).into(),
-                                self.builder.build_pointer_cast(dest,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                                dest.get_type().size_of().const_cast(
-                                    self.context.i32_type(), false).into()
-                            ],
-                            "");
+                        runtime.get_storage(&self, *storage as u32, dest);
                     }
                     cfg::Instr::SetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        self.builder.build_call(
-                            self.externals["set_storage32"],
-                            &[
-                                self.context.i32_type().const_int(*storage as u64, false).into(),
-                                self.builder.build_pointer_cast(dest,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                                dest.get_type().size_of().const_cast(
-                                    self.context.i32_type(), false).into()
-                            ],
-                            "");
+                        runtime.set_storage(&self, *storage as u32, dest);
                     }
                     cfg::Instr::Call { res, func, args } => {
                         let mut parms: Vec<BasicValueEnum> = Vec::new();
@@ -940,6 +494,109 @@ impl<'a> Contract<'a> {
             value_ref: function,
             wasm_return,
         }
+    }
+
+    pub fn emit_function_dispatch(&self, 
+                functions: &Vec<resolver::FunctionDecl>, 
+                argsdata: inkwell::values::PointerValue,
+                argslen: inkwell::values::IntValue,
+                function: inkwell::values::FunctionValue, 
+                fallback_block: &inkwell::basic_block::BasicBlock,
+                runtime: &dyn TargetRuntime) {
+        // create start function
+        let switch_block = self.context.append_basic_block(function, "switch");
+
+        let not_fallback = self.builder.build_int_compare(
+            IntPredicate::UGE,
+            argslen,
+            self.context.i32_type().const_int(4, false).into(),
+            "");
+
+        self.builder.build_conditional_branch(not_fallback, &switch_block, fallback_block);
+
+        self.builder.position_at_end(&switch_block);
+
+        let fid = self.builder.build_load(argsdata, "function_selector");
+
+        // step over the function selector
+        let argsdata = unsafe {
+            self.builder.build_gep(
+                argsdata,
+                &[self.context.i32_type().const_int(1, false).into()],
+                "fid_ptr")
+        };
+
+        let argslen = self.builder.build_int_sub(
+            argslen.into(),
+            self.context.i32_type().const_int(4, false).into(),
+            "argslen"
+        );
+
+        let nomatch = self.context.append_basic_block(function, "nomatch");
+
+        self.builder.position_at_end(&nomatch);
+
+        self.builder.build_unreachable();
+
+        let mut cases = Vec::new();
+
+        for (i, f) in functions.iter().enumerate() {
+            match &f.visibility {
+                ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
+                    continue;
+                }
+                _ => (),
+            }
+
+            if f.fallback {
+                continue;
+            }
+
+            let res = keccak256(f.signature.as_bytes());
+
+            let bb = self.context.append_basic_block(function, "");
+            let id = u32::from_le_bytes([res[0], res[1], res[2], res[3]]);
+
+            self.builder.position_at_end(&bb);
+
+            let mut args = Vec::new();
+
+            // insert abi decode
+            runtime.abi_decode(&self, function, &mut args, argsdata, argslen, f);
+
+            let ret = self.builder.build_call(
+                self.functions[i].value_ref,
+                &args,
+                "").try_as_basic_value().left();
+
+            if f.returns.is_empty() {
+                // return ABI of length 0
+                runtime.return_empty_abi(&self);
+            } else if self.functions[i].wasm_return {
+                let (data, length) = runtime.abi_encode(&self, &[ ret.unwrap() ], &f);
+
+                runtime.return_abi(&self, data, length);
+            } else {
+                // FIXME: abi encode all the arguments
+                unimplemented!();
+            }
+
+            cases.push((self.context.i32_type().const_int(id as u64, false), bb));
+        }
+
+        self.builder.position_at_end(&switch_block);
+
+        let mut c = Vec::new();
+
+        for (id, bb) in cases.iter() {
+            c.push((*id, bb));
+        }
+
+        //let c = cases.into_iter().map(|(id, bb)| (id, &bb)).collect();
+
+        self.builder.build_switch(
+            fid.into_int_value(), &nomatch,
+            &c);
     }
 }
 
