@@ -19,16 +19,53 @@ impl SubstrateTarget {
         let b = SubstrateTarget{};
 
         // externals
-        b.declare_externals(&mut c);
+        b.declare_externals(&c);
 
         c.emit_functions(&b);
-    
+
         b.emit_deploy(&c);
+        b.emit_call(&c);
 
         c
     }
 
-    fn declare_externals(&self, contract: &mut Contract) {
+    fn public_function_prelude<'a>(&self, contract: &'a Contract, function: FunctionValue) -> (PointerValue<'a>, IntValue<'a>) {
+        let entry = contract.context.append_basic_block(function, "entry");
+
+        contract.builder.position_at_end(&entry);
+
+        // init our heap
+        contract.builder.build_call(
+            contract.module.get_function("__init_heap").unwrap(),
+            &[],
+            "");
+
+        // copy arguments from scratch buffer
+        let args_length = contract.builder.build_call(
+            contract.module.get_function("ext_scratch_size").unwrap(),
+            &[],
+            "scratch_size").try_as_basic_value().left().unwrap();
+
+        let args = contract.builder.build_call(
+            contract.module.get_function("__malloc").unwrap(),
+            &[args_length],
+            ""
+        ).try_as_basic_value().left().unwrap().into_pointer_value();
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_read").unwrap(),
+            &[
+                args.into(),
+                contract.context.i32_type().const_zero().into(),
+                args_length.into(),
+            ],
+            ""
+        );
+
+        (args, args_length.into_int_value())
+    }
+
+    fn declare_externals(&self, contract: &Contract) {
         // Access to scratch buffer
         contract.module.add_function(
             "ext_scratch_size",
@@ -62,45 +99,42 @@ impl SubstrateTarget {
         let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
         let function = contract.module.add_function("deploy", ftype, None);
 
-        let entry = contract.context.append_basic_block(function, "entry");
-
-        contract.builder.position_at_end(&entry);
-
-        // init our heap
-        contract.builder.build_call(
-            contract.module.get_function("__init_heap").unwrap(),
-            &[],
-            "");
-        
-        // copy arguments from scratch buffer
-        let deploy_args_length = contract.builder.build_call(
-            contract.module.get_function("ext_scratch_size").unwrap(),
-            &[],
-            "scratch_size").try_as_basic_value().left().unwrap();
-        
-        let deploy_args = contract.builder.build_call(
-            contract.module.get_function("__malloc").unwrap(),
-            &[deploy_args_length],
-            ""
-        ).try_as_basic_value().left().unwrap().into_pointer_value();
-
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                deploy_args.into(),
-                contract.context.i32_type().const_zero().into(),
-                deploy_args_length.into(),
-            ],
-            ""
-        );
-
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
-        contract.emit_function_dispatch(&contract.ns.constructors, deploy_args, deploy_args_length.into_int_value(), function, &fallback_block, self);
-        
+        let (deploy_args, deploy_args_length) = self.public_function_prelude(contract, function);
+
+        contract.emit_function_dispatch(&contract.ns.constructors, deploy_args, deploy_args_length, function, &fallback_block, self);
+
         // emit fallback code
         contract.builder.position_at_end(&fallback_block);
         contract.builder.build_unreachable();
+    }
+
+    fn emit_call(&self, contract: &Contract) {
+        // create deploy function
+        let ret = contract.context.void_type();
+        let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
+        let function = contract.module.add_function("call", ftype, None);
+
+        let fallback_block = contract.context.append_basic_block(function, "fallback");
+
+        let (call_args, call_args_length) = self.public_function_prelude(contract, function);
+
+        contract.emit_function_dispatch(&contract.ns.constructors, call_args, call_args_length, function, &fallback_block, self);
+
+        // emit fallback code
+        contract.builder.position_at_end(&fallback_block);
+
+        if let Some(fallback) = contract.ns.fallback_function() {
+            contract.builder.build_call(
+                contract.functions[fallback].value_ref,
+                &[],
+                "");
+
+            contract.builder.build_return(None);
+        } else {
+            contract.builder.build_unreachable();
+        }
     }
 }
 
@@ -147,7 +181,7 @@ impl TargetRuntime for SubstrateTarget {
             "correct_length");
 
         contract.builder.build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
-    
+
         contract.builder.position_at_end(&decode_block);
 
         let mut argsdata = data;
@@ -234,7 +268,7 @@ impl TargetRuntime for SubstrateTarget {
 
             match ty {
                 ast::ElementaryTypeName::Bool => {
-                    contract.builder.build_store(argsdata, 
+                    contract.builder.build_store(argsdata,
                         contract.builder.build_int_cast(args[i].into_int_value(), contract.context.i8_type(), "bool")
                     );
                     arglen = 1;
