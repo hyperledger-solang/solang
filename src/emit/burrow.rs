@@ -252,7 +252,7 @@ impl BurrowTarget {
 }
 
 impl TargetRuntime for BurrowTarget {
-    fn set_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>) {
+    fn set_storage<'a>(&self, contract: &'a Contract, _function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
         contract.builder.build_call(
             contract.module.get_function("set_storage32").unwrap(),
             &[
@@ -265,7 +265,7 @@ impl TargetRuntime for BurrowTarget {
             "");
     }
 
-    fn get_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>) {
+    fn get_storage<'a>(&self, contract: &'a Contract, _function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
         contract.builder.build_call(
             contract.module.get_function("get_storage32").unwrap(),
             &[

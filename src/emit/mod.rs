@@ -19,7 +19,7 @@ use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::targets::{CodeModel, RelocMode, FileType, Target};
 use inkwell::AddressSpace;
 use inkwell::types::{IntType, StringRadix};
-use inkwell::values::{PointerValue, IntValue, PhiValue, FunctionValue, BasicValueEnum};
+use inkwell::values::{PointerValue, IntValue, PhiValue, FunctionValue, BasicValueEnum, GlobalValue};
 use inkwell::IntPredicate;
 
 const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
@@ -47,8 +47,8 @@ struct Function<'a> {
 
 pub trait TargetRuntime {
     //
-    fn set_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>);
-    fn get_storage<'a>(&self, contract: &'a Contract, slot: u32, dest: inkwell::values::PointerValue<'a>);
+    fn set_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
+    fn get_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
     
     fn abi_decode<'b>(
         &self,
@@ -79,6 +79,7 @@ pub struct Contract<'a> {
     ns: &'a resolver::Contract,
     constructors: Vec<Function<'a>>,
     functions: Vec<Function<'a>>,
+    globals: Vec<GlobalValue<'a>>,
 }
 
 impl<'a> Contract<'a> {
@@ -140,7 +141,30 @@ impl<'a> Contract<'a> {
             ns: contract,
             constructors: Vec::new(),
             functions: Vec::new(),
+            globals: Vec::new(),
         }
+    }
+
+    /// Creates global string in the llvm module with initializer
+    ///
+    fn emit_global_string(&mut self, name: &str, data: &[u8], constant: bool) -> usize {
+        let ty = self.context.i8_type().array_type(data.len() as u32);
+
+        let gv = self.module.add_global(ty, Some(AddressSpace::Generic), name);
+
+        gv.set_linkage(Linkage::Internal);
+
+        gv.set_initializer(&self.context.const_string(data, false));
+        
+        if constant {
+            gv.set_constant(true);
+        }
+
+        let last = self.globals.len();
+
+        self.globals.push(gv);
+
+        last
     }
 
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
@@ -464,12 +488,12 @@ impl<'a> Contract<'a> {
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        runtime.get_storage(&self, *storage as u32, dest);
+                        runtime.get_storage(&self, function, *storage as u32, dest);
                     }
                     cfg::Instr::SetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        runtime.set_storage(&self, *storage as u32, dest);
+                        runtime.set_storage(&self, function, *storage as u32, dest);
                     }
                     cfg::Instr::Call { res, func, args } => {
                         let mut parms: Vec<BasicValueEnum> = Vec::new();

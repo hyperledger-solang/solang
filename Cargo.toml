@@ -28,7 +28,7 @@ ethabi = "7.0.0"
 ethereum-types = "0.5.2"
 
 [dependencies.inkwell]
-git = "https://github.com/TheDan64/inkwell"
+git = "https://github.com/seanyoung/inkwell"
 branch = "llvm8-0"
 features = ["target-webassembly", "llvm8-0"]
 
