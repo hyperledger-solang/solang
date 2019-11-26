@@ -1,4 +1,5 @@
 
+/docs/build
 Cargo.lock
 /target
 **/*.rs.bk

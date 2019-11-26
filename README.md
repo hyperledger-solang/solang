@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)]
 
-<img align="right" width="400" height="400" src="doc/solang.svg">
+<img align="right" width="400" height="400" src="docs/solang.svg">
 
 This is solang, a proof of concept
 [solidity](https://en.wikipedia.org/wiki/Solidity) compiler. The
