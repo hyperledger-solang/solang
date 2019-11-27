@@ -190,6 +190,9 @@ impl<'a> Contract<'a> {
         vartab: &Vec<Variable<'a>>,
     ) -> IntValue<'a> {
         match e {
+            cfg::Expression::BoolLiteral(val) => {
+                self.context.bool_type().const_int(*val as u64, false)
+            }
             cfg::Expression::NumberLiteral(bits, n) => {
                 let ty = self.context.custom_width_int_type(*bits as _);
                 let s = n.to_string();
@@ -268,6 +271,11 @@ impl<'a> Contract<'a> {
                 let ty = t.LLVMType(self.ns, &self.context);
 
                 self.builder.build_int_truncate(e, ty, "")
+            }
+            cfg::Expression::Not(e) => {
+                let e = self.expression(e, vartab);
+
+                self.builder.build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
             }
             _ => {
                 panic!("expression not implemented");
