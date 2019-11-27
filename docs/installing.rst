@@ -99,7 +99,7 @@ _________________________
 
 You will need Fedora 30 or later. Running the following::
 
-	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang
+	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang libffi-devel
 
 Installing LLVM from source
 ___________________________
@@ -141,7 +141,7 @@ Now run cmake to create the makefiles. Replace the *installdir* argument to ``CM
 	cmake -G Ninja -DLLVM_TARGETS_TO_BUILD=WebAssembly -DLLVM_ENABLE_ASSERTIONS=On -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=installdir ../llvm
 	cmake --build . --target install
 
-Once the build has succeeded, the *installdir*/bin has to be added to your path so the solang build can find this llvm config:
+Once the build has succeeded, the *installdir*/bin has to be added to your path so the solang build can find this llvm config::
 
 	export PATH=*installdir*/bin:$PATH
 
