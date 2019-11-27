@@ -23,9 +23,3 @@ is supported, though.
    running
    language
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
