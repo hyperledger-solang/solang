@@ -72,7 +72,7 @@ pub fn link(input: &[u8]) -> Vec<u8> {
         imports.push(ImportEntry::new(
             "env".into(),
             "memory".into(),
-            elements::External::Memory(elements::MemoryType::new(2, Some(2), false)),
+            elements::External::Memory(elements::MemoryType::new(2, Some(2))),
         ));
     }
 
