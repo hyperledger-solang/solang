@@ -135,7 +135,7 @@ Now switch to the 8.0 release branch::
 
 Ensure that clang will built::
 
-	ln -s clang llvm/tools/clang
+	ln -s ../../clang llvm/tools/clang
 
 Create a directory where the build and intermediate files will be stored::
 
