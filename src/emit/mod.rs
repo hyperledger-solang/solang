@@ -512,10 +512,10 @@ impl<'a> Contract<'a> {
 
                         let ret = self.builder.build_call(
                             self.functions[*func].value_ref,
-                            &parms, "").try_as_basic_value().left().unwrap();
+                            &parms, "").try_as_basic_value().left();
 
                         if res.len() > 0 {
-                            w.vars[res[0]].value = ret.into();
+                            w.vars[res[0]].value = ret.unwrap().into();
                         }
                     }
                 }
