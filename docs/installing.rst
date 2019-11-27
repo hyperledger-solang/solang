@@ -34,16 +34,18 @@ Alternatively this will work with podman too::
 
 	podman image build .
 
-Building solang from source using cargo
----------------------------------------
+Building solang from source from crates.io
+------------------------------------------
 
 solang is listed on `crates.io <https://crates.io/crates/solang>`_. Only
-releases are pushed to cargo. Do install using cargo::
+releases are pushed to cargo, and the current release is out of date. This is
+how you tell cargo to retrieve the latest version of solang and compile it
+from source::
 
 	cargo install solang
 
 You will need the llvm libraries for this to work, see 
-`Getting the right version of LLVM`_.
+`Installing the LLVM Libraries`_.
 
 Building solang from source
 ---------------------------
@@ -55,6 +57,15 @@ So see if you have the correct version of rust, simply execute::
   rustc --version
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
+
+After making sure llvm and rust are installed, just run::
+
+  cargo build --release
+
+The executable will be in ``target/release/solang``.
+
+Verify that you have the LLVM Libraries installed
+-------------------------------------------------
 
 To make sure you have the correct version of the llvm libraries installed, first run::
 
@@ -70,22 +81,17 @@ You should see wasm32 listed under the target. Lastly check that the static libr
 
 If there is no output, there are no static llvm libraries and building will fail.
 
-After making sure llvm and rust are installed, just run::
-
-  cargo build --release
-
-The executable will be in ``target/release/solang``.
-
-Getting the right version of LLVM
----------------------------------
+Installing the LLVM Libraries
+-----------------------------
 If you did not have the llvm libraries installed then you can either install
 your systems llvm packages or compile your own. Compiling your own is helpful
 if you want to do solang development.
 
-Any version from llvm 8.0 will do. Note that you will also need clang; the
-Solidity standard library is written in C, and is compiled to wasm by
-clang. For this to work, the version of clang **must** be the same as the
-version of llvm.
+Any version from llvm 8.0 with the WebAssembly target enabled will do. Note
+that you will also need clang; the Solidity standard library is written in C,
+and is compiled to wasm by clang. For this to work, the version of clang
+**must** be the same as the version of llvm.
+
 
 Installing LLVM on Ubuntu
 _________________________
