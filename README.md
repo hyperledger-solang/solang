@@ -1,6 +1,6 @@
 # solang - A Solidity to wasm compiler written in rust
 
-[![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://launch-editor.github.com/actions?workflowID=master&event=push&nwo=hyperledger-labs%2Fsolang)
+[![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
 
 <img align="right" width="400" height="400" src="docs/solang.svg">
