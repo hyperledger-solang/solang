@@ -195,7 +195,7 @@ fn main() {
                 continue;
             }
 
-            let wasm = link::link(&obj);
+            let wasm = link::link(&obj, &target);
 
             if matches.is_present("STD-JSON") {
                 json_contracts.insert(
