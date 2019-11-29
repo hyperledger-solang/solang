@@ -134,13 +134,14 @@ impl SubstrateTarget {
 
     fn emit_deploy(&self, contract: &Contract) {
         // create deploy function
-        let ret = contract.context.void_type();
-        let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = contract.module.add_function("deploy", ftype, None);
-
-        let fallback_block = contract.context.append_basic_block(function, "fallback");
+        let function = contract.module.add_function(
+            "deploy",
+            contract.context.i32_type().fn_type(&[], false),
+            None);
 
         let (deploy_args, deploy_args_length) = self.public_function_prelude(contract, function);
+
+        let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(&contract.ns.constructors, deploy_args, deploy_args_length, function, &fallback_block, self);
 
@@ -150,14 +151,15 @@ impl SubstrateTarget {
     }
 
     fn emit_call(&self, contract: &Contract) {
-        // create deploy function
-        let ret = contract.context.void_type();
-        let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = contract.module.add_function("call", ftype, None);
-
-        let fallback_block = contract.context.append_basic_block(function, "fallback");
+        // create call function
+        let function = contract.module.add_function(
+            "call",
+            contract.context.i32_type().fn_type(&[], false),
+            None);
 
         let (call_args, call_args_length) = self.public_function_prelude(contract, function);
+
+        let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(&contract.ns.constructors, call_args, call_args_length, function, &fallback_block, self);
 
@@ -170,7 +172,7 @@ impl SubstrateTarget {
                 &[],
                 "");
 
-            contract.builder.build_return(None);
+            contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
         } else {
             contract.builder.build_unreachable();
         }
