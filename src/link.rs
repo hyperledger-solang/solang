@@ -25,6 +25,9 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
     let mut exports = Vec::new();
     let mut globals = Vec::new();
 
+    // FIXME: rather than filtering out functions which should not be exported, we should
+    // rely on LLVM to optimize them away, with e.g. LLVMAddInternalizePassWithMustPreservePredicate()
+    // or something like that.
     let allowed_externs = |name: &str| {
         match target {
             Target::Burrow => name == "constructor" || name == "function",
