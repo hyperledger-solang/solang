@@ -1,3 +1,5 @@
+
+use resolver::Target;
 use parity_wasm;
 use parity_wasm::builder;
 use parity_wasm::elements::{
@@ -16,12 +18,19 @@ pub const FLAG_MASK_VISIBILITY: u32 = 0x04;
 #[allow(dead_code)]
 pub const FLAG_MASK_BINDING: u32 = 0x03;
 
-pub fn link(input: &[u8]) -> Vec<u8> {
+pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
     let mut module: Module =
         parity_wasm::deserialize_buffer(input).expect("cannot deserialize llvm wasm");
 
     let mut exports = Vec::new();
     let mut globals = Vec::new();
+
+    let allowed_externs = |name: &str| {
+        match target {
+            Target::Burrow => name == "constructor" || name == "function",
+            Target::Substrate => name == "deploy" || name == "call"
+        }
+    };
 
     for c in module.custom_sections() {
         if c.name() != "linking" {
@@ -33,7 +42,7 @@ pub fn link(input: &[u8]) -> Vec<u8> {
         for sym in read_linking_section(&mut payload).expect("cannot read linking section") {
             match sym {
                 Symbol::Function(SymbolFunction { flags, index, name }) => {
-                    if (flags & FLAG_UNDEFINED) == 0 {
+                    if (flags & FLAG_UNDEFINED) == 0 && allowed_externs(&name) {
                         exports.push(ExportEntry::new(name, Internal::Function(index)));
                     }
                 }

@@ -154,7 +154,7 @@ mod tests {
 
         let obj = contract.wasm("default").expect("llvm wasm emit should work");
 
-        let bc = link::link(&obj);
+        let bc = link::link(&obj, &resolver::Target::Burrow);
 
         let module = Module::from_buffer(bc).expect("parse wasm should work");
 
