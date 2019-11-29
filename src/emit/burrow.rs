@@ -382,7 +382,7 @@ impl TargetRuntime for BurrowTarget {
                             "bool_ptr")
                     };
 
-                    contract.builder.build_int_compare(IntPredicate::EQ,
+                    contract.builder.build_int_compare(IntPredicate::NE,
                         contract.builder.build_load(bool_ptr, "abi_bool").into_int_value(),
                         contract.context.i64_type().const_zero(), "bool").into()
                 }
