@@ -82,6 +82,9 @@ impl SubstrateTarget {
             ""
         );
 
+        let args = contract.builder.build_pointer_cast(args,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic), "").into();
+
         (args, args_length.into_int_value())
     }
 
