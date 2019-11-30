@@ -2,6 +2,7 @@
 use parser::ast;
 use output::{Note, Output};
 use std::collections::HashMap;
+use tiny_keccak::keccak256;
 
 pub mod cfg;
 mod functions;
@@ -104,6 +105,12 @@ impl FunctionDecl {
         FunctionDecl{
             loc, name, fallback, signature, ast_index, mutability, visibility, params, returns, cfg: None
         }
+    }
+
+    pub fn selector(&self) -> [u8; 4] {
+        let res = keccak256(self.signature.as_bytes());
+        
+        [ res[0], res[1], res[2], res[3] ]
     }
 
     pub fn wasm_symbol(&self, ns: &Contract) -> String {

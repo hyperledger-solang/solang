@@ -8,8 +8,6 @@ use std::path::Path;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
-use tiny_keccak::keccak256;
-
 use inkwell::types::BasicTypeEnum;
 use inkwell::OptimizationLevel;
 use inkwell::builder::Builder;
@@ -584,9 +582,9 @@ impl<'a> Contract<'a> {
                 continue;
             }
 
-            let res = keccak256(f.signature.as_bytes());
-
             let bb = self.context.append_basic_block(function, "");
+
+            let res = f.selector();
             let id = u32::from_le_bytes([res[0], res[1], res[2], res[3]]);
 
             self.builder.position_at_end(&bb);
