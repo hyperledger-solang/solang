@@ -9,7 +9,7 @@ contract flipper {
 		value = !value;
 	}
 
-	function get() public returns (bool) {
+	function get() public view returns (bool) {
 		return value;
 	}
 }
