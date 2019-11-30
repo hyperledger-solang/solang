@@ -19,6 +19,7 @@ mod link;
 mod output;
 mod parser;
 mod resolver;
+mod abi;
 mod test;
 
 use serde::Serialize;
@@ -34,7 +35,7 @@ pub struct EwasmContract {
 
 #[derive(Serialize)]
 pub struct JsonContract {
-    abi: Vec<resolver::ABI>,
+    abi: Vec<abi::ethabi::ABI>,
     ewasm: EwasmContract,
 }
 
@@ -159,15 +160,13 @@ fn main() {
         let mut json_contracts = HashMap::new();
 
         // emit phase
-        for contract in &contracts {
+        for resolved_contract in &contracts {
             if let Some("cfg") = matches.value_of("EMIT") {
-                println!("{}", contract.to_string());
+                println!("{}", resolved_contract.to_string());
                 continue;
             }
 
-            let abi = contract.generate_abi();
-
-            let contract = emit::Contract::build(&context, contract, &filename);
+            let contract = emit::Contract::build(&context, resolved_contract, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {
                 contract.dump_llvm(&output_file(&contract.name, "ll")).unwrap();
@@ -201,7 +200,7 @@ fn main() {
                 json_contracts.insert(
                     contract.name.to_owned(),
                     JsonContract {
-                        abi,
+                        abi: abi::ethabi::gen_abi(&resolved_contract),
                         ewasm: EwasmContract {
                             wasm: hex::encode_upper(wasm),
                         },
@@ -213,11 +212,11 @@ fn main() {
                 let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&wasm).unwrap();
 
-                let abi_filename = output_file(&contract.name, "abi");
+                let (abi_bytes, abi_ext) = abi::generate_abi(&resolved_contract);
+                let abi_filename = output_file(&contract.name, abi_ext);
 
                 file = File::create(abi_filename).unwrap();
-                file.write_all(serde_json::to_string(&abi).unwrap().as_bytes())
-                    .unwrap();
+                file.write_all(&abi_bytes).unwrap();
             }
         }
 

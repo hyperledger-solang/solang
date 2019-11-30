@@ -1,32 +1,10 @@
 
 use parser::ast;
 use output::{Note, Output};
-use serde::Serialize;
 use std::collections::HashMap;
 
 pub mod cfg;
 mod functions;
-
-// FIXME: Burrow ABIs do not belong here
-#[derive(Serialize)]
-pub struct ABIParam {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-}
-
-#[derive(Serialize)]
-pub struct ABI {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub ty: String,
-    pub inputs: Vec<ABIParam>,
-    pub outputs: Vec<ABIParam>,
-    pub constant: bool,
-    pub payable: bool,
-    #[serde(rename = "stateMutability")]
-    pub mutability: &'static str,
-}
 
 #[derive(PartialEq, Clone)]
 pub enum Target {
@@ -87,19 +65,6 @@ pub struct EnumDecl {
 pub struct Parameter {
     pub name: String,
     pub ty: TypeName,
-}
-
-impl Parameter {
-    fn to_abi(&self, ns: &Contract) -> ABIParam {
-        ABIParam {
-            name: self.name.to_string(),
-            ty: match &self.ty {
-                TypeName::Elementary(e) => e.to_string(),
-                TypeName::Enum(ref i) => ns.enums[*i].ty.to_string(),
-                TypeName::Noreturn => unreachable!(),
-            },
-        }
-    }
 }
 
 pub struct FunctionDecl {
@@ -357,59 +322,6 @@ impl Contract {
             }
         }
         return None;
-    }
-
-    pub fn generate_abi(&self) -> Vec<ABI> {
-        let mut abis = Vec::new();
-
-        for f in &self.constructors {
-            abis.push(ABI {
-                name: "".to_owned(),
-                constant: match &f.cfg {
-                    Some(cfg) => !cfg.writes_contract_storage,
-                    None => false,
-                },
-                mutability: match &f.mutability {
-                    Some(n) => n.to_string(),
-                    None => "nonpayable",
-                },
-                payable: match &f.mutability {
-                    Some(ast::StateMutability::Payable(_)) => true,
-                    _ => false,
-                },
-                ty: "constructor".to_owned(),
-                inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
-                outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
-            })
-
-        }
-
-        for f in &self.functions {
-            abis.push(ABI {
-                name: f.name.to_owned(),
-                constant: match &f.cfg {
-                    Some(cfg) => !cfg.writes_contract_storage,
-                    None => false,
-                },
-                mutability: match &f.mutability {
-                    Some(n) => n.to_string(),
-                    None => "nonpayable",
-                },
-                payable: match &f.mutability {
-                    Some(ast::StateMutability::Payable(_)) => true,
-                    _ => false,
-                },
-                ty: if f.name == "" {
-                    "fallback".to_owned()
-                } else {
-                    "function".to_owned()
-                },
-                inputs: f.params.iter().map(|p| p.to_abi(&self)).collect(),
-                outputs: f.returns.iter().map(|p| p.to_abi(&self)).collect(),
-            })
-        }
-
-        abis
     }
 
     pub fn to_string(&self) -> String {

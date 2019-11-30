@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use abi;
     use emit;
     use link;
     use output;
@@ -147,7 +148,7 @@ mod tests {
         assert_eq!(contracts.len(), 1);
 
         // abi
-        let abi = contracts[0].generate_abi();
+        let abi = abi::ethabi::gen_abi(&contracts[0]);
 
         // codegen
         let contract = emit::Contract::build(ctx, &contracts[0], &"foo.sol");
