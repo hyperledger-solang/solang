@@ -111,7 +111,7 @@ impl BurrowTarget {
                 "argsdata")
         };
 
-        contract.emit_function_dispatch(&contract.ns.functions, argsdata, argslen, function, &fallback_block, self);
+        contract.emit_function_dispatch(&contract.ns.functions, &contract.functions, argsdata, argslen, function, &fallback_block, self);
 
         // emit fallback code
         contract.builder.position_at_end(&fallback_block);

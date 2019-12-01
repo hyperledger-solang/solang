@@ -137,7 +137,7 @@ impl SubstrateTarget {
         contract.module.add_function(
             "ext_return",
             contract.context.void_type().fn_type(&[
-                contract.context.i32_type().ptr_type(AddressSpace::Generic).into(), // data_ptr
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // data_ptr
                 contract.context.i32_type().into(), // data_len
             ], false),
             Some(Linkage::External)
@@ -155,7 +155,7 @@ impl SubstrateTarget {
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
-        contract.emit_function_dispatch(&contract.ns.constructors, deploy_args, deploy_args_length, function, &fallback_block, self);
+        contract.emit_function_dispatch(&contract.ns.constructors, &contract.constructors, deploy_args, deploy_args_length, function, &fallback_block, self);
 
         // emit fallback code
         contract.builder.position_at_end(&fallback_block);
@@ -173,7 +173,7 @@ impl SubstrateTarget {
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
-        contract.emit_function_dispatch(&contract.ns.constructors, call_args, call_args_length, function, &fallback_block, self);
+        contract.emit_function_dispatch(&contract.ns.functions, &contract.functions, call_args, call_args_length, function, &fallback_block, self);
 
         // emit fallback code
         contract.builder.position_at_end(&fallback_block);
@@ -204,7 +204,7 @@ impl TargetRuntime for SubstrateTarget {
                 contract.context.i32_type().const_int(1, false).into(),
                 contract.builder.build_pointer_cast(dest,
                     contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                dest.get_type().size_of().const_cast(
+                dest.get_type().get_element_type().into_int_type().size_of().const_cast(
                     contract.context.i32_type(), false).into()
             ],
             "");
@@ -235,14 +235,14 @@ impl TargetRuntime for SubstrateTarget {
         contract.builder.build_conditional_branch(exists, &retrieve_block, &clear_block);
 
         contract.builder.position_at_end(&retrieve_block);
-
+        
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
             &[
                 contract.builder.build_pointer_cast(dest,
                     contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
                 contract.context.i32_type().const_zero().into(),
-                dest.get_type().size_of().const_cast(
+                dest.get_type().get_element_type().into_int_type().size_of().const_cast(
                     contract.context.i32_type(), false).into()
             ],
             ""
@@ -270,7 +270,7 @@ impl TargetRuntime for SubstrateTarget {
     ) {
         let mut length = 0;
 
-        for arg in spec.returns.iter() {
+        for arg in spec.params.iter() {
             let ty = match arg.ty {
                 resolver::TypeName::Elementary(e) => e,
                 resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
@@ -299,9 +299,10 @@ impl TargetRuntime for SubstrateTarget {
 
         contract.builder.position_at_end(&decode_block);
 
-        let mut argsdata = data;
+        let mut argsdata = contract.builder.build_pointer_cast(data,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic), "");
 
-        for (i, arg) in spec.returns.iter().enumerate() {
+        for (i, arg) in spec.params.iter().enumerate() {
             let ty = match arg.ty {
                 resolver::TypeName::Elementary(e) => e,
                 resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
@@ -312,19 +313,18 @@ impl TargetRuntime for SubstrateTarget {
 
             match ty {
                 ast::ElementaryTypeName::Bool => {
-                    // FIXME: check for not 0 or 1
-                    args[i] = contract.builder.build_int_compare(IntPredicate::EQ,
+                    args.push(contract.builder.build_int_compare(IntPredicate::EQ,
                         contract.builder.build_load(argsdata, "abi_bool").into_int_value(),
-                        contract.context.i64_type().const_zero(), "bool").into();
+                        contract.context.i8_type().const_int(1, false), "bool").into());
                     arglen = 1;
                 },
                 ast::ElementaryTypeName::Uint(n) |
                 ast::ElementaryTypeName::Int(n) => {
-                    args[i] = contract.builder.build_load(
+                    args.push(contract.builder.build_load(
                         contract.builder.build_pointer_cast(argsdata,
                             args[i].into_int_value().get_type().ptr_type(AddressSpace::Generic),
                             ""),
-                        "");
+                        ""));
                     arglen = n as u64 / 8;
                 },
                 _ => unimplemented!()
@@ -413,14 +413,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
-            &[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).const_zero().into(),
-                contract.context.i32_type().const_zero().into(),
-            ],
-            ""
-        );
+        // This will clear the scratch buffer
         contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
@@ -431,6 +424,6 @@ impl TargetRuntime for SubstrateTarget {
             ""
         );
         // Should be unreachable. 
-        contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
+        contract.builder.build_unreachable();
     }
 }

@@ -38,7 +38,7 @@ struct Variable<'a> {
 }
 
 #[derive(Clone)]
-struct Function<'a> {
+pub struct Function<'a> {
     value_ref: FunctionValue<'a>,
     wasm_return: bool,
 }
@@ -527,7 +527,8 @@ impl<'a> Contract<'a> {
     }
 
     pub fn emit_function_dispatch(&self, 
-                functions: &Vec<resolver::FunctionDecl>, 
+                resolver_functions: &Vec<resolver::FunctionDecl>, 
+                functions: &Vec<Function>,
                 argsdata: inkwell::values::PointerValue,
                 argslen: inkwell::values::IntValue,
                 function: inkwell::values::FunctionValue, 
@@ -553,7 +554,7 @@ impl<'a> Contract<'a> {
             self.builder.build_gep(
                 argsdata,
                 &[self.context.i32_type().const_int(1, false).into()],
-                "fid_ptr")
+                "argsdata")
         };
 
         let argslen = self.builder.build_int_sub(
@@ -570,7 +571,7 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (i, f) in functions.iter().enumerate() {
+        for (i, f) in resolver_functions.iter().enumerate() {
             match &f.visibility {
                 ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
                     continue;
@@ -595,14 +596,14 @@ impl<'a> Contract<'a> {
             runtime.abi_decode(&self, function, &mut args, argsdata, argslen, f);
 
             let ret = self.builder.build_call(
-                self.functions[i].value_ref,
+                functions[i].value_ref,
                 &args,
                 "").try_as_basic_value().left();
 
             if f.returns.is_empty() {
                 // return ABI of length 0
                 runtime.return_empty_abi(&self);
-            } else if self.functions[i].wasm_return {
+            } else if functions[i].wasm_return {
                 let (data, length) = runtime.abi_encode(&self, &[ ret.unwrap() ], &f);
 
                 runtime.return_abi(&self, data, length);
