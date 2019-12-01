@@ -133,6 +133,15 @@ impl SubstrateTarget {
             ], false),
             Some(Linkage::External)
         );
+
+        contract.module.add_function(
+            "ext_return",
+            contract.context.void_type().fn_type(&[
+                contract.context.i32_type().ptr_type(AddressSpace::Generic).into(), // data_ptr
+                contract.context.i32_type().into(), // data_len
+            ], false),
+            Some(Linkage::External)
+        );
     }
 
     fn emit_deploy(&self, contract: &Contract) {
@@ -417,10 +426,11 @@ impl TargetRuntime for SubstrateTarget {
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
+            contract.module.get_function("ext_return").unwrap(),
             &[ data.into(), length.into() ],
             ""
         );
+        // Should be unreachable. 
         contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
     }
 }
