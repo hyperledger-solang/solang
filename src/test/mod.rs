@@ -4,4 +4,7 @@
 // first be possible to run solang as a library.
 
 #[cfg(test)]
+mod substrate;
+
+#[cfg(test)]
 mod burrow;

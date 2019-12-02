@@ -2,9 +2,9 @@
 use resolver::{Contract, Target};
 
 pub mod ethabi;
-mod substrate;
+pub mod substrate;
 
-pub fn generate_abi(contract: &Contract, verbose: bool) -> (Vec<u8>, &'static str) {
+pub fn generate_abi(contract: &Contract, verbose: bool) -> (String, &'static str) {
     match contract.target {
         Target::Burrow => {
             if verbose {
@@ -13,7 +13,7 @@ pub fn generate_abi(contract: &Contract, verbose: bool) -> (Vec<u8>, &'static st
 
             let abi = ethabi::gen_abi(contract);
 
-            (serde_json::to_string(&abi).unwrap().as_bytes().to_vec(), "abi")
+            (serde_json::to_string(&abi).unwrap(), "abi")
         },
         Target::Substrate => {
             if verbose {
@@ -22,7 +22,7 @@ pub fn generate_abi(contract: &Contract, verbose: bool) -> (Vec<u8>, &'static st
 
             let abi = substrate::gen_abi(contract);
 
-            (serde_json::to_string_pretty(&abi).unwrap().as_bytes().to_vec(), "json")
+            (serde_json::to_string_pretty(&abi).unwrap(), "json")
         }
     }
 }
