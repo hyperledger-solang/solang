@@ -111,10 +111,15 @@ fn main() {
     };
 
     let context = inkwell::context::Context::create();
-    let target = match matches.value_of("TARGET") {
-        Some("substrate") => resolver::Target::Substrate,
-        Some("burrow") => resolver::Target::Burrow,
-        _ => unreachable!()
+    let target = if matches.is_present("STD-JSON") {
+        // This type of output is used by burrow deploy
+        resolver::Target::Burrow
+    } else {
+        match matches.value_of("TARGET") {
+            Some("substrate") => resolver::Target::Substrate,
+            Some("burrow") => resolver::Target::Burrow,
+            _ => unreachable!()
+        }
     };
     let verbose = matches.is_present("VERBOSE");
 
