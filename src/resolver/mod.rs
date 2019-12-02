@@ -116,10 +116,10 @@ impl FunctionDecl {
         }
     }
 
-    pub fn selector(&self) -> [u8; 4] {
+    pub fn selector(&self) -> u32 {
         let res = keccak256(self.signature.as_bytes());
         
-        [ res[0], res[1], res[2], res[3] ]
+        u32::from_le_bytes([res[0], res[1], res[2], res[3]])
     }
 
     pub fn wasm_symbol(&self, ns: &Contract) -> String {
