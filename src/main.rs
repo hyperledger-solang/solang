@@ -12,6 +12,10 @@ extern crate tiny_keccak;
 extern crate unescape;
 extern crate wasmi;
 extern crate inkwell;
+extern crate parity_scale_codec_derive;
+extern crate parity_scale_codec;
+extern crate num_derive;
+extern crate serde_derive;
 
 mod emit;
 mod link;
@@ -254,7 +258,7 @@ fn main() {
                 }
 
                 file = File::create(abi_filename).unwrap();
-                file.write_all(&abi_bytes).unwrap();
+                file.write_all(&abi_bytes.as_bytes()).unwrap();
             }
         }
 

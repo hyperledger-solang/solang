@@ -384,7 +384,7 @@ impl TargetRuntime for SubstrateTarget {
             match ty {
                 ast::ElementaryTypeName::Bool => {
                     contract.builder.build_store(argsdata,
-                        contract.builder.build_int_cast(args[i].into_int_value(), contract.context.i8_type(), "bool")
+                        contract.builder.build_int_z_extend(args[i].into_int_value(), contract.context.i8_type(), "bool")
                     );
                     arglen = 1;
                 },
@@ -414,16 +414,28 @@ impl TargetRuntime for SubstrateTarget {
 
     fn return_empty_abi(&self, contract: &Contract) {
         // This will clear the scratch buffer
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_write").unwrap(),
+            &[
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).const_zero().into(),
+                contract.context.i32_type().const_zero().into(),
+            ],
+            ""
+        );
+            
         contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_return").unwrap(),
-            &[ data.into(), length.into() ],
+            contract.module.get_function("ext_scratch_write").unwrap(),
+            &[
+                data.into(),
+                length.into(),
+            ],
             ""
         );
-        // Should be unreachable. 
-        contract.builder.build_unreachable();
+
+        contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
     }
 }

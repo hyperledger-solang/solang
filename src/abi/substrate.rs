@@ -2,24 +2,32 @@
 
 use parser::ast;
 use resolver;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Substrate contracts abi consists of a a registry of strings and types, the contract itself
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 pub struct Metadata {
-    registry: Registry,
+    pub registry: Registry,
     storage: Storage,
-    contract: Contract
+    pub contract: Contract
+}
+
+impl Metadata {
+    #[cfg(test)]
+    pub fn get_function(&self, name: &str) -> Option<&Message> {
+        self.contract.messages.iter()
+            .find(|m| name == self.registry.get_str(m.name))
+    }
 }
 
 /// The registry holds strings and types. Presumably this is to avoid duplication
-#[derive(Serialize)]
-struct Registry {
+#[derive(Deserialize,Serialize)]
+pub struct Registry {
     strings: Vec<String>,
     types: Vec<Type>
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 #[serde(untagged)]
 enum Type {
     Builtin {
@@ -32,26 +40,26 @@ enum Type {
     }
 }
 
-#[derive(Serialize)]
-struct Contract {
-    name: usize,
-    constructors: Vec<Constructor>,
-    messages: Vec<Message>,
+#[derive(Deserialize,Serialize)]
+pub struct Contract {
+    pub name: usize,
+    pub constructors: Vec<Constructor>,
+    pub messages: Vec<Message>,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct BuiltinType {
     id: String,
     def: String
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct StructType {
     id: CustomID,
     def: StructDef
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct CustomID {
     #[serde(rename = "custom.name")]
     name: usize,
@@ -61,49 +69,49 @@ struct CustomID {
     params: Vec<usize>,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct StructDef {
     #[serde(rename = "struct.fields")]
     fields: Vec<StructField>
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct StructField {
     name: usize,
     #[serde(rename = "type")]
     ty: usize
 }
 
-#[derive(Serialize)]
-struct Constructor {
-    name: usize,
-    selector: u32,
+#[derive(Deserialize,Serialize)]
+pub struct Constructor {
+    pub name: usize,
+    pub selector: u32,
     args: Vec<Param>
 }
 
-#[derive(Serialize)]
-struct Message {
-    name: usize,
-    selector: u32,
+#[derive(Deserialize,Serialize)]
+pub struct Message {
+    pub name: usize,
+    pub selector: u32,
     mutates: bool,
     args: Vec<Param>,
     return_type: Option<ParamType>,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct Param {
     name: usize,
     #[serde(rename = "type")]
     ty: ParamType,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct ParamType {
     ty: usize,
     display_name: Vec<usize>
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct Storage {
     #[serde(rename = "struct.type")]
     ty: usize,
@@ -111,7 +119,7 @@ struct Storage {
     fields: Vec<StorageLayout>
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct LayoutField {
     #[serde(rename = "range.offset")]
     offset: String,
@@ -121,13 +129,13 @@ struct LayoutField {
     ty: usize
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 struct StorageLayout {
     name: usize,
     layout: StorageFieldLayout
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize,Serialize)]
 #[serde(untagged)]
 enum StorageFieldLayout {
     Field(LayoutField),
@@ -157,6 +165,12 @@ impl Registry {
         self.strings.push(name.to_owned());
 
         length + 1
+    }
+
+    /// Returns the string at the specified index 
+    #[cfg(test)]
+    pub fn get_str(&self, index: usize) -> &str {
+        &self.strings[index - 1]
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
@@ -198,6 +212,11 @@ impl Registry {
 
         length + 1
     }
+}
+
+#[cfg(test)]
+pub fn load(bs: &str) -> Result<Metadata, serde_json::error::Error> {
+    serde_json::from_str(bs)
 }
 
 pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
