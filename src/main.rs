@@ -47,7 +47,7 @@ pub struct JsonResult {
 
 fn main() {
     let matches = App::new("solang")
-        .version(env!("CARGO_PKG_VERSION"))
+        .version(&*format!("commit {}", env!("GIT_HASH")))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
@@ -122,6 +122,10 @@ fn main() {
         }
     };
     let verbose = matches.is_present("VERBOSE");
+
+    if verbose {
+        eprintln!("info: Solang commit {}", env!("GIT_HASH"));
+    }
 
     for filename in matches.values_of("INPUT").unwrap() {
         let mut f = File::open(&filename).expect("file not found");
