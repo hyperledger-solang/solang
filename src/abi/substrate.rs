@@ -77,14 +77,14 @@ struct StructField {
 #[derive(Serialize)]
 struct Constructor {
     name: usize,
-    selector: String,
+    selector: u32,
     args: Vec<Param>
 }
 
 #[derive(Serialize)]
 struct Message {
     name: usize,
-    selector: String,
+    selector: u32,
     mutates: bool,
     args: Vec<Param>,
     return_type: Option<ParamType>,
@@ -200,11 +200,6 @@ impl Registry {
     }
 }
 
-// TODO: can this be a number?
-fn selector(f: &resolver::FunctionDecl) -> String {
-    format!("[{}]", f.selector().iter().map(|b| format!("\"0x{:02X}\"", *b)).collect::<Vec<String>>().join(","))
-}
-
 pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
     let mut registry = Registry::new();
 
@@ -252,7 +247,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
 
     let constructors = resolver_contract.constructors.iter().map(|f| Constructor{
         name: registry.string("new"),
-        selector: selector(f),
+        selector: f.selector(),
         args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
     }).collect();
 
@@ -264,7 +259,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
             1 => Some(ty_to_abi(&f.returns[0].ty, resolver_contract, &mut registry)),
             _ => unreachable!()
         },
-        selector: selector(f),
+        selector: f.selector(),
         args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
     }).collect();
 

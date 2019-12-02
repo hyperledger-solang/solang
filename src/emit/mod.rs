@@ -585,8 +585,7 @@ impl<'a> Contract<'a> {
 
             let bb = self.context.append_basic_block(function, "");
 
-            let res = f.selector();
-            let id = u32::from_le_bytes([res[0], res[1], res[2], res[3]]);
+            let id = f.selector();
 
             self.builder.position_at_end(&bb);
 
