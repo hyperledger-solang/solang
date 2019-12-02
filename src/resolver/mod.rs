@@ -3,6 +3,7 @@ use parser::ast;
 use output::{Note, Output};
 use std::collections::HashMap;
 use tiny_keccak::keccak256;
+use std::fmt;
 
 pub mod cfg;
 mod functions;
@@ -13,6 +14,14 @@ pub enum Target {
     Burrow
 }
 
+impl fmt::Display for Target {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Target::Substrate => write!(f, "Substrate"),
+            Target::Burrow => write!(f, "Burrow")
+        }
+    }
+}
 #[derive(PartialEq, Clone)]
 pub enum TypeName {
     Elementary(ast::ElementaryTypeName),

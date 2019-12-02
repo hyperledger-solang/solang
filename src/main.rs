@@ -116,6 +116,7 @@ fn main() {
         Some("burrow") => resolver::Target::Burrow,
         _ => unreachable!()
     };
+    let verbose = matches.is_present("VERBOSE");
 
     for filename in matches.values_of("INPUT").unwrap() {
         let mut f = File::open(&filename).expect("file not found");
@@ -135,7 +136,7 @@ fn main() {
                         filename,
                         &contents,
                         &errors,
-                        matches.is_present("VERBOSE"),
+                        verbose,
                     );
                     fatal = true;
                 }
@@ -150,7 +151,7 @@ fn main() {
             let mut out = output::message_as_json(filename, &contents, &errors);
             json.errors.append(&mut out);
         } else {
-            output::print_messages(filename, &contents, &errors, matches.is_present("VERBOSE"));
+            output::print_messages(filename, &contents, &errors, verbose);
         }
 
         if contracts.is_empty() {
@@ -166,15 +167,31 @@ fn main() {
                 continue;
             }
 
+            if verbose {
+                eprintln!("info: Generating LLVM IR for contract {} with target {}", resolved_contract.name, resolved_contract.target);
+            }
+        
             let contract = emit::Contract::build(&context, resolved_contract, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {
-                contract.dump_llvm(&output_file(&contract.name, "ll")).unwrap();
+                let llvm_filename = output_file(&contract.name, "ll");
+
+                if verbose {
+                    eprintln!("info: Saving LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                }
+
+                contract.dump_llvm(&llvm_filename).unwrap();
                 continue;
             }
 
             if let Some("bc") = matches.value_of("EMIT") {
-                contract.bitcode(&output_file(&contract.name, "bc"));
+                let bc_filename = output_file(&contract.name, "bc");
+
+                if verbose {
+                    eprintln!("info: Saving LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                }
+
+                contract.bitcode(&bc_filename);
                 continue;
             }
 
@@ -188,6 +205,10 @@ fn main() {
 
             if let Some("object") = matches.value_of("EMIT") {
                 let obj_filename = output_file(&contract.name, "o");
+
+                if verbose {
+                    eprintln!("info: Saving Object {} for contract {}", obj_filename.display(), contract.name);
+                }
 
                 let mut file = File::create(obj_filename).unwrap();
                 file.write_all(&obj).unwrap();
@@ -209,11 +230,19 @@ fn main() {
             } else {
                 let wasm_filename = output_file(&contract.name, "wasm");
 
+                if verbose {
+                    eprintln!("info: Saving WebAssembly {} for contract {}", wasm_filename.display(), contract.name);
+                }
+
                 let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&wasm).unwrap();
 
-                let (abi_bytes, abi_ext) = abi::generate_abi(&resolved_contract);
+                let (abi_bytes, abi_ext) = abi::generate_abi(&resolved_contract, verbose);
                 let abi_filename = output_file(&contract.name, abi_ext);
+
+                if verbose {
+                    eprintln!("info: Saving ABI {} for contract {}", abi_filename.display(), contract.name);
+                }
 
                 file = File::create(abi_filename).unwrap();
                 file.write_all(&abi_bytes).unwrap();
