@@ -13,7 +13,6 @@ extern crate unescape;
 extern crate wasmi;
 extern crate inkwell;
 
-use clap::{App, Arg};
 mod emit;
 mod link;
 mod output;
@@ -22,6 +21,7 @@ mod resolver;
 mod abi;
 mod test;
 
+use clap::{App, Arg};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
