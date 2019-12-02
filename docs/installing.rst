@@ -7,7 +7,8 @@ ways, so please pick whatever method suits your needs.
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
-Simply pull the latest docker image using::
+New images are automatically available on
+`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. Simply pull the latest docker image using::
 
 	docker pull hyperledgerlabs/solang
 

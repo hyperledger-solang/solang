@@ -9,6 +9,40 @@ Welcome to solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
 needs to be written in rust.
 
-solang is under active development right now, and should be documented as
+solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at
 [our documentation](https://solang.readthedocs.io/en/latest/).
+
+## What works today
+
+First build [solang](https://solang.readthedocs.io/en/latest/installing.html)
+or use the docker image, then write the following to flipper.sol:
+
+```solidity
+contract flipper {
+	bool private value;
+
+	constructor(bool initvalue) public {
+		value = initvalue;
+	}
+
+	function flip() public {
+		value = !value;
+	}
+
+	function get() public view returns (bool) {
+		return value;
+	}
+}
+```
+
+Now run:
+
+```bash
+solang flipper.sol
+```
+
+You will have a flipper.wasm and flipper.json. You can use these directly in
+the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain), as if your smart
+contract was written using Ink!
+
