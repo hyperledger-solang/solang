@@ -37,12 +37,6 @@ struct Variable<'a> {
     stack: bool,
 }
 
-#[derive(Clone)]
-pub struct Function<'a> {
-    value_ref: FunctionValue<'a>,
-    wasm_return: bool,
-}
-
 pub trait TargetRuntime {
     //
     fn set_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
@@ -75,8 +69,8 @@ pub struct Contract<'a> {
     context: &'a Context,
     target: Target,
     ns: &'a resolver::Contract,
-    constructors: Vec<Function<'a>>,
-    functions: Vec<Function<'a>>,
+    constructors: Vec<FunctionValue<'a>>,
+    functions: Vec<FunctionValue<'a>>,
     globals: Vec<GlobalValue<'a>>,
 }
 
@@ -281,9 +275,8 @@ impl<'a> Contract<'a> {
         }
     }
 
-    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl, runtime: &dyn TargetRuntime) -> Function<'a> {
+    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
-        let mut wasm_return = false;
 
         for p in &f.params {
             let ty = p.ty.LLVMType(self.ns, self.context);
@@ -294,8 +287,7 @@ impl<'a> Contract<'a> {
             });
         }
 
-        let ftype = if f.returns.len() == 1 && !f.returns[0].ty.stack_based() {
-            wasm_return = true;
+        let ftype = if f.wasm_return {
             f.returns[0].ty.LLVMType(self.ns, &self.context).fn_type(&args, false)
         } else {
             // add return values
@@ -312,15 +304,12 @@ impl<'a> Contract<'a> {
             None => panic!(),
         };
 
-        self.emit_cfg(cfg, f, wasm_return, function, runtime);
+        self.emit_cfg(cfg, f, function, runtime);
 
-        Function {
-            value_ref: function,
-            wasm_return,
-        }
+        function
     }
 
-    fn emit_cfg(&self, cfg: &cfg::ControlFlowGraph, resolver_function: &resolver::FunctionDecl, wasm_return: bool, function: FunctionValue<'a>, runtime: &dyn TargetRuntime) {
+    fn emit_cfg(&self, cfg: &cfg::ControlFlowGraph, resolver_function: &resolver::FunctionDecl, function: FunctionValue<'a>, runtime: &dyn TargetRuntime) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
             bb: inkwell::basic_block::BasicBlock,
@@ -414,7 +403,7 @@ impl<'a> Contract<'a> {
                     cfg::Instr::Return { value } if value.is_empty() => {
                         self.builder.build_return(None);
                     },
-                    cfg::Instr::Return { value } if wasm_return => {
+                    cfg::Instr::Return { value } if resolver_function.wasm_return => {
                         let retval = self.expression(&value[0], &w.vars);
                         self.builder.build_return(Some(&retval));
                     }
@@ -518,7 +507,7 @@ impl<'a> Contract<'a> {
                         }
 
                         let ret = self.builder.build_call(
-                            self.functions[*func].value_ref,
+                            self.functions[*func],
                             &parms, "").try_as_basic_value().left();
 
                         if res.len() > 0 {
@@ -532,7 +521,7 @@ impl<'a> Contract<'a> {
 
     pub fn emit_function_dispatch(&self,
                 resolver_functions: &Vec<resolver::FunctionDecl>,
-                functions: &Vec<Function>,
+                functions: &Vec<FunctionValue>,
                 argsdata: inkwell::values::PointerValue,
                 argslen: inkwell::values::IntValue,
                 function: inkwell::values::FunctionValue,
@@ -599,14 +588,14 @@ impl<'a> Contract<'a> {
             runtime.abi_decode(&self, function, &mut args, argsdata, argslen, f);
 
             let ret = self.builder.build_call(
-                functions[i].value_ref,
+                functions[i],
                 &args,
                 "").try_as_basic_value().left();
 
             if f.returns.is_empty() {
                 // return ABI of length 0
                 runtime.return_empty_abi(&self);
-            } else if functions[i].wasm_return {
+            } else if f.wasm_return {
                 let (data, length) = runtime.abi_encode(&self, &[ ret.unwrap() ], &f);
 
                 runtime.return_abi(&self, data, length);
@@ -671,7 +660,7 @@ impl resolver::Type {
         }
     }
 
-    fn stack_based(&self) -> bool {
+    pub fn stack_based(&self) -> bool {
         match self {
             resolver::Type::Primitive(e) => e.stack_based(),
             resolver::Type::Enum(_) => false,
