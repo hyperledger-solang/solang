@@ -46,6 +46,8 @@ impl BurrowTarget {
     }
 
     fn emit_constructor_dispatch(&self, contract: &Contract) {
+        let initializer = contract.emit_initializer(self);
+
         // create start function
         let ret = contract.context.void_type();
         let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
@@ -60,6 +62,9 @@ impl BurrowTarget {
             contract.module.get_function("__init_heap").unwrap(),
             &[],
             "");
+
+        // init our storage vars
+        contract.builder.build_call(initializer, &[], "");
 
         if let Some(con) = contract.ns.constructors.get(0) {
             let mut args = Vec::new();

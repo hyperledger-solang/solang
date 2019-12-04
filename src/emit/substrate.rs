@@ -145,6 +145,8 @@ impl SubstrateTarget {
     }
 
     fn emit_deploy(&self, contract: &Contract) {
+        let initialier = contract.emit_initializer(self);
+
         // create deploy function
         let function = contract.module.add_function(
             "deploy",
@@ -152,6 +154,9 @@ impl SubstrateTarget {
             None);
 
         let (deploy_args, deploy_args_length) = self.public_function_prelude(contract, function);
+
+        // init our storage vars
+        contract.builder.build_call(initialier, &[], "");
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
