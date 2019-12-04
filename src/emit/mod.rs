@@ -312,6 +312,15 @@ impl<'a> Contract<'a> {
             None => panic!(),
         };
 
+        self.emit_cfg(cfg, f, wasm_return, function, runtime);
+
+        Function {
+            value_ref: function,
+            wasm_return,
+        }
+    }
+
+    fn emit_cfg(&self, cfg: &cfg::ControlFlowGraph, resolver_function: &resolver::FunctionDecl, wasm_return: bool, function: FunctionValue<'a>, runtime: &dyn TargetRuntime) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
             bb: inkwell::basic_block::BasicBlock,
@@ -410,7 +419,7 @@ impl<'a> Contract<'a> {
                         self.builder.build_return(Some(&retval));
                     }
                     cfg::Instr::Return { value } => {
-                        let returns_offset = f.params.len();
+                        let returns_offset = resolver_function.params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(val, &w.vars);
@@ -518,11 +527,6 @@ impl<'a> Contract<'a> {
                     }
                 }
             }
-        }
-
-        Function {
-            value_ref: function,
-            wasm_return,
         }
     }
 

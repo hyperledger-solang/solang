@@ -101,6 +101,20 @@ pub struct ControlFlowGraph {
 }
 
 impl ControlFlowGraph {
+    pub fn new() -> Self {
+        let mut cfg = ControlFlowGraph {
+            vars: Vec::new(),
+            bb: Vec::new(),
+            current: 0,
+            reads_contract_storage: false,
+            writes_contract_storage: false,
+        };
+
+        cfg.new_basic_block("entry".to_string());
+
+        cfg
+    }
+
     fn new_basic_block(&mut self, name: String) -> usize {
         let pos = self.bb.len();
 
@@ -123,7 +137,7 @@ impl ControlFlowGraph {
         self.current = pos;
     }
 
-    fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
+    pub fn add(&mut self, vartab: &mut Vartable, ins: Instr) {
         if let Instr::Set { res, .. } = ins {
             vartab.set_dirty(res);
         }
@@ -314,15 +328,7 @@ pub fn generate_cfg(
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<Box<ControlFlowGraph>, ()> {
-    let mut cfg = Box::new(ControlFlowGraph {
-        vars: Vec::new(),
-        bb: Vec::new(),
-        current: 0,
-        reads_contract_storage: false,
-        writes_contract_storage: false,
-    });
-
-    cfg.new_basic_block("entry".to_string());
+    let mut cfg = Box::new(ControlFlowGraph::new());
 
     let mut vartab = Vartable::new(ns);
     let mut loops = LoopScopes::new();
@@ -1000,7 +1006,7 @@ fn coerce_int(
     ))
 }
 
-fn cast(
+pub fn cast(
     loc: &ast::Loc,
     expr: Expression,
     from: &resolver::Type,
@@ -1153,7 +1159,7 @@ fn cast(
     }
 }
 
-fn expression(
+pub fn expression(
     expr: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     ns: &resolver::Contract,
