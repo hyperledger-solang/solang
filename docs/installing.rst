@@ -20,7 +20,7 @@ The solang binary is in ``/usr/bin/solang`` in this image. The latest tag
 gets updated each time there is a commit to the master branch of the solang
 git repository.
 
-Build solang from source using Dockerfile
+Build Solang from source using Dockerfile
 -----------------------------------------
 
 First clone the git repo using::
@@ -35,10 +35,10 @@ Alternatively this will work with podman too::
 
 	podman image build .
 
-Building solang from source from crates.io
+Building Solang from source from crates.io
 ------------------------------------------
 
-solang is listed on `crates.io <https://crates.io/crates/solang>`_. Only
+Solang is listed on `crates.io <https://crates.io/crates/solang>`_. Only
 releases are pushed to cargo, and the current release is out of date. This is
 how you tell cargo to retrieve the latest version of solang and compile it
 from source::
