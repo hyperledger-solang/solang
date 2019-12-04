@@ -79,6 +79,8 @@ impl Externals for ContractStorage {
                 Ok(None)
             },
             Some(SubstrateExternal::ext_get_storage) => {
+                assert_eq!(args.len(), 1);
+
                 let key_ptr: u32 = args.nth_checked(0)?;
 
                 let mut key: StorageKey = [0; 32];
@@ -96,6 +98,8 @@ impl Externals for ContractStorage {
                 }
             },
             Some(SubstrateExternal::ext_set_storage) => {
+                assert_eq!(args.len(), 4);
+
                 let key_ptr: u32 = args.nth_checked(0)?;
                 let value_non_null: u32 = args.nth_checked(1)?;
                 let data_ptr: u32 = args.nth_checked(2)?;
@@ -114,6 +118,7 @@ impl Externals for ContractStorage {
                     if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
                         panic!("ext_set_storage: {}", e);
                     }
+
                     self.store.insert(key, data);
                 } else {
                     self.store.remove(&key);
@@ -128,7 +133,7 @@ impl Externals for ContractStorage {
                 self.scratch.resize(len as usize, 0u8);
 
                 if let Err(e) = self.memory.get_into(data_ptr, &mut self.scratch) {
-                    panic!("ext_set_storage: {}", e);
+                    panic!("ext_return: {}", e);
                 }
 
                 Ok(None)
@@ -170,6 +175,16 @@ struct TestRuntime {
 }
 
 impl TestRuntime {
+    fn constructor<'a>(&self, store: &mut ContractStorage, index: usize, args: Vec<u8>) {
+        let m = &self.abi.contract.constructors[index];
+
+        store.scratch = m.selector.to_le_bytes().to_vec().into_iter().chain(args).collect();
+
+        self.module
+            .invoke_export("deploy", &[], store)
+            .expect("failed to call function");
+    }
+
     fn function<'a>(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
@@ -285,4 +300,39 @@ fn flipper() {
     runtime.function(&mut store, "get", Vec::new());
 
     assert_eq!(store.scratch, GetReturn(true).encode());
+}
+
+#[test]
+fn contract_storage_initializers() {
+    let ctx = inkwell::context::Context::create();
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct FooReturn {
+        value: u32
+    }
+
+    // parse
+    let (runtime, mut store) = build_solidity(&ctx,
+        "
+        contract test {
+            uint32 a = 100;
+            uint32 b = 200;
+
+            constructor() public {
+                b = 300;
+            }
+
+            function foo() public returns (uint32) {
+                return a + b;
+            }
+        }",
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "foo", Vec::new());
+
+    let ret = FooReturn{ value: 400 };
+
+    assert_eq!(store.scratch, ret.encode());
 }

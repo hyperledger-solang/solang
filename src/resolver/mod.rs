@@ -346,7 +346,11 @@ impl Contract {
     }
 
     pub fn to_string(&self) -> String {
-        let mut s = format!("#\n# Contract: {}\n", self.name);
+        let mut s = format!("#\n# Contract: {}\n#\n\n", self.name);
+
+        s.push_str("# storage initializer\n");
+        s.push_str(&self.initializer.to_string(self));
+        s.push_str("\n");
 
         for f in &self.constructors {
             s.push_str(&format!("# constructor {}\n", f.signature));

@@ -330,7 +330,7 @@ pub fn generate_cfg(
 ) -> Result<Box<ControlFlowGraph>, ()> {
     let mut cfg = Box::new(ControlFlowGraph::new());
 
-    let mut vartab = Vartable::new(ns);
+    let mut vartab = Vartable::new();
     let mut loops = LoopScopes::new();
 
     // first add function parameters
@@ -409,7 +409,7 @@ fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut
     // FIXME get constant
 }
 
-fn set_contract_storage(
+pub fn set_contract_storage(
     id: &ast::Identifier,
     var: &Variable,
     cfg: &mut ControlFlowGraph,
@@ -1234,7 +1234,7 @@ pub fn expression(
             }
         }
         ast::Expression::Variable(id) => {
-            let v = vartab.find(id, errors)?;
+            let v = vartab.find(id, ns, errors)?;
             get_contract_storage(&v, cfg, vartab);
             Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
         }
@@ -1464,7 +1464,7 @@ pub fn expression(
                 _ => unreachable!(),
             };
 
-            let var = vartab.find(id, errors)?;
+            let var = vartab.find(id, ns, errors)?;
             let (pos, ty) = {
                 get_contract_storage(&var, cfg, vartab);
 
@@ -1583,7 +1583,7 @@ pub fn expression(
 
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            let var = vartab.find(id, errors)?;
+            let var = vartab.find(id, ns, errors)?;
 
             cfg.add(
                 vartab,
@@ -1608,7 +1608,7 @@ pub fn expression(
                 _ => unreachable!(),
             };
 
-            let var = vartab.find(id, errors)?;
+            let var = vartab.find(id, ns, errors)?;
             let (pos, ty) = {
                 get_contract_storage(&var, cfg, vartab);
 
@@ -1852,8 +1852,7 @@ pub struct Variable {
 
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
-pub struct Vartable<'a> {
-    contract: &'a resolver::Contract,
+pub struct Vartable {
     vars: Vec<Variable>,
     names: LinkedList<VarScope>,
     storage_vars: HashMap<String, usize>,
@@ -1865,12 +1864,11 @@ pub struct DirtyTracker {
     set: HashSet<usize>,
 }
 
-impl<'a> Vartable<'a> {
-    pub fn new(contract: &'a resolver::Contract) -> Self {
+impl Vartable {
+    pub fn new() -> Self {
         let mut list = LinkedList::new();
         list.push_front(VarScope(HashMap::new(), None));
         Vartable {
-            contract,
             vars: Vec::new(),
             names: list,
             storage_vars: HashMap::new(),
@@ -1925,6 +1923,7 @@ impl<'a> Vartable<'a> {
     pub fn find(
         &mut self,
         id: &ast::Identifier,
+        contract: &resolver::Contract,
         errors: &mut Vec<output::Output>,
     ) -> Result<Variable, ()> {
         for scope in &self.names {
@@ -1937,8 +1936,8 @@ impl<'a> Vartable<'a> {
             return Ok(self.vars[*n].clone());
         }
 
-        let v = self.contract.resolve_var(&id, errors)?;
-        let var = &self.contract.variables[v];
+        let v = contract.resolve_var(&id, errors)?;
+        let var = &contract.variables[v];
         let pos = self.vars.len();
 
         self.vars.push(Variable {
