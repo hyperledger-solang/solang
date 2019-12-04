@@ -180,7 +180,7 @@ impl SubstrateTarget {
 
         if let Some(fallback) = contract.ns.fallback_function() {
             contract.builder.build_call(
-                contract.functions[fallback].value_ref,
+                contract.functions[fallback],
                 &[],
                 "");
 

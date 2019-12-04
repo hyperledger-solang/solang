@@ -84,7 +84,7 @@ impl BurrowTarget {
                 con,
             );
 
-            contract.builder.build_call(contract.constructors[0].value_ref, &args, "");
+            contract.builder.build_call(contract.constructors[0], &args, "");
         }
 
         contract.builder.build_return(None);
@@ -119,7 +119,7 @@ impl BurrowTarget {
         match contract.ns.fallback_function() {
             Some(f) => {
                 contract.builder.build_call(
-                    contract.functions[f].value_ref,
+                    contract.functions[f],
                     &[],
                     "");
 

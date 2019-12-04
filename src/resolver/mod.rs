@@ -88,6 +88,7 @@ pub struct FunctionDecl {
     pub visibility: ast::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
+    pub wasm_return: bool,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
@@ -112,8 +113,10 @@ impl FunctionDecl {
 
         signature.push(')');
 
+        let wasm_return = returns.len() == 1 && !returns[0].ty.stack_based();
+
         FunctionDecl{
-            loc, name, fallback, signature, ast_index, mutability, visibility, params, returns, cfg: None
+            loc, name, fallback, signature, ast_index, mutability, visibility, params, returns, wasm_return, cfg: None
         }
     }
 
