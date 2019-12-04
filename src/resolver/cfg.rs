@@ -27,9 +27,9 @@ pub enum Expression {
     UModulo(Box<Expression>, Box<Expression>),
     SModulo(Box<Expression>, Box<Expression>),
     Variable(ast::Loc, usize),
-    ZeroExt(resolver::TypeName, Box<Expression>),
-    SignExt(resolver::TypeName, Box<Expression>),
-    Trunc(resolver::TypeName, Box<Expression>),
+    ZeroExt(resolver::Type, Box<Expression>),
+    SignExt(resolver::Type, Box<Expression>),
+    Trunc(resolver::Type, Box<Expression>),
 
     More(Box<Expression>, Box<Expression>),
     Less(Box<Expression>, Box<Expression>),
@@ -561,7 +561,7 @@ fn statement(
                         &cond.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::TypeName::new_bool(),
+                        &resolver::Type::new_bool(),
                         true,
                         ns,
                         errors,
@@ -603,7 +603,7 @@ fn statement(
                         &cond.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::TypeName::new_bool(),
+                        &resolver::Type::new_bool(),
                         true,
                         ns,
                         errors,
@@ -709,7 +709,7 @@ fn statement(
                             &cond_expr.loc(),
                             expr,
                             &expr_ty,
-                            &resolver::TypeName::new_bool(),
+                            &resolver::Type::new_bool(),
                             true,
                             ns,
                             errors,
@@ -747,7 +747,7 @@ fn statement(
                         &cond_expr.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::TypeName::new_bool(),
+                        &resolver::Type::new_bool(),
                         true,
                         ns,
                         errors,
@@ -864,7 +864,7 @@ fn statement(
                         &cond_expr.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::TypeName::new_bool(),
+                        &resolver::Type::new_bool(),
                         true,
                         ns,
                         errors,
@@ -931,13 +931,13 @@ fn statement(
 }
 
 fn coerce(
-    l: &resolver::TypeName,
+    l: &resolver::Type,
     l_loc: &ast::Loc,
-    r: &resolver::TypeName,
+    r: &resolver::Type,
     r_loc: &ast::Loc,
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
-) -> Result<resolver::TypeName, ()> {
+) -> Result<resolver::Type, ()> {
     if *l == *r {
         return Ok(l.clone());
     }
@@ -946,55 +946,55 @@ fn coerce(
 }
 
 fn get_int_length(
-    l: &resolver::TypeName,
+    l: &resolver::Type,
     l_loc: &ast::Loc,
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<(u16, bool), ()> {
     Ok(match l {
-        resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(n)) => (*n, false),
-        resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(n)) => (*n, true),
-        resolver::TypeName::Elementary(t) => {
+        resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => (*n, false),
+        resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => (*n, true),
+        resolver::Type::Primitive(t) => {
             errors.push(Output::error(
                 *l_loc,
                 format!("expression of type {} not allowed", t.to_string()),
             ));
             return Err(());
         }
-        resolver::TypeName::Enum(n) => {
+        resolver::Type::Enum(n) => {
             errors.push(Output::error(
                 *l_loc,
                 format!("type enum {} not allowed", ns.enums[*n].name),
             ));
             return Err(());
         }
-        resolver::TypeName::Noreturn => {
+        resolver::Type::Noreturn => {
             unreachable!();
         }
     })
 }
 
 fn coerce_int(
-    l: &resolver::TypeName,
+    l: &resolver::Type,
     l_loc: &ast::Loc,
-    r: &resolver::TypeName,
+    r: &resolver::Type,
     r_loc: &ast::Loc,
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
-) -> Result<resolver::TypeName, ()> {
+) -> Result<resolver::Type, ()> {
     let (left_len, left_signed) = get_int_length(l, l_loc, ns, errors)?;
 
     let (right_len, right_signed) = get_int_length(r, r_loc, ns, errors)?;
 
-    Ok(resolver::TypeName::Elementary(
+    Ok(resolver::Type::Primitive(
         match (left_signed, right_signed) {
-            (true, true) => ast::ElementaryTypeName::Int(cmp::max(left_len, right_len)),
-            (false, false) => ast::ElementaryTypeName::Uint(cmp::max(left_len, right_len)),
+            (true, true) => ast::PrimitiveType::Int(cmp::max(left_len, right_len)),
+            (false, false) => ast::PrimitiveType::Uint(cmp::max(left_len, right_len)),
             (true, false) => {
-                ast::ElementaryTypeName::Int(cmp::max(left_len, cmp::min(right_len + 8, 256)))
+                ast::PrimitiveType::Int(cmp::max(left_len, cmp::min(right_len + 8, 256)))
             }
             (false, true) => {
-                ast::ElementaryTypeName::Int(cmp::max(cmp::min(left_len + 8, 256), right_len))
+                ast::PrimitiveType::Int(cmp::max(cmp::min(left_len + 8, 256), right_len))
             }
         },
     ))
@@ -1003,8 +1003,8 @@ fn coerce_int(
 fn cast(
     loc: &ast::Loc,
     expr: Expression,
-    from: &resolver::TypeName,
-    to: &resolver::TypeName,
+    from: &resolver::Type,
+    to: &resolver::Type,
     implicit: bool,
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
@@ -1017,14 +1017,14 @@ fn cast(
         if implicit {
             (from.clone(), to.clone())
         } else {
-            let from_conv = if let resolver::TypeName::Enum(n) = from {
-                resolver::TypeName::Elementary(ns.enums[*n].ty)
+            let from_conv = if let resolver::Type::Enum(n) = from {
+                resolver::Type::Primitive(ns.enums[*n].ty)
             } else {
                 from.clone()
             };
 
-            let to_conv = if let resolver::TypeName::Enum(n) = to {
-                resolver::TypeName::Elementary(ns.enums[*n].ty)
+            let to_conv = if let resolver::Type::Enum(n) = to {
+                resolver::Type::Primitive(ns.enums[*n].ty)
             } else {
                 to.clone()
             };
@@ -1035,12 +1035,12 @@ fn cast(
 
     match (from_conv, to_conv) {
         (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
         )
         | (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(from_len)),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(to_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
         ) => {
             if from_len > to_len {
                 if implicit {
@@ -1063,12 +1063,12 @@ fn cast(
             }
         }
         (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(from_len)),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(to_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         )
         | (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(from_len)),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(to_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
             if from_len > to_len {
                 if implicit {
@@ -1091,8 +1091,8 @@ fn cast(
             }
         }
         (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(from_len)),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
             if from_len > to_len {
                 if implicit {
@@ -1113,12 +1113,12 @@ fn cast(
             Ok(expr)
         }
         (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(_)),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::String),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(_)),
+            resolver::Type::Primitive(ast::PrimitiveType::String),
         ) => Ok(expr),
         (
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::String),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(to_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::String),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
             match &expr {
                 Expression::StringLiteral(from_str) => {
@@ -1159,11 +1159,11 @@ fn expression(
     ns: &resolver::Contract,
     vartab: &mut Vartable,
     errors: &mut Vec<output::Output>,
-) -> Result<(Expression, resolver::TypeName), ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     match expr {
         ast::Expression::BoolLiteral(_, v) => Ok((
             Expression::BoolLiteral(*v),
-            resolver::TypeName::Elementary(ast::ElementaryTypeName::Bool),
+            resolver::Type::Primitive(ast::PrimitiveType::Bool),
         )),
         ast::Expression::StringLiteral(loc, v) => {
             // unescape supports octal escape values, solc does not
@@ -1171,7 +1171,7 @@ fn expression(
             match unescape(v) {
                 Some(v) => Ok((
                     Expression::StringLiteral(v),
-                    resolver::TypeName::Elementary(ast::ElementaryTypeName::String),
+                    resolver::Type::Primitive(ast::PrimitiveType::String),
                 )),
                 None => {
                     // would be helpful if unescape told us what/where the problem was
@@ -1195,7 +1195,7 @@ fn expression(
                 let len = bs.len() as u8;
                 Ok((
                     Expression::HexLiteral(bs),
-                    resolver::TypeName::Elementary(ast::ElementaryTypeName::Bytes(len)),
+                    resolver::Type::Primitive(ast::PrimitiveType::Bytes(len)),
                 ))
             }
         }
@@ -1212,7 +1212,7 @@ fn expression(
                 } else {
                     Ok((
                         Expression::NumberLiteral(int_size, b.clone()),
-                        resolver::TypeName::Elementary(ast::ElementaryTypeName::Int(int_size)),
+                        resolver::Type::Primitive(ast::PrimitiveType::Int(int_size)),
                     ))
                 }
             } else {
@@ -1222,7 +1222,7 @@ fn expression(
                 } else {
                     Ok((
                         Expression::NumberLiteral(int_size, b.clone()),
-                        resolver::TypeName::Elementary(ast::ElementaryTypeName::Uint(int_size)),
+                        resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
                     ))
                 }
             }
@@ -1335,7 +1335,7 @@ fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
         ast::Expression::Less(_, l, r) => {
@@ -1349,7 +1349,7 @@ fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
         ast::Expression::MoreEqual(_, l, r) => {
@@ -1363,7 +1363,7 @@ fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
         ast::Expression::LessEqual(_, l, r) => {
@@ -1377,7 +1377,7 @@ fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
         ast::Expression::Equal(_, l, r) => {
@@ -1391,7 +1391,7 @@ fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
         ast::Expression::NotEqual(_, l, r) => {
@@ -1405,7 +1405,7 @@ fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
 
@@ -1418,12 +1418,12 @@ fn expression(
                     &loc,
                     expr,
                     &expr_type,
-                    &resolver::TypeName::new_bool(),
+                    &resolver::Type::new_bool(),
                     true,
                     ns,
                     errors,
                 )?)),
-                resolver::TypeName::new_bool(),
+                resolver::Type::new_bool(),
             ))
         }
         ast::Expression::Complement(loc, e) => {
@@ -1674,9 +1674,9 @@ fn expression(
         }
         ast::Expression::FunctionCall(loc, ty, args) => {
             let to = match ty {
-                ast::TypeName::Elementary(e) => Some(resolver::TypeName::Elementary(*e)),
-                ast::TypeName::Unresolved(s) => match ns.resolve_enum(s) {
-                    Some(v) => Some(resolver::TypeName::Enum(v)),
+                ast::Type::Primitive(e) => Some(resolver::Type::Primitive(*e)),
+                ast::Type::Unresolved(s) => match ns.resolve_enum(s) {
+                    Some(v) => Some(resolver::Type::Enum(v)),
                     None => None,
                 },
             };
@@ -1702,7 +1702,7 @@ fn expression(
                 };
             }
 
-            let funcs = if let ast::TypeName::Unresolved(s) = ty {
+            let funcs = if let ast::Type::Unresolved(s) = ty {
                 ns.resolve_func(s, errors)?
             } else {
                 unreachable!();
@@ -1803,7 +1803,7 @@ fn expression(
                         },
                     );
 
-                    return Ok((Expression::Poison, resolver::TypeName::Noreturn));
+                    return Ok((Expression::Poison, resolver::Type::Noreturn));
                 }
             }
 
@@ -1824,7 +1824,7 @@ fn expression(
 
 // Vartable
 // methods
-// create variable with loc, name, TypeName -> pos
+// create variable with loc, name, Type -> pos
 // find variable by name -> Some(pos)
 // new scope
 // leave scope
@@ -1839,7 +1839,7 @@ pub enum Storage {
 #[derive(Clone)]
 pub struct Variable {
     pub id: ast::Identifier,
-    pub ty: resolver::TypeName,
+    pub ty: resolver::Type,
     pub pos: usize,
     pub storage: Storage,
 }
@@ -1875,7 +1875,7 @@ impl<'a> Vartable<'a> {
     pub fn add(
         &mut self,
         id: &ast::Identifier,
-        ty: resolver::TypeName,
+        ty: resolver::Type,
         errors: &mut Vec<output::Output>,
     ) -> Option<usize> {
         if let Some(ref prev) = self.find_local(&id.name) {
@@ -1950,7 +1950,7 @@ impl<'a> Vartable<'a> {
         Ok(self.vars[pos].clone())
     }
 
-    pub fn temp(&mut self, id: &ast::Identifier, ty: &resolver::TypeName) -> usize {
+    pub fn temp(&mut self, id: &ast::Identifier, ty: &resolver::Type) -> usize {
         let pos = self.vars.len();
 
         self.vars.push(Variable {

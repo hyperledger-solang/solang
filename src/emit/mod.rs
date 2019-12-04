@@ -47,7 +47,7 @@ pub trait TargetRuntime {
     //
     fn set_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
     fn get_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
-    
+
     fn abi_decode<'b>(
         &self,
         contract: &'b Contract,
@@ -153,7 +153,7 @@ impl<'a> Contract<'a> {
         gv.set_linkage(Linkage::Internal);
 
         gv.set_initializer(&self.context.const_string(data, false));
-        
+
         if constant {
             gv.set_constant(true);
         }
@@ -526,12 +526,12 @@ impl<'a> Contract<'a> {
         }
     }
 
-    pub fn emit_function_dispatch(&self, 
-                resolver_functions: &Vec<resolver::FunctionDecl>, 
+    pub fn emit_function_dispatch(&self,
+                resolver_functions: &Vec<resolver::FunctionDecl>,
                 functions: &Vec<Function>,
                 argsdata: inkwell::values::PointerValue,
                 argslen: inkwell::values::IntValue,
-                function: inkwell::values::FunctionValue, 
+                function: inkwell::values::FunctionValue,
                 fallback_block: &inkwell::basic_block::BasicBlock,
                 runtime: &dyn TargetRuntime) {
         // create start function
@@ -630,15 +630,15 @@ impl<'a> Contract<'a> {
     }
 }
 
-impl ast::ElementaryTypeName {
+impl ast::PrimitiveType {
     #[allow(non_snake_case)]
     fn LLVMType<'a>(&self, context: &'a Context) -> IntType<'a> {
         match self {
-            ast::ElementaryTypeName::Bool => context.bool_type(),
-            ast::ElementaryTypeName::Int(n) |
-            ast::ElementaryTypeName::Uint(n) => context.custom_width_int_type(*n as u32),
-            ast::ElementaryTypeName::Address => context.custom_width_int_type(20 * 8),
-            ast::ElementaryTypeName::Bytes(n) => context.custom_width_int_type((*n * 8) as u32),
+            ast::PrimitiveType::Bool => context.bool_type(),
+            ast::PrimitiveType::Int(n) |
+            ast::PrimitiveType::Uint(n) => context.custom_width_int_type(*n as u32),
+            ast::PrimitiveType::Address => context.custom_width_int_type(20 * 8),
+            ast::PrimitiveType::Bytes(n) => context.custom_width_int_type((*n * 8) as u32),
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
@@ -647,31 +647,31 @@ impl ast::ElementaryTypeName {
 
     fn stack_based(&self) -> bool {
         match self {
-            ast::ElementaryTypeName::Bool => false,
-            ast::ElementaryTypeName::Int(n) => *n > 64,
-            ast::ElementaryTypeName::Uint(n) => *n > 64,
-            ast::ElementaryTypeName::Address => true,
-            ast::ElementaryTypeName::Bytes(n) => *n > 8,
+            ast::PrimitiveType::Bool => false,
+            ast::PrimitiveType::Int(n) => *n > 64,
+            ast::PrimitiveType::Uint(n) => *n > 64,
+            ast::PrimitiveType::Address => true,
+            ast::PrimitiveType::Bytes(n) => *n > 8,
             _ => unimplemented!(),
         }
     }
 }
 
-impl resolver::TypeName {
+impl resolver::Type {
     #[allow(non_snake_case)]
     fn LLVMType<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> IntType<'a> {
         match self {
-            resolver::TypeName::Elementary(e) => e.LLVMType(context),
-            resolver::TypeName::Enum(n) => ns.enums[*n].ty.LLVMType(context),
-            resolver::TypeName::Noreturn => unreachable!(),
+            resolver::Type::Primitive(e) => e.LLVMType(context),
+            resolver::Type::Enum(n) => ns.enums[*n].ty.LLVMType(context),
+            resolver::Type::Noreturn => unreachable!(),
         }
     }
 
     fn stack_based(&self) -> bool {
         match self {
-            resolver::TypeName::Elementary(e) => e.stack_based(),
-            resolver::TypeName::Enum(_) => false,
-            resolver::TypeName::Noreturn => unreachable!(),
+            resolver::Type::Primitive(e) => e.stack_based(),
+            resolver::Type::Enum(_) => false,
+            resolver::Type::Noreturn => unreachable!(),
         }
     }
 }

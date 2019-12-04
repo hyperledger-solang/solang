@@ -31,116 +31,116 @@ PragmaValue: String = {
     r"\^0\.\d+\.\d+" => <>.to_string()
 }
 
-ElementaryTypeName: ElementaryTypeName = {
-    "bool" => ElementaryTypeName::Bool,
-    "address" => ElementaryTypeName::Address,
-    "string" => ElementaryTypeName::String,
-    "uint" => ElementaryTypeName::Uint(256),
-    "uint8" => ElementaryTypeName::Uint(8),
-    // for i in $(seq 8 8 256); do printf '    "uint%d" => ElementaryTypeName::Uint(%d),\n' $i $i; done
-    "uint16" => ElementaryTypeName::Uint(16),
-    "uint24" => ElementaryTypeName::Uint(24),
-    "uint32" => ElementaryTypeName::Uint(32),
-    "uint40" => ElementaryTypeName::Uint(40),
-    "uint48" => ElementaryTypeName::Uint(48),
-    "uint56" => ElementaryTypeName::Uint(56),
-    "uint64" => ElementaryTypeName::Uint(64),
-    "uint72" => ElementaryTypeName::Uint(72),
-    "uint80" => ElementaryTypeName::Uint(80),
-    "uint88" => ElementaryTypeName::Uint(88),
-    "uint96" => ElementaryTypeName::Uint(96),
-    "uint104" => ElementaryTypeName::Uint(104),
-    "uint112" => ElementaryTypeName::Uint(112),
-    "uint120" => ElementaryTypeName::Uint(120),
-    "uint128" => ElementaryTypeName::Uint(128),
-    "uint136" => ElementaryTypeName::Uint(136),
-    "uint144" => ElementaryTypeName::Uint(144),
-    "uint152" => ElementaryTypeName::Uint(152),
-    "uint160" => ElementaryTypeName::Uint(160),
-    "uint168" => ElementaryTypeName::Uint(168),
-    "uint176" => ElementaryTypeName::Uint(176),
-    "uint184" => ElementaryTypeName::Uint(184),
-    "uint192" => ElementaryTypeName::Uint(192),
-    "uint200" => ElementaryTypeName::Uint(200),
-    "uint208" => ElementaryTypeName::Uint(208),
-    "uint216" => ElementaryTypeName::Uint(216),
-    "uint224" => ElementaryTypeName::Uint(224),
-    "uint232" => ElementaryTypeName::Uint(232),
-    "uint240" => ElementaryTypeName::Uint(240),
-    "uint248" => ElementaryTypeName::Uint(248),
-    "uint256" => ElementaryTypeName::Uint(256),
-    "int" => ElementaryTypeName::Int(256),
-    "int8" => ElementaryTypeName::Int(8),
-    "int16" => ElementaryTypeName::Int(16),
-    "int24" => ElementaryTypeName::Int(24),
-    "int32" => ElementaryTypeName::Int(32),
-    "int40" => ElementaryTypeName::Int(40),
-    "int48" => ElementaryTypeName::Int(48),
-    "int56" => ElementaryTypeName::Int(56),
-    "int64" => ElementaryTypeName::Int(64),
-    "int72" => ElementaryTypeName::Int(72),
-    "int80" => ElementaryTypeName::Int(80),
-    "int88" => ElementaryTypeName::Int(88),
-    "int96" => ElementaryTypeName::Int(96),
-    "int104" => ElementaryTypeName::Int(104),
-    "int112" => ElementaryTypeName::Int(112),
-    "int120" => ElementaryTypeName::Int(120),
-    "int128" => ElementaryTypeName::Int(128),
-    "int136" => ElementaryTypeName::Int(136),
-    "int144" => ElementaryTypeName::Int(144),
-    "int152" => ElementaryTypeName::Int(152),
-    "int160" => ElementaryTypeName::Int(160),
-    "int168" => ElementaryTypeName::Int(168),
-    "int176" => ElementaryTypeName::Int(176),
-    "int184" => ElementaryTypeName::Int(184),
-    "int192" => ElementaryTypeName::Int(192),
-    "int200" => ElementaryTypeName::Int(200),
-    "int208" => ElementaryTypeName::Int(208),
-    "int216" => ElementaryTypeName::Int(216),
-    "int224" => ElementaryTypeName::Int(224),
-    "int232" => ElementaryTypeName::Int(232),
-    "int240" => ElementaryTypeName::Int(240),
-    "int248" => ElementaryTypeName::Int(248),
-    "int256" => ElementaryTypeName::Int(256),
-    "byte" => ElementaryTypeName::Bytes(1),
-    "bytes" => ElementaryTypeName::DynamicBytes,
-    "bytes1" => ElementaryTypeName::Bytes(1),
-    "bytes2" => ElementaryTypeName::Bytes(2),
-    "bytes3" => ElementaryTypeName::Bytes(3),
-    "bytes4" => ElementaryTypeName::Bytes(4),
-    "bytes5" => ElementaryTypeName::Bytes(5),
-    "bytes6" => ElementaryTypeName::Bytes(6),
-    "bytes7" => ElementaryTypeName::Bytes(7),
-    "bytes8" => ElementaryTypeName::Bytes(8),
-    "bytes9" => ElementaryTypeName::Bytes(9),
-    "bytes10" => ElementaryTypeName::Bytes(10),
-    "bytes11" => ElementaryTypeName::Bytes(11),
-    "bytes12" => ElementaryTypeName::Bytes(12),
-    "bytes13" => ElementaryTypeName::Bytes(13),
-    "bytes14" => ElementaryTypeName::Bytes(14),
-    "bytes15" => ElementaryTypeName::Bytes(15),
-    "bytes16" => ElementaryTypeName::Bytes(16),
-    "bytes17" => ElementaryTypeName::Bytes(17),
-    "bytes18" => ElementaryTypeName::Bytes(18),
-    "bytes19" => ElementaryTypeName::Bytes(19),
-    "bytes20" => ElementaryTypeName::Bytes(20),
-    "bytes21" => ElementaryTypeName::Bytes(21),
-    "bytes22" => ElementaryTypeName::Bytes(22),
-    "bytes23" => ElementaryTypeName::Bytes(23),
-    "bytes24" => ElementaryTypeName::Bytes(24),
-    "bytes25" => ElementaryTypeName::Bytes(25),
-    "bytes26" => ElementaryTypeName::Bytes(26),
-    "bytes27" => ElementaryTypeName::Bytes(27),
-    "bytes28" => ElementaryTypeName::Bytes(28),
-    "bytes29" => ElementaryTypeName::Bytes(29),
-    "bytes30" => ElementaryTypeName::Bytes(30),
-    "bytes31" => ElementaryTypeName::Bytes(31),
-    "bytes32" => ElementaryTypeName::Bytes(32),
+PrimitiveType: PrimitiveType = {
+    "bool" => PrimitiveType::Bool,
+    "address" => PrimitiveType::Address,
+    "string" => PrimitiveType::String,
+    "uint" => PrimitiveType::Uint(256),
+    "uint8" => PrimitiveType::Uint(8),
+    // for i in $(seq 8 8 256); do printf '    "uint%d" => PrimitiveType::Uint(%d),\n' $i $i; done
+    "uint16" => PrimitiveType::Uint(16),
+    "uint24" => PrimitiveType::Uint(24),
+    "uint32" => PrimitiveType::Uint(32),
+    "uint40" => PrimitiveType::Uint(40),
+    "uint48" => PrimitiveType::Uint(48),
+    "uint56" => PrimitiveType::Uint(56),
+    "uint64" => PrimitiveType::Uint(64),
+    "uint72" => PrimitiveType::Uint(72),
+    "uint80" => PrimitiveType::Uint(80),
+    "uint88" => PrimitiveType::Uint(88),
+    "uint96" => PrimitiveType::Uint(96),
+    "uint104" => PrimitiveType::Uint(104),
+    "uint112" => PrimitiveType::Uint(112),
+    "uint120" => PrimitiveType::Uint(120),
+    "uint128" => PrimitiveType::Uint(128),
+    "uint136" => PrimitiveType::Uint(136),
+    "uint144" => PrimitiveType::Uint(144),
+    "uint152" => PrimitiveType::Uint(152),
+    "uint160" => PrimitiveType::Uint(160),
+    "uint168" => PrimitiveType::Uint(168),
+    "uint176" => PrimitiveType::Uint(176),
+    "uint184" => PrimitiveType::Uint(184),
+    "uint192" => PrimitiveType::Uint(192),
+    "uint200" => PrimitiveType::Uint(200),
+    "uint208" => PrimitiveType::Uint(208),
+    "uint216" => PrimitiveType::Uint(216),
+    "uint224" => PrimitiveType::Uint(224),
+    "uint232" => PrimitiveType::Uint(232),
+    "uint240" => PrimitiveType::Uint(240),
+    "uint248" => PrimitiveType::Uint(248),
+    "uint256" => PrimitiveType::Uint(256),
+    "int" => PrimitiveType::Int(256),
+    "int8" => PrimitiveType::Int(8),
+    "int16" => PrimitiveType::Int(16),
+    "int24" => PrimitiveType::Int(24),
+    "int32" => PrimitiveType::Int(32),
+    "int40" => PrimitiveType::Int(40),
+    "int48" => PrimitiveType::Int(48),
+    "int56" => PrimitiveType::Int(56),
+    "int64" => PrimitiveType::Int(64),
+    "int72" => PrimitiveType::Int(72),
+    "int80" => PrimitiveType::Int(80),
+    "int88" => PrimitiveType::Int(88),
+    "int96" => PrimitiveType::Int(96),
+    "int104" => PrimitiveType::Int(104),
+    "int112" => PrimitiveType::Int(112),
+    "int120" => PrimitiveType::Int(120),
+    "int128" => PrimitiveType::Int(128),
+    "int136" => PrimitiveType::Int(136),
+    "int144" => PrimitiveType::Int(144),
+    "int152" => PrimitiveType::Int(152),
+    "int160" => PrimitiveType::Int(160),
+    "int168" => PrimitiveType::Int(168),
+    "int176" => PrimitiveType::Int(176),
+    "int184" => PrimitiveType::Int(184),
+    "int192" => PrimitiveType::Int(192),
+    "int200" => PrimitiveType::Int(200),
+    "int208" => PrimitiveType::Int(208),
+    "int216" => PrimitiveType::Int(216),
+    "int224" => PrimitiveType::Int(224),
+    "int232" => PrimitiveType::Int(232),
+    "int240" => PrimitiveType::Int(240),
+    "int248" => PrimitiveType::Int(248),
+    "int256" => PrimitiveType::Int(256),
+    "byte" => PrimitiveType::Bytes(1),
+    "bytes" => PrimitiveType::DynamicBytes,
+    "bytes1" => PrimitiveType::Bytes(1),
+    "bytes2" => PrimitiveType::Bytes(2),
+    "bytes3" => PrimitiveType::Bytes(3),
+    "bytes4" => PrimitiveType::Bytes(4),
+    "bytes5" => PrimitiveType::Bytes(5),
+    "bytes6" => PrimitiveType::Bytes(6),
+    "bytes7" => PrimitiveType::Bytes(7),
+    "bytes8" => PrimitiveType::Bytes(8),
+    "bytes9" => PrimitiveType::Bytes(9),
+    "bytes10" => PrimitiveType::Bytes(10),
+    "bytes11" => PrimitiveType::Bytes(11),
+    "bytes12" => PrimitiveType::Bytes(12),
+    "bytes13" => PrimitiveType::Bytes(13),
+    "bytes14" => PrimitiveType::Bytes(14),
+    "bytes15" => PrimitiveType::Bytes(15),
+    "bytes16" => PrimitiveType::Bytes(16),
+    "bytes17" => PrimitiveType::Bytes(17),
+    "bytes18" => PrimitiveType::Bytes(18),
+    "bytes19" => PrimitiveType::Bytes(19),
+    "bytes20" => PrimitiveType::Bytes(20),
+    "bytes21" => PrimitiveType::Bytes(21),
+    "bytes22" => PrimitiveType::Bytes(22),
+    "bytes23" => PrimitiveType::Bytes(23),
+    "bytes24" => PrimitiveType::Bytes(24),
+    "bytes25" => PrimitiveType::Bytes(25),
+    "bytes26" => PrimitiveType::Bytes(26),
+    "bytes27" => PrimitiveType::Bytes(27),
+    "bytes28" => PrimitiveType::Bytes(28),
+    "bytes29" => PrimitiveType::Bytes(29),
+    "bytes30" => PrimitiveType::Bytes(30),
+    "bytes31" => PrimitiveType::Bytes(31),
+    "bytes32" => PrimitiveType::Bytes(32),
 }
 
-TypeName: TypeName = {
-    ElementaryTypeName => TypeName::Elementary(<>),
-    Identifier => TypeName::Unresolved(<>),
+Type: Type = {
+    PrimitiveType => Type::Primitive(<>),
+    Identifier => Type::Unresolved(<>),
 }
 
 StorageLocation: StorageLocation = {
@@ -154,10 +154,10 @@ Identifier: Identifier = {
 }
 
 VariableDeclaration: Box<VariableDeclaration> = {
-    <t:TypeName> <s:StorageLocation> <i:Identifier> => Box::new(VariableDeclaration{
+    <t:Type> <s:StorageLocation> <i:Identifier> => Box::new(VariableDeclaration{
         typ: t, storage: s, name: i
     }),
-    <t:TypeName> <i:Identifier> => Box::new(VariableDeclaration{ 
+    <t:Type> <i:Identifier> => Box::new(VariableDeclaration{ 
         typ: t, storage: StorageLocation::Default, name: i
     })
 }
@@ -189,7 +189,7 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <t:TypeName> <i:"indexed"?> <n:Identifier?> => EventParameter{
+    <t:Type> <i:"indexed"?> <n:Identifier?> => EventParameter{
         typ: t, indexed: match i { Some(_) => true, _ => false }, name:n
     }
 }
@@ -213,7 +213,7 @@ EnumDefinition: Box<EnumDefinition> = {
 }
 
 ContractVariableDefinition: Box<ContractVariableDefinition> = {
-    <l:@L> <t:TypeName> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <l:@L> <t:Type> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
         Box::new(ContractVariableDefinition{
             loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
         })
@@ -333,13 +333,13 @@ Precedence2: Expression = {
 Precedence1: Expression = {
     <a:@L> <e:Precedence1> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence1> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
-    <a:@L> "new" <t:ElementaryTypeName> <b:@R> => Expression::New(Loc(a, b), t),
+    <a:@L> "new" <t:PrimitiveType> <b:@R> => Expression::New(Loc(a, b), t),
     <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence1> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
-    <a:@L> <i:TypeName> "(" ")" <b:@R> => {
+    <a:@L> <i:Type> "(" ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), i, Vec::new())
     },
-    <a:@L> <i:TypeName> "(" <v:(<Expression> ",")*> <e:Expression> ")" <b:@R> => {
+    <a:@L> <i:Type> "(" <v:(<Expression> ",")*> <e:Expression> ")" <b:@R> => {
         let mut v = v;
         v.push(e);
         Expression::FunctionCall(Loc(a, b), i, v)
@@ -372,7 +372,7 @@ HexLiteral: String = {
 }
 
 Parameter: Parameter = {
-    <e:TypeName> <s:StorageLocation?> <i:Identifier?> => {
+    <e:Type> <s:StorageLocation?> <i:Identifier?> => {
         Parameter{typ: e, storage: s, name: i}
     }
 }

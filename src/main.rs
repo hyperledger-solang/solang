@@ -183,7 +183,7 @@ fn main() {
             if verbose {
                 eprintln!("info: Generating LLVM IR for contract {} with target {}", resolved_contract.name, resolved_contract.target);
             }
-        
+
             let contract = emit::Contract::build(&context, resolved_contract, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {

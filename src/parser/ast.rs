@@ -20,7 +20,7 @@ pub enum SourceUnitPart {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ElementaryTypeName {
+pub enum PrimitiveType {
     Address,
     Bool,
     String,
@@ -31,47 +31,47 @@ pub enum ElementaryTypeName {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum TypeName {
-    Elementary(ElementaryTypeName),
+pub enum Type {
+    Primitive(PrimitiveType),
     Unresolved(Identifier),
 }
 
-impl ElementaryTypeName {
+impl PrimitiveType {
     pub fn signed(&self) -> bool {
         match self {
-            ElementaryTypeName::Int(_) => true,
+            PrimitiveType::Int(_) => true,
             _ => false,
         }
     }
 
     pub fn ordered(&self) -> bool {
         match self {
-            ElementaryTypeName::Int(_) => true,
-            ElementaryTypeName::Uint(_) => true,
+            PrimitiveType::Int(_) => true,
+            PrimitiveType::Uint(_) => true,
             _ => false,
         }
     }
 
     pub fn bits(&self) -> u16 {
         match self {
-            ElementaryTypeName::Address => 160,
-            ElementaryTypeName::Bool => 1,
-            ElementaryTypeName::Int(n) => *n,
-            ElementaryTypeName::Uint(n) => *n,
-            ElementaryTypeName::Bytes(n) => (*n * 8) as u16,
+            PrimitiveType::Address => 160,
+            PrimitiveType::Bool => 1,
+            PrimitiveType::Int(n) => *n,
+            PrimitiveType::Uint(n) => *n,
+            PrimitiveType::Bytes(n) => (*n * 8) as u16,
             _ => panic!("{} not fixed size", self.to_string()),
         }
     }
 
     pub fn to_string(&self) -> String {
         match self {
-            ElementaryTypeName::Address => "address".to_string(),
-            ElementaryTypeName::Bool => "bool".to_string(),
-            ElementaryTypeName::String => "string".to_string(),
-            ElementaryTypeName::Int(n) => format!("int{}", n),
-            ElementaryTypeName::Uint(n) => format!("uint{}", n),
-            ElementaryTypeName::Bytes(n) => format!("bytes{}", n),
-            ElementaryTypeName::DynamicBytes => "bytes".to_string(),
+            PrimitiveType::Address => "address".to_string(),
+            PrimitiveType::Bool => "bool".to_string(),
+            PrimitiveType::String => "string".to_string(),
+            PrimitiveType::Int(n) => format!("int{}", n),
+            PrimitiveType::Uint(n) => format!("uint{}", n),
+            PrimitiveType::Bytes(n) => format!("bytes{}", n),
+            PrimitiveType::DynamicBytes => "bytes".to_string(),
         }
     }
 }
@@ -86,7 +86,7 @@ pub enum StorageLocation {
 
 #[derive(Debug, PartialEq)]
 pub struct VariableDeclaration {
-    pub typ: TypeName,
+    pub typ: Type,
     pub storage: StorageLocation,
     pub name: Identifier,
 }
@@ -123,7 +123,7 @@ pub struct ContractDefinition {
 
 #[derive(Debug, PartialEq)]
 pub struct EventParameter {
-    pub typ: TypeName,
+    pub typ: Type,
     pub indexed: bool,
     pub name: Option<Identifier>,
 }
@@ -150,7 +150,7 @@ pub enum VariableAttribute {
 #[derive(Debug, PartialEq)]
 pub struct ContractVariableDefinition {
     pub loc: Loc,
-    pub ty: TypeName,
+    pub ty: Type,
     pub attrs: Vec<VariableAttribute>,
     pub name: Identifier,
     pub initializer: Option<Expression>,
@@ -160,10 +160,10 @@ pub struct ContractVariableDefinition {
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
-    New(Loc, ElementaryTypeName),
+    New(Loc, PrimitiveType),
     IndexAccess(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
-    FunctionCall(Loc, TypeName, Vec<Expression>),
+    FunctionCall(Loc, Type, Vec<Expression>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),
     Delete(Loc, Box<Expression>),
@@ -267,7 +267,7 @@ impl Expression {
 
 #[derive(Debug, PartialEq)]
 pub struct Parameter {
-    pub typ: TypeName,
+    pub typ: Type,
     pub storage: Option<StorageLocation>,
     pub name: Option<Identifier>,
 }
@@ -413,7 +413,7 @@ mod test {
                         },
                         fields: vec![
                             Box::new(VariableDeclaration {
-                                typ: TypeName::Elementary(ElementaryTypeName::Bool),
+                                typ: Type::Primitive(PrimitiveType::Bool),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(86, 92),
@@ -421,7 +421,7 @@ mod test {
                                 },
                             }),
                             Box::new(VariableDeclaration {
-                                typ: TypeName::Elementary(ElementaryTypeName::Uint(256)),
+                                typ: Type::Primitive(PrimitiveType::Uint(256)),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(123, 129),
@@ -429,7 +429,7 @@ mod test {
                                 },
                             }),
                             Box::new(VariableDeclaration {
-                                typ: TypeName::Elementary(ElementaryTypeName::Bytes(2)),
+                                typ: Type::Primitive(PrimitiveType::Bytes(2)),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(162, 169),
@@ -437,7 +437,7 @@ mod test {
                                 },
                             }),
                             Box::new(VariableDeclaration {
-                                typ: TypeName::Elementary(ElementaryTypeName::Bytes(32)),
+                                typ: Type::Primitive(PrimitiveType::Bytes(32)),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(203, 209),
@@ -448,7 +448,7 @@ mod test {
                     })),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
-                            ty: TypeName::Elementary(ElementaryTypeName::String),
+                            ty: Type::Primitive(PrimitiveType::String),
                             attrs: vec![],
                             name: Identifier {
                                 loc: Loc(260, 268),
@@ -460,7 +460,7 @@ mod test {
                     )),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
-                            ty: TypeName::Elementary(ElementaryTypeName::Int(64)),
+                            ty: Type::Primitive(PrimitiveType::Int(64)),
                             attrs: vec![],
                             name: Identifier {
                                 loc: Loc(296, 306),
