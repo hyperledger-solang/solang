@@ -218,7 +218,7 @@ pub fn function_decl(
         // fallback function
         if let Some(i) = ns.fallback_function() {
             let prev = &ns.functions[i];
-            
+
             errors.push(Output::error_with_note(
                 f.loc,
                 "fallback function already defined".to_string(),
@@ -237,7 +237,7 @@ pub fn function_decl(
             ));
             return false;
         }
-        
+
         ns.functions.push(fdecl);
 
         true
@@ -264,11 +264,11 @@ fn signatures() {
         vec!(
             Parameter {
                 name: "".to_string(),
-                ty: TypeName::Elementary(ast::ElementaryTypeName::Uint(8))
+                ty: Type::Primitive(ast::PrimitiveType::Uint(8))
             },
             Parameter {
                 name: "".to_string(),
-                ty: TypeName::Elementary(ast::ElementaryTypeName::Address)
+                ty: Type::Primitive(ast::PrimitiveType::Address)
             },
         ), Vec::new(), &ns);
 

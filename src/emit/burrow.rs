@@ -24,9 +24,9 @@ impl BurrowTarget {
         b.declare_externals(&mut c);
 
         c.emit_functions(&b);
-    
+
         b.emit_constructor_dispatch(&c);
-        b.emit_function_dispatch(&c); 
+        b.emit_function_dispatch(&c);
 
         c
     }
@@ -40,7 +40,7 @@ impl BurrowTarget {
         ];
 
         let ftype = ret.fn_type(&args, false);
-        
+
         contract.module.add_function("get_storage32", ftype, Some(Linkage::External));
         contract.module.add_function("set_storage32", ftype, Some(Linkage::External));
     }
@@ -134,12 +134,12 @@ impl BurrowTarget {
     fn emit_abi_encode_single_val(
         &self,
         contract: &Contract,
-        ty: &ast::ElementaryTypeName,
+        ty: &ast::PrimitiveType,
         dest: PointerValue,
         val: IntValue,
     ) {
         match ty {
-            ast::ElementaryTypeName::Bool => {
+            ast::PrimitiveType::Bool => {
                 // first clear
                 let dest8 = contract.builder.build_pointer_cast(dest,
                     contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -165,8 +165,8 @@ impl BurrowTarget {
 
                 contract.builder.build_store(dest, value);
             }
-            ast::ElementaryTypeName::Int(8) | ast::ElementaryTypeName::Uint(8) => {
-                let signval = if let ast::ElementaryTypeName::Int(8) = ty {
+            ast::PrimitiveType::Int(8) | ast::PrimitiveType::Uint(8) => {
+                let signval = if let ast::PrimitiveType::Int(8) = ty {
                     let negative = contract.builder.build_int_compare(IntPredicate::SLT,
                             val, contract.context.i8_type().const_zero(), "neg");
 
@@ -197,10 +197,10 @@ impl BurrowTarget {
 
                 contract.builder.build_store(dest, val);
             }
-            ast::ElementaryTypeName::Uint(n) | ast::ElementaryTypeName::Int(n) => {
+            ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
                 // first clear/set the upper bits
                 if *n < 256 {
-                    let signval = if let ast::ElementaryTypeName::Int(8) = ty {
+                    let signval = if let ast::PrimitiveType::Int(8) = ty {
                         let negative = contract.builder.build_int_compare(IntPredicate::SLT,
                                 val, contract.context.i8_type().const_zero(), "neg");
 
@@ -329,9 +329,9 @@ impl TargetRuntime for BurrowTarget {
         for (i, arg) in spec.returns.iter().enumerate() {
             // insert abi decode
             let ty = match arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
+                resolver::Type::Primitive(e) => e,
+                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::Noreturn => unreachable!(),
             };
 
             self.emit_abi_encode_single_val(contract, &ty, abi_ptr, args[i].into_int_value());
@@ -363,13 +363,13 @@ impl TargetRuntime for BurrowTarget {
 
         for arg in &spec.params {
             let ty = match &arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => &contract.ns.enums[*n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
+                resolver::Type::Primitive(e) => e,
+                resolver::Type::Enum(n) => &contract.ns.enums[*n].ty,
+                resolver::Type::Noreturn => unreachable!(),
             };
 
             args.push(match ty {
-                ast::ElementaryTypeName::Bool => {
+                ast::PrimitiveType::Bool => {
                     // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
                     // which is unneeded (hopefully)
                     // cast to 64 bit pointer
@@ -386,7 +386,7 @@ impl TargetRuntime for BurrowTarget {
                         contract.builder.build_load(bool_ptr, "abi_bool").into_int_value(),
                         contract.context.i64_type().const_zero(), "bool").into()
                 }
-                ast::ElementaryTypeName::Uint(8) | ast::ElementaryTypeName::Int(8) => {
+                ast::PrimitiveType::Uint(8) | ast::PrimitiveType::Int(8) => {
                     let int8_ptr = contract.builder.build_pointer_cast(data,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic), "");
 
@@ -398,7 +398,7 @@ impl TargetRuntime for BurrowTarget {
 
                     contract.builder.build_load(int8_ptr, "abi_int8")
                 }
-                ast::ElementaryTypeName::Uint(n) | ast::ElementaryTypeName::Int(n) => {
+                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
                     let int_type = contract.context.custom_width_int_type(*n as u32);
                     let type_size = int_type.size_of();
 

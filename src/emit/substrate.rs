@@ -227,15 +227,15 @@ impl TargetRuntime for SubstrateTarget {
             exists.into_int_value(),
             contract.context.i32_type().const_zero(),
             "storage_exists");
-        
+
         let clear_block = contract.context.append_basic_block(function, "not_in_storage");
         let retrieve_block = contract.context.append_basic_block(function, "in_storage");
         let done_storage = contract.context.append_basic_block(function, "done_storage");
-        
+
         contract.builder.build_conditional_branch(exists, &retrieve_block, &clear_block);
 
         contract.builder.position_at_end(&retrieve_block);
-        
+
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
             &[
@@ -272,15 +272,15 @@ impl TargetRuntime for SubstrateTarget {
 
         for arg in spec.params.iter() {
             let ty = match arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
+                resolver::Type::Primitive(e) => e,
+                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::Noreturn => unreachable!(),
             };
 
             match ty {
-                ast::ElementaryTypeName::Bool => length += 1,
-                ast::ElementaryTypeName::Uint(n) |
-                ast::ElementaryTypeName::Int(n) => length += n as u64 / 8,
+                ast::PrimitiveType::Bool => length += 1,
+                ast::PrimitiveType::Uint(n) |
+                ast::PrimitiveType::Int(n) => length += n as u64 / 8,
                 _ => unimplemented!()
             }
         }
@@ -304,22 +304,22 @@ impl TargetRuntime for SubstrateTarget {
 
         for (i, arg) in spec.params.iter().enumerate() {
             let ty = match arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
+                resolver::Type::Primitive(e) => e,
+                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::Noreturn => unreachable!(),
             };
 
             let arglen;
 
             match ty {
-                ast::ElementaryTypeName::Bool => {
+                ast::PrimitiveType::Bool => {
                     args.push(contract.builder.build_int_compare(IntPredicate::EQ,
                         contract.builder.build_load(argsdata, "abi_bool").into_int_value(),
                         contract.context.i8_type().const_int(1, false), "bool").into());
                     arglen = 1;
                 },
-                ast::ElementaryTypeName::Uint(n) |
-                ast::ElementaryTypeName::Int(n) => {
+                ast::PrimitiveType::Uint(n) |
+                ast::PrimitiveType::Int(n) => {
                     args.push(contract.builder.build_load(
                         contract.builder.build_pointer_cast(argsdata,
                             args[i].into_int_value().get_type().ptr_type(AddressSpace::Generic),
@@ -349,15 +349,15 @@ impl TargetRuntime for SubstrateTarget {
 
         for arg in spec.returns.iter() {
             let ty = match arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
+                resolver::Type::Primitive(e) => e,
+                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::Noreturn => unreachable!(),
             };
 
             match ty {
-                ast::ElementaryTypeName::Bool => length += 1,
-                ast::ElementaryTypeName::Uint(n) |
-                ast::ElementaryTypeName::Int(n) => length += n as u64 / 8,
+                ast::PrimitiveType::Bool => length += 1,
+                ast::PrimitiveType::Uint(n) |
+                ast::PrimitiveType::Int(n) => length += n as u64 / 8,
                 _ => unimplemented!()
             }
         }
@@ -374,22 +374,22 @@ impl TargetRuntime for SubstrateTarget {
 
         for (i, arg) in spec.returns.iter().enumerate() {
             let ty = match arg.ty {
-                resolver::TypeName::Elementary(e) => e,
-                resolver::TypeName::Enum(n) => contract.ns.enums[n].ty,
-                resolver::TypeName::Noreturn => unreachable!(),
+                resolver::Type::Primitive(e) => e,
+                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::Noreturn => unreachable!(),
             };
 
             let arglen;
 
             match ty {
-                ast::ElementaryTypeName::Bool => {
+                ast::PrimitiveType::Bool => {
                     contract.builder.build_store(argsdata,
                         contract.builder.build_int_z_extend(args[i].into_int_value(), contract.context.i8_type(), "bool")
                     );
                     arglen = 1;
                 },
-                ast::ElementaryTypeName::Uint(n) |
-                ast::ElementaryTypeName::Int(n) => {
+                ast::PrimitiveType::Uint(n) |
+                ast::PrimitiveType::Int(n) => {
                     contract.builder.build_store(
                         contract.builder.build_pointer_cast(argsdata,
                             args[i].into_int_value().get_type().ptr_type(AddressSpace::Generic),
@@ -422,7 +422,7 @@ impl TargetRuntime for SubstrateTarget {
             ],
             ""
         );
-            
+
         contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
     }
 

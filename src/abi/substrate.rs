@@ -167,7 +167,7 @@ impl Registry {
         length + 1
     }
 
-    /// Returns the string at the specified index 
+    /// Returns the string at the specified index
     #[cfg(test)]
     pub fn get_str(&self, index: usize) -> &str {
         &self.strings[index - 1]
@@ -291,32 +291,32 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
     Metadata{registry, storage, contract}
 }
 
-fn solty_to_scalety(ty: &resolver::TypeName, contract: &resolver::Contract) -> (String, usize) {
+fn solty_to_scalety(ty: &resolver::Type, contract: &resolver::Contract) -> (String, usize) {
     let solty = match &ty {
-        resolver::TypeName::Elementary(e) => e,
-        resolver::TypeName::Enum(ref i) => &contract.enums[*i].ty,
-        resolver::TypeName::Noreturn => unreachable!(),
+        resolver::Type::Primitive(e) => e,
+        resolver::Type::Enum(ref i) => &contract.enums[*i].ty,
+        resolver::Type::Noreturn => unreachable!(),
     };
 
     match solty {
-        ast::ElementaryTypeName::Bool => ("bool".into(), 1),
-        ast::ElementaryTypeName::Uint(n) => (format!("u{}", n), (n / 8).into()),
-        ast::ElementaryTypeName::Int(n) => (format!("i{}", n), (n / 8).into()),
+        ast::PrimitiveType::Bool => ("bool".into(), 1),
+        ast::PrimitiveType::Uint(n) => (format!("u{}", n), (n / 8).into()),
+        ast::PrimitiveType::Int(n) => (format!("i{}", n), (n / 8).into()),
         _ => unreachable!()
     }
 }
 
-fn ty_to_abi(ty: &resolver::TypeName, contract: &resolver::Contract, registry: &mut Registry) -> ParamType {
+fn ty_to_abi(ty: &resolver::Type, contract: &resolver::Contract, registry: &mut Registry) -> ParamType {
     let solty = match &ty {
-        resolver::TypeName::Elementary(e) => e,
-        resolver::TypeName::Enum(ref i) => &contract.enums[*i].ty,
-        resolver::TypeName::Noreturn => unreachable!(),
+        resolver::Type::Primitive(e) => e,
+        resolver::Type::Enum(ref i) => &contract.enums[*i].ty,
+        resolver::Type::Noreturn => unreachable!(),
     };
 
     let scalety = match solty {
-        ast::ElementaryTypeName::Bool => "bool".into(),
-        ast::ElementaryTypeName::Uint(n) => format!("u{}", n),
-        ast::ElementaryTypeName::Int(n) => format!("i{}", n),
+        ast::PrimitiveType::Bool => "bool".into(),
+        ast::PrimitiveType::Uint(n) => format!("u{}", n),
+        ast::PrimitiveType::Int(n) => format!("i{}", n),
         _ => unreachable!()
     };
 

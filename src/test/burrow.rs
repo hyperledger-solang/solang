@@ -106,7 +106,7 @@ impl TestRuntime {
             Some(RuntimeValue::I32(offset)) => {
                 let offset = offset as u32;
                 let returndata = store.memory.get(offset + mem::size_of::<u32>() as u32, 32).unwrap();
-    
+
                 self.abi.functions[name].decode_output(&returndata).unwrap()
             }
             _ => panic!("expected return value when calling {}", name),
@@ -120,7 +120,7 @@ impl TestRuntime {
             // need to prepend length
             store.memory.set_value(0, calldata.len() as u32).unwrap();
             store.memory.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
-    
+
             let ret = self.module
                 .invoke_export("constructor", &[RuntimeValue::I32(0)], store)
                 .expect("failed to call constructor");
@@ -160,7 +160,7 @@ fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRu
     let store = ContractStorage::new();
 
     let abi = serde_json::to_string(&abi).unwrap();
-    
+
     (
         TestRuntime{
             module: ModuleInstance::new(&module, &ImportsBuilder::new().with_resolver("env", &store))
@@ -250,7 +250,7 @@ contract test3 {
     for i in 0..=50 {
         let res = (i + 1) * 10 + 1;
 
-        let returns = runtime.function(&mut store, "bar", 
+        let returns = runtime.function(&mut store, "bar",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
                 ethabi::Token::Bool(true)
@@ -266,7 +266,7 @@ contract test3 {
             res *= 3;
         }
 
-        let returns = runtime.function(&mut store, "bar", 
+        let returns = runtime.function(&mut store, "bar",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
                 ethabi::Token::Bool(false)
@@ -286,7 +286,7 @@ contract test3 {
             res += 1;
         }
 
-        let returns = runtime.function(&mut store, "baz", 
+        let returns = runtime.function(&mut store, "baz",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
             ]);
@@ -348,7 +348,7 @@ contract test {
     );
 
     for val in [102i32, 255, 256, 0x7fffffff].iter() {
-        let returns = runtime.function(&mut store, "foo", 
+        let returns = runtime.function(&mut store, "foo",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(*val)),
             ]);

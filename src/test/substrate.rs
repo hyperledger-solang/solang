@@ -12,7 +12,7 @@ use wasmi::*;
 
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Encode, Decode};
-use num_derive::FromPrimitive;    
+use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 type StorageKey = [u8; 32];
@@ -130,7 +130,7 @@ impl Externals for ContractStorage {
                 if let Err(e) = self.memory.get_into(data_ptr, &mut self.scratch) {
                     panic!("ext_set_storage: {}", e);
                 }
-    
+
                 Ok(None)
             },
             _ => panic!("external {} unknown", index),
@@ -172,7 +172,7 @@ struct TestRuntime {
 impl TestRuntime {
     fn function<'a>(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
-        
+
         store.scratch = m.selector.to_le_bytes().to_vec().into_iter().chain(args).collect();
 
         self.module
@@ -249,21 +249,21 @@ fn simple_solidiy_compile_and_run() {
 #[test]
 fn flipper() {
     let ctx = inkwell::context::Context::create();
-    
+
     // parse
     let (runtime, mut store) = build_solidity(&ctx,
         "
         contract flipper {
             bool private value;
-        
+
             constructor(bool initvalue) public {
                 value = initvalue;
             }
-        
+
             function flip() public {
                 value = !value;
             }
-        
+
             function get() public view returns (bool) {
                 return value;
             }

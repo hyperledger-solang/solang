@@ -2,7 +2,7 @@
 // This is used by Hyperledger Burrow
 
 use parser::ast;
-use resolver::{Contract, Parameter, TypeName};
+use resolver::{Contract, Parameter, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -82,9 +82,9 @@ fn parameter_to_abi(param: &Parameter, contract: &Contract) -> ABIParam {
     ABIParam {
         name: param.name.to_string(),
         ty: match &param.ty {
-            TypeName::Elementary(e) => e.to_string(),
-            TypeName::Enum(ref i) => contract.enums[*i].ty.to_string(),
-            TypeName::Noreturn => unreachable!(),
+            Type::Primitive(e) => e.to_string(),
+            Type::Enum(ref i) => contract.enums[*i].ty.to_string(),
+            Type::Noreturn => unreachable!(),
         },
     }
 }

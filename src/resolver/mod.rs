@@ -23,58 +23,58 @@ impl fmt::Display for Target {
     }
 }
 #[derive(PartialEq, Clone)]
-pub enum TypeName {
-    Elementary(ast::ElementaryTypeName),
+pub enum Type {
+    Primitive(ast::PrimitiveType),
     Enum(usize),
     Noreturn,
 }
 
-impl TypeName {
+impl Type {
     pub fn to_string(&self, ns: &Contract) -> String {
         match self {
-            TypeName::Elementary(e) => e.to_string(),
-            TypeName::Enum(n) => format!("enum {}", ns.enums[*n].name),
-            TypeName::Noreturn => "no return".to_owned(),
+            Type::Primitive(e) => e.to_string(),
+            Type::Enum(n) => format!("enum {}", ns.enums[*n].name),
+            Type::Noreturn => "no return".to_owned(),
         }
     }
 
     pub fn bits(&self) -> u16 {
         match self {
-            TypeName::Elementary(e) => e.bits(),
+            Type::Primitive(e) => e.bits(),
             _ => panic!("type not allowed"),
         }
     }
 
     pub fn signed(&self) -> bool {
         match self {
-            TypeName::Elementary(e) => e.signed(),
-            TypeName::Enum(_) => false,
-            TypeName::Noreturn => unreachable!(),
+            Type::Primitive(e) => e.signed(),
+            Type::Enum(_) => false,
+            Type::Noreturn => unreachable!(),
         }
     }
 
     pub fn ordered(&self) -> bool {
         match self {
-            TypeName::Elementary(e) => e.ordered(),
-            TypeName::Enum(_) => false,
-            TypeName::Noreturn => unreachable!(),
+            Type::Primitive(e) => e.ordered(),
+            Type::Enum(_) => false,
+            Type::Noreturn => unreachable!(),
         }
     }
 
     pub fn new_bool() -> Self {
-        TypeName::Elementary(ast::ElementaryTypeName::Bool)
+        Type::Primitive(ast::PrimitiveType::Bool)
     }
 }
 
 pub struct EnumDecl {
     pub name: String,
-    pub ty: ast::ElementaryTypeName,
+    pub ty: ast::PrimitiveType,
     pub values: HashMap<String, (ast::Loc, usize)>,
 }
 
 pub struct Parameter {
     pub name: String,
-    pub ty: TypeName,
+    pub ty: Type,
 }
 
 pub struct FunctionDecl {
@@ -96,19 +96,19 @@ impl FunctionDecl {
         let mut signature = name.to_owned();
 
         signature.push('(');
-    
+
         for (i, p) in params.iter().enumerate() {
             if i > 0 {
                 signature.push(',');
             }
-    
+
             signature.push_str(&match &p.ty {
-                TypeName::Elementary(e) => e.to_string(),
-                TypeName::Enum(i) => ns.enums[*i].ty.to_string(),
-                TypeName::Noreturn => unreachable!(),
+                Type::Primitive(e) => e.to_string(),
+                Type::Enum(i) => ns.enums[*i].ty.to_string(),
+                Type::Noreturn => unreachable!(),
             });
         }
-    
+
         signature.push(')');
 
         FunctionDecl{
@@ -118,7 +118,7 @@ impl FunctionDecl {
 
     pub fn selector(&self) -> u32 {
         let res = keccak256(self.signature.as_bytes());
-        
+
         u32::from_le_bytes([res[0], res[1], res[2], res[3]])
     }
 
@@ -134,9 +134,9 @@ impl FunctionDecl {
                 }
 
                 sig.push_str(&match &p.ty {
-                    TypeName::Elementary(e) => e.to_string(),
-                    TypeName::Enum(i) => ns.enums[*i].name.to_owned(),
-                    TypeName::Noreturn => unreachable!(),
+                    Type::Primitive(e) => e.to_string(),
+                    Type::Enum(i) => ns.enums[*i].name.to_owned(),
+                    Type::Noreturn => unreachable!(),
                 });
             }
         }
@@ -147,7 +147,7 @@ impl FunctionDecl {
 
 pub struct ContractVariable {
     pub name: String,
-    pub ty: TypeName,
+    pub ty: Type,
     pub visibility: ast::Visibility,
     pub storage: Option<usize>,
 }
@@ -223,10 +223,10 @@ impl Contract {
         true
     }
 
-    pub fn resolve_type(&self, id: &ast::TypeName, errors: &mut Vec<Output>) -> Result<TypeName, ()> {
+    pub fn resolve_type(&self, id: &ast::Type, errors: &mut Vec<Output>) -> Result<Type, ()> {
         match id {
-            ast::TypeName::Elementary(e) => Ok(TypeName::Elementary(*e)),
-            ast::TypeName::Unresolved(s) => match self.symbols.get(&s.name) {
+            ast::Type::Primitive(e) => Ok(Type::Primitive(*e)),
+            ast::Type::Unresolved(s) => match self.symbols.get(&s.name) {
                 None => {
                     errors.push(Output::decl_error(
                         s.loc,
@@ -234,7 +234,7 @@ impl Contract {
                     ));
                     Err(())
                 }
-                Some(Symbol::Enum(_, n)) => Ok(TypeName::Enum(*n)),
+                Some(Symbol::Enum(_, n)) => Ok(Type::Enum(*n)),
                 Some(Symbol::Function(_)) => {
                     errors.push(Output::decl_error(
                         s.loc,
@@ -549,7 +549,7 @@ fn enum_decl(enum_: &ast::EnumDefinition, errors: &mut Vec<Output>) -> EnumDecl 
 
     EnumDecl {
         name: enum_.name.name.to_string(),
-        ty: ast::ElementaryTypeName::Uint(bits as u16),
+        ty: ast::PrimitiveType::Uint(bits as u16),
         values: entries,
     }
 }
@@ -570,7 +570,7 @@ fn enum_256values_is_uint8() {
     });
 
     let f = enum_decl(&e, &mut Vec::new());
-    assert_eq!(f.ty, ast::ElementaryTypeName::Uint(8));
+    assert_eq!(f.ty, ast::PrimitiveType::Uint(8));
 
     for i in 1..256 {
         e.values.push(ast::Identifier {
@@ -582,7 +582,7 @@ fn enum_256values_is_uint8() {
     assert_eq!(e.values.len(), 256);
 
     let r = enum_decl(&e, &mut Vec::new());
-    assert_eq!(r.ty, ast::ElementaryTypeName::Uint(8));
+    assert_eq!(r.ty, ast::PrimitiveType::Uint(8));
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -590,7 +590,7 @@ fn enum_256values_is_uint8() {
     });
 
     let r2 = enum_decl(&e, &mut Vec::new());
-    assert_eq!(r2.ty, ast::ElementaryTypeName::Uint(16));
+    assert_eq!(r2.ty, ast::PrimitiveType::Uint(16));
 }
 
 fn var_decl(
