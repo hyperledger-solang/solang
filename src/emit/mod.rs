@@ -275,6 +275,15 @@ impl<'a> Contract<'a> {
         }
     }
 
+    fn emit_initializer(&self, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
+        let function = self.module.add_function("storage_initializers",
+            self.context.void_type().fn_type(&[], false), Some(Linkage::Internal));
+
+        self.emit_cfg(&self.ns.initializer, None, function, runtime);
+
+        function
+    }
+
     fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
 
@@ -304,12 +313,12 @@ impl<'a> Contract<'a> {
             None => panic!(),
         };
 
-        self.emit_cfg(cfg, f, function, runtime);
+        self.emit_cfg(cfg, Some(f), function, runtime);
 
         function
     }
 
-    fn emit_cfg(&self, cfg: &cfg::ControlFlowGraph, resolver_function: &resolver::FunctionDecl, function: FunctionValue<'a>, runtime: &dyn TargetRuntime) {
+    fn emit_cfg(&self, cfg: &cfg::ControlFlowGraph, resolver_function: Option<&resolver::FunctionDecl>, function: FunctionValue<'a>, runtime: &dyn TargetRuntime) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
             bb: inkwell::basic_block::BasicBlock,
@@ -403,12 +412,12 @@ impl<'a> Contract<'a> {
                     cfg::Instr::Return { value } if value.is_empty() => {
                         self.builder.build_return(None);
                     },
-                    cfg::Instr::Return { value } if resolver_function.wasm_return => {
+                    cfg::Instr::Return { value } if resolver_function.unwrap().wasm_return => {
                         let retval = self.expression(&value[0], &w.vars);
                         self.builder.build_return(Some(&retval));
                     }
                     cfg::Instr::Return { value } => {
-                        let returns_offset = resolver_function.params.len();
+                        let returns_offset = resolver_function.unwrap().params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(val, &w.vars);

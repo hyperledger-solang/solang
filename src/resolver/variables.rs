@@ -20,6 +20,8 @@ pub fn contract_variables(
         }
     }
 
+    cfg.add(&mut Vartable::new(&ns), Instr::Return{ value: Vec::new() });
+
     ns.initializer = cfg;
 
     broken
