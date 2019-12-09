@@ -457,7 +457,7 @@ fn statement(
             let var_ty = ns.resolve_type(&decl.typ, errors)?;
 
             let e_t = if let Some(init) = init {
-                let (expr, init_ty) = expression(init, cfg, ns, vartab, errors)?;
+                let (expr, init_ty) = expression(init, cfg, ns, &mut Some(vartab), errors)?;
 
                 Some(cast(
                     &decl.name.loc,
@@ -540,7 +540,7 @@ fn statement(
             let mut exprs = Vec::new();
 
             for (i, r) in returns.iter().enumerate() {
-                let (e, ty) = expression(r, cfg, ns, vartab, errors)?;
+                let (e, ty) = expression(r, cfg, ns, &mut Some(vartab), errors)?;
 
                 exprs.push(cast(&r.loc(), e, &ty, &f.returns[i].ty, true, ns, errors)?);
             }
@@ -550,12 +550,12 @@ fn statement(
             Ok(false)
         }
         ast::Statement::Expression(expr) => {
-            expression(expr, cfg, ns, vartab, errors)?;
+            expression(expr, cfg, ns, &mut Some(vartab), errors)?;
 
             Ok(true)
         }
         ast::Statement::If(cond, then_stmt, None) => {
-            let (expr, expr_ty) = expression(cond, cfg, ns, vartab, errors)?;
+            let (expr, expr_ty) = expression(cond, cfg, ns, &mut Some(vartab), errors)?;
 
             let then = cfg.new_basic_block("then".to_string());
             let endif = cfg.new_basic_block("endif".to_string());
@@ -596,7 +596,7 @@ fn statement(
             Ok(true)
         }
         ast::Statement::If(cond, then_stmt, Some(else_stmt)) => {
-            let (expr, expr_ty) = expression(cond, cfg, ns, vartab, errors)?;
+            let (expr, expr_ty) = expression(cond, cfg, ns, &mut Some(vartab), errors)?;
 
             let then = cfg.new_basic_block("then".to_string());
             let else_ = cfg.new_basic_block("else".to_string());
@@ -706,7 +706,7 @@ fn statement(
             if body_reachable {
                 cfg.set_basic_block(cond);
 
-                let (expr, expr_ty) = expression(cond_expr, cfg, ns, vartab, errors)?;
+                let (expr, expr_ty) = expression(cond_expr, cfg, ns, &mut Some(vartab), errors)?;
 
                 cfg.add(
                     vartab,
@@ -744,7 +744,7 @@ fn statement(
 
             cfg.set_basic_block(cond);
 
-            let (expr, expr_ty) = expression(cond_expr, cfg, ns, vartab, errors)?;
+            let (expr, expr_ty) = expression(cond_expr, cfg, ns, &mut Some(vartab), errors)?;
 
             cfg.add(
                 vartab,
@@ -861,7 +861,7 @@ fn statement(
 
             cfg.set_basic_block(cond);
 
-            let (expr, expr_ty) = expression(cond_expr, cfg, ns, vartab, errors)?;
+            let (expr, expr_ty) = expression(cond_expr, cfg, ns, &mut Some(vartab), errors)?;
 
             cfg.add(
                 vartab,
@@ -1163,7 +1163,7 @@ pub fn expression(
     expr: &ast::Expression,
     cfg: &mut ControlFlowGraph,
     ns: &resolver::Contract,
-    vartab: &mut Vartable,
+    vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     match expr {
@@ -1234,9 +1234,15 @@ pub fn expression(
             }
         }
         ast::Expression::Variable(id) => {
-            let v = vartab.find(id, ns, errors)?;
-            get_contract_storage(&v, cfg, vartab);
-            Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
+            if let &mut Some(ref mut tab) = vartab {
+                let v = tab.find(id, ns, errors)?;
+                get_contract_storage(&v, cfg, tab);
+                Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
+            } else {
+                errors.push(Output::error(
+                    id.loc.clone(), format!("cannot read variable {} in constant expression", id.name)));
+                Err(())
+            }
         }
         ast::Expression::Add(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
@@ -1464,6 +1470,15 @@ pub fn expression(
                 _ => unreachable!(),
             };
 
+            let vartab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        loc.clone(), format!("cannot access variable {} in constant expression", id.name)));
+                    return Err(());
+                }
+            };
+
             let var = vartab.find(id, ns, errors)?;
             let (pos, ty) = {
                 get_contract_storage(&var, cfg, vartab);
@@ -1575,13 +1590,22 @@ pub fn expression(
         }
 
         // assignment
-        ast::Expression::Assign(_, var, e) => {
+        ast::Expression::Assign(loc, var, e) => {
             let id = match var.as_ref() {
                 ast::Expression::Variable(id) => id,
                 _ => unreachable!(),
             };
 
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+
+            let vartab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        loc.clone(), format!("cannot access variable {} in constant expression", id.name)));
+                    return Err(());
+                }
+            };
 
             let var = vartab.find(id, ns, errors)?;
 
@@ -1598,19 +1622,30 @@ pub fn expression(
             Ok((Expression::Variable(id.loc.clone(), var.pos), var.ty))
         }
 
-        ast::Expression::AssignAdd(_, var, e)
-        | ast::Expression::AssignSubtract(_, var, e)
-        | ast::Expression::AssignMultiply(_, var, e)
-        | ast::Expression::AssignDivide(_, var, e)
-        | ast::Expression::AssignModulo(_, var, e) => {
+        ast::Expression::AssignAdd(loc, var, e)
+        | ast::Expression::AssignSubtract(loc, var, e)
+        | ast::Expression::AssignMultiply(loc, var, e)
+        | ast::Expression::AssignDivide(loc, var, e)
+        | ast::Expression::AssignModulo(loc, var, e) => {
             let id = match var.as_ref() {
                 ast::Expression::Variable(id) => id,
                 _ => unreachable!(),
             };
 
-            let var = vartab.find(id, ns, errors)?;
+            let (set, set_type) = expression(e, cfg, ns, vartab, errors)?;
+
+            let tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        loc.clone(), format!("cannot access variable {} in constant expression", id.name)));
+                    return Err(());
+                }
+            };
+
+            let var = tab.find(id, ns, errors)?;
             let (pos, ty) = {
-                get_contract_storage(&var, cfg, vartab);
+                get_contract_storage(&var, cfg, tab);
 
                 (var.pos, var.ty.clone())
             };
@@ -1622,8 +1657,6 @@ pub fn expression(
                 ));
                 return Err(());
             }
-
-            let (set, set_type) = expression(e, cfg, ns, vartab, errors)?;
 
             let set = cast(&id.loc, set, &set_type, &ty, true, ns, errors)?;
 
@@ -1667,14 +1700,14 @@ pub fn expression(
             };
 
             cfg.add(
-                vartab,
+                tab,
                 Instr::Set {
                     res: pos,
                     expr: set,
                 },
             );
 
-            set_contract_storage(id, &var, cfg, vartab, errors)?;
+            set_contract_storage(id, &var, cfg, tab, errors)?;
 
             Ok((Expression::Variable(id.loc.clone(), pos), ty))
         }
@@ -1723,6 +1756,15 @@ pub fn expression(
                 resolved_args.push(Box::new(expr));
                 resolved_types.push(expr_type);
             }
+
+            let tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        loc.clone(), format!("cannot call function in constant expression")));
+                    return Err(());
+                }
+            };
 
             let mut temp_errors = Vec::new();
 
@@ -1787,10 +1829,10 @@ pub fn expression(
                         loc: ast::Loc(0, 0),
                         name: "".to_owned(),
                     };
-                    let temp_pos = vartab.temp(&id, ty);
+                    let temp_pos = tab.temp(&id, ty);
 
                     cfg.add(
-                        vartab,
+                        tab,
                         Instr::Call {
                             res: vec![temp_pos],
                             func: f.1,
@@ -1801,7 +1843,7 @@ pub fn expression(
                     return Ok((Expression::Variable(id.loc.clone(), temp_pos), ty.clone()));
                 } else {
                     cfg.add(
-                        vartab,
+                        tab,
                         Instr::Call {
                             res: Vec::new(),
                             func: f.1,
