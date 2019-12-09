@@ -113,7 +113,7 @@ fn var_decl(
         if is_constant {
             // TODO check for non-constant stuff
         }  else {
-            let (res, resty) = match expression(&initializer, cfg, &ns, vartab, errors) {
+            let (res, resty) = match expression(&initializer, cfg, &ns, &mut Some(vartab), errors) {
                 Ok((res, ty)) => (res, ty),
                 Err(()) => return false
             };
