@@ -62,6 +62,10 @@ pub enum Instr {
         res: usize,
         expr: Expression,
     },
+    Constant {
+        res: usize,
+        constant: usize,
+    },
     Call {
         res: Vec<usize>,
         func: usize,
@@ -245,6 +249,11 @@ impl ControlFlowGraph {
                 self.vars[*res].id.name,
                 self.expr_to_string(ns, expr)
             ),
+            Instr::Constant { res, constant } => format!(
+                "%{} = const {}",
+                self.vars[*res].id.name,
+                self.expr_to_string(ns, &ns.constants[*constant])
+            ),
             Instr::Branch { bb } => format!("branch bb{}", bb),
             Instr::BranchCond {
                 cond,
@@ -396,17 +405,28 @@ fn check_return(
 }
 
 fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
-    if let Storage::Contract(offset) = var.storage {
-        cfg.reads_contract_storage = true;
-        cfg.add(
-            vartab,
-            Instr::GetStorage {
-                local: var.pos,
-                storage: offset,
-            },
-        );
+    match var.storage {
+        Storage::Contract(offset) => {
+            cfg.reads_contract_storage = true;
+            cfg.add(
+                vartab,
+                Instr::GetStorage {
+                    local: var.pos,
+                    storage: offset,
+                },
+            );
+        },
+        Storage::Constant(n) => {
+            cfg.add(
+                vartab,
+                Instr::Constant {
+                    res: var.pos,
+                    constant: n,
+                },
+            );
+        }
+        Storage::Local => ()
     }
-    // FIXME get constant
 }
 
 pub fn set_contract_storage(
@@ -429,7 +449,7 @@ pub fn set_contract_storage(
 
             Ok(())
         }
-        Storage::Constant => {
+        Storage::Constant(_) => {
             errors.push(Output::type_error(
                 id.loc.clone(),
                 format!("cannot assign to constant {}", id.name),
@@ -1879,7 +1899,7 @@ pub fn expression(
 // produce full Vector of all variables
 #[derive(Clone)]
 pub enum Storage {
-    Constant,
+    Constant(usize),
     Contract(usize),
     Local,
 }
@@ -1986,9 +2006,9 @@ impl Vartable {
             id: id.clone(),
             ty: var.ty.clone(),
             pos,
-            storage: match var.storage {
-                Some(n) => Storage::Contract(n),
-                None => Storage::Constant,
+            storage: match var.var {
+                resolver::ContractVariableType::Storage(n) => Storage::Contract(n),
+                resolver::ContractVariableType::Constant(n) => Storage::Constant(n),
             },
         });
 

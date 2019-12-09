@@ -149,11 +149,26 @@ impl FunctionDecl {
     }
 }
 
+pub enum ContractVariableType {
+    Storage(usize),
+    Constant(usize)
+}
+
 pub struct ContractVariable {
     pub name: String,
     pub ty: Type,
     pub visibility: ast::Visibility,
-    pub storage: Option<usize>,
+    pub var: ContractVariableType
+}
+
+impl ContractVariable {
+    pub fn is_storage(&self) -> bool {
+        if let ContractVariableType::Storage(_) = self.var {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 pub enum Symbol {
@@ -169,6 +184,7 @@ pub struct Contract {
     pub constructors: Vec<FunctionDecl>,
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<ContractVariable>,
+    pub constants: Vec<cfg::Expression>,
     pub initializer: cfg::ControlFlowGraph,
     pub target: Target,
     top_of_contract_storage: usize,
@@ -402,6 +418,7 @@ fn resolve_contract(
         constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
+        constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
         target: target.clone(),
         top_of_contract_storage: 0,
