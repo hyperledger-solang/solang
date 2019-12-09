@@ -3,7 +3,7 @@
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
 
-<img align="right" width="200" height="200" src="docs/solang.svg">
+<img align="right" width="640" src="web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">
 
 Welcome to solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
