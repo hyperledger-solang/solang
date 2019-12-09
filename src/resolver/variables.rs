@@ -3,6 +3,7 @@ use parser::ast;
 use output::Output;
 use super::{Contract, ContractVariable, Symbol};
 use resolver::cfg::{ControlFlowGraph, Vartable, Instr, set_contract_storage, expression, cast};
+use resolver::ContractVariableType;
 
 pub fn contract_variables(
     def: &ast::ContractDefinition,
@@ -86,19 +87,50 @@ fn var_decl(
         None => ast::Visibility::Private(ast::Loc(0, 0)),
     };
 
-    let storage = if !is_constant {
+    let var = if !is_constant {
         let storage = ns.top_of_contract_storage;
         ns.top_of_contract_storage += 1;
-        Some(storage)
+        ContractVariableType::Storage(storage)
     } else {
+        ContractVariableType::Constant(ns.constants.len())
+    };
+
+    let initializer = if let Some(initializer) = &s.initializer {
+        let expr = if is_constant {
+            expression(&initializer, cfg, &ns, &mut None, errors)
+        } else {
+            expression(&initializer, cfg, &ns, &mut Some(vartab), errors)
+        };
+
+        let (res, resty) = match expr {
+            Ok((res, ty)) => (res, ty),
+            Err(()) => return false
+        };
+
+        // implicityly conversion to correct ty
+        let res = match cast(&s.loc, res, &resty, &ty, false, &ns, errors) {
+            Ok(res) => res,
+            Err(_) => return false
+        };
+
+        Some(res)
+    } else {
+        if is_constant {
+            errors.push(Output::decl_error(
+                s.loc.clone(),
+                format!("missing initializer for constant"),
+            ));
+            return false;
+        }
+
         None
     };
 
     let sdecl = ContractVariable {
         name: s.name.name.to_string(),
-        storage,
         visibility,
         ty,
+        var
     };
 
     let pos = ns.variables.len();
@@ -109,34 +141,15 @@ fn var_decl(
         return false
     }
 
-    if let Some(initializer) = &s.initializer {
+    if let Some(res) = initializer {
         if is_constant {
-            // TODO check for non-constant stuff
-        }  else {
-            let (res, resty) = match expression(&initializer, cfg, &ns, &mut Some(vartab), errors) {
-                Ok((res, ty)) => (res, ty),
-                Err(()) => return false
-            };
-
+            ns.constants.push(res);
+        } else {
             let var = vartab.find(&s.name, ns, errors).unwrap();
-
-            // implicityly convversion to correct ty
-            let res = match cast(&s.loc, res, &resty, &var.ty, false, &ns, errors) {
-                Ok(res) => res,
-                Err(_) => return false
-            };
 
             cfg.add(vartab, Instr::Set{ res: var.pos, expr: res });
 
             set_contract_storage(&s.name, &var, cfg, vartab, errors).unwrap();
-        }
-    } else {
-        if is_constant {
-            errors.push(Output::decl_error(
-                s.loc.clone(),
-                format!("missing initializer for constant"),
-            ));
-            return false;
         }
     }
 

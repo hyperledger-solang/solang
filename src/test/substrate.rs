@@ -336,3 +336,38 @@ fn contract_storage_initializers() {
 
     assert_eq!(store.scratch, ret.encode());
 }
+
+#[test]
+fn contract_constants() {
+    let ctx = inkwell::context::Context::create();
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct FooReturn {
+        value: u32
+    }
+
+    // parse
+    let (runtime, mut store) = build_solidity(&ctx,
+        "
+        contract test {
+            uint32 constant a = 300 + 100;
+
+            constructor() public {
+            }
+
+            function foo() public pure returns (uint32) {
+                uint32 ret = a;
+                return ret;
+            }
+        }",
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "foo", Vec::new());
+
+    let ret = FooReturn{ value: 400 };
+
+    assert_eq!(store.scratch, ret.encode());
+}
+ 

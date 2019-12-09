@@ -367,15 +367,12 @@ impl<'a> Contract<'a> {
                         stack: false,
                     });
                 }
-                cfg::Storage::Local | cfg::Storage::Contract(_) => {
+                cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
                     vars.push(Variable {
                         value: self.builder.build_alloca(
                             v.ty.LLVMType(self.ns, &self.context), &v.id.name).into(),
                         stack: true,
                     });
-                }
-                cfg::Storage::Constant => {
-                    // nothing to do
                 }
             }
         }
@@ -428,6 +425,15 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Set { res, expr } => {
                         let value_ref = self.expression(expr, &w.vars);
+                        if w.vars[*res].stack {
+                            self.builder.build_store(w.vars[*res].value.into_pointer_value(), value_ref);
+                        } else {
+                            w.vars[*res].value = value_ref.into();
+                        }
+                    }
+                    cfg::Instr::Constant { res, constant } => {
+                        let const_expr = &self.ns.constants[*constant];
+                        let value_ref = self.expression(const_expr, &w.vars);
                         if w.vars[*res].stack {
                             self.builder.build_store(w.vars[*res].value.into_pointer_value(), value_ref);
                         } else {

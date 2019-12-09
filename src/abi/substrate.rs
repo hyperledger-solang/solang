@@ -223,7 +223,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
     let mut registry = Registry::new();
 
     let fields = resolver_contract.variables.iter()
-        .filter(|v| !v.storage.is_none())
+        .filter(|v| !v.is_storage())
         .map(|v| {
             let (scalety, _) = solty_to_scalety(&v.ty, resolver_contract);
 
@@ -236,18 +236,20 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
     let storagety = registry.struct_type("storage", fields);
 
     let fields = resolver_contract.variables.iter()
-        .filter(|v| !v.storage.is_none())
-        .map(|v| {
-            let storage = v.storage.unwrap();
-            let (scalety, len) = solty_to_scalety(&v.ty, resolver_contract);
+        .filter_map(|v|  {
+            if let resolver::ContractVariableType::Storage(storage) = v.var {
+                let (scalety, len) = solty_to_scalety(&v.ty, resolver_contract);
 
-            StorageLayout {
-                name: registry.string(&v.name),
-                layout: StorageFieldLayout::Field(LayoutField{
-                    offset: format!("0x{:064X}", storage),
-                    len,
-                    ty: registry.builtin_type(&scalety)
+                Some(StorageLayout {
+                    name: registry.string(&v.name),
+                    layout: StorageFieldLayout::Field(LayoutField{
+                        offset: format!("0x{:064X}", storage),
+                        len,
+                        ty: registry.builtin_type(&scalety)
+                    })
                 })
+            } else {
+                None
             }
         }).collect();
 

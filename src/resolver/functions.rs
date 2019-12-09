@@ -254,6 +254,7 @@ fn signatures() {
         constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
+        constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
         target: crate::resolver::Target::Burrow,
         top_of_contract_storage: 0,

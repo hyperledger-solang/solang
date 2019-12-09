@@ -37,7 +37,7 @@ impl SubstrateTarget {
 
     fn storage_keys<'a>(&mut self, contract: &'a mut Contract) {
         for var in &contract.ns.variables {
-            if let Some(slot) = var.storage {
+            if let resolver::ContractVariableType::Storage(slot) = var.var {
                 let mut key = slot.to_le_bytes().to_vec();
 
                 key.resize(32, 0);
