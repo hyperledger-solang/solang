@@ -11,6 +11,8 @@ pub mod cfg;
 mod functions;
 mod variables;
 
+use resolver::cfg::{ControlFlowGraph, Vartable, Instr};
+
 #[derive(PartialEq, Clone)]
 pub enum Type {
     Primitive(ast::PrimitiveType),
@@ -466,6 +468,22 @@ fn resolve_contract(
                 Err(_) => broken = true
             }
         }
+    }
+
+    // Substrate requires one constructor
+    if ns.constructors.is_empty() && target == &Target::Substrate {
+        let mut fdecl = FunctionDecl::new(
+            ast::Loc(0, 0), "".to_owned(), false, 0, None, ast::Visibility::Public(ast::Loc(0, 0)), Vec::new(), Vec::new(), &ns);
+
+        let mut vartab = Vartable::new();
+        let mut cfg = ControlFlowGraph::new();
+
+        cfg.add(&mut vartab, Instr::Return{ value: Vec::new() });
+        cfg.vars = vartab.drain();
+
+        fdecl.cfg = Some(Box::new(cfg));
+
+        ns.constructors.push(fdecl);
     }
 
     // resolve function bodies

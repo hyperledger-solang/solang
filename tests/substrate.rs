@@ -335,9 +335,6 @@ fn contract_constants() {
         contract test {
             uint32 constant a = 300 + 100;
 
-            constructor() public {
-            }
-
             function foo() public pure returns (uint32) {
                 uint32 ret = a;
                 return ret;
