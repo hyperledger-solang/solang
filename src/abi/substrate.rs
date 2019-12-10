@@ -13,7 +13,6 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    #[cfg(test)]
     pub fn get_function(&self, name: &str) -> Option<&Message> {
         self.contract.messages.iter()
             .find(|m| name == self.registry.get_str(m.name))
@@ -168,7 +167,6 @@ impl Registry {
     }
 
     /// Returns the string at the specified index
-    #[cfg(test)]
     pub fn get_str(&self, index: usize) -> &str {
         &self.strings[index - 1]
     }
@@ -214,7 +212,6 @@ impl Registry {
     }
 }
 
-#[cfg(test)]
 pub fn load(bs: &str) -> Result<Metadata, serde_json::error::Error> {
     serde_json::from_str(bs)
 }

@@ -1,5 +1,6 @@
 
-use resolver::{Contract, Target};
+use resolver::Contract;
+use Target;
 
 pub mod ethabi;
 pub mod substrate;

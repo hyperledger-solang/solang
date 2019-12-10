@@ -1,14 +1,21 @@
 // Create WASM virtual machine like substrate
+extern crate solang;
+extern crate wasmi;
+extern crate ethabi;
+extern crate ethereum_types;
+extern crate parity_scale_codec_derive;
+extern crate parity_scale_codec;
+extern crate num_derive;
+extern crate serde_derive;
+extern crate num_traits;
 
-use abi;
-use emit;
-use link;
-use output;
-use parser;
-use resolver;
 use std::collections::HashMap;
 use wasmi::memory_units::Pages;
 use wasmi::*;
+
+use solang::{compile_with_context, Target};
+use solang::output;
+use solang::abi;
 
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Encode, Decode};
@@ -197,26 +204,11 @@ impl TestRuntime {
 }
 
 fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRuntime, ContractStorage) {
-    let s = parser::parse(src).expect("parse should succeed");
+    let (res, errors) = compile_with_context(ctx, src, "test.sol", &Target::Substrate);
 
-    // resolve
-    let (contracts, errors) = resolver::resolver(s, &resolver::Target::Substrate);
+    output::print_messages("test.sol", src, &errors, false);
 
-    if contracts.is_empty() {
-        output::print_messages("test.sol", src, &errors, false);
-    }
-
-    assert_eq!(contracts.len(), 1);
-
-    // abi
-    let (abistr, _) = abi::generate_abi(&contracts[0], false);
-
-    // codegen
-    let contract = emit::Contract::build(ctx, &contracts[0], &"foo.sol");
-
-    let obj = contract.wasm("default").expect("llvm wasm emit should work");
-
-    let bc = link::link(&obj, &resolver::Target::Substrate);
+    let (bc, abistr) = res.unwrap();
 
     let module = Module::from_buffer(bc).expect("parse wasm should work");
 

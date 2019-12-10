@@ -1,6 +1,7 @@
 use parser::ast;
 use output::Output;
-use super::{Contract, Parameter, FunctionDecl, Target, Symbol};
+use Target;
+use super::{Contract, Parameter, FunctionDecl, Symbol};
 
 pub fn function_decl(
     f: &ast::FunctionDefinition,
@@ -256,7 +257,7 @@ fn signatures() {
         variables: Vec::new(),
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
-        target: crate::resolver::Target::Burrow,
+        target: crate::Target::Burrow,
         top_of_contract_storage: 0,
         symbols: HashMap::new(),
     };

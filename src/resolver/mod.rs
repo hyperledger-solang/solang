@@ -3,26 +3,14 @@ use parser::ast;
 use output::{Note, Output};
 use std::collections::HashMap;
 use tiny_keccak::keccak256;
-use std::fmt;
+use Target;
+use abi;
+use emit;
 
 pub mod cfg;
 mod functions;
 mod variables;
 
-#[derive(PartialEq, Clone)]
-pub enum Target {
-    Substrate,
-    Burrow
-}
-
-impl fmt::Display for Target {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Target::Substrate => write!(f, "Substrate"),
-            Target::Burrow => write!(f, "Burrow")
-        }
-    }
-}
 #[derive(PartialEq, Clone)]
 pub enum Type {
     Primitive(ast::PrimitiveType),
@@ -389,6 +377,14 @@ impl Contract {
         }
 
         s
+    }
+
+    pub fn abi(&self, verbose: bool) -> (String, &'static str) {
+        abi::generate_abi(self, verbose)
+    }
+
+    pub fn emit<'a>(&'a self, context: &'a inkwell::context::Context, filename: &'a str) -> emit::Contract {
+        emit::Contract::build(context, self, filename)
     }
 }
 

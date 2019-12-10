@@ -1,29 +1,6 @@
 extern crate clap;
-extern crate ethabi;
-extern crate ethereum_types;
-extern crate hex;
-extern crate lalrpop_util;
-extern crate lazy_static;
-extern crate num_bigint;
-extern crate num_traits;
-extern crate parity_wasm;
 extern crate serde;
-extern crate tiny_keccak;
-extern crate unescape;
-extern crate wasmi;
-extern crate inkwell;
-extern crate parity_scale_codec_derive;
-extern crate parity_scale_codec;
-extern crate num_derive;
-extern crate serde_derive;
-
-mod emit;
-mod link;
-mod output;
-mod parser;
-mod resolver;
-mod abi;
-mod test;
+extern crate solang;
 
 use clap::{App, Arg};
 use serde::Serialize;
@@ -31,6 +8,10 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
+
+use solang::output;
+use solang::link;
+use solang::abi;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -117,11 +98,11 @@ fn main() {
     let context = inkwell::context::Context::create();
     let target = if matches.is_present("STD-JSON") {
         // This type of output is used by burrow deploy
-        resolver::Target::Burrow
+        solang::Target::Burrow
     } else {
         match matches.value_of("TARGET") {
-            Some("substrate") => resolver::Target::Substrate,
-            Some("burrow") => resolver::Target::Burrow,
+            Some("substrate") => solang::Target::Substrate,
+            Some("burrow") => solang::Target::Burrow,
             _ => unreachable!()
         }
     };
@@ -138,27 +119,8 @@ fn main() {
         f.read_to_string(&mut contents)
             .expect("something went wrong reading the file");
 
-        let ast = match parser::parse(&contents) {
-            Ok(s) => s,
-            Err(errors) => {
-                if matches.is_present("STD-JSON") {
-                    let mut out = output::message_as_json(filename, &contents, &errors);
-                    json.errors.append(&mut out);
-                } else {
-                    output::print_messages(
-                        filename,
-                        &contents,
-                        &errors,
-                        verbose,
-                    );
-                    fatal = true;
-                }
-                continue;
-            }
-        };
-
         // resolve phase
-        let (contracts, errors) = resolver::resolver(ast, &target);
+        let (contracts, errors) = solang::parse_and_resolve(&contents, &target);
 
         if matches.is_present("STD-JSON") {
             let mut out = output::message_as_json(filename, &contents, &errors);
@@ -168,6 +130,7 @@ fn main() {
         }
 
         if contracts.is_empty() {
+            fatal = true;
             continue;
         }
 
@@ -184,7 +147,7 @@ fn main() {
                 eprintln!("info: Generating LLVM IR for contract {} with target {}", resolved_contract.name, resolved_contract.target);
             }
 
-            let contract = emit::Contract::build(&context, resolved_contract, &filename);
+            let contract = resolved_contract.emit(&context, &filename);
 
             if let Some("llvm") = matches.value_of("EMIT") {
                 let llvm_filename = output_file(&contract.name, "ll");
@@ -250,7 +213,7 @@ fn main() {
                 let mut file = File::create(wasm_filename).unwrap();
                 file.write_all(&wasm).unwrap();
 
-                let (abi_bytes, abi_ext) = abi::generate_abi(&resolved_contract, verbose);
+                let (abi_bytes, abi_ext) = resolved_contract.abi(verbose);
                 let abi_filename = output_file(&contract.name, abi_ext);
 
                 if verbose {

@@ -1,14 +1,16 @@
-use abi;
-use emit;
-use link;
-use output;
-use parser;
-use resolver;
+extern crate solang;
+extern crate wasmi;
+extern crate ethabi;
+extern crate ethereum_types;
+
 use std::collections::HashMap;
 use std::mem;
 use wasmi::memory_units::Pages;
 use wasmi::*;
 use ethabi::Token;
+
+use solang::{compile_with_context, Target};
+use solang::output;
 
 struct ContractStorage {
     memory: MemoryRef,
@@ -134,32 +136,16 @@ impl TestRuntime {
 }
 
 fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRuntime, ContractStorage) {
-    let s = parser::parse(src).expect("parse should succeed");
+    let (res, errors) = compile_with_context(ctx, src, "test.sol", &Target::Burrow);
+
+    output::print_messages("test.sol", src, &errors, false);
 
     // resolve
-    let (contracts, errors) = resolver::resolver(s, &resolver::Target::Burrow);
-
-    if contracts.is_empty() {
-        output::print_messages("test.sol", src, &errors, false);
-    }
-
-    assert_eq!(contracts.len(), 1);
-
-    // abi
-    let abi = abi::ethabi::gen_abi(&contracts[0]);
-
-    // codegen
-    let contract = emit::Contract::build(ctx, &contracts[0], &"foo.sol");
-
-    let obj = contract.wasm("default").expect("llvm wasm emit should work");
-
-    let bc = link::link(&obj, &resolver::Target::Burrow);
+    let (bc, abi) = res.unwrap();
 
     let module = Module::from_buffer(bc).expect("parse wasm should work");
 
     let store = ContractStorage::new();
-
-    let abi = serde_json::to_string(&abi).unwrap();
 
     (
         TestRuntime{
