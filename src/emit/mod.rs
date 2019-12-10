@@ -77,8 +77,8 @@ pub struct Contract<'a> {
 impl<'a> Contract<'a> {
     pub fn build(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Self {
         match contract.target {
-            resolver::Target::Burrow => burrow::BurrowTarget::build(context, contract, filename),
-            resolver::Target::Substrate => substrate::SubstrateTarget::build(context, contract, filename),
+            super::Target::Burrow => burrow::BurrowTarget::build(context, contract, filename),
+            super::Target::Substrate => substrate::SubstrateTarget::build(context, contract, filename),
         }
     }
 

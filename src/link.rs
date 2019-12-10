@@ -1,5 +1,5 @@
 
-use resolver::Target;
+use Target;
 use parity_wasm;
 use parity_wasm::builder;
 use parity_wasm::elements::{
