@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
-use solang::{compile_with_context, Target};
+use solang::{compile, Target};
 use solang::output;
 use solang::abi;
 
@@ -203,12 +203,15 @@ impl TestRuntime {
     }
 }
 
-fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (res, errors) = compile_with_context(ctx, src, "test.sol", &Target::Substrate);
+fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
+    let (mut res, errors) = compile(src, "test.sol", &Target::Substrate);
 
     output::print_messages("test.sol", src, &errors, false);
 
-    let (bc, abistr) = res.unwrap();
+    assert_eq!(res.len(), 1);
+
+    // resolve
+    let (bc, abistr) = res.pop().unwrap();
 
     let module = Module::from_buffer(bc).expect("parse wasm should work");
 
@@ -229,16 +232,13 @@ fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRu
 
 #[test]
 fn simple_solidiy_compile_and_run() {
-    let ctx = inkwell::context::Context::create();
-
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
         value: u32
     }
 
     // parse
-    let (runtime, mut store) = build_solidity(&ctx,
-        "
+    let (runtime, mut store) = build_solidity("
         contract test {
             function foo() public returns (uint32) {
                 return 2;
@@ -255,11 +255,8 @@ fn simple_solidiy_compile_and_run() {
 
 #[test]
 fn flipper() {
-    let ctx = inkwell::context::Context::create();
-
     // parse
-    let (runtime, mut store) = build_solidity(&ctx,
-        "
+    let (runtime, mut store) = build_solidity("
         contract flipper {
             bool private value;
 
@@ -296,16 +293,13 @@ fn flipper() {
 
 #[test]
 fn contract_storage_initializers() {
-    let ctx = inkwell::context::Context::create();
-
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
         value: u32
     }
 
     // parse
-    let (runtime, mut store) = build_solidity(&ctx,
-        "
+    let (runtime, mut store) = build_solidity("
         contract test {
             uint32 a = 100;
             uint32 b = 200;
@@ -331,16 +325,13 @@ fn contract_storage_initializers() {
 
 #[test]
 fn contract_constants() {
-    let ctx = inkwell::context::Context::create();
-
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
         value: u32
     }
 
     // parse
-    let (runtime, mut store) = build_solidity(&ctx,
-        "
+    let (runtime, mut store) = build_solidity("
         contract test {
             uint32 constant a = 300 + 100;
 
