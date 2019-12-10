@@ -20,11 +20,11 @@ fn test_variable_errors() {
             function foo() public pure returns (int32) {
                 int32 a = b + 3;
                 int32 b = a + 7;
-        
+
                 return a * b;
             }
         }", &Target::Substrate);
-    
+
     assert_eq!(first_error(errors), "`b' is not declared");
 }
 
@@ -67,7 +67,7 @@ fn test_variable_initializer_errors() {
         }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "`y' is not declared");
-    
+
     // cannot refer to yourself
     let (_, errors) = parse_and_resolve(
         "contract test {

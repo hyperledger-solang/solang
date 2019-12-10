@@ -362,4 +362,3 @@ fn contract_constants() {
 
     assert_eq!(store.scratch, ret.encode());
 }
- 
