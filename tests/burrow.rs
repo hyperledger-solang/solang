@@ -9,7 +9,7 @@ use wasmi::memory_units::Pages;
 use wasmi::*;
 use ethabi::Token;
 
-use solang::{compile_with_context, Target};
+use solang::{compile, Target};
 use solang::output;
 
 struct ContractStorage {
@@ -135,13 +135,15 @@ impl TestRuntime {
     }
 }
 
-fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (res, errors) = compile_with_context(ctx, src, "test.sol", &Target::Burrow);
+fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
+    let (mut res, errors) = compile(src, "test.sol", &Target::Burrow);
 
     output::print_messages("test.sol", src, &errors, false);
 
+    assert_eq!(res.len(), 1);
+
     // resolve
-    let (bc, abi) = res.unwrap();
+    let (bc, abi) = res.pop().unwrap();
 
     let module = Module::from_buffer(bc).expect("parse wasm should work");
 
@@ -161,10 +163,8 @@ fn build_solidity(ctx: &inkwell::context::Context, src: &'static str) -> (TestRu
 
 #[test]
 fn simple_solidiy_compile_and_run() {
-    let ctx = inkwell::context::Context::create();
-
     // parse
-    let (runtime, mut store) = build_solidity(&ctx,
+    let (runtime, mut store) = build_solidity(
         "
         contract test {
             function foo() public returns (uint32) {
@@ -180,9 +180,7 @@ fn simple_solidiy_compile_and_run() {
 
 #[test]
 fn simple_loops() {
-    let ctx = inkwell::context::Context::create();
-
-    let (runtime, mut store) = build_solidity(&ctx,
+    let (runtime, mut store) = build_solidity(
         r##"
 contract test3 {
 	function foo(uint32 a) public returns (uint32) {
@@ -283,9 +281,7 @@ contract test3 {
 
 #[test]
 fn stack_test() {
-    let ctx = inkwell::context::Context::create();
-
-    let (runtime, mut store) = build_solidity(&ctx,
+    let (runtime, mut store) = build_solidity(
         r##"
 contract test3 {
 	function foo() public returns (bool) {
@@ -304,9 +300,7 @@ contract test3 {
 
 #[test]
 fn abi_call_return_test() {
-    let ctx = inkwell::context::Context::create();
-
-    let (runtime, mut store) = build_solidity(&ctx,
+    let (runtime, mut store) = build_solidity(
         r##"
 contract test {
 	function foo() public returns (uint32) {
@@ -322,9 +316,7 @@ contract test {
 
 #[test]
 fn abi_call_pass_return_test() {
-    let ctx = inkwell::context::Context::create();
-
-    let (runtime, mut store) = build_solidity(&ctx,
+    let (runtime, mut store) = build_solidity(
         r##"
 contract test {
 	function foo(uint32 a) public returns (uint32) {
@@ -345,9 +337,7 @@ contract test {
 
 #[test]
 fn contract_storage_test() {
-    let ctx = inkwell::context::Context::create();
-
-    let (runtime, mut store) = build_solidity(&ctx,
+    let (runtime, mut store) = build_solidity(
         r##"
 contract test {
 uint32 foo;

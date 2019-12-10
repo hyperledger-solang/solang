@@ -47,34 +47,33 @@ impl fmt::Display for Target {
 /// compiler warnings, errors and informational messages are also provided.
 ///
 /// The ctx is the inkwell llvm context.
-pub fn compile_with_context(ctx: &inkwell::context::Context, src: &str, filename: &str, target: &Target) -> (Option<(Vec<u8>, String)>, Vec<output::Output>) {
+pub fn compile(src: &str, filename: &str, target: &Target) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
+    let ctx = inkwell::context::Context::create();
+
     let ast = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {
-            return (None, errors);
+            return (Vec::new(), errors);
         }
     };
 
     // resolve
     let (contracts, errors) = resolver::resolver(ast, target);
 
-    if contracts.is_empty() {
-        return (None, errors);
-    }
+    let results = contracts.iter().map(|c| {
+        let (abistr, _) = abi::generate_abi(c, false);
 
-    assert_eq!(contracts.len(), 1);
+        // codegen
+        let contract = emit::Contract::build(&ctx, c, filename);
 
-    // abi
-    let (abistr, _) = abi::generate_abi(&contracts[0], false);
+        let obj = contract.wasm("default").expect("llvm wasm emit should work");
 
-    // codegen
-    let contract = emit::Contract::build(ctx, &contracts[0], filename);
+        let bc = link::link(&obj, target);
 
-    let obj = contract.wasm("default").expect("llvm wasm emit should work");
+        (bc, abistr)
+    }).collect();
 
-    let bc = link::link(&obj, target);
-
-    (Some((bc, abistr)), errors)
+    (results, errors)
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.
