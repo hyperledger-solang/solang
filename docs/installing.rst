@@ -45,7 +45,7 @@ from source::
 
 	cargo install solang
 
-You will need the llvm libraries for this to work, see 
+You will need the llvm libraries for this to work, see
 `Installing the LLVM Libraries`_.
 
 Building solang from source
@@ -118,13 +118,13 @@ installed by your distribution.
 The llvm project is a large code base so it will take some time to build.
 
 If you are planning to do development on solang itself, then having your
-own built llvm is very helpful. The distributions build llvm without 
+own built llvm is very helpful. The distributions build llvm without
 assertions enabled. These assertions check that the IR that solang builds
 is correct. If the IR is not correct, then faults might happen when llvm
 runs compiler passes on the IR and the stack trace will not be useful
 to debug this problem.
 
-The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult. 
+The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult.
 First if all clone the llvm repository::
 
 	git clone https://github.com/llvm/llvm-project

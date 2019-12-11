@@ -6,7 +6,7 @@ Solang Solidity Compiler
     :alt: Funded by the web3 foundation
     :align: center
 
-Welcome the solang Solidity compiler. Using solang, you can compile 
+Welcome the solang Solidity compiler. Using solang, you can compile
 smart contracts written in `Solidity <https://en.wikipedia.org/wiki/Solidity>`_ for `Substrate <https://substrate.dev/>`_ or `Hyperledger Burrow <https://github.com/hyperledger/burrow>`_. It uses the
 `llvm <https://www.llvm.org/>`_ compiler framework to produce WebAssembly
 (wasm). As result, the output is highly optimized, which saves you in gas costs.
