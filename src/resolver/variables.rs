@@ -108,7 +108,7 @@ fn var_decl(
         };
 
         // implicityly conversion to correct ty
-        let res = match cast(&s.loc, res, &resty, &ty, false, &ns, errors) {
+        let res = match cast(&s.loc, res, &resty, &ty, true, &ns, errors) {
             Ok(res) => res,
             Err(_) => return false
         };

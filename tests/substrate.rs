@@ -20,6 +20,7 @@ use solang::output;
 use solang::abi;
 
 mod substrate_first;
+mod substrate_primitives;
 
 type StorageKey = [u8; 32];
 
@@ -226,4 +227,12 @@ pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
         },
         store
     )
+}
+
+pub fn first_error(errors: Vec<output::Output>) -> String {
+    for m in errors.iter().filter(|m| m.level == output::Level::Error) {
+        return m.message.to_owned();
+    }
+
+    panic!("no errors detected");
 }
