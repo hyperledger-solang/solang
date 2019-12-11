@@ -351,10 +351,14 @@ Precedence1: Expression = {
     <a:@L> <s:HexLiteral> <b:@R> => Expression::HexLiteral(Loc(a, b), s.to_string()),
     <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
-    <l:@L> <n:r#"-?[0-9]+"#> <r:@R> => Expression::NumberLiteral(Loc(l, r), BigInt::from_str(n).unwrap()),
-    <l:@L> <n:r#"-?0x[0-9a-fA-B]+"#> <r:@R> => {
+    <l:@L> <n:r#"-?[0-9][0-9_]*"#> <r:@R> => {
+        let s: String = n.chars().filter(|v| *v != '_').collect();
+
+        Expression::NumberLiteral(Loc(l, r), BigInt::from_str(&s).unwrap())
+    },
+    <l:@L> <n:r#"-?0x[0-9a-fA-B][0-9a-fA-B_]*"#> <r:@R> => {
         // from_str_radix does not like the 0x prefix
-        let s: String = n.chars().filter(|v| *v != 'x').collect();
+        let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
 
         Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
     }

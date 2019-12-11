@@ -30,7 +30,7 @@ The following primitive types are supported:
 
 ``uint``
   This represents a single unsigned integer of 256 bits wide. Values can be for example
-  ``0``, ``102`` or ``0xdeadcafe``.
+  ``0``, ``102``, ``0xdeadcafe``, or ``1000_000_000_000_000``.
 
 ``uint64``, ``uint32``, ``uint16``, ``uint8``
   These represent shorter single unsigned integers of the given width. These widths are
@@ -42,7 +42,7 @@ The following primitive types are supported:
 
 ``int``
   This represents a single signed integer of 256 bits wide. Values can be for example
-  ``-102``, ``0``, ``102`` or ``-0xdeadcafe``.
+  ``-102``, ``0``, ``102`` or ``-0xdead_cafe``.
 
 ``int64``, ``uint32``, ``uint16``, ``uint8``
   These represent shorter single signed integers of the given width. These widths are
@@ -52,13 +52,16 @@ The following primitive types are supported:
   These represent shorter single signed integers of width ``N``. ``N`` can be anything
   between 8 and 256 bits.
 
+Underscores ``_`` are allowed in numbers, as long as the number does not start with
+an underscore.
+
 Assigning values which cannot fit into the type gives a compiler error. For example::
 
     uint8 foo = 300;
 
 The largest value an ``uint8`` can hold is (2^8) - 1 = 255. So, the compiler says::
 
-    ERROR
+    implicit conversion would truncate from uint16 to uint8
 
 .. tip::
 
