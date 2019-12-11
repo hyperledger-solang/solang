@@ -13,7 +13,7 @@ use output;
 use output::Output;
 use resolver;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
     BoolLiteral(bool),
     StringLiteral(String),
@@ -800,6 +800,8 @@ fn statement(
             let set = vartab.pop_dirty_tracker();
             cfg.set_phis(end, set.clone());
             cfg.set_phis(cond, set);
+
+            cfg.set_basic_block(end);
 
             Ok(true)
         }
