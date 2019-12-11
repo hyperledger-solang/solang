@@ -70,21 +70,21 @@ fn test_literal_overflow() {
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            int8 foo = 0x80;
+            int8 foo = 0x8_0;
         }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "implicit conversion would truncate from uint8 to int8");
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            uint8 foo = -130;
+            uint8 foo = -1_30;
         }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "implicit conversion cannot change negative number to uint8");
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            int64 foo = 18446744073709551616;
+            int64 foo = 1844674_4073709551616;
         }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "implicit conversion would truncate from uint72 to int64");
