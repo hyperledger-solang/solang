@@ -1,6 +1,7 @@
 
 use std::str::FromStr;
 use num_bigint::BigInt;
+use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
 
@@ -351,7 +352,13 @@ Precedence1: Expression = {
     <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
     <l:@L> <n:r#"-?[0-9]+"#> <r:@R> => Expression::NumberLiteral(Loc(l, r), BigInt::from_str(n).unwrap()),
- }
+    <l:@L> <n:r#"-?0x[0-9a-fA-B]+"#> <r:@R> => {
+        // from_str_radix does not like the 0x prefix
+        let s: String = n.chars().filter(|v| *v != 'x').collect();
+
+        Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+    }
+}
 
 StringLiteral: String = {
     r#""([^"]|'\\'.)*""# => {
