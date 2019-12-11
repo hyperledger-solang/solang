@@ -38,7 +38,7 @@ struct Variable<'a> {
 }
 
 pub trait TargetRuntime {
-    //
+    // Access storage
     fn set_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
     fn get_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
 
@@ -58,8 +58,14 @@ pub trait TargetRuntime {
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>);
 
+    /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
+
+    /// Return success with the ABI encoded result
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue);
+
+    /// Return failure without any result
+    fn assert_failure<'b>(&self, contract: &'b Contract);
 }
 
 pub struct Contract<'a> {
@@ -525,6 +531,9 @@ impl<'a> Contract<'a> {
                         let dest = w.vars[*local].value.into_pointer_value();
 
                         runtime.set_storage(&self, function, *storage as u32, dest);
+                    }
+                    cfg::Instr::AssertFailure {} => {
+                        runtime.assert_failure(self);
                     }
                     cfg::Instr::Call { res, func, args } => {
                         let mut parms: Vec<BasicValueEnum> = Vec::new();

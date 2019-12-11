@@ -445,4 +445,8 @@ impl TargetRuntime for SubstrateTarget {
 
         contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
     }
+
+    fn assert_failure<'b>(&self, contract: &'b Contract) {
+        contract.builder.build_unreachable();
+    }
 }

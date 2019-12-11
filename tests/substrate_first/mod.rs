@@ -124,3 +124,38 @@ fn contract_constants() {
 
     assert_eq!(store.scratch, ret.encode());
 }
+
+#[test]
+fn assert_ok() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function foo() public pure returns (uint32) {
+                assert(true);
+                return 0;
+            }
+        }",
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "foo", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn assert_not_ok() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function foo() public pure returns (uint32) {
+                assert(false);
+                return 0;
+            }
+        }",
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "foo", Vec::new());
+}
