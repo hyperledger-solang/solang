@@ -1059,13 +1059,62 @@ pub fn cast(
         }
     };
 
+    // Special case: when converting literal sign can change if it fits
+    match (&expr, &to_conv) {
+        (
+            &Expression::NumberLiteral(bits, ref n),
+            &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len))
+        ) => {
+            return if n.sign() == Sign::Minus {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion cannot change negative number to {}",
+                        to.to_string(ns)
+                    )
+                ));
+
+                Err(())
+            } else if bits > to_len - 1 {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would truncate from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+
+                Err(())
+            } else {
+                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+            }
+        },
+        (
+            &Expression::NumberLiteral(bits, _),
+            &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len))
+        ) => {
+            return if bits > to_len - 1 {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would truncate from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+
+                Err(())
+            } else {
+                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+            }
+        },
+        _ => ()
+    };
+
     match (from_conv, to_conv) {
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        )
-        | (
-            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
         ) => {
             if from_len > to_len {
@@ -1087,13 +1136,9 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        }
+        },
         (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        )
-        | (
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
             if from_len > to_len {
@@ -1115,7 +1160,57 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        }
+        },
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len))
+        ) if to_len > from_len => {
+            Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+        },
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
+        ) => {
+            if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would change sign from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if from_len > to_len {
+                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+            } else if from_len < to_len {
+                Ok(Expression::SignExt(to.clone(), Box::new(expr)))
+            } else {
+                Ok(expr)
+            }
+        },
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
+        ) => {
+            if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would change sign from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if from_len > to_len {
+                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+            } else if from_len < to_len {
+                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+            } else {
+                Ok(expr)
+            }
+        },
         (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
