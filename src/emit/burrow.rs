@@ -445,4 +445,7 @@ impl TargetRuntime for BurrowTarget {
         contract.builder.position_at_end(&decode_block);
     }
 
+    fn assert_failure<'b>(&self, contract: &'b Contract) {
+        contract.builder.build_unreachable();
+    }
 }

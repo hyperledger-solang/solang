@@ -10,6 +10,7 @@ use emit;
 pub mod cfg;
 mod functions;
 mod variables;
+mod builtin;
 
 use resolver::cfg::{ControlFlowGraph, Vartable, Instr};
 
@@ -73,7 +74,7 @@ pub struct FunctionDecl {
     pub name: String,
     pub fallback: bool,
     pub signature: String,
-    pub ast_index: usize,
+    pub ast_index: Option<usize>,
     pub mutability: Option<ast::StateMutability>,
     pub visibility: ast::Visibility,
     pub params: Vec<Parameter>,
@@ -83,7 +84,7 @@ pub struct FunctionDecl {
 }
 
 impl FunctionDecl {
-    fn new(loc: ast::Loc, name: String, fallback: bool, ast_index: usize, mutability: Option<ast::StateMutability>,
+    fn new(loc: ast::Loc, name: String, fallback: bool, ast_index: Option<usize>, mutability: Option<ast::StateMutability>,
         visibility: ast::Visibility, params: Vec<Parameter>, returns: Vec<Parameter>, ns: &Contract) -> Self {
         let mut signature = name.to_owned();
 
@@ -428,6 +429,8 @@ fn resolve_contract(
         format!("found contract {}", def.name.name),
     ));
 
+    builtin::add_builtin_function(&mut ns);
+
     let mut broken = false;
 
     // first resolve enums
@@ -461,11 +464,12 @@ fn resolve_contract(
 
     // resolve constructor bodies
     for f in 0..ns.constructors.len() {
-        let ast_index = ns.constructors[f].ast_index;
-        if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-            match cfg::generate_cfg(ast_f, &ns.constructors[f], &ns, errors) {
-                Ok(c) =>  ns.constructors[f].cfg = Some(c),
-                Err(_) => broken = true
+        if let Some(ast_index) = ns.constructors[f].ast_index {
+            if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
+                match cfg::generate_cfg(ast_f, &ns.constructors[f], &ns, errors) {
+                    Ok(c) =>  ns.constructors[f].cfg = Some(c),
+                    Err(_) => broken = true
+                }
             }
         }
     }
@@ -473,7 +477,7 @@ fn resolve_contract(
     // Substrate requires one constructor
     if ns.constructors.is_empty() && target == &Target::Substrate {
         let mut fdecl = FunctionDecl::new(
-            ast::Loc(0, 0), "".to_owned(), false, 0, None, ast::Visibility::Public(ast::Loc(0, 0)), Vec::new(), Vec::new(), &ns);
+            ast::Loc(0, 0), "".to_owned(), false, None, None, ast::Visibility::Public(ast::Loc(0, 0)), Vec::new(), Vec::new(), &ns);
 
         let mut vartab = Vartable::new();
         let mut cfg = ControlFlowGraph::new();
@@ -488,62 +492,63 @@ fn resolve_contract(
 
     // resolve function bodies
     for f in 0..ns.functions.len() {
-        let ast_index = ns.functions[f].ast_index;
-        if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-            match cfg::generate_cfg(ast_f, &ns.functions[f], &ns, errors) {
-                Ok(c) => {
-                    match &ns.functions[f].mutability {
-                        Some(ast::StateMutability::Pure(loc)) => {
-                            if c.writes_contract_storage {
-                                errors.push(Output::error(
-                                    loc.clone(),
-                                    format!("function declared pure but writes contract storage"),
-                                ));
-                                broken = true;
-                            } else if c.reads_contract_storage {
-                                errors.push(Output::error(
-                                    loc.clone(),
-                                    format!("function declared pure but reads contract storage"),
-                                ));
-                                broken = true;
+        if let Some(ast_index) = ns.functions[f].ast_index {
+            if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
+                match cfg::generate_cfg(ast_f, &ns.functions[f], &ns, errors) {
+                    Ok(c) => {
+                        match &ns.functions[f].mutability {
+                            Some(ast::StateMutability::Pure(loc)) => {
+                                if c.writes_contract_storage {
+                                    errors.push(Output::error(
+                                        loc.clone(),
+                                        format!("function declared pure but writes contract storage"),
+                                    ));
+                                    broken = true;
+                                } else if c.reads_contract_storage {
+                                    errors.push(Output::error(
+                                        loc.clone(),
+                                        format!("function declared pure but reads contract storage"),
+                                    ));
+                                    broken = true;
+                                }
                             }
-                        }
-                        Some(ast::StateMutability::View(loc)) => {
-                            if c.writes_contract_storage {
-                                errors.push(Output::error(
-                                    loc.clone(),
-                                    format!("function declared view but writes contract storage"),
-                                ));
-                                broken = true;
-                            } else if !c.reads_contract_storage {
-                                errors.push(Output::warning(
-                                    loc.clone(),
-                                    format!("function can be declared pure"),
-                                ));
+                            Some(ast::StateMutability::View(loc)) => {
+                                if c.writes_contract_storage {
+                                    errors.push(Output::error(
+                                        loc.clone(),
+                                        format!("function declared view but writes contract storage"),
+                                    ));
+                                    broken = true;
+                                } else if !c.reads_contract_storage {
+                                    errors.push(Output::warning(
+                                        loc.clone(),
+                                        format!("function can be declared pure"),
+                                    ));
+                                }
                             }
-                        }
-                        Some(ast::StateMutability::Payable(_)) => {
-                            unimplemented!();
-                        }
-                        None => {
-                            let loc = &ns.functions[f].loc;
+                            Some(ast::StateMutability::Payable(_)) => {
+                                unimplemented!();
+                            }
+                            None => {
+                                let loc = &ns.functions[f].loc;
 
-                            if !c.writes_contract_storage && !c.reads_contract_storage {
-                                errors.push(Output::warning(
-                                    loc.clone(),
-                                    format!("function can be declare pure"),
-                                ));
-                            } else if !c.writes_contract_storage {
-                                errors.push(Output::warning(
-                                    loc.clone(),
-                                    format!("function can be declared view"),
-                                ));
+                                if !c.writes_contract_storage && !c.reads_contract_storage {
+                                    errors.push(Output::warning(
+                                        loc.clone(),
+                                        format!("function can be declare pure"),
+                                    ));
+                                } else if !c.writes_contract_storage {
+                                    errors.push(Output::warning(
+                                        loc.clone(),
+                                        format!("function can be declared view"),
+                                    ));
+                                }
                             }
                         }
+                        ns.functions[f].cfg = Some(c);
                     }
-                    ns.functions[f].cfg = Some(c);
+                    Err(_) => broken = true
                 }
-                Err(_) => broken = true
             }
         }
     }

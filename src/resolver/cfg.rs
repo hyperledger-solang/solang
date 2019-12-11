@@ -82,6 +82,9 @@ pub enum Instr {
         true_: usize,
         false_: usize,
     },
+    AssertFailure {
+
+    }
 }
 
 pub struct BasicBlock {
@@ -119,7 +122,7 @@ impl ControlFlowGraph {
         cfg
     }
 
-    fn new_basic_block(&mut self, name: String) -> usize {
+    pub fn new_basic_block(&mut self, name: String) -> usize {
         let pos = self.bb.len();
 
         self.bb.push(BasicBlock {
@@ -137,7 +140,7 @@ impl ControlFlowGraph {
         }
     }
 
-    fn set_basic_block(&mut self, pos: usize) {
+    pub fn set_basic_block(&mut self, pos: usize) {
         self.current = pos;
     }
 
@@ -273,6 +276,9 @@ impl ControlFlowGraph {
             }
             Instr::GetStorage { local, storage } => {
                 format!("getstorage %{} = %{}", *storage, self.vars[*local].id.name)
+            }
+            Instr::AssertFailure {  } => {
+                format!("assert-failure")
             }
             Instr::Call { res, func, args } => format!(
                 "{} = call {} {}",
