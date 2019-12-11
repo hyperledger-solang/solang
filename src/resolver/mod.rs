@@ -13,7 +13,7 @@ mod variables;
 
 use resolver::cfg::{ControlFlowGraph, Vartable, Instr};
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Type {
     Primitive(ast::PrimitiveType),
     Enum(usize),

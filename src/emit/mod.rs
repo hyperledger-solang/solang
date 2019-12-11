@@ -221,6 +221,18 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_signed_div(left, right, "")
             }
+            cfg::Expression::SModulo(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_signed_rem(left, right, "")
+            }
+            cfg::Expression::UModulo(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_unsigned_rem(left, right, "")
+            }
             cfg::Expression::Equal(l, r) => {
                 let left = self.expression(l, vartab);
                 let right = self.expression(r, vartab);
@@ -270,7 +282,7 @@ impl<'a> Contract<'a> {
                 self.builder.build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
             }
             _ => {
-                panic!("expression not implemented");
+                panic!("expression not implemented {:?}", e);
             }
         }
     }

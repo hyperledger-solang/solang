@@ -198,7 +198,7 @@ impl SubstrateTarget {
 
 impl TargetRuntime for SubstrateTarget {
     fn set_storage<'a>(&self, contract: &'a Contract, _function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
-        // FIXME: check for non-zero
+        // TODO: check for non-zero
         let key = contract.globals[self.slot_mapping[&(slot as usize)]];
 
         contract.builder.build_call(
@@ -307,7 +307,7 @@ impl TargetRuntime for SubstrateTarget {
         let mut argsdata = contract.builder.build_pointer_cast(data,
             contract.context.i8_type().ptr_type(AddressSpace::Generic), "");
 
-        for (i, arg) in spec.params.iter().enumerate() {
+        for arg in spec.params.iter() {
             let ty = match arg.ty {
                 resolver::Type::Primitive(e) => e,
                 resolver::Type::Enum(n) => contract.ns.enums[n].ty,
@@ -325,9 +325,11 @@ impl TargetRuntime for SubstrateTarget {
                 },
                 ast::PrimitiveType::Uint(n) |
                 ast::PrimitiveType::Int(n) => {
+                    let int_type = contract.context.custom_width_int_type(n as u32);
+
                     args.push(contract.builder.build_load(
                         contract.builder.build_pointer_cast(argsdata,
-                            args[i].into_int_value().get_type().ptr_type(AddressSpace::Generic),
+                            int_type.ptr_type(AddressSpace::Generic),
                             ""),
                         ""));
                     arglen = n as u64 / 8;
