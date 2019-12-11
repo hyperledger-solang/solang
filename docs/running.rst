@@ -16,8 +16,6 @@ Two blockchains are supported right now:
   constructor can be overloaded with different prototypes. With burrow, only
   one constructor prototype is allowed.
 
-  The Solidity langauge has notes for each difference.
-
 Using solang on the command line
 --------------------------------
 
@@ -25,11 +23,21 @@ Usage:
 
   solang [OPTIONS]... [SOLIDITY SOURCE FILE]...
 
---target *target*
+This means that the command line is ``solang`` followed by any options described below,
+followed by one or more solidity source filenames.
+
+Options:
+
+-v, \\-\\-verbose
+  Make the output more verbose. The compiler tell you what contracts have been
+  found in the source, and what files are generated. Without this option solang
+  will be silent if there are no errors.
+
+\\-\\-target *target*
   This takes one argument, which can either be ``burrow`` or ``substrate``.
   The default is substrate.
 
--o, --output *directory*
+-o, \\-\\-output *directory*
   This option takes one argument, which is the directory where output should
   be saved. The default is the current directory.
 
@@ -37,10 +45,10 @@ Usage:
   This takes one argument, which can either be ``none``, ``less``, ``default``,
   or ``aggressive``. These correspond to llvm optimization levels.
 
---help, -h
+\\-\\-help, -h
   This displays a short description of all the options
 
---standard-json
+\\-\\-standard-json
   This option causes solang to emulate the behaviour of Solidity
   `standard json output <https://solidity.readthedocs.io/en/v0.5.13/using-the-compiler.html#output-description>`_. No output files are written, all the
   output will be in json on stdout.
@@ -49,7 +57,7 @@ Usage:
 
   This setting implies ``--target burrow``.
 
---emit *phase*
+\\-\\-emit *phase*
   This option is can be used for debugging solang itself. This is used to
   output early phases of compilation.
 
