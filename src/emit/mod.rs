@@ -245,17 +245,59 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_compare(IntPredicate::EQ, left, right, "")
             }
-            cfg::Expression::More(l, r) => {
+            cfg::Expression::NotEqual(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::NE, left, right, "")
+            }
+            cfg::Expression::SMore(l, r) => {
                 let left = self.expression(l, vartab);
                 let right = self.expression(r, vartab);
 
                 self.builder.build_int_compare(IntPredicate::SGT, left, right, "")
             }
-            cfg::Expression::Less(l, r) => {
+            cfg::Expression::SMoreEqual(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::SGE, left, right, "")
+            }
+            cfg::Expression::SLess(l, r) => {
                 let left = self.expression(l, vartab);
                 let right = self.expression(r, vartab);
 
                 self.builder.build_int_compare(IntPredicate::SLT, left, right, "")
+            }
+            cfg::Expression::SLessEqual(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::SLE, left, right, "")
+            }
+            cfg::Expression::UMore(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::UGT, left, right, "")
+            }
+            cfg::Expression::UMoreEqual(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::UGE, left, right, "")
+            }
+            cfg::Expression::ULess(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::ULT, left, right, "")
+            }
+            cfg::Expression::ULessEqual(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_int_compare(IntPredicate::ULE, left, right, "")
             }
             cfg::Expression::Variable(_, s) => {
                 if vartab[*s].stack {

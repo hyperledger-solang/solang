@@ -31,10 +31,14 @@ pub enum Expression {
     SignExt(resolver::Type, Box<Expression>),
     Trunc(resolver::Type, Box<Expression>),
 
-    More(Box<Expression>, Box<Expression>),
-    Less(Box<Expression>, Box<Expression>),
-    MoreEqual(Box<Expression>, Box<Expression>),
-    LessEqual(Box<Expression>, Box<Expression>),
+    UMore(Box<Expression>, Box<Expression>),
+    ULess(Box<Expression>, Box<Expression>),
+    UMoreEqual(Box<Expression>, Box<Expression>),
+    ULessEqual(Box<Expression>, Box<Expression>),
+    SMore(Box<Expression>, Box<Expression>),
+    SLess(Box<Expression>, Box<Expression>),
+    SMoreEqual(Box<Expression>, Box<Expression>),
+    SLessEqual(Box<Expression>, Box<Expression>),
     Equal(Box<Expression>, Box<Expression>),
     NotEqual(Box<Expression>, Box<Expression>),
 
@@ -196,19 +200,43 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(ns, e)
             ),
-
-            Expression::More(l, r) => format!(
-                "({} > {})",
+            Expression::SMore(l, r) => format!(
+                "({} >(s) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Less(l, r) => format!(
-                "({} < {})",
+            Expression::SLess(l, r) => format!(
+                "({} <(s) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::MoreEqual(l, r) => format!(
-                "({} >= {})",
+            Expression::SMoreEqual(l, r) => format!(
+                "({} >=(s) {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::SLessEqual(l, r) => format!(
+                "({} <=(s) {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::UMore(l, r) => format!(
+                "({} >(u) {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::ULess(l, r) => format!(
+                "({} <(u) {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::UMoreEqual(l, r) => format!(
+                "({} >=(u) {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::ULessEqual(l, r) => format!(
+                "({} <=(u) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
@@ -1070,7 +1098,7 @@ pub fn cast(
     // Special case: when converting literal sign can change if it fits
     match (&expr, &to_conv) {
         (
-            &Expression::NumberLiteral(bits, ref n),
+            &Expression::NumberLiteral(_, ref n),
             &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len))
         ) => {
             return if n.sign() == Sign::Minus {
@@ -1083,7 +1111,7 @@ pub fn cast(
                 ));
 
                 Err(())
-            } else if bits > to_len - 1 {
+            } else if n.bits() >= to_len as usize {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1099,10 +1127,10 @@ pub fn cast(
             }
         },
         (
-            &Expression::NumberLiteral(bits, _),
+            &Expression::NumberLiteral(_, ref n),
             &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len))
         ) => {
-            return if bits > to_len - 1 {
+            return if n.bits() >= to_len as usize {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1465,13 +1493,23 @@ pub fn expression(
 
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
-            Ok((
-                Expression::More(
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
-                ),
-                resolver::Type::new_bool(),
-            ))
+            if ty.signed() {
+                Ok((
+                    Expression::SMore(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            } else {
+                Ok((
+                    Expression::UMore(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            }
         }
         ast::Expression::Less(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
@@ -1479,13 +1517,23 @@ pub fn expression(
 
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
-            Ok((
-                Expression::Less(
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
-                ),
-                resolver::Type::new_bool(),
-            ))
+            if ty.signed() {
+                Ok((
+                    Expression::SLess(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            } else {
+                Ok((
+                    Expression::ULess(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            }
         }
         ast::Expression::MoreEqual(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
@@ -1493,27 +1541,47 @@ pub fn expression(
 
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
-            Ok((
-                Expression::MoreEqual(
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
-                ),
-                resolver::Type::new_bool(),
-            ))
-        }
+            if ty.signed() {
+                Ok((
+                    Expression::SMoreEqual(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            } else {
+                Ok((
+                    Expression::UMoreEqual(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            }
+       }
         ast::Expression::LessEqual(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
             let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
-            Ok((
-                Expression::LessEqual(
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
-                ),
-                resolver::Type::new_bool(),
-            ))
+            if ty.signed() {
+                Ok((
+                    Expression::SLessEqual(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            } else {
+                Ok((
+                    Expression::ULessEqual(
+                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ),
+                    resolver::Type::new_bool(),
+                ))
+            }
         }
         ast::Expression::Equal(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
