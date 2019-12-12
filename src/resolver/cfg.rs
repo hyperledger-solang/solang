@@ -1734,7 +1734,7 @@ pub fn expression(
                         vartab,
                         Instr::Set {
                             res: pos,
-                            expr: Expression::Subtract(
+                            expr: Expression::Add(
                                 Box::new(Expression::Variable(id.loc.clone(), pos)),
                                 Box::new(Expression::NumberLiteral(ty.bits(), One::one())),
                             ),
