@@ -123,12 +123,12 @@ reviewer could see cast as a code smell.
 
 Some examples::
 
-	function abs(int bar) public returns (int64) {
-          if (bar > 0) {
-                  return bar;
-          } else {
-                  return -bar;
-      		}
+  function abs(int bar) public returns (int64) {
+      if (bar > 0) {
+          return bar;
+      } else {
+          return -bar;
+      }
   }
 
 The compiler will say::
@@ -144,14 +144,30 @@ with overloaded functions, so that there is an ``abs()`` for each type.
   The Ethereum Foundation Solidity compiler supports more expressions than are listed here.
   These will be implemented in Solang in early 2020.
 
+Enums
+-----
+
+Solidity enums types have to be defined on the contract level. An enum has a type name, and a list of
+unique values. Enum types can used in public functions, but the value is represented as a ``uint8``
+in the ABI.
+
+An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
+is numbered from 0, like in C and Rust::
+
+  contract enum_example {
+      enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
+
+      function is_weekend(Weekday day) public pure returns (bool) {
+          return (day == Weekday.Saturday || day == Weekday.Sunday);
+      }
+  }
+
+
 Conditionals and Loops
 ----------------------
 
 Contracts
 ---------
-
-Enums
------
 
 Constructors
 ------------
