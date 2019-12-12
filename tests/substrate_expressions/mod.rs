@@ -64,7 +64,7 @@ fn digits() {
                 }
 
                 return sum;
-            } 
+            }
         }",
     );
 
@@ -87,6 +87,9 @@ fn expressions() {
     // parse
     let (runtime, mut store) = build_solidity("
         contract test {
+            // this is 2^254
+            int constant large_value = 14474011154664524427946373126085988481658748083205070504932198000989141204992;
+
             function add_100(uint16 a) pure public returns (uint16) {
                 a -= 200;
                 a += 300;
@@ -103,6 +106,56 @@ fn expressions() {
                 a %= 10;
                 return a;
             }
+
+            function test_comparisons() pure public {
+                {
+                    // test comparisons work, if will work even if sign/unsigned is broken
+                    uint64 left = 102;
+                    uint64 right = 103;
+
+                    assert(left < right);
+                    assert(left <= right);
+                    assert(left != right);
+                    assert(right > left);
+                    assert(right >= left);
+                    assert(right == 103);
+                    assert(left >= 102);
+                    assert(right <= 103);
+                    assert(!(right <= 102));
+                }
+
+                {
+                    // check if unsigned compare works correctly (will fail if signed compare is done)
+                    uint16 left = 102;
+                    uint16 right = 0x8001;
+
+                    assert(left < right);
+                    assert(left <= right);
+                    assert(left != right);
+                    assert(right > left);
+                    assert(right >= left);
+                    assert(right == 0x8001);
+                    assert(left >= 102);
+                    assert(right <= 0x8001);
+                    assert(!(right <= 102));
+                }
+
+                {
+                    // check if signed compare works correctly (will fail if unsigned compare is done)
+                    int left = -102;
+                    int right = large_value;
+
+                    assert(left < right);
+                    assert(left <= right);
+                    assert(left != right);
+                    assert(right > left);
+                    assert(right >= left);
+                    assert(right == large_value);
+                    assert(left >= -102);
+                    assert(right <= large_value);
+                    assert(!(right <= -102));
+                }
+            }
         }",
     );
 
@@ -117,4 +170,6 @@ fn expressions() {
     runtime.function(&mut store, "low_digit", Val8(25).encode());
 
     assert_eq!(store.scratch, Val8(5).encode());
+
+    runtime.function(&mut store, "test_comparisons", Vec::new());
 }
