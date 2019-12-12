@@ -367,11 +367,11 @@ impl Contract {
             }
         }
 
-        for f in &self.functions {
+        for (i, f) in self.functions.iter().enumerate() {
             if f.name != "" {
-                s.push_str(&format!("# function {}\n", f.signature));
+                s.push_str(&format!("# function({}) {}\n", i, f.signature));
             } else {
-                s.push_str(&format!("# fallback\n"));
+                s.push_str(&format!("# fallback({})\n", i));
             }
 
             if let Some(ref cfg) = f.cfg {

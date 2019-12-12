@@ -313,7 +313,7 @@ impl ControlFlowGraph {
                 format!("assert-failure")
             }
             Instr::Call { res, func, args } => format!(
-                "{} = call {} {}",
+                "{} = call {} {} {}",
                 {
                     let s: Vec<String> = res
                         .iter()
@@ -322,6 +322,7 @@ impl ControlFlowGraph {
 
                     s.join(", ")
                 },
+                *func,
                 ns.functions[*func].name.to_owned(),
                 {
                     let s: Vec<String> = args
@@ -2079,7 +2080,7 @@ pub fn expression(
             match ns.enums[e].values.get(&id.name) {
                 Some((_, val)) => {
                     Ok((Expression::NumberLiteral(
-                            ns.enums[e].ty.bits(), 
+                            ns.enums[e].ty.bits(),
                             BigInt::from_usize(*val).unwrap()
                         ),
                         resolver::Type::Enum(e)))
