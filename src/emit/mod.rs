@@ -329,6 +329,18 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
             }
+            cfg::Expression::Or(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_or(left, right, "")
+            }
+            cfg::Expression::And(l, r) => {
+                let left = self.expression(l, vartab);
+                let right = self.expression(r, vartab);
+
+                self.builder.build_and(left, right, "")
+            }
             _ => {
                 panic!("expression not implemented {:?}", e);
             }

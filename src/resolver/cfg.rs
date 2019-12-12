@@ -47,6 +47,9 @@ pub enum Expression {
     Complement(Box<Expression>),
     UnaryMinus(Box<Expression>),
 
+    Or(Box<Expression>, Box<Expression>),
+    And(Box<Expression>, Box<Expression>),
+
     Poison,
 }
 
@@ -2088,7 +2091,59 @@ pub fn expression(
                 }
             }
         }
-        _ => unimplemented!()
+        ast::Expression::Or(loc, left, right) => {
+            // TODO investigate if Solidity evaluates right if left is true
+            let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
+            let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+
+            Ok((Expression::Or(Box::new(cast(
+                    &loc,
+                    l,
+                    &l_type,
+                    &resolver::Type::new_bool(),
+                    true,
+                    ns,
+                    errors,
+                )?),
+                Box::new(cast(
+                    &loc,
+                    r,
+                    &r_type,
+                    &resolver::Type::new_bool(),
+                    true,
+                    ns,
+                    errors,
+                )?)),
+                resolver::Type::new_bool()
+            ))
+        }
+        ast::Expression::And(loc, left, right) => {
+            // TODO investigate if Solidity evaluates right if left is false
+            let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
+            let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+
+            Ok((Expression::And(Box::new(cast(
+                    &loc,
+                    l,
+                    &l_type,
+                    &resolver::Type::new_bool(),
+                    true,
+                    ns,
+                    errors,
+                )?),
+                Box::new(cast(
+                    &loc,
+                    r,
+                    &r_type,
+                    &resolver::Type::new_bool(),
+                    true,
+                    ns,
+                    errors,
+                )?)),
+                resolver::Type::new_bool()
+            ))
+        }
+        _ => panic!("unimplemented: {:?}", expr)
     }
 }
 
