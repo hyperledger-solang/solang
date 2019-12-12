@@ -1,6 +1,7 @@
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use num_traits::One;
+use num_traits::FromPrimitive;
 use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -2057,7 +2058,37 @@ pub fn expression(
 
             Err(())
         }
-        _ => unimplemented!(),
+        ast::Expression::MemberAccess(loc, namespace, id) => {
+            // Is it an enum
+            let e = match ns.resolve_enum(namespace) {
+                Some(v) => v,
+                None => {
+                    errors.push(Output::error(
+                        loc.clone(),
+                        format!("not found"),
+                    ));
+                    return Err(());
+                }
+            };
+
+            match ns.enums[e].values.get(&id.name) {
+                Some((_, val)) => {
+                    Ok((Expression::NumberLiteral(
+                            ns.enums[e].ty.bits(), 
+                            BigInt::from_usize(*val).unwrap()
+                        ),
+                        resolver::Type::Enum(e)))
+                },
+                None => {
+                    errors.push(Output::error(
+                        id.loc.clone(),
+                        format!("enum {} does not have value {}", ns.enums[e].name, id.name),
+                    ));
+                    Err(())
+                }
+            }
+        }
+        _ => unimplemented!()
     }
 }
 
