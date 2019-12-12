@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Encode, Decode};
 
-use super::{build_solidity, first_error};
+use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
 
 #[test]
@@ -190,4 +190,78 @@ fn expressions() {
     runtime.function(&mut store, "test_comparisons", Vec::new());
 
     runtime.function(&mut store, "increments", Vec::new());
+}
+
+#[test]
+fn test_cast_errors() {
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foo(uint bar) public {
+                bool is_nonzero = bar;
+            }
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "conversion from uint256 to bool not possible");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foobar(uint foo, int bar) public returns (bool) {
+                return (foo < bar);
+            }
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "implicit conversion would change sign from uint256 to int256");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foobar(int32 foo, uint16 bar) public returns (bool) {
+                foo = bar;
+                return false;
+            }
+        }", &Target::Substrate);
+
+    no_errors(errors);
+
+    // int16 can be negative, so cannot be stored in uint32
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foobar(uint32 foo, int16 bar) public returns (bool) {
+                foo = bar;
+                return false;
+            }
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "implicit conversion would change sign from int16 to uint32");
+
+    let (_, errors) = parse_and_resolve(
+        "contract foo {
+            uint bar;
+
+            function set_bar(uint32 b) public {
+                bar = b;
+            }
+
+            function get_bar() public returns (uint32) {
+                return uint32(bar);
+            }
+        }
+
+        contract bar {
+            enum X { Y1, Y2, Y3}
+            X y;
+
+            function set_x(uint32 b) public {
+                y = X(b);
+            }
+
+            function get_x() public returns (uint32) {
+                return uint32(y);
+            }
+
+            function set_enum_x(X b) public {
+                set_x(uint32(b));
+            }
+        }", &Target::Substrate);
+
+    no_errors(errors);
 }
