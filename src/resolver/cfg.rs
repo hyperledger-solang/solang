@@ -1100,9 +1100,10 @@ pub fn cast(
     };
 
     // Special case: when converting literal sign can change if it fits
-    match (&expr, &to_conv) {
+    match (&expr, &from_conv, &to_conv) {
         (
             &Expression::NumberLiteral(_, ref n),
+            &resolver::Type::Primitive(_),
             &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len))
         ) => {
             return if n.sign() == Sign::Minus {
@@ -1132,6 +1133,7 @@ pub fn cast(
         },
         (
             &Expression::NumberLiteral(_, ref n),
+            &resolver::Type::Primitive(_),
             &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len))
         ) => {
             return if n.bits() >= to_len as usize {

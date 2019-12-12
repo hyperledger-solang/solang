@@ -22,6 +22,7 @@ use solang::abi;
 mod substrate_first;
 mod substrate_primitives;
 mod substrate_expressions;
+mod substrate_enums;
 
 type StorageKey = [u8; 32];
 
