@@ -237,3 +237,7 @@ pub fn first_error(errors: Vec<output::Output>) -> String {
 
     panic!("no errors detected");
 }
+
+pub fn no_errors(errors: Vec<output::Output>) {
+    assert!(errors.iter().filter(|m| m.level == output::Level::Error).count() == 0);
+}
