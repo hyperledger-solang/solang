@@ -104,6 +104,10 @@ Assignment expressions are also supported, as you would expect::
 It is also possible to compare values. For, this the ``>=``, ``>``, ``==``, ``!=``, ``<``, and ``<=``
 is supported. This is useful for conditionals.
 
+The post-increment and pre-increment operators are implemented like you would expect. So, ``a++``
+evaluates to the value of of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
+after incrementing.
+
 The result of a comparison operator can be assigned to a bool. For example::
 
 	bool even = (value % 2) == 0;
@@ -120,12 +124,12 @@ reviewer could see cast as a code smell.
 Some examples::
 
 	function abs(int bar) public returns (int64) {
-		if (bar > 0) {
-			return bar;
-		} else {
-        		return -bar;
+          if (bar > 0) {
+                  return bar;
+          } else {
+                  return -bar;
       		}
-  	}
+  }
 
 The compiler will say::
 

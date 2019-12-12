@@ -156,6 +156,22 @@ fn expressions() {
                     assert(!(right <= -102));
                 }
             }
+
+            function increments() public {
+                uint a = 1;
+
+                assert(a-- == 1);
+                assert(a == 0);
+
+                assert(a++ == 0);
+                assert(a == 1);
+
+                assert(--a == 0);
+                assert(a == 0);
+
+                assert(++a == 1);
+                assert(a == 1);
+            }
         }",
     );
 
@@ -172,4 +188,6 @@ fn expressions() {
     assert_eq!(store.scratch, Val8(5).encode());
 
     runtime.function(&mut store, "test_comparisons", Vec::new());
+
+    runtime.function(&mut store, "increments", Vec::new());
 }
