@@ -166,10 +166,6 @@ impl<'a> Contract<'a> {
     }
 
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
-        self.constructors = self.ns.constructors.iter()
-            .map(|func| self.emit_func(&format!("sol::constructor::{}", func.wasm_symbol(&self.ns)), func, runtime))
-            .collect();
-
         for func in &self.ns.functions {
             let name = if func.name != "" {
                 format!("sol::function::{}", func.wasm_symbol(&self.ns))
@@ -180,6 +176,10 @@ impl<'a> Contract<'a> {
             let f = self.emit_func(&name, func, runtime);
             self.functions.push(f);
         }
+
+        self.constructors = self.ns.constructors.iter()
+            .map(|func| self.emit_func(&format!("sol::constructor{}", func.wasm_symbol(&self.ns)), func, runtime))
+            .collect();
     }
 
     fn expression(
@@ -626,7 +626,9 @@ impl<'a> Contract<'a> {
             self.context.i32_type().const_int(4, false).into(),
             "");
 
-        self.builder.build_conditional_branch(not_fallback, &switch_block, fallback_block);
+        let nomatch = self.context.append_basic_block(function, "nomatch");
+
+        self.builder.build_conditional_branch(not_fallback, &switch_block, &nomatch);
 
         self.builder.position_at_end(&switch_block);
 
@@ -645,12 +647,6 @@ impl<'a> Contract<'a> {
             self.context.i32_type().const_int(4, false).into(),
             "argslen"
         );
-
-        let nomatch = self.context.append_basic_block(function, "nomatch");
-
-        self.builder.position_at_end(&nomatch);
-
-        self.builder.build_unreachable();
 
         let mut cases = Vec::new();
 
@@ -708,8 +704,12 @@ impl<'a> Contract<'a> {
         //let c = cases.into_iter().map(|(id, bb)| (id, &bb)).collect();
 
         self.builder.build_switch(
-            fid.into_int_value(), &nomatch,
+            fid.into_int_value(), fallback_block,
             &c);
+
+        self.builder.position_at_end(&nomatch);
+
+        self.builder.build_unreachable();
     }
 }
 

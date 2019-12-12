@@ -23,6 +23,7 @@ mod substrate_first;
 mod substrate_primitives;
 mod substrate_expressions;
 mod substrate_enums;
+mod substrate_functions;
 
 type StorageKey = [u8; 32];
 
@@ -198,6 +199,14 @@ impl TestRuntime {
         let m = self.abi.get_function(name).unwrap();
 
         store.scratch = m.selector.to_le_bytes().to_vec().into_iter().chain(args).collect();
+
+        self.module
+            .invoke_export("call", &[], store)
+            .expect("failed to call function");
+    }
+
+    pub fn raw_function<'a>(&self, store: &mut ContractStorage, input: Vec<u8>) {
+        store.scratch = input;
 
         self.module
             .invoke_export("call", &[], store)
