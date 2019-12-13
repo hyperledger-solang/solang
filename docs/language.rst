@@ -20,6 +20,31 @@ these caveats:
   Where differences exist between different targets or the Ethereum Foundation Solidity
   compiler, this is noted in boxes like these.
 
+Solidity Source File Structure
+------------------------------
+
+A solidity file may have multiple contracts in them. If you compile a Solidity file containing::
+
+  contract A {
+      function foo() public return (bool) {
+          return true;
+      }
+  }
+
+  contract B {
+      function bar() public return (bool) {
+          return false;
+      }
+  }
+
+Then Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI files for each contract.
+
+.. note::
+
+  The Ethereum Foundation Solidity compiler can also contain other other elements other than
+  contracts: ``pragma``, ``import``, ``library``, ``interface``. These are not supported yet
+  and these should not be included as they may result in parser errors.
+
 Types
 -----
 
@@ -162,31 +187,6 @@ is numbered from 0, like in C and Rust::
       }
   }
 
-Solidity Source File Structure
-------------------------------
-
-A solidity file may have multiple contracts in them. If you compile a Solidity file containing::
-
-  contract A {
-      function foo() public return (bool) {
-          return true;
-      }
-  }
-
-  contract B {
-      function bar() public return (bool) {
-          return false;
-      }
-  }
-
-Then Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI files for each contract.
-
-.. note::
-
-  The Ethereum Foundation Solidity compiler can also contain other other elements other than
-  contracts: ``pragma``, ``import``, ``library``, ``interface``. These are not supported yet
-  and these should not be included as they may result in parser errors.
-
 Contract Storage
 ----------------
 
@@ -255,8 +255,8 @@ A constructor must be declared ``public``.
   The Ethereum Foundation Solidity compiler allows constructors to be declared ``internal`` if
   for abstract contracts. Since Solang does not support abstract contracts, this is not possible yet.
 
-Functions
----------
+Declaring Functions
+-------------------
 
 Functions can be declared and called as follow::
 
@@ -366,8 +366,146 @@ fallback function::
       }
   }
 
-Conditionals and Loops
-----------------------
+Writing Functions
+-----------------
 
+In functions, you can declare variables with the types or an enum. If the name is the same as
+an existing function, enum type, or another variable, then the compiler will generate a
+warning as the original item is no longer accessible::
 
+  contract test {
+      uint foo = 102;
+      uint bar;
 
+      function foobar() private {
+          // AVOID: this shadows the contract storage variable foo
+          uint foo = 5;
+      }
+  }
+
+Scoping rules apply as you would expect, so if you declare a variable in a block, then it is not
+accessible outside that block. For example::
+
+  function foo() public {
+      // new block is introduced with { and ends with }
+      {
+          uint a;
+
+          a = 102;
+      }
+
+      // ERROR: a is out of scope
+      uint b = a + 5;
+  }
+
+If statement
+____________
+
+Conditional execution of a block can be achieved using an ``if (condition) { }`` statement. The
+condition must evaluate to a ``bool`` value::
+
+  function foo(uint32 n) private {
+      if (n > 10) {
+          // do something
+      }
+
+      // ERROR: unlike C integers can not be used as a condition
+      if (n) {
+            // ...
+      }
+  }
+
+The statements enclosed by ``{`` and ``}`` (commonly known as a *block*) are executed only if
+the condition evaluates to true.
+
+While statement
+_______________
+
+Repeated execution of a block can be achieved using ``while``. It syntax is similar to ``if``,
+however the block is repeatedly executed until the condition evaluates to false.
+If the condition is not true on first execution, then the loop is never executed::
+
+  function foo(uint n) private {
+      while (n >= 10) {
+          n -= 9;
+      }
+  }
+
+It is possible to terminate execution of the while statement by using the ``break`` statement.
+Execution will continue to next statement in the function. Alternatively, ``continue`` will
+cease execution of the block, but repeat the loop if the condition still holds::
+
+  function foo(uint n) private {
+      while (n >= 10) {
+          n--;
+
+          if (n >= 100) {
+              // do not execute the if statement below, but loop again
+              continue;
+          }
+
+          if (bar(n)) {
+              // cease execution of this while loop and jump to the "n = 102" statement
+              break;
+          }
+      }
+
+      n = 102;
+  }
+
+Do While statement
+__________________
+
+A ``do { ... } while (condition);`` statement is much like the ``while (condition) { ... }`` except
+that the condition is evaluated after execution the block. This means that the block is executed
+at least once, which is not true for ``while`` statements::
+
+  function foo(uint n) private {
+      do {
+          n--;
+
+          if (n >= 100) {
+              // do not execute the if statement below, but loop again
+              continue;
+          }
+
+          if (bar(n)) {
+              // cease execution of this while loop and jump to the "n = 102" statement
+              break;
+          }
+      }
+      while (n > 10);
+
+      n = 102;
+  }
+
+For statements
+______________
+
+For loops are like ``while`` loops with added syntaxic sugar. To execute a loop, we often
+need to declare a loop variable, set its initial variable, have a loop condition, and then
+adjust the loop variable for the next loop iteration.
+
+For example, to loop from 0 to 1000 by steps of 100::
+
+  function foo() private {
+      for (uint i = 0; i <= 1000; i += 100) {
+          // ...
+      }
+  }
+
+The declaration ``uint i = 0`` can be omitted if no new variable needs to be declared, and
+similarly the post increment ``i += 100`` can be omitted if not necessary. The loop condition
+must evaluate to a boolean, or it can be omitted completely. If it is ommited the block must
+contain a ``break`` or ``return`` statement, else execution will
+repeat infinitely (or until all gas is spent)::
+
+  function foo(uint n) private {
+      // all three omitted
+      for (;;) {
+          // there must be a way out
+          if (n == 0) {
+              break;
+          }
+      }
+  }

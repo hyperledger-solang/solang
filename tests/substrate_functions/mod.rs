@@ -2,7 +2,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Encode, Decode};
 
-use super::{build_solidity, first_error};
+use super::{build_solidity, first_error, first_warning};
 use solang::{parse_and_resolve, Target};
 
 #[test]
@@ -155,4 +155,154 @@ fn mutability() {
         }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "function declared view but writes contract storage");
+}
+
+#[test]
+fn shadowing() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u64);
+
+    let src = "
+    contract test {
+        uint64 result;
+
+        function goodset(uint64 val) public {
+            result = val;
+        }
+
+        function badset(uint64 val) public {
+            uint64 result = val;
+        }
+
+        function get() public returns (uint64) {
+            return result;
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_warning(errors), "declaration of `result\' shadows state variable");
+
+    // parse
+    let (runtime, mut store) = build_solidity(src);
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "goodset", Val(0x1234_5678_9abc_def0).encode());
+
+    runtime.function(&mut store, "get", Vec::new());
+
+    assert_eq!(store.scratch, Val(0x1234_5678_9abc_def0).encode());
+
+    runtime.function(&mut store, "badset", Val(1).encode());
+
+    runtime.function(&mut store, "get", Vec::new());
+
+    assert_eq!(store.scratch, Val(0x1234_5678_9abc_def0).encode());
+}
+
+#[test]
+fn scopes() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u64);
+
+    let src = "
+    contract test {
+        function goodset() public returns (bool) {
+            {
+                bool a = true;
+            }
+            return a;
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "`a\' is not declared");
+
+    let src = "
+    contract test {
+        function goodset() public returns (uint) {
+            for (uint i = 0; i < 10 ; i++) {
+                bool a = true;
+            }
+            return i;
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "`i\' is not declared");
+}
+
+#[test]
+fn for_forever() {
+    let src = "
+    contract test {
+        function goodset() public returns (bool) {
+            for (;;) {
+                // ...
+            }
+            return;
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "unreachable statement");
+}
+
+#[test]
+fn test_loops() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            uint32 result = 1;
+
+            constructor() public {
+                uint32 n = 0;
+                for (uint32 i = 0; i < 1000; i += 100) {
+                    n += 1;
+                }
+                assert(n == 10);
+
+                n = 0;
+                for (uint32 i = 0; i < 1000; i += 100) {
+                    if (true)
+                        continue;
+                    n += 1;
+                }
+                assert(n == 0);
+
+                n = 0;
+                for (uint32 i = 0; i < 1000; i += 100) {
+                    n += 1;
+                    break;
+                }
+                assert(n == 1);
+
+                n = 0;
+
+                while (n < 10) {
+                    n += 9;
+                }
+                assert(n == 18);
+
+                n = 0;
+
+                while (false) {
+                    n += 1000;
+                }
+                assert(n == 0);
+
+                do {
+                    n += 9;
+                }
+                while(false);
+
+                assert(n == 9);
+            }
+        }");
+
+    runtime.constructor(&mut store, 0, Vec::new());
 }
