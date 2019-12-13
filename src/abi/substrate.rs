@@ -321,7 +321,7 @@ fn ty_to_abi(ty: &resolver::Type, contract: &resolver::Contract, registry: &mut 
 
     ParamType{
         ty: registry.builtin_type(&scalety),
-        display_name: vec![ registry.string(&solty.to_string()) ],
+        display_name: vec![ registry.string(&scalety.to_string()) ],
     }
 }
 
