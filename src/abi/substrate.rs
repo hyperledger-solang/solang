@@ -269,17 +269,23 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
     }).collect();
 
-    let messages = resolver_contract.functions.iter().map(|f| Message{
-        name: registry.string(&f.name),
-        mutates: f.mutability.is_none(),
-        return_type: match f.returns.len() {
-            0 => None,
-            1 => Some(ty_to_abi(&f.returns[0].ty, resolver_contract, &mut registry)),
-            _ => unreachable!()
-        },
-        selector: f.selector(),
-        args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
-    }).collect();
+    let messages = resolver_contract.functions.iter()
+        .filter(|f| if let ast::Visibility::Public(_) = f.visibility {
+                true
+            } else {
+                false
+            })
+        .map(|f| Message{
+            name: registry.string(&f.name),
+            mutates: f.mutability.is_none(),
+            return_type: match f.returns.len() {
+                0 => None,
+                1 => Some(ty_to_abi(&f.returns[0].ty, resolver_contract, &mut registry)),
+                _ => unreachable!()
+            },
+            selector: f.selector(),
+            args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
+        }).collect();
 
     let contract = Contract{
         name: registry.string(&resolver_contract.name),
