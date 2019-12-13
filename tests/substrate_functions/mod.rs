@@ -306,3 +306,30 @@ fn test_loops() {
 
     runtime.constructor(&mut store, 0, Vec::new());
 }
+
+#[test]
+fn test_full_example() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val32(i32);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val64(i64);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct ValBool(bool);
+
+    // parse
+    let src = include_str!("../../examples/full_example.sol");
+
+    let (runtime, mut store) = build_solidity(&src);
+
+    runtime.constructor(&mut store, 0, Val32(102).encode());
+
+    runtime.function(&mut store, "is_zombie_reaper", Vec::new());
+
+    assert_eq!(store.scratch, ValBool(false).encode());
+
+    runtime.function(&mut store, "reap_processes", Vec::new());
+
+    runtime.function(&mut store, "run_queue", Vec::new());
+}

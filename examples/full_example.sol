@@ -5,7 +5,7 @@
  Solang Solidity Compiler supports.
 */
 
-contract solang {
+contract full_example {
 	// Process state
 	enum State {
 		Running,
@@ -60,7 +60,7 @@ contract solang {
 	// This mocks a pid state
 	function get_pid_state(int64 _pid) pure private returns (State) {
 		int64 n = 8;
-		for (int16 i = 0; i < 100; ++i) {
+		for (int16 i = 1; i < 100; ++i) {
 			if ((i % 3) == 0) {
 				n *= _pid / int64(i);
 			} else {
@@ -86,7 +86,6 @@ contract solang {
 			}
 			n++;
 		}
-
 	}
 
 	function run_queue() public pure returns (uint16) {
