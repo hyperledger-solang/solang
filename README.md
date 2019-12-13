@@ -3,7 +3,7 @@
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
 
-<img align="right" width="640" src="docs/web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">
+[<img align="right" width="640" src="docs/web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">](https://web3.foundation/grants/)
 
 Welcome to solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
@@ -42,6 +42,11 @@ Now run:
 solang flipper.sol
 ```
 
+Alternatively if you want to use the solang docker image, run:
+
+```
+docker run --rm -it -v .:/sources hyperledgerlabs/solang  -v -o /sources /sources/flipper.sol
+```
 You will have a flipper.wasm and flipper.json. You can use these directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain), as if your smart
 contract was written using Ink!
