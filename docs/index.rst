@@ -24,4 +24,5 @@ is supported, though.
 
    installing
    running
+   examples
    language
