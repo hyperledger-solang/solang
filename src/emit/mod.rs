@@ -460,18 +460,13 @@ impl<'a> Contract<'a> {
                 None => break,
             };
 
-            // ensure reference to blocks is short-lived
-            let ll_bb = {
-                let bb = blocks.get(&w.bb_no).unwrap();
+            let bb = blocks.get(&w.bb_no).unwrap();
 
-                self.builder.position_at_end(&bb.bb);
+            self.builder.position_at_end(&bb.bb);
 
-                for (v, phi) in bb.phis.iter() {
-                    w.vars[*v].value = (*phi).as_basic_value();
-                }
-
-                bb.bb
-            };
+            for (v, phi) in bb.phis.iter() {
+                w.vars[*v].value = (*phi).as_basic_value();
+            }
 
             for ins in &cfg.bb[w.bb_no].instr {
                 match ins {
@@ -513,6 +508,8 @@ impl<'a> Contract<'a> {
                         }
                     }
                     cfg::Instr::Branch { bb: dest } => {
+                        let pos = self.builder.get_insert_block().unwrap();
+
                         if !blocks.contains_key(&dest) {
                             blocks.insert(*dest, create_bb(*dest));
                             work.push_back(Work {
@@ -524,10 +521,10 @@ impl<'a> Contract<'a> {
                         let bb = blocks.get(dest).unwrap();
 
                         for (v, phi) in bb.phis.iter() {
-                            phi.add_incoming(&[ (&w.vars[*v].value, &ll_bb) ]);
+                            phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
                         }
 
-                        self.builder.position_at_end(&ll_bb);
+                        self.builder.position_at_end(&pos);
                         self.builder.build_unconditional_branch(&bb.bb);
                     }
                     cfg::Instr::BranchCond {
@@ -535,6 +532,8 @@ impl<'a> Contract<'a> {
                         true_,
                         false_,
                     } => {
+                        let pos = self.builder.get_insert_block().unwrap();
+
                         let cond = self.expression(cond, &w.vars);
 
                         let bb_true = {
@@ -549,7 +548,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(true_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[ (&w.vars[*v].value, &ll_bb) ]);
+                                phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
                             }
 
                             bb.bb
@@ -567,13 +566,13 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(false_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[ (&w.vars[*v].value, &ll_bb) ]);
+                                phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
                             }
 
                             bb.bb
                         };
 
-                        self.builder.position_at_end(&ll_bb);
+                        self.builder.position_at_end(&pos);
                         self.builder.build_conditional_branch(cond, &bb_true, &bb_false);
                     }
                     cfg::Instr::GetStorage { local, storage } => {
