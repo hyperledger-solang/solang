@@ -53,7 +53,7 @@ contract full_example {
 		return fahrenheit;
 	}
 
-	function fahrenheit2celcius(uint32 fahrenheit) pure public returns (uint32) {
+	function fahrenheit2celcius(int32 fahrenheit) pure public returns (int32) {
 		return (fahrenheit - 32) * 5 / 9;
 	}
 
