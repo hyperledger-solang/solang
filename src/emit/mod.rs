@@ -414,10 +414,11 @@ impl<'a> Contract<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
-                    // FIXME: no phis needed for stack based vars
-                    let ty = cfg.vars[*v].ty.LLVMType(self.ns, &self.context);
+                    if !cfg.vars[*v].ty.stack_based() {
+                        let ty = cfg.vars[*v].ty.LLVMType(self.ns, &self.context);
 
-                    phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name).into());
+                        phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name).into());
+                    }
                 }
             }
 
@@ -521,7 +522,9 @@ impl<'a> Contract<'a> {
                         let bb = blocks.get(dest).unwrap();
 
                         for (v, phi) in bb.phis.iter() {
-                            phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                            if !w.vars[*v].value.is_pointer_value() {
+                                phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                            }
                         }
 
                         self.builder.position_at_end(&pos);
@@ -548,7 +551,9 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(true_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                if !w.vars[*v].value.is_pointer_value() {
+                                    phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                }
                             }
 
                             bb.bb
@@ -566,7 +571,9 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(false_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                if !w.vars[*v].value.is_pointer_value() {
+                                    phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                }
                             }
 
                             bb.bb

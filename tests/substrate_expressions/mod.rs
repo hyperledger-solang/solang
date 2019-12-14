@@ -78,6 +78,33 @@ fn digits() {
 }
 
 #[test]
+fn large_loops() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val32(u32);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val64(u64);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function foo(uint val) pure public returns (uint) {
+                for (uint i =0 ; i < 100; i++ ) {
+                    val += i + 10;
+                }
+
+                return val;
+            }
+
+            function bar() public {
+                assert(foo(10) == 5960);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "bar", Vec::new());
+}
+
+#[test]
 fn expressions() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val16(u16);
