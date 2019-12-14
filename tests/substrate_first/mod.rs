@@ -126,6 +126,30 @@ fn contract_constants() {
 }
 
 #[test]
+fn large_contract_variables() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct ValBool(u8);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            int constant large = 0x7fff0000_7fff0000_7fff0000_7fff0000__7fff0000_7fff0000_7fff0000_7fff0000;
+            int bar = large + 10;
+
+            function foo() public view returns (int) {
+                return (bar - 10);
+            }
+        }",
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "foo", Vec::new());
+
+    assert_eq!(store.scratch, b"\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f\x00\x00\xff\x7f");
+}
+
+#[test]
 fn assert_ok() {
     // parse
     let (runtime, mut store) = build_solidity("
