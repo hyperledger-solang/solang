@@ -333,3 +333,29 @@ fn test_full_example() {
 
     runtime.function(&mut store, "run_queue", Vec::new());
 }
+
+#[test]
+fn test_large_vals() {
+    // parse
+    let src = "
+        contract test {
+            function large() public returns (int) {
+                return 102;
+            }
+
+            function large2(int x) public returns (int) {
+                return x + 100;
+            }
+
+            function doda() public {
+                int x = large();
+                assert(large2(10) == 110);
+            }
+        }";
+
+    let (runtime, mut store) = build_solidity(&src);
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "doda", Vec::new());
+}

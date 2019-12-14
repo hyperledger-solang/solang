@@ -327,11 +327,21 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Int(n) => {
                     let int_type = contract.context.custom_width_int_type(n as u32);
 
-                    args.push(contract.builder.build_load(
+                    let val = contract.builder.build_load(
                         contract.builder.build_pointer_cast(argsdata,
                             int_type.ptr_type(AddressSpace::Generic),
                             ""),
-                        ""));
+                        "");
+
+                    if ty.stack_based() {
+                        let m = contract.builder.build_alloca(ty.LLVMType(&contract.context), "");
+
+                        contract.builder.build_store(m, val);
+
+                        args.push(m.into());
+                    } else {
+                        args.push(val);
+                    }
                     arglen = n as u64 / 8;
                 },
                 _ => unimplemented!()

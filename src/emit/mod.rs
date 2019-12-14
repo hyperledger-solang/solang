@@ -590,9 +590,30 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Call { res, func, args } => {
                         let mut parms: Vec<BasicValueEnum> = Vec::new();
+                        let f = &self.ns.functions[*func];
 
-                        for a in args {
-                            parms.push(self.expression(&a, &w.vars).into());
+                        for (i, a) in args.iter().enumerate() {
+                            let ty = &f.params[i].ty;
+                            let val = self.expression(&a, &w.vars);
+
+                            parms.push(if ty.stack_based() {
+                                // copy onto stack
+                                let m = self.builder.build_alloca(ty.LLVMType(self.ns, &self.context), "");
+
+                                self.builder.build_store(m, val);
+
+                                m.into()
+                            } else {
+                                val.into()
+                            });
+                        }
+
+                        if !res.is_empty() && !f.wasm_return {
+                            for v in f.returns.iter() {
+                                parms.push(self.builder.build_alloca(
+                                    v.ty.LLVMType(self.ns, &self.context), &v.name).into(),
+                                );
+                            }
                         }
 
                         let ret = self.builder.build_call(
@@ -600,7 +621,21 @@ impl<'a> Contract<'a> {
                             &parms, "").try_as_basic_value().left();
 
                         if res.len() > 0 {
-                            w.vars[res[0]].value = ret.unwrap().into();
+                            if f.wasm_return {
+                                w.vars[res[0]].value = ret.unwrap().into();
+                            } else {
+                                for (i, v) in f.returns.iter().enumerate() {
+                                    let val = self.builder.build_load(parms[f.params.len() + i].into_pointer_value(), &v.name);
+
+                                    let dest = w.vars[res[i]].value;
+
+                                    if dest.is_pointer_value() {
+                                        self.builder.build_store(dest.into_pointer_value(), val);
+                                    } else {
+                                        w.vars[res[i]].value = val.into();
+                                    }
+                                }
+                            }
                         }
                     }
                 }
