@@ -672,6 +672,15 @@ impl<'a> Contract<'a> {
             // insert abi decode
             runtime.abi_decode(&self, function, &mut args, argsdata, argslen, f);
 
+            // add return values as pointer arguments at the end
+            if !f.returns.is_empty() && !f.wasm_return {
+                for v in f.returns.iter() {
+                    args.push(self.builder.build_alloca(
+                        v.ty.LLVMType(self.ns, &self.context), &v.name).into(),
+                    );
+                }
+            }
+
             let ret = self.builder.build_call(
                 functions[i],
                 &args,
@@ -685,8 +694,9 @@ impl<'a> Contract<'a> {
 
                 runtime.return_abi(&self, data, length);
             } else {
-                // FIXME: abi encode all the arguments
-                unimplemented!();
+                let (data, length) = runtime.abi_encode(&self, &args[f.params.len()..], &f);
+
+                runtime.return_abi(&self, data, length);
             }
 
             cases.push((self.context.i32_type().const_int(id as u64, false), bb));

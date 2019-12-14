@@ -397,12 +397,20 @@ impl TargetRuntime for SubstrateTarget {
                 },
                 ast::PrimitiveType::Uint(n) |
                 ast::PrimitiveType::Int(n) => {
+                    let val = if args[i].is_pointer_value() {
+                        // Value is a pointer to e.g i256. First we have to load the value
+                        contract.builder.build_load(args[i].into_pointer_value(), "")
+                    } else {
+                        args[i]
+                    };
+
                     contract.builder.build_store(
                         contract.builder.build_pointer_cast(argsdata,
-                            args[i].into_int_value().get_type().ptr_type(AddressSpace::Generic),
+                            val.into_int_value().get_type().ptr_type(AddressSpace::Generic),
                             ""),
-                        args[i].into_int_value()
+                        val.into_int_value()
                     );
+
                     arglen = n as u64 / 8;
                 }
                 _ => unimplemented!()
