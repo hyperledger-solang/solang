@@ -8,11 +8,15 @@ Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
 New images are automatically available on
-`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. Simply pull the latest docker image using::
+`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. Simply pull the latest docker image using:
+
+.. code-block:: bash
 
 	docker pull hyperledgerlabs/solang
 
-And if you are using podman::
+And if you are using podman:
+
+.. code-block:: bash
 
 	podman image pull hyperlederlabs/solang
 
@@ -23,15 +27,21 @@ git repository.
 Build Solang from source using Dockerfile
 -----------------------------------------
 
-First clone the git repo using::
+First clone the git repo using:
+
+.. code-block:: bash
 
   git clone https://github.com/hyperledger-labs/solang
 
-Then you can build the image using::
+Then you can build the image using:
+
+.. code-block:: bash
 
 	docker build .
 
-Alternatively this will work with podman too::
+Alternatively this will work with podman too:
+
+.. code-block:: bash
 
 	podman image build .
 
@@ -41,7 +51,9 @@ Building Solang from source from crates.io
 Solang is listed on `crates.io <https://crates.io/crates/solang>`_. Only
 releases are pushed to cargo, and the current release is out of date. This is
 how you tell cargo to retrieve the latest version of solang and compile it
-from source::
+from source:
+
+.. code-block:: bash
 
 	cargo install solang
 
@@ -53,13 +65,17 @@ Building solang from source
 In order to build solang from source, you will need rust 1.33.0 or higher,
 and llvm version 8 or higher with the WebAssembly target enabled.
 
-So see if you have the correct version of rust, simply execute::
+So see if you have the correct version of rust, simply execute:
+
+.. code-block:: bash
 
   rustc --version
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
 
-After making sure llvm and rust are installed, just run::
+After making sure llvm and rust are installed, just run:
+
+.. code-block:: bash
 
   cargo build --release
 
@@ -68,15 +84,21 @@ The executable will be in ``target/release/solang``.
 Verify that you have the LLVM Libraries installed
 -------------------------------------------------
 
-To make sure you have the correct version of the llvm libraries installed, first run::
+To make sure you have the correct version of the llvm libraries installed, first run:
+
+.. code-block:: bash
 
   llvm-config --version
 
-The output should be 8.0 or higher. Then check if the WebAssembly target is enabled by running::
+The output should be 8.0 or higher. Then check if the WebAssembly target is enabled by running:
+
+.. code-block:: bash
 
   llc --version
 
-You should see wasm32 listed under the target. Lastly check that the static libraries are installed::
+You should see wasm32 listed under the target. Lastly check that the static libraries are installed:
+
+.. code-block:: bash
 
   llvm-config --link-static --libs
 
@@ -96,14 +118,18 @@ and is compiled to wasm by clang. The version of clang *must* be the same as the
 Installing LLVM on Ubuntu
 _________________________
 
-You will need ubuntu 18.04 with backports or later. Just run::
+You will need ubuntu 18.04 with backports or later. Just run:
+
+.. code-block:: bash
 
 	sudo apt install curl llvm clang git zlib1g-dev cargo
 
 Installing LLVM on Fedora
 _________________________
 
-You will need Fedora 30 or later. Running the following::
+You will need Fedora 30 or later. Running the following:
+
+.. code-block:: bash
 
 	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang libffi-devel
 
@@ -124,32 +150,44 @@ runs compiler passes on the LLVM IR and the stack trace will not be useful
 to debug it.
 
 The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult.
-First if all clone the llvm repository::
+First if all clone the llvm repository:
+
+.. code-block:: bash
 
 	git clone https://github.com/llvm/llvm-project
 	cd llvm-project
 
-Now switch to the 8.0 release branch::
+Now switch to the 8.0 release branch:
+
+.. code-block:: bash
 
 	git checkout -b release_8.x origin/release/8.x
 
-Ensure that clang will built::
+Ensure that clang will built:
+
+.. code-block:: bash
 
 	ln -s ../../clang llvm/tools/clang
 
-Create a directory where the build and intermediate files will be stored::
+Create a directory where the build and intermediate files will be stored:
+
+.. code-block:: bash
 
 	mkdir build
 	cd build
 
-Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build::
+Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
+
+.. code-block:: bash
 
 	cmake -G Ninja -DLLVM_TARGETS_TO_BUILD=WebAssembly -DLLVM_ENABLE_ASSERTIONS=On \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=installdir ../llvm
 	cmake --build . --target install
 
 Once the build has succeeded, the *installdir*/bin has to be added to your path so the
-Solang build can find the ``llvm-config`` from this build::
+Solang build can find the ``llvm-config`` from this build:
+
+.. code-block:: bash
 
 	export PATH=installdir/bin:$PATH
 
