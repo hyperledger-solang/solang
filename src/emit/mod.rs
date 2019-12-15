@@ -213,7 +213,33 @@ impl<'a> Contract<'a> {
                 let left = self.expression(l, vartab);
                 let right = self.expression(r, vartab);
 
-                self.builder.build_int_mul(left, right, "")
+                let bits = left.get_type().get_bit_width();
+
+                if bits > 64 {
+                    let l = self.builder.build_alloca(left.get_type(), "");
+                    let r = self.builder.build_alloca(left.get_type(), "");
+                    let o = self.builder.build_alloca(left.get_type(), "");
+
+                    self.builder.build_store(l, left);
+                    self.builder.build_store(r, right);
+
+                    self.builder.build_call(
+                        self.module.get_function("__mul32").unwrap(),
+                        &[
+                            self.builder.build_pointer_cast(l,
+                                    self.context.i32_type().ptr_type(AddressSpace::Generic), "left").into(),
+                            self.builder.build_pointer_cast(r,
+                                    self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
+                            self.builder.build_pointer_cast(o,
+                                    self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
+                            self.context.i32_type().const_int(bits as u64 / 4, false).into(),
+                        ],
+                        "");
+
+                    self.builder.build_load(o, "mul").into_int_value()
+                } else {
+                    self.builder.build_int_mul(left, right, "")
+                }
             }
             cfg::Expression::UDivide(l, r) => {
                 let left = self.expression(l, vartab);
