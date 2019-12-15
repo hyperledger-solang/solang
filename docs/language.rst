@@ -23,7 +23,9 @@ these caveats:
 Solidity Source File Structure
 ------------------------------
 
-A solidity file may have multiple contracts in them. If you compile a Solidity file containing::
+A solidity file may have multiple contracts in them. If you compile a Solidity file containing:
+
+.. code-block:: javascript
 
   contract A {
       function foo() public return (bool) {
@@ -114,17 +116,23 @@ Expressions
 
 Solidity resembles the C family of languages, however it has its quirks. Simple expressions
 can have the following operators: ``-``, ``+``, ``*``, ``/``, and ``%``, and the unary
-operators ``-`` and ``!``::
+operators ``-`` and ``!``:
 
-	uint32 fahrenheit = celcius * 9 / 5 + 32;
+.. code-block:: javascript
 
-Parentheses can be used too, of course::
+ 	uint32 fahrenheit = celcius * 9 / 5 + 32;
 
-	uint32 celcius = (fahrenheit - 32) * 5 / 9;
+Parentheses can be used too, of course:
 
-Assignment expressions are also supported, as you would expect::
+.. code-block:: javascript
 
-	balance += 10;
+ 	uint32 celcius = (fahrenheit - 32) * 5 / 9;
+
+Assignment expressions are also supported, as you would expect:
+
+.. code-block:: javascript
+
+ 	balance += 10;
 
 It is also possible to compare values. For, this the ``>=``, ``>``, ``==``, ``!=``, ``<``, and ``<=``
 is supported. This is useful for conditionals.
@@ -133,9 +141,11 @@ The post-increment and pre-increment operators are implemented like you would ex
 evaluates to the value of of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
 after incrementing.
 
-The result of a comparison operator can be assigned to a bool. For example::
+The result of a comparison operator can be assigned to a bool. For example:
 
-	bool even = (value % 2) == 0;
+.. code-block:: javascript
+
+ 	bool even = (value % 2) == 0;
 
 It is not allowed to assign an integer to a bool; an explicit comparision is needed to turn it into
 a bool.
@@ -145,7 +155,9 @@ these are fatal errors and Solang will refuse to compile it. You can force the c
 accept truncations or differences in sign by adding a cast, but this is best avoided. Often
 changing the parameters or return value of a function will avoid the need for casting.
 
-Some examples::
+Some examples:
+
+.. code-block:: javascript
 
   function abs(int bar) public returns (int64) {
       if (bar > 0) {
@@ -155,9 +167,11 @@ Some examples::
       }
   }
 
-The compiler will say::
+The compiler will say:
 
-  implicit conversion would truncate from int256 to int64
+.. code-block:: none
+
+   implicit conversion would truncate from int256 to int64
 
 Now you can work around this by adding a cast to the argument to return ``return int64(bar);``,
 however it would be much nicer if the return value matched the argument. Multiple abs() could exists
@@ -176,7 +190,9 @@ unique values. Enum types can used in public functions, but the value is represe
 in the ABI.
 
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
-is numbered from 0, like in C and Rust::
+is numbered from 0, like in C and Rust:
+
+.. code-block:: javascript
 
   contract enum_example {
       enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
@@ -191,7 +207,9 @@ Contract Storage
 
 Any variables declared at the contract level (so not contained in a function or constructor),
 then these will automatically become contract storage. Contract storage is maintained between
-calls on-chain. These are declared so::
+calls on-chain. These are declared so:
+
+.. code-block:: javascript
 
   contract hitcount {
       uint counter = 1;
@@ -215,7 +233,9 @@ Constants
 Constants are declared at the contract level just like contract storage variables. However, they
 do not use any contract storage and cannot be modified. Assigning a value to a constant is a
 compiler error. The variable must have an initializer, which must be a constant expression. It is
-not allowed to call functions or read variables in the initializer::
+not allowed to call functions or read variables in the initializer:
+
+.. code-block:: javascript
 
   contract ethereum {
       uint constant byzantium_block = 4_370_000;
@@ -226,7 +246,9 @@ Constructors
 
 When a contract is deployed, the contract storage is initialized to the initializer values provided,
 and any constructor is called. A constructor is not required for a contract. A constructor is defined
-like so::
+like so:
+
+.. code-block:: javascript
 
   contract mycontract {
       uint foo;
@@ -257,7 +279,9 @@ A constructor must be declared ``public``.
 Declaring Functions
 -------------------
 
-Functions can be declared and called as follow::
+Functions can be declared and called as follow:
+
+.. code-block:: javascript
 
   contact foo {
       uint bound = get_initial_bound();
@@ -303,7 +327,9 @@ different in at least one of two ways:
 - The type of at least one of the arguments is different
 
 A function cannot be overloaded by changing the return types or number of returned
-values. Here is an example of an overloaded function::
+values. Here is an example of an overloaded function:
+
+.. code-block:: javascript
 
   contract shape {
       int64 bar;
@@ -351,7 +377,9 @@ function selector in the raw encoded ABI call data. If no function matches, then
 fallback function is called, if it is defined. If no fallback function is defined then
 the call aborts via the ``unreachable`` wasm instruction. A fallback function may not have a name,
 any arguments or return values, and must be declared ``external``. Here is an example of
-fallback function::
+fallback function:
+
+.. code-block:: javascript
 
   contract test {
       int32 bar;
@@ -370,7 +398,9 @@ Writing Functions
 
 In functions, you can declare variables with the types or an enum. If the name is the same as
 an existing function, enum type, or another variable, then the compiler will generate a
-warning as the original item is no longer accessible::
+warning as the original item is no longer accessible.
+
+.. code-block:: javascript
 
   contract test {
       uint foo = 102;
@@ -383,9 +413,11 @@ warning as the original item is no longer accessible::
   }
 
 Scoping rules apply as you would expect, so if you declare a variable in a block, then it is not
-accessible outside that block. For example::
+accessible outside that block. For example:
 
-  function foo() public {
+.. code-block:: javascript
+
+   function foo() public {
       // new block is introduced with { and ends with }
       {
           uint a;
@@ -401,7 +433,9 @@ If statement
 ____________
 
 Conditional execution of a block can be achieved using an ``if (condition) { }`` statement. The
-condition must evaluate to a ``bool`` value::
+condition must evaluate to a ``bool`` value.
+
+.. code-block:: javascript
 
   function foo(uint32 n) private {
       if (n > 10) {
@@ -422,7 +456,9 @@ _______________
 
 Repeated execution of a block can be achieved using ``while``. It syntax is similar to ``if``,
 however the block is repeatedly executed until the condition evaluates to false.
-If the condition is not true on first execution, then the loop is never executed::
+If the condition is not true on first execution, then the loop is never executed:
+
+.. code-block:: javascript
 
   function foo(uint n) private {
       while (n >= 10) {
@@ -432,7 +468,9 @@ If the condition is not true on first execution, then the loop is never executed
 
 It is possible to terminate execution of the while statement by using the ``break`` statement.
 Execution will continue to next statement in the function. Alternatively, ``continue`` will
-cease execution of the block, but repeat the loop if the condition still holds::
+cease execution of the block, but repeat the loop if the condition still holds:
+
+.. code-block:: javascript
 
   function foo(uint n) private {
       while (n >= 10) {
@@ -457,7 +495,9 @@ __________________
 
 A ``do { ... } while (condition);`` statement is much like the ``while (condition) { ... }`` except
 that the condition is evaluated after execution the block. This means that the block is executed
-at least once, which is not true for ``while`` statements::
+at least once, which is not true for ``while`` statements:
+
+.. code-block:: javascript
 
   function foo(uint n) private {
       do {
@@ -485,7 +525,9 @@ For loops are like ``while`` loops with added syntaxic sugar. To execute a loop,
 need to declare a loop variable, set its initial variable, have a loop condition, and then
 adjust the loop variable for the next loop iteration.
 
-For example, to loop from 0 to 1000 by steps of 100::
+For example, to loop from 0 to 1000 by steps of 100:
+
+.. code-block:: javascript
 
   function foo() private {
       for (uint i = 0; i <= 1000; i += 100) {
@@ -497,7 +539,9 @@ The declaration ``uint i = 0`` can be omitted if no new variable needs to be dec
 similarly the post increment ``i += 100`` can be omitted if not necessary. The loop condition
 must evaluate to a boolean, or it can be omitted completely. If it is ommited the block must
 contain a ``break`` or ``return`` statement, else execution will
-repeat infinitely (or until all gas is spent)::
+repeat infinitely (or until all gas is spent):
+
+.. code-block:: javascript
 
   function foo(uint n) private {
       // all three omitted

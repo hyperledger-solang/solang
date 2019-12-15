@@ -79,29 +79,41 @@ Running solang from docker image
 ________________________________
 
 First pull the last solang image from
-`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_::
+`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_:
+
+.. code-block:: bash
 
         docker pull hyperledgerlabs/solang
 
-And if you are using podman::
+And if you are using podman:
+
+.. code-block:: bash
 
         podman image pull hyperlederlabs/solang
 
-Now you can run solang like so::
+Now you can run solang like so:
+
+.. code-block:: bash
 
 	docker run --rm -it solang --version
 
-Or podman::
+Or podman:
+
+.. code-block:: bash
 
 	podman container run --rm -it solang --version
 
 Now if you want to compile some solidity, the source file needs to be available
 in the container. You can do this via the -v command line. ``/local/path`` should
-be replaced with the path to your solidity files::
+be replaced with the path to your solidity files:
+
+.. code-block:: bash
 
 	docker run --rm -it -v /local/path:/sources solang -o /sources /sources/flipper.sol
 
-On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora::
+On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora:
+
+.. code-block:: bash
 
 	podman container run --rm -it -v /local/path:/sources:Z solang -o /sources /sources/flipper.sol
 
@@ -114,7 +126,9 @@ which can be found in the `examples <https://github.com/hyperledger-labs/solang/
 .. include:: ../examples/flipper.sol
   :code: javascript
 
-Write this to flipper.sol and run::
+Write this to flipper.sol and run:
+
+.. code-block:: bash
 
   solang flipper.sol
 
