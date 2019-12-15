@@ -95,13 +95,29 @@ fn large_loops() {
                 return val;
             }
 
+            function baz(int val) pure public returns (int) {
+                return val * 1000_000;
+            }
+
             function bar() public {
                 assert(foo(10) == 5960);
+                assert(baz(7_000_123) == 7_000_123_000_000);
+                assert(baz(7_000_123_456_678) == 7_000_123_456_678_000_000);
             }
         }",
     );
 
     runtime.function(&mut store, "bar", Vec::new());
+
+    let mut args = Val64(7000).encode();
+    args.resize(32, 0);
+
+    runtime.function(&mut store, "baz", args);
+
+    let mut rets = Val64(7000_000_000).encode();
+    rets.resize(32, 0);
+
+    assert_eq!(store.scratch, rets);
 }
 
 #[test]

@@ -211,3 +211,28 @@ void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
 		*to-- = *from++;
 	} while (--length);
 }
+
+__attribute__((visibility("hidden")))
+void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
+{
+	uint64_t val1, val2, val3, carry = 0;
+	int i;
+
+	val1 = (uint64_t)left[0] * (uint64_t)right[0];
+	carry = val1 >> 32;
+
+	out[0] = val1;
+
+	for (i = 0; i < (len - 1); i++) {
+		val2 = (uint64_t)left[i] * (uint64_t)right[i + 1];
+		val3 = (uint64_t)left[i + 1] * (uint64_t)right[i];
+		bool overflow = __builtin_add_overflow(val2, val3, &val1);
+		if (__builtin_add_overflow(val1, carry & 0xffffffff, &val1))
+			overflow = true;
+		out[i+1] = val1;
+		carry >>= 32;
+		carry += val1 >> 32;
+		if (overflow)
+			carry |= 0x100000000;
+	}
+}
