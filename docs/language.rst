@@ -5,7 +5,7 @@ The Solidity language support by Solang is compatible with the
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
 these caveats:
 
-- At this point solang is very much a work in progress so not at all features
+- At this point Solang is very much a work in progress; not at all features
   are supported yet.
 
 - Solang can target different blockchains and some features depending on the target.
@@ -143,8 +143,7 @@ a bool.
 Solidity is strict about the sign of operations, and whether an assignment can truncate a value;
 these are fatal errors and Solang will refuse to compile it. You can force the compiler to
 accept truncations or differences in sign by adding a cast, but this is best avoided. Often
-changing the parameters or return value of a function will avoid the need for casting. A code
-reviewer could see cast as a code smell.
+changing the parameters or return value of a function will avoid the need for casting.
 
 Some examples::
 
@@ -158,9 +157,9 @@ Some examples::
 
 The compiler will say::
 
-  implicit conversion would truncate from uint256 to uint64
+  implicit conversion would truncate from int256 to int64
 
-Now you can work around this by adding a cast to the argument to return ``return uint64(bar);``,
+Now you can work around this by adding a cast to the argument to return ``return int64(bar);``,
 however it would be much nicer if the return value matched the argument. Multiple abs() could exists
 with overloaded functions, so that there is an ``abs()`` for each type.
 
@@ -280,9 +279,9 @@ Functions can be declared and called as follow::
       }
   }
 
-Function arguments can have any number of arguments. Function arguments may have names;
-if they do not have names then they cannot be used, but they will be present in the
-public interface. Return values cannot have names.
+Function can have any number of arguments. Function arguments may have names;
+if they do not have names then they cannot be used in the function body, but they will
+be present in the public interface. Return values cannot have names.
 
 Functions which are declared ``public`` will be present in the ABI and are callable
 externally. If a function is declared ``private`` then it is not callable externally,
@@ -348,9 +347,9 @@ _________________
 
 When a function is called externally, either via an transaction or when one contract
 call a function on another contract, the correct function is dispatched based on the
-function selector in the ABI. If no function matches, then the fallback function
-is called, if it is defined. If no fallback function is defined then the call aborts
-via the ``unreachable`` wasm instruction. A fallback function may not have a name,
+function selector in the raw encoded ABI call data. If no function matches, then the
+fallback function is called, if it is defined. If no fallback function is defined then
+the call aborts via the ``unreachable`` wasm instruction. A fallback function may not have a name,
 any arguments or return values, and must be declared ``external``. Here is an example of
 fallback function::
 

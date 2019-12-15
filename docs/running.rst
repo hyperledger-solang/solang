@@ -1,7 +1,7 @@
 Running Solang
 ==============
 
-The solang compiler is run on the command line. The solidity source file
+The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
 wasm file which is ready for deployment on a chain.
 
@@ -96,35 +96,23 @@ Or podman::
 	podman container run --rm -it solang --version
 
 Now if you want to compile some solidity, the source file needs to be available
-to the container. You can do this via the -v command line. ``/local/path`` should be replaced with the path to your solidity files::
+in the container. You can do this via the -v command line. ``/local/path`` should
+be replaced with the path to your solidity files::
 
-	docker run --rm -it -v /local/path:/sources solang -o /sources /sources/contract.sol
+	docker run --rm -it -v /local/path:/sources solang -o /sources /sources/flipper.sol
 
 On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora::
 
-	podman container run --rm -it -v /local/path:/sources:Z solang -o /sources /sources/contract.sol
+	podman container run --rm -it -v /local/path:/sources:Z solang -o /sources /sources/flipper.sol
 
 Using solang with Substrate
 ---------------------------
 
 Solang builds contracts for Substrate by default. There is an solidity example
-which can be found in the `examples <https://github.com/hyperledger-labs/solang/tree/master/examples>`_ directory::
+which can be found in the `examples <https://github.com/hyperledger-labs/solang/tree/master/examples>`_ directory.
 
-  contract flipper {
-  	bool private value;
-
-  	constructor(bool initvalue) public {
-  		value = initvalue;
-  	}
-
-  	function flip() public {
-  		value = !value;
-  	}
-
-  	function get() public view returns (bool) {
-  		return value;
-  	}
-  }
+.. include:: ../examples/flipper.sol
+  :code: javascript
 
 Write this to flipper.sol and run::
 

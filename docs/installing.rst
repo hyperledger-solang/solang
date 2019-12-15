@@ -1,7 +1,7 @@
 Installing Solang
 =================
 
-The solang compiler is a single binary. It can be installed in many different
+The Solang compiler is a single binary. It can be installed in many different
 ways, so please pick whatever method suits your needs.
 
 Using hyperledgerlabs/solang docker hub images
@@ -78,20 +78,19 @@ The output should be 8.0 or higher. Then check if the WebAssembly target is enab
 
 You should see wasm32 listed under the target. Lastly check that the static libraries are installed::
 
-  llvm-version --link-static --libs
+  llvm-config --link-static --libs
 
 If there is no output, there are no static llvm libraries and building will fail.
 
 Installing the LLVM Libraries
 -----------------------------
-If you did not have the llvm libraries installed then you can either install
-your systems llvm packages or compile your own. Compiling your own is helpful
+If you do not have the llvm libraries installed then you can either install
+your distribution llvm packages or compile your own. Compiling your own is helpful
 if you want to do solang development.
 
-Any version from llvm 8.0 with the WebAssembly target enabled will do. Note
-that you will also need clang; the Solidity standard library is written in C,
-and is compiled to wasm by clang. For this to work, the version of clang
-**must** be the same as the version of llvm.
+Any release from llvm 8.0 onwards, with the WebAssembly target enabled should work.
+Note that you will also need clang; the Solidity standard library is written in C,
+and is compiled to wasm by clang. The version of clang *must* be the same as the version of llvm.
 
 
 Installing LLVM on Ubuntu
@@ -117,12 +116,12 @@ installed by your distribution.
 
 The llvm project is a large code base so it will take some time to build.
 
-If you are planning to do development on solang itself, then having your
-own built llvm is very helpful. The distributions build llvm without
-assertions enabled. These assertions check that the IR that solang builds
-is correct. If the IR is not correct, then faults might happen when llvm
-runs compiler passes on the IR and the stack trace will not be useful
-to debug this problem.
+If you are planning to do development on Solang itself, then having your
+own built llvm is helpful. The distributions build llvm without
+assertions enabled. These assertions check that the LLVM IR that Solang builds
+is correct. If the LLVM IR is not correct, then faults might happen when llvm
+runs compiler passes on the LLVM IR and the stack trace will not be useful
+to debug it.
 
 The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult.
 First if all clone the llvm repository::
@@ -149,7 +148,8 @@ Now run cmake to create the makefiles. Replace the *installdir* argument to ``CM
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=installdir ../llvm
 	cmake --build . --target install
 
-Once the build has succeeded, the *installdir*/bin has to be added to your path so the solang build can find this llvm config::
+Once the build has succeeded, the *installdir*/bin has to be added to your path so the
+Solang build can find the ``llvm-config`` from this build::
 
 	export PATH=installdir/bin:$PATH
 
