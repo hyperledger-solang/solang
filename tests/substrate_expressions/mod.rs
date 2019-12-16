@@ -308,3 +308,126 @@ fn test_cast_errors() {
 
     no_errors(errors);
 }
+
+#[test]
+#[should_panic]
+fn divisions_by_zero() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public returns (uint){
+                uint256 val = 100;
+
+                return (val / 0);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
+
+#[test]
+fn divisions() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            uint constant large = 101213131318098987934191741;
+            function do_test() public returns (uint) {
+                assert(large / 1 == large);
+                assert(large / (large + 102) == 0);
+                assert(large / large == 1);
+
+                assert(large % 1 == 0);
+                assert(large % (large + 102) == large);
+                assert(large % large == 0);
+
+                return 0;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
+
+#[test]
+fn divisions64() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            uint64 constant large = 101213131318098987;
+            function do_test() public returns (uint) {
+                assert(large / 1 == large);
+                assert(large / (large + 102) == 0);
+                assert(large / large == 1);
+
+                assert(large % 1 == 0);
+                assert(large % (large + 102) == large);
+                assert(large % large == 0);
+
+                return 0;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
+
+#[test]
+fn divisions128() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            uint128 constant large = 101213131318098987;
+            uint128 constant small = 99;
+            function do_test() public returns (uint) {
+                assert(large / 1 == large);
+                assert(large / (large + 102) == 0);
+                assert(large / large == 1);
+
+                assert(large % 1 == 0);
+                assert(large % (large + 102) == large);
+                assert(large % large == 0);
+
+                assert(small / 10 == 9);
+                assert(small % 10 == 9);
+
+                assert(large / 100000 == 1012131313180);
+                assert(large % 100000 == 98987);
+
+                return 0;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
+
+#[test]
+fn divisions256() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            uint256 constant large = 101213131318098987;
+            uint256 constant small = 99;
+            function do_test() public returns (uint) {
+                assert(large / 1 == large);
+                assert(large / (large + 102) == 0);
+                assert(large / large == 1);
+
+                assert(large % 1 == 0);
+                assert(large % (large + 102) == large);
+                assert(large % large == 0);
+
+                assert(small / 10 == 9);
+                assert(small % 10 == 9);
+
+                assert(large / 100000 == 1012131313180);
+                assert(large % 100000 == 98987);
+
+                return 0;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
