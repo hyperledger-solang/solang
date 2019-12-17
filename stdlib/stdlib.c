@@ -236,3 +236,64 @@ void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 			carry |= 0x100000000;
 	}
 }
+
+
+// Some compiler runtime builtins we need.
+
+// 128 bit shift left. 
+typedef union {
+	__uint128_t all;
+	struct {
+		uint64_t low;
+		uint64_t high;
+	};
+} two64;
+
+// This assumes r >= 0 && r <= 127
+__uint128_t __ashlti3(__uint128_t val, int r)
+{
+	two64 in;
+	two64 result;
+
+	in.all = val;
+
+	if (r == 0) {
+		// nothing to do
+		result.all = in.all;
+	} else if (r & 64) {
+		// Shift more than or equal 64
+		result.low = 0;
+		result.high = in.low << (r & 63);
+	} else {
+		// Shift less than 64 
+		result.low = in.low << r;
+		result.high = (in.high << r) | (in.low >> (64 - r));
+	}
+
+	return result.all;
+}
+
+// This assumes r >= 0 && r <= 127
+__uint128_t __lshrti3(__uint128_t val, int r)
+{
+	two64 in;
+	two64 result;
+
+	in.all = val;
+
+	if (r == 0) {
+		// nothing to do
+		result.all = in.all;
+	} else if (r & 64) {
+		// Shift more than or equal 64
+		result.low = in.high >> (r & 63);
+		result.high = 0;
+	} else {
+		// Shift less than 64 
+		result.low = (in.low >> r) | (in.high << (64 - r));
+		result.high = in.high >> r;
+	}
+
+	return result.all;
+}
+
