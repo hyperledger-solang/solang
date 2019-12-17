@@ -1129,7 +1129,7 @@ pub fn cast(
 
                 Err(())
             } else {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+                Ok(Expression::NumberLiteral(to_len, n.clone()))
             }
         },
         (
@@ -1149,7 +1149,7 @@ pub fn cast(
 
                 Err(())
             } else {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+                Ok(Expression::NumberLiteral(to_len, n.clone()))
             }
         },
         _ => ()

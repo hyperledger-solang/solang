@@ -2,7 +2,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Encode, Decode};
 
-use super::{build_solidity, first_error};
+use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
 
 #[test]
@@ -74,6 +74,27 @@ fn test_literal_overflow() {
         }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "implicit conversion would truncate from uint8 to int8");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            int8 foo = 127;
+        }", &Target::Substrate);
+
+    no_errors(errors);
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            int8 foo = -128;
+        }", &Target::Substrate);
+
+    no_errors(errors);
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            uint8 foo = 255;
+        }", &Target::Substrate);
+
+    no_errors(errors);
 
     let (_, errors) = parse_and_resolve(
         "contract test {

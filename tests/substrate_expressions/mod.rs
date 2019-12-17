@@ -1,4 +1,4 @@
-use parity_scale_codec::Encode;
+use parity_scale_codec::{Encode, Decode};
 use parity_scale_codec_derive::{Encode, Decode};
 
 use super::{build_solidity, first_error, no_errors};
@@ -374,11 +374,22 @@ fn divisions64() {
 
 #[test]
 fn divisions128() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Args(i128, i128);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Rets(i128);
+
     // parse
     let (runtime, mut store) = build_solidity("
         contract test {
             uint128 constant large = 101213131318098987;
             uint128 constant small = 99;
+
+            int128 constant signed_large = 101213131318098987;
+            int128 constant neg_signed_large = -101213131318098987;
+            int128 constant signed_small = 99;
+
             function do_test() public returns (uint) {
                 assert(large / 1 == large);
                 assert(large / (large + 102) == 0);
@@ -396,10 +407,83 @@ fn divisions128() {
 
                 return 0;
             }
+
+            function do_signed_test() public returns (uint) {
+                assert(signed_large / 1 == signed_large);
+                assert(signed_large / (signed_large + 102) == 0);
+                assert(signed_large / signed_large == 1);
+
+                assert(signed_large % 1 == 0);
+                assert(signed_large % (signed_large + 102) == signed_large);
+                assert(signed_large % signed_large == 0);
+
+                assert(signed_small / 10 == 9);
+                assert(signed_small % 10 == 9);
+
+                assert(signed_large / 100000 == 1012131313180);
+                assert(signed_large % 100000 == 98987);
+
+                assert(neg_signed_large / -100000 == 1012131313180);
+                assert(signed_large / -100000 == -1012131313180);
+                assert(-signed_large / 100000 == -1012131313180);
+
+                assert(signed_large % -100000 == 98987);
+                assert(-signed_large % 100000 == -98987);
+                assert(-signed_large % -100000 == -98987);
+
+
+                return 0;
+            }
+
+            function do_div(int128 x, int128 y) public returns (int128) {
+                return x / y;
+            }
+
+            function return_neg() public returns (int128) {
+                return -100;
+            }
+
+            function return_pos() public returns (int128) {
+                return 255;
+            }
         }",
     );
 
     runtime.function(&mut store, "do_test", Vec::new());
+
+    runtime.function(&mut store, "return_neg", Vec::new());
+
+    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+        assert_eq!(r, -100);
+    } else {
+        assert!(false);
+    }
+
+    runtime.function(&mut store, "return_pos", Vec::new());
+
+    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+        assert_eq!(r, 255);
+    } else {
+        assert!(false);
+    }
+
+    runtime.function(&mut store, "do_div", Args(-9900, -100).encode());
+
+    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+        assert_eq!(r, 99);
+    } else {
+        assert!(false);
+    }
+
+    runtime.function(&mut store, "do_div", Args(-101213131318098987, -100000).encode());
+
+    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+        assert_eq!(r, 1012131313180);
+    } else {
+        assert!(false);
+    }
+
+    runtime.function(&mut store, "do_signed_test", Vec::new());
 }
 
 #[test]
