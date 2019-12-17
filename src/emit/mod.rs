@@ -263,17 +263,23 @@ impl<'a> Contract<'a> {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_signed_div(left, right, "")
-            }
-            cfg::Expression::SModulo(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let bits = left.get_type().get_bit_width();
 
-                self.builder.build_int_signed_rem(left, right, "")
+                if bits > 64 {
+                    let f = self.sdivmod(bits, runtime);
+
+                    let rem = self.builder.build_alloca(left.get_type(), "");
+
+                    self.builder.build_call(f, &[ left.into(), right.into(), rem.into() ], "udiv")
+                        .try_as_basic_value().left().unwrap().into_int_value()
+                } else {
+                    self.builder.build_int_signed_div(left, right, "")
+                }
             }
             cfg::Expression::UModulo(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
+
                 let bits = left.get_type().get_bit_width();
 
                 if bits > 64 {
@@ -286,6 +292,24 @@ impl<'a> Contract<'a> {
                     self.builder.build_load(rem, "urem").into_int_value()
                 } else {
                    self.builder.build_int_unsigned_rem(left, right, "")
+                }
+            }
+            cfg::Expression::SModulo(l, r) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                let bits = left.get_type().get_bit_width();
+
+                if bits > 64 {
+                    let f = self.sdivmod(bits, runtime);
+
+                    let rem = self.builder.build_alloca(left.get_type(), "");
+
+                    self.builder.build_call(f, &[ left.into(), right.into(), rem.into() ], "sdiv");
+
+                    self.builder.build_load(rem, "srem").into_int_value()
+                } else {
+                   self.builder.build_int_signed_rem(left, right, "")
                 }
             }
             cfg::Expression::Equal(l, r) => {
@@ -360,6 +384,11 @@ impl<'a> Contract<'a> {
                 let ty = t.LLVMType(self.ns, &self.context);
 
                 self.builder.build_int_z_extend(e, ty, "")
+            }
+            cfg::Expression::UnaryMinus(e) => {
+                let e = self.expression(e, vartab, runtime);
+
+                self.builder.build_int_neg(e, "")
             }
             cfg::Expression::SignExt(t, e) => {
                 let e = self.expression(e, vartab, runtime);
@@ -827,7 +856,7 @@ impl<'a> Contract<'a> {
 
         let pos = self.builder.get_insert_block().unwrap();
 
-        // divmod_u256(dividend, divisor, *rem) -> quotient
+        // __udivmod256(dividend, divisor, *rem) -> quotient
         let function = self.module.add_function(&name, ty.fn_type(&[ ty.into(), ty.into(), ty.ptr_type(AddressSpace::Generic).into() ], false), None);
 
         let entry = self.context.append_basic_block(function, "entry");
@@ -982,6 +1011,67 @@ impl<'a> Contract<'a> {
 
         self.builder.build_store(rem, remainder.as_basic_value().into_int_value());
         self.builder.build_return(Some(&quotient.as_basic_value().into_int_value()));
+
+        self.builder.position_at_end(&pos);
+
+        function
+    }
+
+    pub fn sdivmod(&self, bit: u32, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
+        let name = format!("__sdivmod{}", bit);
+        let ty = self.context.custom_width_int_type(bit);
+
+        if let Some(f) = self.module.get_function(&name) {
+            return f;
+        }
+
+        let pos = self.builder.get_insert_block().unwrap();
+
+        // __sdivmod256(dividend, divisor, *rem) -> quotient
+        let function = self.module.add_function(&name, ty.fn_type(&[ ty.into(), ty.into(), ty.ptr_type(AddressSpace::Generic).into() ], false), None);
+
+        let entry = self.context.append_basic_block(function, "entry");
+
+        self.builder.position_at_end(&entry);
+
+        let dividend = function.get_nth_param(0).unwrap().into_int_value();
+        let divisor = function.get_nth_param(1).unwrap().into_int_value();
+        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
+
+        let dividend_negative = self.builder.build_int_compare(IntPredicate::SLT, dividend, ty.const_zero(), "dividend_negative");
+        let divisor_negative = self.builder.build_int_compare(IntPredicate::SLT, divisor, ty.const_zero(), "divisor_negative");
+
+        let dividend_abs = self.builder.build_select(dividend_negative,
+                self.builder.build_int_neg(dividend, "dividen_neg"),
+                dividend, "dividend_abs");
+
+        let divisor_abs = self.builder.build_select(divisor_negative,
+                    self.builder.build_int_neg(divisor, "divisor_neg"),
+                    divisor, "divisor_abs");
+
+        let quotient = self.builder.build_call(self.udivmod(bit, runtime), &[ dividend_abs.into(), divisor_abs.into(), rem.into() ], "quotient")
+                .try_as_basic_value().left().unwrap().into_int_value();
+
+        let quotient = self.builder.build_select(
+                self.builder.build_int_compare(IntPredicate::NE, dividend_negative, divisor_negative, "two_negatives"),
+                self.builder.build_int_neg(quotient, "quotient_neg"), quotient, "quotient");
+
+        let negrem = self.context.append_basic_block(function, "negative_rem");
+        let posrem = self.context.append_basic_block(function, "positive_rem");
+
+        self.builder.build_conditional_branch(dividend_negative, &negrem, &posrem);
+
+        self.builder.position_at_end(&posrem);
+
+        self.builder.build_return(Some(&quotient));
+
+        self.builder.position_at_end(&negrem);
+
+        let remainder = self.builder.build_load(rem, "remainder").into_int_value();
+
+        self.builder.build_store(rem, self.builder.build_int_neg(remainder, "negative_remainder"));
+
+        self.builder.build_return(Some(&quotient));
 
         self.builder.position_at_end(&pos);
 
