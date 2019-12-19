@@ -60,7 +60,7 @@ contract full_example {
 	// This mocks a pid state
 	function get_pid_state(int64 _pid) pure private returns (State) {
 		int64 n = 8;
-		for (int16 i = 1; i < 100; ++i) {
+		for (int16 i = 1; i < 10; ++i) {
 			if ((i % 3) == 0) {
 				n *= _pid / int64(i);
 			} else {
@@ -79,7 +79,7 @@ contract full_example {
 	function reap_processes() public {
 		int32 n = 0;
 
-		while (n < 1000) {
+		while (n < 100) {
 			if (get_pid_state(n) == State.Zombie) {
 				// reap!
 				reaped += 1;
