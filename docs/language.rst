@@ -114,9 +114,15 @@ The largest value an ``uint8`` can hold is (2^8) - 1 = 255. So, the compiler say
 Expressions
 -----------
 
-Solidity resembles the C family of languages, however it has its quirks. Simple expressions
-can have the following operators: ``-``, ``+``, ``*``, ``/``, and ``%``, and the unary
-operators ``-`` and ``!``:
+Solidity resembles the C family of languages, however it has its quirks. Expressions
+can have the following operators.
+
+Arithmetic operators
+____________________
+
+The binary operators ``-``, ``+``, ``*``, ``/``, and ``%`` are supported, and also
+in the assignment form ``-=``, ``+=``, ``*=``, ``/=``, and ``%=``. There is a
+unary operator ``-``.
 
 .. code-block:: javascript
 
@@ -128,11 +134,37 @@ Parentheses can be used too, of course:
 
  	uint32 celcius = (fahrenheit - 32) * 5 / 9;
 
-Assignment expressions are also supported, as you would expect:
+The assignment operator:
 
 .. code-block:: javascript
 
  	balance += 10;
+
+Bitwise operators
+_________________
+
+The ``|``, ``&``, ``^`` are supported, as are the shift operators ``<<``
+and ``>>``. There are also available in the assignment form ``|=``, ``&=``,
+``^=``, ``<<=``, and ``>>=``. Lastly there is a unary operator ``~`` to
+invert all the bits in a value.
+
+Logical operators
+_________________
+
+The logical operators ``||``, ``&&``, and ``!`` are supported.
+
+Ternary operator
+________________
+
+The ternary operator ``? :`` is supported:
+
+.. code-block:: javascript
+
+  uint64 abs = foo > 0 ? foo : -foo;
+
+
+Comparison operators
+____________________
 
 It is also possible to compare values. For, this the ``>=``, ``>``, ``==``, ``!=``, ``<``, and ``<=``
 is supported. This is useful for conditionals.
@@ -149,6 +181,9 @@ The result of a comparison operator can be assigned to a bool. For example:
 
 It is not allowed to assign an integer to a bool; an explicit comparision is needed to turn it into
 a bool.
+
+Casting
+_______
 
 Solidity is strict about the sign of operations, and whether an assignment can truncate a value;
 these are fatal errors and Solang will refuse to compile it. You can force the compiler to
