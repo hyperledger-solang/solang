@@ -454,6 +454,13 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_right_shift(left, right, *signed, "")
             }
+            cfg::Expression::Ternary(c, l, r) => {
+                let cond = self.expression(c, vartab, runtime);
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                self.builder.build_select(cond, left, right, "").into_int_value()
+            }
             _ => {
                 panic!("expression not implemented {:?}", e);
             }

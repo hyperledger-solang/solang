@@ -52,6 +52,8 @@ pub enum Expression {
     Complement(Box<Expression>),
     UnaryMinus(Box<Expression>),
 
+    Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
+
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
 
@@ -1666,7 +1668,7 @@ pub fn expression(
                     resolver::Type::new_bool(),
                 ))
             }
-       }
+        }
         ast::Expression::LessEqual(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
@@ -1757,6 +1759,26 @@ pub fn expression(
             get_int_length(&expr_type, loc, ns, errors)?;
 
             Ok((expr, expr_type))
+        }
+
+        ast::Expression::Ternary(_, c, l, r) => {
+            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (cond, cond_type) = expression(c, cfg, ns, vartab, errors)?;
+
+            let cond = cast(
+                &c.loc(),
+                cond,
+                &cond_type,
+                &resolver::Type::new_bool(),
+                true,
+                ns,
+                errors,
+            )?;
+
+            let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+
+            Ok((Expression::Ternary(Box::new(cond), Box::new(left), Box::new(right)), ty))
         }
 
         // pre/post decrement/increment
