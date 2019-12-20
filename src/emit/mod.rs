@@ -407,6 +407,11 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
             }
+            cfg::Expression::Complement(e) => {
+                let e = self.expression(e, vartab, runtime);
+
+                self.builder.build_not(e, "")
+            }
             cfg::Expression::Or(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
