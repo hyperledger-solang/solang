@@ -442,6 +442,18 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_xor(left, right, "")
             }
+            cfg::Expression::ShiftLeft(l, r) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                self.builder.build_left_shift(left, right, "")
+            }
+            cfg::Expression::ShiftRight(l, r, signed) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                self.builder.build_right_shift(left, right, *signed, "")
+            }
             _ => {
                 panic!("expression not implemented {:?}", e);
             }

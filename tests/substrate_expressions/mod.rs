@@ -613,3 +613,30 @@ fn bitwise() {
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
 }
+
+#[test]
+fn shift() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public {
+                uint8 x1 = 0xf0;
+                uint8 x2 = 0x0f;
+                assert(x1 >> 4 == 0x0f);
+                assert(x2 << 4 == 0xf0);
+
+                int x3 = -16;
+                assert(x3 >> 2 == -4);
+
+                uint x5 = 0xdead_0000_0000_0000_0000;
+                assert(x5 >> 64 == 0xdead);
+
+                x5 = 0xdead;
+                assert(x5 << 64 == 0xdead_0000_0000_0000_0000);
+
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
