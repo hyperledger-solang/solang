@@ -1925,7 +1925,12 @@ pub fn expression(
         | ast::Expression::AssignSubtract(loc, var, e)
         | ast::Expression::AssignMultiply(loc, var, e)
         | ast::Expression::AssignDivide(loc, var, e)
-        | ast::Expression::AssignModulo(loc, var, e) => {
+        | ast::Expression::AssignModulo(loc, var, e)
+        | ast::Expression::AssignOr(loc, var, e)
+        | ast::Expression::AssignAnd(loc, var, e)
+        | ast::Expression::AssignXor(loc, var, e)
+        | ast::Expression::AssignShiftLeft(loc, var, e)
+        | ast::Expression::AssignShiftRight(loc, var, e) => {
             let id = match var.as_ref() {
                 ast::Expression::Variable(id) => id,
                 _ => unreachable!(),
@@ -1968,6 +1973,21 @@ pub fn expression(
                 }
                 ast::Expression::AssignMultiply(_, _, _) => {
                     Expression::Multiply(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
+                }
+                ast::Expression::AssignOr(_, _, _) => {
+                    Expression::BitwiseOr(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
+                }
+                ast::Expression::AssignAnd(_, _, _) => {
+                    Expression::BitwiseAnd(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
+                }
+                ast::Expression::AssignXor(_, _, _) => {
+                    Expression::BitwiseXor(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
+                }
+                ast::Expression::AssignShiftLeft(_, _, _) => {
+                    Expression::ShiftLeft(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
+                }
+                ast::Expression::AssignShiftRight(_, _, _) => {
+                    Expression::ShiftRight(Box::new(Expression::Variable(id.loc, pos)), Box::new(set), ty.signed())
                 }
                 ast::Expression::AssignDivide(_, _, _) => {
                     if ty.signed() {
