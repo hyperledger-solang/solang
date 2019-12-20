@@ -640,3 +640,112 @@ fn shift() {
 
     runtime.function(&mut store, "do_test", Vec::new());
 }
+
+#[test]
+fn assign_bitwise() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public {
+                uint8 x1 = 0xf0;
+                uint8 x2 = 0x0f;
+                x1 |= x2;
+                assert(x1 == 0xff);
+                x1 = 0xf0; x2 = 0x0f;
+                x1 ^= x2;
+                assert(x1 == 0xff);
+                x1 = 0xf0; x2 = 0x0f;
+                x1 &= x2;
+                assert(x1 == 0x00);
+                x1 = 0xf0; x2 = 0x0f;
+                x1 ^= 0;
+                assert(x1 == x1);
+
+                int32 x3 = 0x7fefabcd;
+                x3 &= 0xffff;
+                assert(x3 == 0xabcd);
+            }
+
+            function do_or(uint256 a, uint256 b) public returns (uint) {
+                a |= b;
+                return a;
+            }
+
+            function do_and(uint256 a, uint256 b) public returns (uint) {
+                a &= b;
+                return a;
+            }
+
+            function do_xor(uint256 a, uint256 b) public returns (uint) {
+                a ^= b;
+                return a;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+    args.resize(64, 0xff);
+
+    runtime.function(&mut store, "do_xor", args);
+
+    let ret = &store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.iter().filter(|x| **x == 255).count() == 32);
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+    args.resize(64, 0xff);
+
+    runtime.function(&mut store, "do_or", args);
+
+    let ret = &store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.iter().filter(|x| **x == 255).count() == 32);
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+    args.resize(64, 0xff);
+
+    runtime.function(&mut store, "do_and", args);
+
+    let ret = &store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.iter().filter(|x| **x == 0).count() == 32);
+}
+
+#[test]
+fn assign_shift() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public {
+                uint8 x1 = 0xf0;
+                uint8 x2 = 0x0f;
+                x1 >>= 4;
+                x2 <<= 4;
+                assert(x1 == 0x0f);
+                assert(x2 == 0xf0);
+
+                int x3 = -16;
+                x3 >>= 2;
+                assert(x3 == -4);
+
+                uint x5 = 0xdead_0000_0000_0000_0000;
+                x5 >>= 64;
+                assert(x5 == 0xdead);
+
+                x5 = 0xdead;
+                x5 <<= 64;
+                assert(x5 == 0xdead_0000_0000_0000_0000);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
