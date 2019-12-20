@@ -749,3 +749,21 @@ fn assign_shift() {
 
     runtime.function(&mut store, "do_test", Vec::new());
 }
+
+#[test]
+fn ternary() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public {
+                uint8 x1 = 0xf0;
+                uint8 x2 = 0x0f;
+
+                assert((false ? x1 : x2) == x2);
+                assert((true ? x1 : x2) == x1);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
