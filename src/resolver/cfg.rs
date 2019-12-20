@@ -27,6 +27,9 @@ pub enum Expression {
     SDivide(Box<Expression>, Box<Expression>),
     UModulo(Box<Expression>, Box<Expression>),
     SModulo(Box<Expression>, Box<Expression>),
+    BitwiseOr(Box<Expression>, Box<Expression>),
+    BitwiseAnd(Box<Expression>, Box<Expression>),
+    BitwiseXor(Box<Expression>, Box<Expression>),
     Variable(ast::Loc, usize),
     ZeroExt(resolver::Type, Box<Expression>),
     SignExt(resolver::Type, Box<Expression>),
@@ -1424,6 +1427,48 @@ pub fn expression(
 
             Ok((
                 Expression::Subtract(
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                ),
+                ty,
+            ))
+        }
+        ast::Expression::BitwiseOr(_, l, r) => {
+            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+
+            Ok((
+                Expression::BitwiseOr(
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                ),
+                ty,
+            ))
+        }
+        ast::Expression::BitwiseAnd(_, l, r) => {
+            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+
+            Ok((
+                Expression::BitwiseAnd(
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                ),
+                ty,
+            ))
+        }
+        ast::Expression::BitwiseXor(_, l, r) => {
+            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+
+            Ok((
+                Expression::BitwiseXor(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),

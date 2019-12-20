@@ -546,3 +546,70 @@ fn complement() {
     assert!(ret.len() == 32);
     assert!(ret.into_iter().filter(|x| *x == 255).count() == 32);
 }
+
+#[test]
+fn bitwise() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public {
+                uint8 x1 = 0xf0;
+                uint8 x2 = 0x0f;
+                assert(x1 | x2 == 0xff);
+                assert(x1 ^ x2 == 0xff);
+                assert(x1 & x2 == 0x00);
+                assert(x1 ^ 0 == x1);
+
+                int32 x3 = 0x7fefabcd;
+                assert(x3 & 0xffff == 0xabcd);
+            }
+
+            function do_or(uint256 a, uint256 b) public returns (uint) {
+                return a | b;
+            }
+
+            function do_and(uint256 a, uint256 b) public returns (uint) {
+                return a & b;
+            }
+
+            function do_xor(uint256 a, uint256 b) public returns (uint) {
+                return a ^ b;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+    args.resize(64, 0xff);
+
+    runtime.function(&mut store, "do_xor", args);
+
+    let ret = &store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.iter().filter(|x| **x == 255).count() == 32);
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+    args.resize(64, 0xff);
+
+    runtime.function(&mut store, "do_or", args);
+
+    let ret = &store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.iter().filter(|x| **x == 255).count() == 32);
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+    args.resize(64, 0xff);
+
+    runtime.function(&mut store, "do_and", args);
+
+    let ret = &store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.iter().filter(|x| **x == 0).count() == 32);
+}

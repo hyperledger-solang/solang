@@ -424,6 +424,24 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_and(left, right, "")
             }
+            cfg::Expression::BitwiseOr(l, r) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                self.builder.build_or(left, right, "")
+            }
+            cfg::Expression::BitwiseAnd(l, r) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                self.builder.build_and(left, right, "")
+            }
+            cfg::Expression::BitwiseXor(l, r) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                self.builder.build_xor(left, right, "")
+            }
             _ => {
                 panic!("expression not implemented {:?}", e);
             }
