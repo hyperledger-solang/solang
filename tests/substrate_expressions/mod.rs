@@ -515,3 +515,34 @@ fn divisions256() {
 
     runtime.function(&mut store, "do_test", Vec::new());
 }
+
+#[test]
+fn complement() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function do_test() public {
+                uint8 x1 = 0;
+                assert(~x1 == 255);
+                int32 x2 = 0x7fefabcd;
+                assert(uint32(~x2) == 0x80105432);
+            }
+
+            function do_complement(uint256 foo) public returns (uint) {
+                return ~foo;
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+
+    let mut args = Vec::new();
+    args.resize(32, 0);
+
+    runtime.function(&mut store, "do_complement", args);
+
+    let ret = store.scratch;
+
+    assert!(ret.len() == 32);
+    assert!(ret.into_iter().filter(|x| *x == 255).count() == 32);
+}
