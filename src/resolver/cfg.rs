@@ -30,6 +30,8 @@ pub enum Expression {
     BitwiseOr(Box<Expression>, Box<Expression>),
     BitwiseAnd(Box<Expression>, Box<Expression>),
     BitwiseXor(Box<Expression>, Box<Expression>),
+    ShiftLeft(Box<Expression>, Box<Expression>),
+    ShiftRight(Box<Expression>, Box<Expression>, bool),
     Variable(ast::Loc, usize),
     ZeroExt(resolver::Type, Box<Expression>),
     SignExt(resolver::Type, Box<Expression>),
@@ -176,6 +178,31 @@ impl ControlFlowGraph {
             ),
             Expression::Subtract(l, r) => format!(
                 "({} - {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::BitwiseOr(l, r) => format!(
+                "({} | {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::BitwiseAnd(l, r) => format!(
+                "({} & {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::BitwiseXor(l, r) => format!(
+                "({} ^ {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::ShiftLeft(l, r) => format!(
+                "({} << {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::ShiftRight(l, r, _) => format!(
+                "({} >> {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
@@ -1471,6 +1498,35 @@ pub fn expression(
                 Expression::BitwiseXor(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                ),
+                ty,
+            ))
+        }
+        ast::Expression::ShiftLeft(_, l, r) => {
+            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+
+            Ok((
+                Expression::ShiftLeft(
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                ),
+                ty,
+            ))
+        }
+        ast::Expression::ShiftRight(_, l, r) => {
+            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+
+            Ok((
+                Expression::ShiftRight(
+                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    ty.signed(),
                 ),
                 ty,
             ))
