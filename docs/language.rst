@@ -151,7 +151,29 @@ invert all the bits in a value.
 Logical operators
 _________________
 
-The logical operators ``||``, ``&&``, and ``!`` are supported.
+The logical operators ``||``, ``&&``, and ``!`` are supported. The ``||`` and ``&&``
+short-circuit. For example:
+
+.. code-block:: javascript
+
+  bool foo = x > 0 || bar();
+
+bar() will not be called if the left hand expression evaluates to true, i.e. x is greater
+than 0. If x is 0, then bar() will be called and the result of the ``||`` will be
+the return value of bar(). Similarly, the right hand expressions of ``&&`` will not be
+evaluated if the left hand expression evaluates to ``false``; in this case, whatever
+ever the outcome of the right hand expression, the ``&&`` will result in ``false``.
+
+
+.. code-block:: javascript
+
+  bool foo = x > 0 && bar();
+
+Now ``bar()`` will only be called if x *is* greater than 0. If x is 0 then the ``&&``
+will result in false, irrespective of what bar() would returns, so bar() is not
+called at all. The expression elides execution of the right hand side, which is also
+called *short-circuit*.
+
 
 Ternary operator
 ________________
@@ -169,9 +191,6 @@ ____________________
 It is also possible to compare values. For, this the ``>=``, ``>``, ``==``, ``!=``, ``<``, and ``<=``
 is supported. This is useful for conditionals.
 
-The post-increment and pre-increment operators are implemented like you would expect. So, ``a++``
-evaluates to the value of of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
-after incrementing.
 
 The result of a comparison operator can be assigned to a bool. For example:
 
@@ -181,6 +200,13 @@ The result of a comparison operator can be assigned to a bool. For example:
 
 It is not allowed to assign an integer to a bool; an explicit comparision is needed to turn it into
 a bool.
+
+Increment and Decrement operators
+_________________________________
+
+The post-increment and pre-increment operators are implemented like you would expect. So, ``a++``
+evaluates to the value of of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
+after incrementing.
 
 Casting
 _______

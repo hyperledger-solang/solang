@@ -2238,56 +2238,140 @@ pub fn expression(
             }
         }
         ast::Expression::Or(loc, left, right) => {
-            // TODO investigate if Solidity evaluates right if left is true
+            let boolty = resolver::Type::new_bool();
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
-            let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+            let l = cast(
+                &loc,
+                l,
+                &l_type,
+                &boolty,
+                true,
+                ns,
+                errors,
+            )?;
 
-            Ok((Expression::Or(Box::new(cast(
-                    &loc,
-                    l,
-                    &l_type,
-                    &resolver::Type::new_bool(),
-                    true,
-                    ns,
-                    errors,
-                )?),
-                Box::new(cast(
-                    &loc,
-                    r,
-                    &r_type,
-                    &resolver::Type::new_bool(),
-                    true,
-                    ns,
-                    errors,
-                )?)),
-                resolver::Type::new_bool()
-            ))
+            let mut tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    // In constant context, no side effects so short-circut not necessary
+                    let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+
+                    return Ok((Expression::Or(
+                        Box::new(l),
+                        Box::new(cast(
+                            &loc,
+                            r,
+                            &r_type,
+                            &resolver::Type::new_bool(),
+                            true,
+                            ns,
+                            errors,
+                        )?)),
+                        resolver::Type::new_bool()
+                    ))
+                }
+            };
+
+            let pos = tab.temp(&ast::Identifier{ name: "or".to_owned(), loc: loc.clone()}, &resolver::Type::new_bool());
+
+            let right_side = cfg.new_basic_block("or_right_side".to_string());
+            let end_or = cfg.new_basic_block("or_end".to_string());
+
+            cfg.add(tab, Instr::Set{ res: pos, expr: Expression::BoolLiteral(true) });
+            cfg.add(tab, Instr::BranchCond{ cond: l, true_: end_or, false_: right_side });
+            cfg.set_basic_block(right_side);
+
+            let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
+            let r = cast(
+                &loc,
+                r,
+                &r_type,
+                &resolver::Type::new_bool(),
+                true,
+                ns,
+                errors,
+            )?;
+
+            cfg.add(tab, Instr::Set{ res: pos, expr: r });
+
+            let mut phis = HashSet::new();
+            phis.insert(pos);
+
+            cfg.set_phis(end_or, phis);
+
+            cfg.add(tab, Instr::Branch{ bb: end_or });
+
+            cfg.set_basic_block(end_or);
+
+            Ok((Expression::Variable(loc.clone(), pos), boolty))
         }
         ast::Expression::And(loc, left, right) => {
-            // TODO investigate if Solidity evaluates right if left is false
+            let boolty = resolver::Type::new_bool();
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
-            let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+            let l = cast(
+                &loc,
+                l,
+                &l_type,
+                &boolty,
+                true,
+                ns,
+                errors,
+            )?;
 
-            Ok((Expression::And(Box::new(cast(
-                    &loc,
-                    l,
-                    &l_type,
-                    &resolver::Type::new_bool(),
-                    true,
-                    ns,
-                    errors,
-                )?),
-                Box::new(cast(
-                    &loc,
-                    r,
-                    &r_type,
-                    &resolver::Type::new_bool(),
-                    true,
-                    ns,
-                    errors,
-                )?)),
-                resolver::Type::new_bool()
-            ))
+            let mut tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    // In constant context, no side effects so short-circut not necessary
+                    let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+
+                    return Ok((Expression::And(
+                        Box::new(l),
+                        Box::new(cast(
+                            &loc,
+                            r,
+                            &r_type,
+                            &resolver::Type::new_bool(),
+                            true,
+                            ns,
+                            errors,
+                        )?)),
+                        resolver::Type::new_bool()
+                    ))
+                }
+            };
+
+            let pos = tab.temp(&ast::Identifier{ name: "and".to_owned(), loc: loc.clone()}, &resolver::Type::new_bool());
+
+            let right_side = cfg.new_basic_block("and_right_side".to_string());
+            let end_and = cfg.new_basic_block("and_end".to_string());
+
+            cfg.add(tab, Instr::Set{ res: pos, expr: Expression::BoolLiteral(false) });
+            cfg.add(tab, Instr::BranchCond{ cond: l, true_: right_side, false_: end_and });
+            cfg.set_basic_block(right_side);
+
+            let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
+            let r = cast(
+                &loc,
+                r,
+                &r_type,
+                &resolver::Type::new_bool(),
+                true,
+                ns,
+                errors,
+            )?;
+
+            cfg.add(tab, Instr::Set{ res: pos, expr: r });
+
+            let mut phis = HashSet::new();
+            phis.insert(pos);
+
+            cfg.set_phis(end_and, phis);
+
+            cfg.add(tab, Instr::Branch{ bb: end_and });
+
+            cfg.set_basic_block(end_and);
+
+            Ok((Expression::Variable(loc.clone(), pos), boolty))
         }
         _ => panic!("unimplemented: {:?}", expr)
     }
