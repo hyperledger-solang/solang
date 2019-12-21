@@ -767,3 +767,37 @@ fn ternary() {
 
     runtime.function(&mut store, "do_test", Vec::new());
 }
+
+#[test]
+fn short_circuit() {
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            uint32 counter;
+
+            function increase_counter() private returns (bool) {
+                counter += 1;
+                return true;
+            }
+
+            function do_test() public {
+                assert(counter == 0);
+
+                // if left of or is true, right is not evaluated
+                assert(true || increase_counter());
+                assert(counter == 0);
+
+                assert(false || increase_counter());
+                assert(counter == 1);
+
+                false && increase_counter();
+                assert(counter == 1);
+
+                true && increase_counter();
+                assert(counter == 2);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
