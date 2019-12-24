@@ -11,12 +11,12 @@ Two blockchains are supported right now:
 
 .. note::
 
-  Depending on which target solang is compiling for, different language
+  Depending on which target Solang is compiling for, different language
   features are supported. For example, when compiling for substrate, the
   constructor can be overloaded with different prototypes. With burrow, only
   one constructor prototype is allowed.
 
-Using solang on the command line
+Using Solang on the command line
 --------------------------------
 
 Usage:
@@ -30,7 +30,7 @@ Options:
 
 -v, \\-\\-verbose
   Make the output more verbose. The compiler tell you what contracts have been
-  found in the source, and what files are generated. Without this option solang
+  found in the source, and what files are generated. Without this option Solang
   will be silent if there are no errors.
 
 \\-\\-target *target*
@@ -49,7 +49,7 @@ Options:
   This displays a short description of all the options
 
 \\-\\-standard-json
-  This option causes solang to emulate the behaviour of Solidity
+  This option causes Solang to emulate the behaviour of Solidity
   `standard json output <https://solidity.readthedocs.io/en/v0.5.13/using-the-compiler.html#output-description>`_. No output files are written, all the
   output will be in json on stdout.
 
@@ -58,7 +58,7 @@ Options:
   This setting implies ``--target burrow``.
 
 \\-\\-emit *phase*
-  This option is can be used for debugging solang itself. This is used to
+  This option is can be used for debugging Solang itself. This is used to
   output early phases of compilation.
 
   Phase:
@@ -75,10 +75,10 @@ Options:
   object
     Output wasm object file; this is the contract before final linking.
 
-Running solang from docker image
+Running Solang from docker image
 ________________________________
 
-First pull the last solang image from
+First pull the last Solang image from
 `docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_:
 
 .. code-block:: bash
@@ -91,17 +91,17 @@ And if you are using podman:
 
         podman image pull hyperlederlabs/solang
 
-Now you can run solang like so:
+Now you can run Solang like so:
 
 .. code-block:: bash
 
-	docker run --rm -it solang --version
+	docker run --rm -it hyperledgerlabs/solang --version
 
 Or podman:
 
 .. code-block:: bash
 
-	podman container run --rm -it solang --version
+	podman container run --rm -it hyperledgerlabs/solang --version
 
 If you want to compile some solidity files, the source file needs to be
 available inside the container. You can do this via the -v command line.
@@ -110,15 +110,15 @@ to your solidity files:
 
 .. code-block:: bash
 
-	docker run --rm -it -v /local/path:/sources solang -o /sources /sources/flipper.sol
+	docker run --rm -it -v /local/path:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
 
 On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora. Also, podman allows relative paths:
 
 .. code-block:: bash
 
-	podman container run --rm -it -v .:/sources:Z solang -o /sources /sources/flipper.sol
+	podman container run --rm -it -v .:/sources:Z hyperledgerlabs/solang -o /sources /sources/flipper.sol
 
-Using solang with Substrate
+Using Solang with Substrate
 ---------------------------
 
 Solang builds contracts for Substrate by default. There is an solidity example
@@ -136,7 +136,7 @@ Write this to flipper.sol and run:
 Now you should have ``flipper.wasm`` and ``flipper.json``. This can be used
 directly in the `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in Ink!.
 
-Using solang with Hyperledger Burrow
+Using Solang with Hyperledger Burrow
 ------------------------------------
 
 This is documented in the `burrow documentation <https://hyperledger.github.io/burrow/#/reference/wasm>`_.
