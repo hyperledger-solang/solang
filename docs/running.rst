@@ -103,19 +103,20 @@ Or podman:
 
 	podman container run --rm -it solang --version
 
-Now if you want to compile some solidity, the source file needs to be available
-in the container. You can do this via the -v command line. ``/local/path`` should
-be replaced with the path to your solidity files:
+If you want to compile some solidity files, the source file needs to be
+available inside the container. You can do this via the -v command line.
+In this example ``/local/path`` should be replaced with the absolute path
+to your solidity files:
 
 .. code-block:: bash
 
 	docker run --rm -it -v /local/path:/sources solang -o /sources /sources/flipper.sol
 
-On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora:
+On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora. Also, podman allows relative paths:
 
 .. code-block:: bash
 
-	podman container run --rm -it -v /local/path:/sources:Z solang -o /sources /sources/flipper.sol
+	podman container run --rm -it -v .:/sources:Z solang -o /sources /sources/flipper.sol
 
 Using solang with Substrate
 ---------------------------
