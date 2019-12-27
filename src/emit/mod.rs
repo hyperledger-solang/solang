@@ -312,6 +312,16 @@ impl<'a> Contract<'a> {
                    self.builder.build_int_signed_rem(left, right, "")
                 }
             }
+            cfg::Expression::Power(l, r) => {
+                let left = self.expression(l, vartab, runtime);
+                let right = self.expression(r, vartab, runtime);
+
+                let bits = left.get_type().get_bit_width();
+
+                let f = self.upower(bits);
+
+                self.builder.build_call(f, &[ left.into(), right.into() ], "power").try_as_basic_value().left().unwrap().into_int_value()
+            }
             cfg::Expression::Equal(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
@@ -1114,6 +1124,96 @@ impl<'a> Contract<'a> {
         self.builder.build_store(rem, self.builder.build_int_neg(remainder, "negative_remainder"));
 
         self.builder.build_return(Some(&quotient));
+
+        self.builder.position_at_end(&pos);
+
+        function
+    }
+
+    pub fn upower(&self, bit: u32) -> FunctionValue<'a> {
+        /*
+            int ipow(int base, int exp)
+            {
+                int result = 1;
+                for (;;)
+                {
+                    if (exp & 1)
+                        result *= base;
+                    exp >>= 1;
+                    if (!exp)
+                        break;
+                    base *= base;
+                }
+
+                return result;
+            }
+        */
+        let name = format!("__upower{}", bit);
+        let ty = self.context.custom_width_int_type(bit);
+
+        if let Some(f) = self.module.get_function(&name) {
+            return f;
+        }
+
+        let pos = self.builder.get_insert_block().unwrap();
+
+        // __upower(base, exp)
+        let function = self.module.add_function(&name, ty.fn_type(&[ ty.into(), ty.into() ], false), None);
+
+        let entry = self.context.append_basic_block(function, "entry");
+        let loop_block = self.context.append_basic_block(function, "loop");
+        let multiply = self.context.append_basic_block(function, "multiply");
+        let nomultiply = self.context.append_basic_block(function, "nomultiply");
+        let done = self.context.append_basic_block(function, "done");
+        let notdone = self.context.append_basic_block(function, "notdone");
+
+        self.builder.position_at_end(&entry);
+        self.builder.build_unconditional_branch(&loop_block);
+
+        self.builder.position_at_end(&loop_block);
+        let base = self.builder.build_phi(ty, "base");
+        base.add_incoming(&[ (&function.get_nth_param(0).unwrap(), &entry) ]);
+
+        let exp = self.builder.build_phi(ty, "exp");
+        exp.add_incoming(&[ (&function.get_nth_param(1).unwrap(), &entry) ]);
+
+        let result = self.builder.build_phi(ty, "result");
+        result.add_incoming(&[ (&ty.const_int(1, false), &entry) ]);
+
+        let bit = self.builder.build_int_truncate(exp.as_basic_value().into_int_value(), self.context.bool_type(), "bit");
+
+        self.builder.build_conditional_branch(bit, &multiply, &nomultiply);
+
+        self.builder.position_at_end(&multiply);
+
+        let result2 = self.builder.build_int_mul(result.as_basic_value().into_int_value(),
+            base.as_basic_value().into_int_value(), "result");
+
+        self.builder.build_unconditional_branch(&nomultiply);
+        self.builder.position_at_end(&nomultiply);
+
+        let result3 = self.builder.build_phi(ty, "result");
+        result3.add_incoming(&[ (&result.as_basic_value(), &loop_block), (&result2, &multiply) ]);
+
+        let exp2 = self.builder.build_right_shift(exp.as_basic_value().into_int_value(), ty.const_int(1, false), false, "exp");
+        let zero = self.builder.build_int_compare(IntPredicate::EQ, exp2, ty.const_zero(), "zero");
+
+        self.builder.build_conditional_branch(zero, &done, &notdone);
+
+        self.builder.position_at_end(&done);
+
+        self.builder.build_return(Some(&result3.as_basic_value()));
+
+        self.builder.position_at_end(&notdone);
+
+        let base2 = self.builder.build_int_mul(base.as_basic_value().into_int_value(),
+                base.as_basic_value().into_int_value(), "base");
+
+        base.add_incoming(&[ (&base2, &notdone) ]);
+        result.add_incoming(&[ (&result3.as_basic_value(), &notdone) ]);
+        exp.add_incoming(&[ (&exp2, &notdone) ]);
+
+        self.builder.build_unconditional_branch(&loop_block);
 
         self.builder.position_at_end(&pos);
 
