@@ -27,6 +27,7 @@ pub enum Expression {
     SDivide(Box<Expression>, Box<Expression>),
     UModulo(Box<Expression>, Box<Expression>),
     SModulo(Box<Expression>, Box<Expression>),
+    Power(Box<Expression>, Box<Expression>),
     BitwiseOr(Box<Expression>, Box<Expression>),
     BitwiseAnd(Box<Expression>, Box<Expression>),
     BitwiseXor(Box<Expression>, Box<Expression>),
@@ -220,6 +221,11 @@ impl ControlFlowGraph {
             ),
             Expression::UModulo(l, r) | Expression::SModulo(l, r) => format!(
                 "({} % {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::Power(l, r) => format!(
+                "({} ** {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
@@ -1594,6 +1600,26 @@ pub fn expression(
                     ty,
                 ))
             }
+        }
+        ast::Expression::Power(loc, b, e) => {
+            let (base, base_type) = expression(b, cfg, ns, vartab, errors)?;
+            let (exp, exp_type) = expression(e, cfg, ns, vartab, errors)?;
+
+            // solc-0.5.13 does not allow either base or exp to be signed
+            if base_type.signed() || exp_type.signed() {
+                errors.push(Output::error(loc.clone(), format!("exponation (**) is not allowed with signed types")));
+                return Err(());
+            }
+
+            let ty = coerce_int(&base_type, &b.loc(), &exp_type, &e.loc(), ns, errors)?;
+
+            Ok((
+                Expression::Power(
+                    Box::new(cast(&b.loc(), base, &base_type, &ty, true, ns, errors)?),
+                    Box::new(cast(&e.loc(), exp, &exp_type, &ty, true, ns, errors)?),
+                ),
+                ty,
+            ))
         }
 
         // compare

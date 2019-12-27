@@ -801,3 +801,72 @@ fn short_circuit() {
 
     runtime.function(&mut store, "do_test", Vec::new());
 }
+
+#[test]
+fn power() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u64);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract c {
+            function power(uint64 base, uint64 exp) public returns (uint64) {
+                return base ** exp;
+            }
+        }");
+
+    // 4**5 = 1024
+    let args = Val(4).encode().into_iter().chain(Val(5).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(1024).encode());
+
+    // n ** 1 = n
+    let args = Val(2345).encode().into_iter().chain(Val(1).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(2345).encode());
+
+    // n ** 0 = 0
+    let args = Val(0xdeadbeef).encode().into_iter().chain(Val(0).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(1).encode());
+
+    // 0 ** n = 0
+    let args = Val(0).encode().into_iter().chain(Val(0xdeadbeef).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(0).encode());
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function power(uint64 base, int64 exp) public returns (uint64) {
+                return base ** exp;
+            }
+       }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function power(int64 base, uint64 exp) public returns (int64) {
+                return base ** exp;
+            }
+       }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function power(int64 base, int64 exp) public returns (int64) {
+                return base ** exp;
+            }
+       }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+}
