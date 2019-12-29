@@ -49,5 +49,4 @@ docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources /so
 ```
 You will have a flipper.wasm and flipper.json. You can use these directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain), as if your smart
-contract was written using Ink!
-
+contract was written using ink!.
