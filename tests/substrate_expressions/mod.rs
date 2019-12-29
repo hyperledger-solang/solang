@@ -3,6 +3,9 @@ use parity_scale_codec_derive::{Encode, Decode};
 
 use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
+use num_bigint::BigInt;
+use num_bigint::Sign;
+use rand::Rng;
 
 #[test]
 fn celcius_and_fahrenheit() {
@@ -869,4 +872,51 @@ fn power() {
        }", &Target::Substrate);
 
     assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+}
+
+#[test]
+fn multiply() {
+    let mut rng = rand::thread_rng();
+    let size = 32;
+
+    let (runtime, mut store) = build_solidity("
+        contract c {
+            function multiply(uint a, uint b) public returns (uint) {
+                return a * b;
+            }
+        }");
+
+    let mut rand = || -> (BigInt, Vec<u8>) {
+        let length = rng.gen::<usize>() % size;
+
+        let mut data = Vec::new();
+
+        data.resize_with(length + 1, || rng.gen());
+
+        data.resize(size, 0);
+
+        (BigInt::from_bytes_le(Sign::Plus, &data), data)
+    };
+
+    for _ in 0..1000 {
+        let (a, a_data) = rand();
+        let (b, b_data) = rand();
+
+        println!("in: a:{:?} b:{:?}", a_data, b_data);
+
+        runtime.function(&mut store, "multiply", a_data.into_iter().chain(b_data.into_iter()).collect());
+
+        println!("out: res:{:?}", store.scratch);
+
+        let res = BigInt::from_bytes_le(Sign::Plus, &store.scratch);
+
+        println!("{} = {} * {}", res, a, b);
+
+        // the result is truncated to $size bytes. We do this here by converting to Vec<u8> and truncating
+        // it. A truncating bigint multiply would be nicer.
+        let (_, mut foo) = (a * b).to_bytes_le();
+        foo.resize(size, 0);
+
+        assert_eq!(foo, store.scratch);
+    }
 }

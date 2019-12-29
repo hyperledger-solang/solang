@@ -233,7 +233,7 @@ impl<'a> Contract<'a> {
                                     self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
                             self.builder.build_pointer_cast(o,
                                     self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
-                            self.context.i32_type().const_int(bits as u64 / 4, false).into(),
+                            self.context.i32_type().const_int(bits as u64 / 32, false).into(),
                         ],
                         "");
 

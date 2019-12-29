@@ -8,6 +8,8 @@ extern crate parity_scale_codec;
 extern crate num_derive;
 extern crate serde_derive;
 extern crate num_traits;
+extern crate num_bigint;
+extern crate rand;
 
 use std::collections::HashMap;
 use wasmi::memory_units::Pages;
