@@ -13,7 +13,7 @@ these caveats:
   to be overloaded.
 
 - Solang generates WebAssembly rather than EVM. This means that the ``assembly {}``
-  using EVM instructions is not supported.
+  statement using EVM instructions is not supported, and probably never will be.
 
 .. note::
 
@@ -87,7 +87,9 @@ Assigning values which cannot fit into the type gives a compiler error. For exam
 
     uint8 foo = 300;
 
-The largest value an ``uint8`` can hold is (2^8) - 1 = 255. So, the compiler says::
+The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, the compiler says:
+
+.. code-block:: none
 
     implicit conversion would truncate from uint16 to uint8
 
@@ -101,21 +103,18 @@ The largest value an ``uint8`` can hold is (2^8) - 1 = 255. So, the compiler say
   When using integers, whenever possible use the ``int64``, ``int32`` or ``uint64``,
   ``uint32`` types.
 
-  The Solidity language has its origins in the Ethereum Virtual Machine (EVM), which has
+  The Solidity language has its origins for the Ethereum Virtual Machine (EVM), which has
   support for 256 bit registers. Most common CPUs like x86_64 do not implement arithmetic
-  for such large types, and the EVM virtual machine itself has to do bigint calculations, which
-  are costly. This means that EVM instructions with gas cost of 1 can be very expensive in
-  real CPU cost.
+  for such large types, and any EVM virtual machine implementation has to do bigint
+  calculations, which are expensive.
 
   WebAssembly does not support this. This means that Solang has to emulate larger types with
-  multiple WebAssembly instructions, resulting in larger contract code and higher gas cost.
-  As a result, gas cost approximates real CPU cost much better.
+  many WebAssembly instructions, resulting in larger contract code and higher gas cost.
 
 Expressions
 -----------
 
-Solidity resembles the C family of languages, however it has its quirks. Expressions
-can have the following operators.
+Solidity resembles the C family of languages. Expressions can have the following operators.
 
 Arithmetic operators
 ____________________
