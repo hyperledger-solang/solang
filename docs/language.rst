@@ -120,7 +120,7 @@ can have the following operators.
 Arithmetic operators
 ____________________
 
-The binary operators ``-``, ``+``, ``*``, ``/``, and ``%`` are supported, and also
+The binary operators ``-``, ``+``, ``*``, ``/``, ``%``, and ``**`` are supported, and also
 in the assignment form ``-=``, ``+=``, ``*=``, ``/=``, and ``%=``. There is a
 unary operator ``-``.
 
@@ -139,6 +139,14 @@ The assignment operator:
 .. code-block:: javascript
 
  	balance += 10;
+
+The exponation (or power) can be used to multiply a number N times by itself. This can only be done
+for unsigned types.
+
+.. code-block:: javascript
+
+  uint64 thousand = 1000;
+  uint64 billion = thousand ** 3;
 
 Bitwise operators
 _________________
@@ -237,11 +245,6 @@ The compiler will say:
 Now you can work around this by adding a cast to the argument to return ``return int64(bar);``,
 however it would be much nicer if the return value matched the argument. Multiple abs() could exists
 with overloaded functions, so that there is an ``abs()`` for each type.
-
-.. note::
-
-  The Ethereum Foundation Solidity compiler supports more expressions than are listed here.
-  These will be implemented in Solang in early 2020.
 
 Enums
 -----
