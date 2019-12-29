@@ -875,6 +875,55 @@ fn power() {
 }
 
 #[test]
+fn large_power() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u128);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract c {
+            function power(uint128 base, uint128 exp) public returns (uint128) {
+                return base ** exp;
+            }
+        }");
+
+    // 4**5 = 1024
+    let args = Val(4).encode().into_iter().chain(Val(5).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(1024).encode());
+
+    // n ** 1 = n
+    let args = Val(2345).encode().into_iter().chain(Val(1).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(2345).encode());
+
+    // n ** 0 = 0
+    let args = Val(0xdeadbeef).encode().into_iter().chain(Val(0).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(1).encode());
+
+    // 0 ** n = 0
+    let args = Val(0).encode().into_iter().chain(Val(0xdeadbeef).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(0).encode());
+
+    // 10 ** 36 = 1000000000000000000000000000000000000
+    let args = Val(10).encode().into_iter().chain(Val(36).encode().into_iter()).collect();
+
+    runtime.function(&mut store, "power", args);
+
+    assert_eq!(store.scratch, Val(1000000000000000000000000000000000000).encode());
+}
+
+#[test]
 fn multiply() {
     let mut rng = rand::thread_rng();
     let size = 32;

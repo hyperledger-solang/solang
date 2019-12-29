@@ -1168,6 +1168,11 @@ impl<'a> Contract<'a> {
         let notdone = self.context.append_basic_block(function, "notdone");
 
         self.builder.position_at_end(&entry);
+
+        let l = self.builder.build_alloca(ty, "");
+        let r = self.builder.build_alloca(ty, "");
+        let o = self.builder.build_alloca(ty, "");
+
         self.builder.build_unconditional_branch(&loop_block);
 
         self.builder.position_at_end(&loop_block);
@@ -1180,14 +1185,34 @@ impl<'a> Contract<'a> {
         let result = self.builder.build_phi(ty, "result");
         result.add_incoming(&[ (&ty.const_int(1, false), &entry) ]);
 
-        let bit = self.builder.build_int_truncate(exp.as_basic_value().into_int_value(), self.context.bool_type(), "bit");
+        let lowbit = self.builder.build_int_truncate(exp.as_basic_value().into_int_value(), self.context.bool_type(), "bit");
 
-        self.builder.build_conditional_branch(bit, &multiply, &nomultiply);
+        self.builder.build_conditional_branch(lowbit, &multiply, &nomultiply);
 
         self.builder.position_at_end(&multiply);
 
-        let result2 = self.builder.build_int_mul(result.as_basic_value().into_int_value(),
-            base.as_basic_value().into_int_value(), "result");
+        let result2 = if bit > 64 {
+            self.builder.build_store(l, result.as_basic_value().into_int_value());
+            self.builder.build_store(r, base.as_basic_value().into_int_value());
+
+            self.builder.build_call(
+                self.module.get_function("__mul32").unwrap(),
+                &[
+                    self.builder.build_pointer_cast(l,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic), "left").into(),
+                    self.builder.build_pointer_cast(r,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
+                    self.builder.build_pointer_cast(o,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
+                    self.context.i32_type().const_int(bit as u64 / 32, false).into(),
+                ],
+                "");
+
+            self.builder.build_load(o, "result").into_int_value()
+        } else {
+            self.builder.build_int_mul(result.as_basic_value().into_int_value(),
+                base.as_basic_value().into_int_value(), "result")
+        };
 
         self.builder.build_unconditional_branch(&nomultiply);
         self.builder.position_at_end(&nomultiply);
@@ -1206,8 +1231,28 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(&notdone);
 
-        let base2 = self.builder.build_int_mul(base.as_basic_value().into_int_value(),
-                base.as_basic_value().into_int_value(), "base");
+        let base2 = if bit > 64 {
+            self.builder.build_store(l, base.as_basic_value().into_int_value());
+            self.builder.build_store(r, base.as_basic_value().into_int_value());
+
+            self.builder.build_call(
+                self.module.get_function("__mul32").unwrap(),
+                &[
+                    self.builder.build_pointer_cast(l,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic), "left").into(),
+                    self.builder.build_pointer_cast(r,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
+                    self.builder.build_pointer_cast(o,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
+                    self.context.i32_type().const_int(bit as u64 / 32, false).into(),
+                ],
+                "");
+
+            self.builder.build_load(o, "base").into_int_value()
+        } else {
+            self.builder.build_int_mul(base.as_basic_value().into_int_value(),
+                base.as_basic_value().into_int_value(), "base")
+        };
 
         base.add_incoming(&[ (&base2, &notdone) ]);
         result.add_incoming(&[ (&result3.as_basic_value(), &notdone) ]);
