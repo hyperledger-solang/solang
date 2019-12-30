@@ -1293,6 +1293,56 @@ pub fn cast(
             }
         },
         (
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Address),
+        ) |
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Address),
+        ) => {
+            if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion from {} to address not allowed",
+                        from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if from_len > 160 {
+                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+            } else if from_len < 160 {
+                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+            } else {
+                Ok(expr)
+            }
+        },
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Address),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
+        ) |
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Address),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
+        ) => {
+            if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion to {} from address not allowed",
+                        from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if to_len < 160 {
+                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+            } else if to_len > 160 {
+                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+            } else {
+                Ok(expr)
+            }
+        },
+        (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
@@ -1428,6 +1478,12 @@ pub fn expression(
                     ))
                 }
             }
+        }
+        ast::Expression::AddressLiteral(_, a) => {
+            Ok((
+                Expression::NumberLiteral(160, a.clone()),
+                resolver::Type::Primitive(ast::PrimitiveType::Address),
+            ))
         }
         ast::Expression::Variable(id) => {
             if let &mut Some(ref mut tab) = vartab {

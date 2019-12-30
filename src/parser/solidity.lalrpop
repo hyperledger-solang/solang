@@ -3,7 +3,8 @@ use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
 use parser::ast::*;
-use parser::box_option;
+use parser::{box_option, is_hexstr_eip55};
+
 
 grammar;
 
@@ -356,11 +357,15 @@ Precedence1: Expression = {
 
         Expression::NumberLiteral(Loc(l, r), BigInt::from_str(&s).unwrap())
     },
-    <l:@L> <n:r#"-?0x[0-9a-fA-B][0-9a-fA-B_]*"#> <r:@R> => {
+    <l:@L> <n:r#"-?0x[0-9a-fA-F][0-9a-fA-F_]*"#> <r:@R> => {
         // from_str_radix does not like the 0x prefix
         let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
 
-        Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        if is_hexstr_eip55(n) {
+            Expression::AddressLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        } else {
+            Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        }
     }
 }
 
