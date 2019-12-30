@@ -1,10 +1,10 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: 84bee39b213feed236f19d1e218efe0e37052abc6beb996f2631dab67529b
+// sha256: 4be489b8523787a8591cc7d226af0954a2570cd217948f1673f890da82632
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
 use parser::ast::*;
-use parser::box_option;
+use parser::{box_option, is_hexstr_eip55};
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
@@ -18,7 +18,7 @@ mod __parse__SourceUnit {
     use num_bigint::BigInt;
     use num_traits::Num;
     use parser::ast::*;
-    use parser::box_option;
+    use parser::{box_option, is_hexstr_eip55};
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -3299,7 +3299,7 @@ mod __parse__SourceUnit {
             r###""}""###,
             r###""~""###,
             r###"r#"\"([^\"]|\'\\\\\'.)*\""#"###,
-            r###"r#"-?0x[0-9a-fA-B][0-9a-fA-B_]*"#"###,
+            r###"r#"-?0x[0-9a-fA-F][0-9a-fA-F_]*"#"###,
             r###"r#"-?[0-9][0-9_]*"#"###,
             r###"r#"[a-zA-Z_$][a-zA-Z_$0-9]*"#"###,
             r###"r#"\\^0\\.\\d+\\.\\d+"#"###,
@@ -11461,7 +11461,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = r#"-?0x[0-9a-fA-B][0-9a-fA-B_]*"# => ActionFn(442);
+        // Precedence1 = r#"-?0x[0-9a-fA-F][0-9a-fA-F_]*"# => ActionFn(442);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
@@ -15281,7 +15281,7 @@ mod __intern_token {
     use num_bigint::BigInt;
     use num_traits::Num;
     use parser::ast::*;
-    use parser::box_option;
+    use parser::{box_option, is_hexstr_eip55};
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -15306,7 +15306,7 @@ mod __intern_token {
         pub fn new() -> __MatcherBuilder {
             let __strs: &[&str] = &[
                 "^(\"([\u{0}-!\\#-\u{10ffff}]|\'\\\\\'[\u{0}-\t\u{b}-\u{10ffff}])*\")",
-                "^(\\-?0x[0-9A-Ba-f][0-9A-B_a-f]*)",
+                "^(\\-?0x[0-9A-Fa-f][0-9A-F_a-f]*)",
                 "^(\\-?[0-9][0-9_]*)",
                 "^([\\$A-Z_a-z][\\$0-9A-Z_a-z]*)",
                 "^(\\^0\\.[0-9٠-٩۰-۹߀-߉०-९০-৯੦-੯૦-૯୦-୯௦-௯౦-౯೦-೯൦-൯෦-෯๐-๙໐-໙༠-༩၀-၉႐-႙០-៩᠐-᠙᥆-᥏᧐-᧙᪀-᪉᪐-᪙᭐-᭙᮰-᮹᱀-᱉᱐-᱙꘠-꘩꣐-꣙꤀-꤉꧐-꧙꧰-꧹꩐-꩙꯰-꯹０-９𐒠-𐒩𐴰-𐴹𑁦-𑁯𑃰-𑃹𑄶-𑄿𑇐-𑇙𑋰-𑋹𑑐-𑑙𑓐-𑓙𑙐-𑙙𑛀-𑛉𑜰-𑜹𑣠-𑣩𑱐-𑱙𑵐-𑵙𑶠-𑶩𖩠-𖩩𖭐-𖭙𝟎-𝟿𞅀-𞅉𞋰-𞋹𞥐-𞥙]+\\.[0-9٠-٩۰-۹߀-߉०-९০-৯੦-੯૦-૯୦-୯௦-௯౦-౯೦-೯൦-൯෦-෯๐-๙໐-໙༠-༩၀-၉႐-႙០-៩᠐-᠙᥆-᥏᧐-᧙᪀-᪉᪐-᪙᭐-᭙᮰-᮹᱀-᱉᱐-᱙꘠-꘩꣐-꣙꤀-꤉꧐-꧙꧰-꧹꩐-꩙꯰-꯹０-９𐒠-𐒩𐴰-𐴹𑁦-𑁯𑃰-𑃹𑄶-𑄿𑇐-𑇙𑋰-𑋹𑑐-𑑙𑓐-𑓙𑙐-𑙙𑛀-𑛉𑜰-𑜹𑣠-𑣩𑱐-𑱙𑵐-𑵙𑶠-𑶩𖩠-𖩩𖭐-𖭙𝟎-𝟿𞅀-𞅉𞋰-𞋹𞥐-𞥙]+)",
@@ -15502,7 +15502,7 @@ mod __intern_token {
             let __regex_set = __regex::RegexSet::new(__strs).unwrap();
             let __regex_vec = vec![
                 __regex::Regex::new("^(\"([\u{0}-!\\#-\u{10ffff}]|\'\\\\\'[\u{0}-\t\u{b}-\u{10ffff}])*\")").unwrap(),
-                __regex::Regex::new("^(\\-?0x[0-9A-Ba-f][0-9A-B_a-f]*)").unwrap(),
+                __regex::Regex::new("^(\\-?0x[0-9A-Fa-f][0-9A-F_a-f]*)").unwrap(),
                 __regex::Regex::new("^(\\-?[0-9][0-9_]*)").unwrap(),
                 __regex::Regex::new("^([\\$A-Z_a-z][\\$0-9A-Z_a-z]*)").unwrap(),
                 __regex::Regex::new("^(\\^0\\.[0-9٠-٩۰-۹߀-߉०-९০-৯੦-੯૦-૯୦-୯௦-௯౦-౯೦-೯൦-൯෦-෯๐-๙໐-໙༠-༩၀-၉႐-႙០-៩᠐-᠙᥆-᥏᧐-᧙᪀-᪉᪐-᪙᭐-᭙᮰-᮹᱀-᱉᱐-᱙꘠-꘩꣐-꣙꤀-꤉꧐-꧙꧰-꧹꩐-꩙꯰-꯹０-９𐒠-𐒩𐴰-𐴹𑁦-𑁯𑃰-𑃹𑄶-𑄿𑇐-𑇙𑋰-𑋹𑑐-𑑙𑓐-𑓙𑙐-𑙙𑛀-𑛉𑜰-𑜹𑣠-𑣩𑱐-𑱙𑵐-𑵙𑶠-𑶩𖩠-𖩩𖭐-𖭙𝟎-𝟿𞅀-𞅉𞋰-𞋹𞥐-𞥙]+\\.[0-9٠-٩۰-۹߀-߉०-९০-৯੦-੯૦-૯୦-୯௦-௯౦-౯೦-೯൦-൯෦-෯๐-๙໐-໙༠-༩၀-၉႐-႙០-៩᠐-᠙᥆-᥏᧐-᧙᪀-᪉᪐-᪙᭐-᭙᮰-᮹᱀-᱉᱐-᱙꘠-꘩꣐-꣙꤀-꤉꧐-꧙꧰-꧹꩐-꩙꯰-꯹０-９𐒠-𐒩𐴰-𐴹𑁦-𑁯𑃰-𑃹𑄶-𑄿𑇐-𑇙𑋰-𑋹𑑐-𑑙𑓐-𑓙𑙐-𑙙𑛀-𑛉𑜰-𑜹𑣠-𑣩𑱐-𑱙𑵐-𑵙𑶠-𑶩𖩠-𖩩𖭐-𖭙𝟎-𝟿𞅀-𞅉𞋰-𞋹𞥐-𞥙]+)").unwrap(),
@@ -18308,7 +18308,11 @@ fn __action206<
         // from_str_radix does not like the 0x prefix
         let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
 
-        Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        if is_hexstr_eip55(n) {
+            Expression::AddressLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        } else {
+            Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        }
     }
 }
 
