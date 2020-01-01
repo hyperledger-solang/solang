@@ -18,7 +18,7 @@ SourceUnitPart: SourceUnitPart = {
     ImportDirective => SourceUnitPart::ImportDirective(<>),
 }
 
-ImportDirective: String = {
+ImportDirective: StringLiteral = {
     "import" <s:StringLiteral> ";" => s
 }
 
@@ -348,8 +348,8 @@ Precedence1: Expression = {
     },
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
-    <a:@L> <s:StringLiteral> <b:@R> => Expression::StringLiteral(Loc(a, b), s.to_string()),
-    <a:@L> <s:HexLiteral> <b:@R> => Expression::HexLiteral(Loc(a, b), s.to_string()),
+    <StringLiteral+> => Expression::StringLiteral(<>),
+    <HexLiteral+> => Expression::HexLiteral(<>),
     <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
     <l:@L> <n:r#"-?[0-9][0-9_]*"#> <r:@R> => {
@@ -369,21 +369,23 @@ Precedence1: Expression = {
     }
 }
 
-StringLiteral: String = {
-    r#""([^"]|'\\'.)*""# => {
-        let mut v = <>.to_string();
+StringLiteral: StringLiteral = {
+    <l:@L> <s:r#""([^"]|'\\'.)*""#> <r:@R> => {
+        let mut v = s.to_string();
         v.remove(0);
         let len = v.len();
         v.remove(len - 1);
-        v.replace("\\\n", "")
+
+        StringLiteral{ loc: Loc(l, r), string: v.replace("\\\n", "") }
     }
 }
 
-HexLiteral: String = {
-    r#"hex"[0-9a-fA-F]*""# => {
-        let v = <>.to_string();
+HexLiteral: HexLiteral = {
+    <l:@L> <s:r#"hex"[0-9a-fA-F_]*""#> <r:@R> => {
+        let v = s.to_string();
         let hex_len = v.len() - 5;
-        v.chars().skip(4).take(hex_len).collect()
+
+        HexLiteral{ loc: Loc(l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"').collect() }
     }
 }
 

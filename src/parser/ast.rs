@@ -16,7 +16,7 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
     PragmaDirective(Identifier, String),
-    ImportDirective(String),
+    ImportDirective(StringLiteral),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -157,6 +157,18 @@ pub struct ContractVariableDefinition {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct StringLiteral {
+    pub loc: Loc,
+    pub string: String
+}
+
+#[derive(Debug, PartialEq)]
+pub struct HexLiteral {
+    pub loc: Loc,
+    pub hex: String
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -205,8 +217,8 @@ pub enum Expression {
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
     AddressLiteral(Loc, BigInt),
-    StringLiteral(Loc, String),
-    HexLiteral(Loc, String),
+    StringLiteral(Vec<StringLiteral>),
+    HexLiteral(Vec<HexLiteral>),
     Variable(Identifier),
 }
 
@@ -259,10 +271,10 @@ impl Expression {
             | Expression::AssignModulo(loc, _, _)
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, _)
-            | Expression::StringLiteral(loc, _)
             | Expression::AddressLiteral(loc, _)
-            | Expression::HexLiteral(loc, _)
             | Expression::Variable(Identifier { loc, name: _ }) => loc.clone(),
+            Expression::StringLiteral(v) => v[0].loc,
+            Expression::HexLiteral(v) => v[0].loc,
         }
     }
 }
