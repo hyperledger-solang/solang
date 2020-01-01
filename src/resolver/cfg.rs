@@ -1417,40 +1417,53 @@ pub fn expression(
             Expression::BoolLiteral(*v),
             resolver::Type::Primitive(ast::PrimitiveType::Bool),
         )),
-        ast::Expression::StringLiteral(loc, v) => {
-            // unescape supports octal escape values, solc does not
-            // neither solc nor unescape support unicode code points like \u{61}
-            match unescape(v) {
-                Some(v) => Ok((
-                    Expression::StringLiteral(v),
-                    resolver::Type::Primitive(ast::PrimitiveType::String),
-                )),
-                None => {
-                    // would be helpful if unescape told us what/where the problem was
-                    errors.push(Output::error(
-                        loc.clone(),
-                        format!("string \"{}\" has invalid escape", v),
-                    ));
-                    Err(())
+        ast::Expression::StringLiteral(v) => {
+            // Concatenate the strings
+            let mut result = String::new();
+
+            for s in v {
+                // unescape supports octal escape values, solc does not
+                // neither solc nor unescape support unicode code points like \u{61}
+                match unescape(&s.string) {
+                    Some(v) => result.push_str(&v),
+                    None => {
+                        // would be helpful if unescape told us what/where the problem was
+                        errors.push(Output::error(
+                            s.loc.clone(),
+                            format!("string \"{}\" has invalid escape", s.string),
+                        ));
+                        return Err(());
+                    }
                 }
             }
-        }
-        ast::Expression::HexLiteral(loc, v) => {
-            if (v.len() % 2) != 0 {
-                errors.push(Output::error(
-                    loc.clone(),
-                    format!("hex string \"{}\" has odd number of characters", v),
-                ));
-                Err(())
-            } else {
-                let bs = hex::decode(v).unwrap();
-                let len = bs.len() as u8;
-                Ok((
-                    Expression::HexLiteral(bs),
-                    resolver::Type::Primitive(ast::PrimitiveType::Bytes(len)),
-                ))
+
+            Ok((
+                Expression::StringLiteral(result),
+                resolver::Type::Primitive(ast::PrimitiveType::String),
+            ))
+        },
+        ast::Expression::HexLiteral(v) => {
+            let mut result = Vec::new();
+
+            for s in v {
+                if (s.hex.len() % 2) != 0 {
+                    errors.push(Output::error(
+                        s.loc.clone(),
+                        format!("hex string \"{}\" has odd number of characters", s.hex),
+                    ));
+                    return Err(());
+                } else {
+                    result.extend_from_slice(&hex::decode(&s.hex).unwrap());
+                }
             }
-        }
+
+            let length = result.len() / 8;
+
+            Ok((
+                Expression::HexLiteral(result),
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
+            ))
+        },
         ast::Expression::NumberLiteral(loc, b) => {
             // Return smallest type
             let bits = b.bits();
