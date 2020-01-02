@@ -370,3 +370,69 @@ constructor() public {
         assert_eq!(returns, vec![eval]);
     }
 }
+
+#[test]
+fn large_ints_encoded() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+    contract test {
+        uint foo;
+        constructor() public {
+            foo = 102;
+        }
+        function getFoo() public returns (uint) {
+            return foo + 256;
+        }
+        function setFoo(uint a) public  {
+            foo = a - 256;
+        }
+}"##,
+    );
+
+    // call constructor
+    runtime.constructor(&mut store, &[]);
+
+    for val in [4096u32, 1000u32].iter() {
+        let eval = ethabi::Token::Uint(ethereum_types::U256::from(*val));
+        // create call for foo
+        let returns = runtime.function(&mut store, "setFoo", &[eval]);
+
+        assert_eq!(returns, vec![]);
+
+        // create call for foo
+        let returns = runtime.function(&mut store, "getFoo", &[]);
+
+        let eval = ethabi::Token::Uint(ethereum_types::U256::from(*val));
+        assert_eq!(returns, vec![eval]);
+    }
+}
+
+#[test]
+fn address() {
+    let (runtime, mut store) = build_solidity("
+        contract address_tester {
+            function encode_const() public returns (address) {
+                return 0x52908400098527886E0F7030069857D2E4169EE7;
+            }
+
+            function test_arg(address foo) public {
+                assert(foo == 0x27b1fdb04752bbc536007a920d24acb045561c26);
+
+                // this literal is a number
+                int x = 0x27b1fdb04752bbc536007a920d24acb045561C26;
+                assert(int(foo) == x);
+            }
+        }");
+
+    let ret = runtime.function(&mut store, "encode_const", &[]);
+
+    assert_eq!(ret, [ ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("52908400098527886E0F7030069857D2E4169EE7").unwrap())) ]);
+
+    runtime.function(&mut store, "test_arg", &[
+        ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("27b1fdb04752bbc536007a920d24acb045561c26").unwrap()))
+    ]);
+
+    // no arithmetic/bitwise allowed on address
+    // no ordered comparison allowed
+    // address 0x27b1fdb04752bbc536007a920d24acb045561C26 should be a warning
+}
