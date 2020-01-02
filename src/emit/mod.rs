@@ -480,9 +480,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_select(cond, left, right, "").into_int_value()
             }
-            _ => {
-                panic!("expression not implemented {:?}", e);
-            }
+            cfg::Expression::Poison => unreachable!()
         }
     }
 
