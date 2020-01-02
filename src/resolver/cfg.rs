@@ -1045,18 +1045,20 @@ fn coerce(
         return Ok(l.clone());
     }
 
-    coerce_int(l, l_loc, r, r_loc, ns, errors)
+    coerce_int(l, l_loc, r, r_loc, true, ns, errors)
 }
 
 fn get_int_length(
     l: &resolver::Type,
     l_loc: &ast::Loc,
+    allow_bytes: bool,
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<(u16, bool), ()> {
     Ok(match l {
         resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => (*n, false),
         resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => (*n, true),
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) if allow_bytes => (*n as u16 * 8, false),
         resolver::Type::Primitive(t) => {
             errors.push(Output::error(
                 *l_loc,
@@ -1082,12 +1084,23 @@ fn coerce_int(
     l_loc: &ast::Loc,
     r: &resolver::Type,
     r_loc: &ast::Loc,
+    allow_bytes: bool,
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<resolver::Type, ()> {
-    let (left_len, left_signed) = get_int_length(l, l_loc, ns, errors)?;
+    match (l, r) {
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(left_length)),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(right_length)),
+        ) if allow_bytes && left_length == right_length => {
+            return Ok(resolver::Type::Primitive(ast::PrimitiveType::Bytes(*left_length)));
+        }
+        _ => ()
+    }
 
-    let (right_len, right_signed) = get_int_length(r, r_loc, ns, errors)?;
+    let (left_len, left_signed) = get_int_length(l, l_loc, false, ns, errors)?;
+
+    let (right_len, right_signed) = get_int_length(r, r_loc, false, ns, errors)?;
 
     Ok(resolver::Type::Primitive(
         match (left_signed, right_signed) {
@@ -1674,7 +1687,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::Add(
@@ -1688,7 +1701,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::Subtract(
@@ -1702,7 +1715,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             Ok((
                 Expression::BitwiseOr(
@@ -1716,7 +1729,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             Ok((
                 Expression::BitwiseAnd(
@@ -1730,7 +1743,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             Ok((
                 Expression::BitwiseXor(
@@ -1744,7 +1757,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             Ok((
                 Expression::ShiftLeft(
@@ -1758,7 +1771,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             Ok((
                 Expression::ShiftRight(
@@ -1773,7 +1786,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::Multiply(
@@ -1787,7 +1800,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
 
             if ty.signed() {
                 Ok((
@@ -1811,7 +1824,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
 
             if ty.signed() {
                 Ok((
@@ -1841,7 +1854,7 @@ pub fn expression(
                 return Err(());
             }
 
-            let ty = coerce_int(&base_type, &b.loc(), &exp_type, &e.loc(), ns, errors)?;
+            let ty = coerce_int(&base_type, &b.loc(), &exp_type, &e.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::Power(
@@ -1857,7 +1870,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             if ty.signed() {
                 Ok((
@@ -1881,7 +1894,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             if ty.signed() {
                 Ok((
@@ -1905,7 +1918,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             if ty.signed() {
                 Ok((
@@ -1929,7 +1942,7 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
 
             if ty.signed() {
                 Ok((
@@ -1998,21 +2011,21 @@ pub fn expression(
         ast::Expression::Complement(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, ns, errors)?;
+            get_int_length(&expr_type, loc, true, ns, errors)?;
 
             Ok((Expression::Complement(Box::new(expr)), expr_type))
         }
         ast::Expression::UnaryMinus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, ns, errors)?;
+            get_int_length(&expr_type, loc, false, ns, errors)?;
 
             Ok((Expression::UnaryMinus(Box::new(expr)), expr_type))
         }
         ast::Expression::UnaryPlus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, ns, errors)?;
+            get_int_length(&expr_type, loc, false, ns, errors)?;
 
             Ok((expr, expr_type))
         }
@@ -2063,7 +2076,7 @@ pub fn expression(
                 (var.pos, var.ty.clone())
             };
 
-            get_int_length(&ty, loc, ns, errors)?;
+            get_int_length(&ty, loc, false, ns, errors)?;
 
             match expr {
                 ast::Expression::PostIncrement(_, _) => {
