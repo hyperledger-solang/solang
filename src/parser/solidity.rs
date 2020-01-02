@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: 5d369d3d5689a82b334095e8ed519a951597ef2e847cdd3c188a3bbb8f5d811
+// sha256: b3f4767cb57ec9b643ca1e1ed237964c17f44d5c26643e20bddb81bf250cadd
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
@@ -18513,7 +18513,7 @@ fn __action207<
         v.remove(0);
         let len = v.len();
         v.remove(len - 1);
-        
+
         StringLiteral{ loc: Loc(l, r), string: v.replace("\\\n", "") }
     }
 }

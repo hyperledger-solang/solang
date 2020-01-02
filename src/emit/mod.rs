@@ -4,6 +4,7 @@ use resolver;
 use resolver::cfg;
 use std::str;
 use std::path::Path;
+use hex;
 
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -197,6 +198,14 @@ impl<'a> Contract<'a> {
                 let s = n.to_string();
 
                 ty.const_int_from_string(&s, StringRadix::Decimal).unwrap()
+            }
+            cfg::Expression::BytesLiteral(bs) => {
+                let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
+
+                // hex"11223344" should become i32 0x11223344
+                let s = hex::encode(bs);
+
+                ty.const_int_from_string(&s, StringRadix::Hexadecimal).unwrap()
             }
             cfg::Expression::Add(l, r) => {
                 let left = self.expression(l, vartab, runtime);

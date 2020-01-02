@@ -17,8 +17,7 @@ use resolver;
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
     BoolLiteral(bool),
-    StringLiteral(String),
-    HexLiteral(Vec<u8>),
+    BytesLiteral(Vec<u8>),
     NumberLiteral(u16, BigInt),
     Add(Box<Expression>, Box<Expression>),
     Subtract(Box<Expression>, Box<Expression>),
@@ -171,8 +170,7 @@ impl ControlFlowGraph {
         match expr {
             Expression::BoolLiteral(false) => "false".to_string(),
             Expression::BoolLiteral(true) => "true".to_string(),
-            Expression::StringLiteral(s) => format!("\"{}\"", s), // FIXME: escape with lion snailquote
-            Expression::HexLiteral(s) => format!("hex\"{}\"", hex::encode(s)),
+            Expression::BytesLiteral(s) => format!("hex\"{}\"", hex::encode(s)),
             Expression::NumberLiteral(bits, n) => format!("i{} {}", bits, n.to_str_radix(10)),
             Expression::Add(l, r) => format!(
                 "({} + {})",
@@ -1190,6 +1188,32 @@ pub fn cast(
                 Ok(Expression::NumberLiteral(to_len, n.clone()))
             }
         },
+        // Literal strings can be implicitly lengthened
+        (
+            &Expression::BytesLiteral(ref bs),
+            &resolver::Type::Primitive(_),
+            &resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len))
+        ) => {
+            return if bs.len() > to_len as usize {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would truncate from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+
+                Err(())
+            } else {
+                let mut bs = bs.to_owned();
+
+                // Add zero's at the end as needed
+                bs.resize(to_len as usize, 0);
+
+                Ok(Expression::BytesLiteral(bs))
+            }
+        },
         _ => ()
     };
 
@@ -1292,6 +1316,7 @@ pub fn cast(
                 Ok(expr)
             }
         },
+        // Casting int to address
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Address),
@@ -1317,6 +1342,7 @@ pub fn cast(
                 Ok(expr)
             }
         },
+        // Casting int address to int
         (
             resolver::Type::Primitive(ast::PrimitiveType::Address),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
@@ -1342,28 +1368,161 @@ pub fn cast(
                 Ok(expr)
             }
         },
+        // Lengthing or shorting a fixed bytes array
         (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
-            if from_len > to_len {
-                if implicit {
-                    errors.push(Output::type_error(
-                        *loc,
-                        format!(
-                            "implicit conversion would truncate from {} to {}",
-                            from.to_string(ns),
-                            to.to_string(ns)
-                        ),
-                    ));
-                    return Err(());
-                } else {
-                    unimplemented!();
-                }
-            }
+            if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would truncate from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if to_len > from_len {
+                let shift = (to_len - from_len) * 8;
 
-            Ok(expr)
+                Ok(Expression::ShiftLeft(
+                    Box::new(Expression::ZeroExt(to.clone(), Box::new(expr))),
+                    Box::new(Expression::NumberLiteral(to_len as u16 * 8, BigInt::from_u8(shift).unwrap()))
+                ))
+            } else {
+                let shift = (from_len - to_len) * 8;
+
+                Ok(Expression::Trunc(to.clone(),
+                    Box::new(Expression::ShiftRight(
+                        Box::new(expr),
+                        Box::new(Expression::NumberLiteral(from_len as u16 * 8, BigInt::from_u8(shift).unwrap())),
+                        false
+                    ))
+                ))
+            }
         }
+        // Explicit conversion from bytesN to int/uint only allowed with expliciy
+        // cast and if it is the same size (i.e. no conversion required)
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
+        ) |
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
+        ) => {
+            return if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if from_len as u16 * 8 != to_len {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(expr)
+            }
+        }
+        // Explicit conversion to bytesN from int/uint only allowed with expliciy
+        // cast and if it is the same size (i.e. no conversion required)
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
+        ) |
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
+        ) => {
+            return if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if to_len as u16 * 8 != from_len {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(expr)
+            }
+        }
+        // Explicit conversion from bytesN to address only allowed with expliciy
+        // cast and if it is the same size (i.e. no conversion required)
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
+            resolver::Type::Primitive(ast::PrimitiveType::Address),
+        ) => {
+            return if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if from_len != 20 {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(expr)
+            }
+        }
+        // Explicit conversion to bytesN from int/uint only allowed with expliciy
+        // cast and if it is the same size (i.e. no conversion required)
+        (
+            resolver::Type::Primitive(ast::PrimitiveType::Address),
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
+        ) => {
+            return if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else if to_len != 20 {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "conversion to {} from {} not allowed",
+                        to.to_string(ns), from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(expr)
+            }
+        }
+        // string conversions
         (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(_)),
             resolver::Type::Primitive(ast::PrimitiveType::String),
@@ -1373,7 +1532,7 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
             match &expr {
-                Expression::StringLiteral(from_str) => {
+                Expression::BytesLiteral(from_str) => {
                     if from_str.len() > to_len as usize {
                         errors.push(Output::type_error(
                             *loc,
@@ -1437,9 +1596,11 @@ pub fn expression(
                 }
             }
 
+            let length = result.len();
+
             Ok((
-                Expression::StringLiteral(result),
-                resolver::Type::Primitive(ast::PrimitiveType::String),
+                Expression::BytesLiteral(result.into_bytes()),
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
         },
         ast::Expression::HexLiteral(v) => {
@@ -1457,10 +1618,10 @@ pub fn expression(
                 }
             }
 
-            let length = result.len() / 8;
+            let length = result.len();
 
             Ok((
-                Expression::HexLiteral(result),
+                Expression::BytesLiteral(result),
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
         },
