@@ -424,6 +424,10 @@ fn address() {
                 int x = 0x27b1fdb04752bbc536007a920d24acb045561C26;
                 assert(int(foo) == x);
             }
+
+            function allones() public returns (address) {
+                return address(1);
+            }
         }");
 
     let ret = runtime.function(&mut store, "encode_const", &[]);
@@ -433,6 +437,10 @@ fn address() {
     runtime.function(&mut store, "test_arg", &[
         ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("27b1fdb04752bbc536007a920d24acb045561c26").unwrap()))
     ]);
+
+    let ret = runtime.function(&mut store, "allones", &[]);
+
+    assert_eq!(ret, [ ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("0000000000000000000000000000000000000001").unwrap())) ]);
 
     // no arithmetic/bitwise allowed on address
     // no ordered comparison allowed
