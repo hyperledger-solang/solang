@@ -1293,7 +1293,7 @@ impl ast::PrimitiveType {
             ast::PrimitiveType::Int(n) |
             ast::PrimitiveType::Uint(n) => context.custom_width_int_type(*n as u32),
             ast::PrimitiveType::Address => context.custom_width_int_type(20 * 8),
-            ast::PrimitiveType::Bytes(n) => context.custom_width_int_type((*n * 8) as u32),
+            ast::PrimitiveType::Bytes(n) => context.custom_width_int_type(*n as u32 * 8),
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
