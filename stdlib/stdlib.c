@@ -200,6 +200,16 @@ void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
 	} while (--length);
 }
 
+__attribute__((visibility("hidden")))
+void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
+{
+	from += length;
+
+	do {
+		*to++ = *--from;
+	} while (--length);
+}
+
 // This function is for used for abi encoding integers
 // ABI encoding is big endian.
 __attribute__((visibility("hidden")))
@@ -209,6 +219,16 @@ void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
 
 	do {
 		*to-- = *from++;
+	} while (--length);
+}
+
+__attribute__((visibility("hidden")))
+void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
+{
+	to += length;
+
+	do {
+		*--to = *from++;
 	} while (--length);
 }
 

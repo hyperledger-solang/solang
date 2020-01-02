@@ -109,6 +109,8 @@ impl TestRuntime {
                 let offset = offset as u32;
                 let returndata = store.memory.get(offset + mem::size_of::<u32>() as u32, 32).unwrap();
 
+                println!("RETURNDATA: {}", hex::encode(&returndata));
+
                 self.abi.functions[name].decode_output(&returndata).unwrap()
             }
             _ => panic!("expected return value when calling {}", name),
@@ -435,4 +437,66 @@ fn address() {
     // no arithmetic/bitwise allowed on address
     // no ordered comparison allowed
     // address 0x27b1fdb04752bbc536007a920d24acb045561C26 should be a warning
+}
+
+#[test]
+fn bytes() {
+    let (runtime, mut store) = build_solidity(r##"
+        contract bar {
+            bytes4 constant foo = hex"11223344";
+
+            function get_foo() public returns (bytes4) {
+                return foo;
+            }
+
+            function bytes4asuint32() public view returns (uint32) {
+                return uint32(foo);
+            }
+
+            function bytes4asuint64() public view returns (uint64) {
+                return uint64(bytes8(foo));
+            }
+
+            function bytes4asbytes2() public view returns (bytes2) {
+                return bytes2(foo);
+            }
+
+            function passthrough(bytes4 bar) public view returns (bytes4) {
+                return bar;
+            }
+/*
+            function entry(uint index) public view returns (byte) {
+                return foo[index];
+            }
+            function shiftedleft() public view returns (bytes4) {
+                return foo << 8;
+            }
+
+            function shiftedright() public view returns (bytes4) {
+                return foo >> 8;
+            }
+*/
+        }"##);
+
+    runtime.constructor(&mut store, &[]);
+
+    let ret = runtime.function(&mut store, "get_foo", &[]);
+
+    assert_eq!(ret, [ ethabi::Token::FixedBytes(vec!( 0x11, 0x22, 0x33, 0x44 )) ]);
+
+    let ret = runtime.function(&mut store, "bytes4asuint32", &[]);
+
+    assert_eq!(ret, [ ethabi::Token::Uint(ethereum_types::U256::from(0x11223344)) ]);
+
+    let ret = runtime.function(&mut store, "bytes4asuint64", &[]);
+
+    assert_eq!(ret, [ ethabi::Token::Uint(ethereum_types::U256::from(0x11223344_0000_0000u64)) ]);
+
+    let ret = runtime.function(&mut store, "bytes4asbytes2", &[]);
+
+    assert_eq!(ret, [ ethabi::Token::FixedBytes(vec!(0x11, 0x22)) ]);
+
+    let val = vec!(ethabi::Token::FixedBytes(vec!(0x41, 0x42, 0x43, 0x44)));
+
+    assert_eq!(runtime.function(&mut store, "passthrough", &val), val);
 }
