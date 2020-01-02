@@ -266,6 +266,48 @@ impl BurrowTarget {
                     ],
                     "");
             }
+            ast::PrimitiveType::Bytes(b) => {
+                // first clear/set the upper bits
+                if *b < 32 {
+                    let dest8 = contract.builder.build_pointer_cast(dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "destvoid");
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__bzero8").unwrap(),
+                        &[ dest8.into(), contract.context.i32_type().const_int(4, false).into() ],
+                        "");
+                }
+
+                // no need to allocate space for each uint64
+                // allocate enough for type
+                let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
+                let type_size = int_type.size_of();
+
+                let store = if ty.stack_based() {
+                    val.into_pointer_value()
+                } else {
+                    let store = contract.builder.build_alloca(int_type, "stack");
+
+                    contract.builder.build_store(store, val);
+
+                    store
+                };
+
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        contract.builder.build_pointer_cast(store,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "store").into(),
+                        contract.builder.build_pointer_cast(dest,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "dest").into(),
+                        contract.builder.build_int_truncate(type_size,
+                            contract.context.i32_type(), "").into()
+                    ],
+                    "");
+            }
             _ => unimplemented!(),
         }
     }
@@ -461,6 +503,31 @@ impl TargetRuntime for BurrowTarget {
 
                     if *n <= 64 {
                         contract.builder.build_load(store, &format!("abi_int{}", *n))
+                    } else {
+                        store.into()
+                    }
+                }
+                ast::PrimitiveType::Bytes(b) => {
+                    let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
+                    let type_size = int_type.size_of();
+
+                    let store = contract.builder.build_alloca(int_type, "stack");
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__beNtoleN").unwrap(),
+                        &[
+                            contract.builder.build_pointer_cast(data,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract.builder.build_pointer_cast(store,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract.builder.build_int_truncate(type_size,
+                                contract.context.i32_type(), "size").into()
+                        ],
+                        ""
+                    );
+
+                    if *b <= 8 {
+                        contract.builder.build_load(store, &format!("bytes{}", *b))
                     } else {
                         store.into()
                     }
