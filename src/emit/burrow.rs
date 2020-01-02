@@ -141,7 +141,7 @@ impl BurrowTarget {
         contract: &Contract,
         ty: &ast::PrimitiveType,
         dest: PointerValue,
-        val: IntValue,
+        val: BasicValueEnum,
     ) {
         match ty {
             ast::PrimitiveType::Bool => {
@@ -156,7 +156,7 @@ impl BurrowTarget {
                        contract.context.i32_type().const_int(4, false).into() ],
                     "");
 
-                let value = contract.builder.build_select(val,
+                let value = contract.builder.build_select(val.into_int_value(),
                     contract.context.i8_type().const_int(1, false),
                     contract.context.i8_type().const_zero(),
                     "bool_val");
@@ -173,7 +173,7 @@ impl BurrowTarget {
             ast::PrimitiveType::Int(8) | ast::PrimitiveType::Uint(8) => {
                 let signval = if let ast::PrimitiveType::Int(8) = ty {
                     let negative = contract.builder.build_int_compare(IntPredicate::SLT,
-                            val, contract.context.i8_type().const_zero(), "neg");
+                            val.into_int_value(), contract.context.i8_type().const_zero(), "neg");
 
                             contract.builder.build_select(negative,
                         contract.context.i64_type().const_zero(),
@@ -202,12 +202,21 @@ impl BurrowTarget {
 
                 contract.builder.build_store(dest, val);
             }
-            ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
+            ast::PrimitiveType::Address |
+            ast::PrimitiveType::Uint(_) |
+            ast::PrimitiveType::Int(_) => {
+                let n = match ty {
+                    ast::PrimitiveType::Address => 160,
+                    ast::PrimitiveType::Uint(b) => *b,
+                    ast::PrimitiveType::Int(b) => *b,
+                    _ => unreachable!()
+                };
+
                 // first clear/set the upper bits
-                if *n < 256 {
+                if n < 256 {
                     let signval = if let ast::PrimitiveType::Int(8) = ty {
                         let negative = contract.builder.build_int_compare(IntPredicate::SLT,
-                                val, contract.context.i8_type().const_zero(), "neg");
+                                val.into_int_value(), contract.context.i8_type().const_zero(), "neg");
 
                         contract.builder.build_select(negative,
                             contract.context.i64_type().const_zero(),
@@ -230,21 +239,28 @@ impl BurrowTarget {
 
                 // no need to allocate space for each uint64
                 // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(*n as u32);
+                let int_type = contract.context.custom_width_int_type(n as u32);
                 let type_size = int_type.size_of();
 
-                let store = contract.builder.build_alloca(int_type, "stack");
+                let store = if ty.stack_based() {
+                    val.into_pointer_value()
+                } else {
+                    let store = contract.builder.build_alloca(int_type, "stack");
 
-                contract.builder.build_store(store, val);
+                    contract.builder.build_store(store, val);
+
+                    store
+                };
 
                 contract.builder.build_call(
                     contract.module.get_function("__leNtobe32").unwrap(),
-                    &[ contract.builder.build_pointer_cast(store,
+                    &[
+                        contract.builder.build_pointer_cast(store,
                             contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "destvoid").into(),
+                            "store").into(),
                         contract.builder.build_pointer_cast(dest,
                             contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "destvoid").into(),
+                            "dest").into(),
                         contract.builder.build_int_truncate(type_size,
                             contract.context.i32_type(), "").into()
                     ],
@@ -339,7 +355,7 @@ impl TargetRuntime for BurrowTarget {
                 resolver::Type::Noreturn => unreachable!(),
             };
 
-            self.emit_abi_encode_single_val(contract, &ty, abi_ptr, args[i].into_int_value());
+            self.emit_abi_encode_single_val(contract, &ty, abi_ptr, args[i]);
         }
 
         (data, length)
@@ -402,6 +418,27 @@ impl TargetRuntime for BurrowTarget {
                     };
 
                     contract.builder.build_load(int8_ptr, "abi_int8")
+                }
+                ast::PrimitiveType::Address => {
+                    let int_type = contract.context.custom_width_int_type(160);
+                    let type_size = int_type.size_of();
+
+                    let store = contract.builder.build_alloca(int_type, "address");
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__be32toleN").unwrap(),
+                        &[
+                            contract.builder.build_pointer_cast(data,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract.builder.build_pointer_cast(store,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract.builder.build_int_truncate(type_size,
+                                contract.context.i32_type(), "size").into()
+                        ],
+                        ""
+                    );
+
+                    store.into()
                 }
                 ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
                     let int_type = contract.context.custom_width_int_type(*n as u32);
