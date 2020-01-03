@@ -359,3 +359,59 @@ fn test_large_vals() {
 
     runtime.function(&mut store, "doda", Vec::new());
 }
+
+#[test]
+fn args_and_returns() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val32(i32);
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg1) public {
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "arg1 is already declared");
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public returns (address arg2, uint) {
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "arg2 is already declared");
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public returns (address, uint) {
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "missing return statement");
+
+    let (runtime, mut store) = build_solidity("
+        contract foobar {
+            function foo1() public returns (int32 a) {
+                a = -102;
+            }
+
+            function foo2() public returns (int32 a) {
+                a = -102;
+                return 553;
+            }
+        }");
+
+    runtime.function(&mut store, "foo1", Vec::new());
+
+    assert_eq!(store.scratch, Val32(-102).encode());
+
+    runtime.function(&mut store, "foo2", Vec::new());
+
+    assert_eq!(store.scratch, Val32(553).encode());
+}

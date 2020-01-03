@@ -349,8 +349,8 @@ Functions can be declared and called as follow:
   contact foo {
       uint bound = get_initial_bound();
 
-      function get_initial_bound() private returns (uint) {
-          return 102;
+      function get_initial_bound() private returns (uint bound) {
+          bound = 102;
       }
 
       function set_bound(uint _bound) public {
@@ -368,17 +368,18 @@ Functions can be declared and called as follow:
 
 Function can have any number of arguments. Function arguments may have names;
 if they do not have names then they cannot be used in the function body, but they will
-be present in the public interface. Return values cannot have names.
+be present in the public interface.
+
+The return values may have names as demonstrated in the get_initial_bound() function.
+When at least one of the return values has a name, then the return statement is no
+longer required at the end of a function body. In stead of returning the values
+which are provided in the return statement, the values of the return variables at the end
+of the function is returned. It is still possible to explicitly return some values
+with a return statement with some values.
 
 Functions which are declared ``public`` will be present in the ABI and are callable
 externally. If a function is declared ``private`` then it is not callable externally,
 but it can be called from within the contract.
-
-.. note::
-
-  The Ethereum Foundation Solidity compiler does allow return values to have names,
-  and the ``return`` statement can be elided. This will be corrected in Solang
-  in early 2020.
 
 Function overloading
 ____________________

@@ -53,14 +53,6 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
-        // FIXME: these should be allowed
-        if let Some(ref n) = r.name {
-            errors.push(Output::warning(
-                n.loc,
-                format!("named return value `{}' not allowed", n.name),
-            ));
-        }
-
         match ns.resolve_type(&r.typ, errors) {
             Ok(s) => returns.push(Parameter {
                 name: r

@@ -428,6 +428,42 @@ pub fn generate_cfg(
         }
     }
 
+    // If any of the return values are named, then the return statement can be omitted at
+    // the end of the function, and return values may be omitted too. Create variables to
+    // store the return values
+    if ast_f.returns.iter().any(|v| v.name.is_some()) {
+        let mut returns = Vec::new();
+
+        for (i, p) in ast_f.returns.iter().enumerate() {
+            returns.push(if let Some(ref name) = p.name {
+                    if let Some(pos) = vartab.add(name, resolve_f.returns[i].ty.clone(), errors) {
+                        ns.check_shadowing(name, errors);
+
+                        // set to zero
+                        cfg.add(&mut vartab, Instr::Set { res: pos, expr: resolve_f.returns[i].ty.default(ns) });
+
+                        pos
+                    } else {
+                        // obs wrong but we had an error so will continue with bogus value to generate parser errors
+                        0
+                    }
+                } else {
+                    // this variable can never be assigned but will need a zero value
+                    let pos = vartab.temp(
+                        &ast::Identifier{ loc: ast::Loc(0, 0), name: format!("arg{}", i)},
+                        &resolve_f.returns[i].ty.clone());
+
+                    // set to zero
+                    cfg.add(&mut vartab, Instr::Set { res: pos, expr: resolve_f.returns[i].ty.default(ns) });
+
+                    pos
+                }
+            );
+        }
+
+        vartab.returns = returns;
+    }
+
     let reachable = statement(
         &ast_f.body,
         resolve_f,
@@ -438,12 +474,12 @@ pub fn generate_cfg(
         errors,
     )?;
 
-    cfg.vars = vartab.drain();
-
     // ensure we have a return instruction
     if reachable {
-        check_return(ast_f, &mut cfg, errors)?;
+        check_return(ast_f, &mut cfg, &vartab, errors)?;
     }
+
+    cfg.vars = vartab.drain();
 
     // walk cfg to check for use for before initialize
 
@@ -453,6 +489,7 @@ pub fn generate_cfg(
 fn check_return(
     f: &ast::FunctionDefinition,
     cfg: &mut ControlFlowGraph,
+    vartab: &Vartable,
     errors: &mut Vec<output::Output>,
 ) -> Result<(), ()> {
     let current = cfg.current;
@@ -466,8 +503,8 @@ fn check_return(
         }
     }
 
-    if f.returns.is_empty() {
-        bb.add(Instr::Return { value: Vec::new() });
+    if f.returns.is_empty() || !vartab.returns.is_empty() {
+        bb.add(Instr::Return { value: vartab.returns.iter().map(|pos| Expression::Variable(ast::Loc(0, 0), *pos)).collect() });
 
         Ok(())
     } else {
@@ -597,6 +634,26 @@ fn statement(
             vartab.leave_scope();
 
             Ok(reachable)
+        }
+        ast::Statement::Return(loc, returns) if returns.is_empty() => {
+            let no_returns = f.returns.len();
+
+            if vartab.returns.len() != no_returns {
+                errors.push(Output::error(
+                    loc.clone(),
+                    format!(
+                        "missing return value, {} return values expected",
+                        no_returns
+                    ),
+                ));
+                return Err(());
+            }
+
+            cfg.add(vartab, Instr::Return { value:
+                vartab.returns.iter().map(|pos| Expression::Variable(ast::Loc(0, 0), *pos)).collect()
+            });
+
+            Ok(false)
         }
         ast::Statement::Return(loc, returns) => {
             let no_returns = f.returns.len();
@@ -2675,6 +2732,7 @@ pub struct Vartable {
     names: LinkedList<VarScope>,
     storage_vars: HashMap<String, usize>,
     dirty: Vec<DirtyTracker>,
+    returns: Vec<usize>
 }
 
 pub struct DirtyTracker {
@@ -2691,6 +2749,7 @@ impl Vartable {
             names: list,
             storage_vars: HashMap::new(),
             dirty: Vec::new(),
+            returns: Vec::new(),
         }
     }
 
@@ -2866,6 +2925,34 @@ impl LoopScopes {
                 Some(scope.continue_bb)
             }
             None => None,
+        }
+    }
+}
+
+impl resolver::Type {
+    fn default(&self, ns: &resolver::Contract) -> Expression {
+        match self {
+            resolver::Type::Primitive(e) => e.default(),
+            resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
+            resolver::Type::Noreturn => unreachable!()
+        }
+    }
+}
+
+impl ast::PrimitiveType {
+    fn default(&self) -> Expression {
+        match self {
+            ast::PrimitiveType::Uint(b) |
+            ast::PrimitiveType::Int(b) => Expression::NumberLiteral(*b, BigInt::from(0)),
+            ast::PrimitiveType::Bool => Expression::BoolLiteral(false),
+            ast::PrimitiveType::Address => Expression::NumberLiteral(160, BigInt::from(0)),
+            ast::PrimitiveType::Bytes(n) => {
+                let mut l = Vec::new();
+                l.resize(*n as usize, 0);
+                Expression::BytesLiteral(l)
+            },
+            ast::PrimitiveType::DynamicBytes => unimplemented!(),
+            ast::PrimitiveType::String => unimplemented!(),
         }
     }
 }
