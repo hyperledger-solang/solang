@@ -349,8 +349,8 @@ Functions can be declared and called as follow:
   contact foo {
       uint bound = get_initial_bound();
 
-      function get_initial_bound() private returns (uint bound) {
-          bound = 102;
+      function get_initial_bound() private returns (uint value) {
+          value = 102;
       }
 
       function set_bound(uint _bound) public {
