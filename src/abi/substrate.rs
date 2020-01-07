@@ -27,10 +27,22 @@ pub struct Registry {
 }
 
 #[derive(Deserialize,Serialize)]
+pub struct Array {
+    #[serde(rename = "array.len")]
+    len: usize,
+    #[serde(rename = "array.type")]
+    ty: usize
+}
+
+#[derive(Deserialize,Serialize)]
 #[serde(untagged)]
 enum Type {
     Builtin {
         id: String,
+        def: String
+    },
+    BuiltinArray {
+        id: Array,
         def: String
     },
     Struct {
@@ -192,6 +204,32 @@ impl Registry {
         length + 1
     }
 
+    /// Returns index to builtin type in registry. Type is added if not already present
+    fn builtin_bytes_type(&mut self, array_len: usize) -> usize {
+        let elem = self.builtin_type("u8");
+
+        for (i, s) in self.types.iter().enumerate() {
+            match s {
+                Type::BuiltinArray { id: Array { len, ty }, .. } if *len == array_len && *ty == elem => {
+                    return i + 1;
+                },
+                _ => ()
+            }
+        }
+
+        let length = self.types.len();
+
+        self.types.push(Type::BuiltinArray {
+            id: Array {
+                len: array_len,
+                ty: elem,
+            },
+            def: "builtin".to_owned(),
+        });
+
+        length + 1
+    }
+
     /// Adds struct type to registry. Does not check for duplication (yet)
     fn struct_type(&mut self, name: &str, fields: Vec<StructField>) -> usize {
         let length = self.types.len();
@@ -322,12 +360,20 @@ fn ty_to_abi(ty: &resolver::Type, contract: &resolver::Contract, registry: &mut 
         ast::PrimitiveType::Bool => "bool".into(),
         ast::PrimitiveType::Uint(n) => format!("u{}", n),
         ast::PrimitiveType::Int(n) => format!("i{}", n),
+        ast::PrimitiveType::Bytes(n) => format!("bytes{}", n),
         _ => unreachable!()
     };
 
-    ParamType{
-        ty: registry.builtin_type(&scalety),
-        display_name: vec![ registry.string(&scalety.to_string()) ],
+    if let ast::PrimitiveType::Bytes(n) = solty {
+        ParamType{
+            ty: registry.builtin_bytes_type(*n as usize),
+            display_name: vec!(),
+        }
+    } else {
+        ParamType {
+            ty: registry.builtin_type(&scalety),
+            display_name: vec![ registry.string(&scalety.to_string()) ],
+        }
     }
 }
 
