@@ -286,6 +286,7 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Bool => length += 1,
                 ast::PrimitiveType::Uint(n) |
                 ast::PrimitiveType::Int(n) => length += n as u64 / 8,
+                ast::PrimitiveType::Bytes(n) => length += n as u64,
                 _ => unimplemented!()
             }
         }
@@ -344,6 +345,30 @@ impl TargetRuntime for SubstrateTarget {
                     }
                     arglen = n as u64 / 8;
                 },
+                ast::PrimitiveType::Bytes(n) => {
+                    // Step over length
+                    let m = contract.builder.build_alloca(ty.LLVMType(&contract.context), "");
+
+                    // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+                    contract.builder.build_call(
+                        contract.module.get_function("__beNtoleN").unwrap(),
+                        &[
+                            argsdata.into(),
+                            contract.builder.build_pointer_cast(m,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract.context.i32_type().const_int(n as u64, false).into()
+                        ],
+                        ""
+                    );
+
+                    if ty.stack_based() {
+                        args.push(m.into());
+                    } else {
+                        args.push(contract.builder.build_load(m, ""));
+                    }
+
+                    arglen = n as u64;
+                }
                 _ => unimplemented!()
             }
 
@@ -375,6 +400,7 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Bool => length += 1,
                 ast::PrimitiveType::Uint(n) |
                 ast::PrimitiveType::Int(n) => length += n as u64 / 8,
+                ast::PrimitiveType::Bytes(n) => length += n as u64,
                 _ => unimplemented!()
             }
         }
@@ -422,6 +448,31 @@ impl TargetRuntime for SubstrateTarget {
                     );
 
                     arglen = n as u64 / 8;
+                },
+                ast::PrimitiveType::Bytes(n) => {
+                    let val = if args[i].is_pointer_value() {
+                        args[i].into_pointer_value()
+                    } else {
+                        let val = contract.builder.build_alloca(args[i].into_int_value().get_type(), &format!("bytes{}", n));
+
+                        contract.builder.build_store(val, args[i].into_int_value());
+
+                        val
+                    };
+
+                    // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+                    contract.builder.build_call(
+                        contract.module.get_function("__leNtobeN").unwrap(),
+                        &[
+                            contract.builder.build_pointer_cast(val,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            argsdata.into(),
+                            contract.context.i32_type().const_int(n as u64, false).into()
+                        ],
+                        ""
+                    );
+
+                    arglen = n as u64
                 }
                 _ => unimplemented!()
             }
