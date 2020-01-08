@@ -969,3 +969,41 @@ fn multiply() {
         assert_eq!(foo, store.scratch);
     }
 }
+
+#[test]
+fn bytes_bitwise() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Bytes3([u8; 3]);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Bytes5([u8; 5]);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract c {
+            function or(bytes5 x) public returns (bytes5 y) {
+                y = x | hex\"80808080\";
+            }
+
+            function and(bytes5 x) public returns (bytes5) {
+                return x & hex\"FFFF\";
+            }
+
+            function xor(bytes5 x) public returns (bytes5) {
+                x ^= hex\"FF00\";
+
+                return x;
+            }
+        }");
+
+    runtime.function(&mut store, "or", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0x81, 0x81, 0x81, 0x81, 0x01]).encode());
+
+    runtime.function(&mut store, "and", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
+
+    runtime.function(&mut store, "xor", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode());
+}
