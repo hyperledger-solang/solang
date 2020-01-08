@@ -976,6 +976,8 @@ fn bytes_bitwise() {
     struct Bytes3([u8; 3]);
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Bytes5([u8; 5]);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct BytesArray([u8; 7], u32);
 
     // parse
     let (runtime, mut store) = build_solidity("
@@ -1017,6 +1019,10 @@ fn bytes_bitwise() {
 
                 assert(b4.length == 4);
             }
+
+            function bytes_array(bytes7 foo, uint32 index) public returns (bytes1) {
+                return foo[index];
+            }
         }");
 
     runtime.function(&mut store, "or", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
@@ -1051,4 +1057,48 @@ fn bytes_bitwise() {
 
     // check length
     runtime.function(&mut store, "bytes_length", Vec::new());
+
+    // array access
+    let bytes7 = *b"NAWABRA";
+    for i in 0..6 {
+        runtime.function(&mut store, "bytes_array", BytesArray(bytes7, i).encode());
+
+        assert_eq!(store.scratch, [ bytes7[i as usize] ]);
+    }
+}
+
+#[test]
+#[should_panic]
+fn bytesn_underflow_index_acccess() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct BytesArray([u8; 7], i32);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function bytes_array(bytes7 foo, int32 index) public returns (bytes1) {
+                return foo[index];
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "bytes_array", BytesArray(*b"nawabra", -1).encode());
+}
+
+#[test]
+#[should_panic]
+fn bytesn_overflow_index_acccess() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct BytesArray([u8; 7], i32);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function bytes_array(bytes7 foo, int32 index) public returns (bytes1) {
+                return foo[index];
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "bytes_array", BytesArray(*b"nawabra", 7).encode());
 }
