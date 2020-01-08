@@ -993,6 +993,24 @@ fn bytes_bitwise() {
 
                 return x;
             }
+
+            function shift_left(bytes3 a) public returns (bytes5 b) {
+                b = bytes5(a) << 8;
+            }
+
+            function shift_right(bytes3 a) public returns (bytes5 b) {
+                b = bytes5(a) >> 8;
+            }
+
+            function shift_left2(bytes3 a) public returns (bytes5 b) {
+                b = bytes5(a);
+                b <<= 8;
+            }
+
+            function shift_right2(bytes3 a) public returns (bytes5 b) {
+                b = bytes5(a);
+                b >>= 8;
+            }
         }");
 
     runtime.function(&mut store, "or", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
@@ -1003,7 +1021,26 @@ fn bytes_bitwise() {
 
     assert_eq!(store.scratch, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
 
-    runtime.function(&mut store, "xor", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+    runtime.function(&mut store, "xor", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(store.scratch, Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode());
+
+    // shifty-shift
+    runtime.function(&mut store, "shift_left", Bytes3([0xf3, 0x7d, 0x03]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode());
+
+    runtime.function(&mut store, "shift_right", Bytes3([0xf3, 0x7d, 0x03]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode());
+
+    // assignment versions
+    runtime.function(&mut store, "shift_left2", Bytes3([0xf3, 0x7d, 0x03]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode());
+
+    runtime.function(&mut store, "shift_right2", Bytes3([0xf3, 0x7d, 0x03]).encode());
+
+    assert_eq!(store.scratch, Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode());
+
 }
