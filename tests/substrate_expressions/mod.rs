@@ -1011,6 +1011,12 @@ fn bytes_bitwise() {
                 b = bytes5(a);
                 b >>= 8;
             }
+
+            function bytes_length() public {
+                bytes4 b4;
+
+                assert(b4.length == 4);
+            }
         }");
 
     runtime.function(&mut store, "or", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
@@ -1043,4 +1049,6 @@ fn bytes_bitwise() {
 
     assert_eq!(store.scratch, Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode());
 
+    // check length
+    runtime.function(&mut store, "bytes_length", Vec::new());
 }
