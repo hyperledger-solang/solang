@@ -1814,29 +1814,51 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            // left hand side may be bytes/int/uint
+            // right hand size may be int/uint
+            let left_length = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
+            let right_length = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::ShiftLeft(
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    Box::new(left),
+                    Box::new(if left_length == right_length {
+                        right
+                    } else if right_length < left_length && right_type.signed() {
+                        Expression::SignExt(left_type.clone(), Box::new(right))
+                    } else if right_length < left_length && !right_type.signed() {
+                        Expression::ZeroExt(left_type.clone(), Box::new(right))
+                    } else {
+                        Expression::Trunc(left_type.clone(), Box::new(right))
+                    })
                 ),
-                ty,
+                left_type,
             ))
         }
         ast::Expression::ShiftRight(_, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            // left hand side may be bytes/int/uint
+            // right hand size may be int/uint
+            let left_length = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
+            let right_length = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::ShiftRight(
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
-                    ty.signed(),
+                    Box::new(left),
+                    Box::new(if left_length == right_length {
+                        right
+                    } else if right_length < left_length && right_type.signed() {
+                        Expression::SignExt(left_type.clone(), Box::new(right))
+                    } else if right_length < left_length && !right_type.signed() {
+                        Expression::ZeroExt(left_type.clone(), Box::new(right))
+                    } else {
+                        Expression::Trunc(left_type.clone(), Box::new(right))
+                    }),
+                    left_type.signed()
                 ),
-                ty,
+                left_type,
             ))
         }
         ast::Expression::Multiply(_, l, r) => {
@@ -2313,9 +2335,29 @@ pub fn expression(
                     ));
                     return Err(());
                 }
-            }
+            };
 
-            let set = cast(&id.loc, set, &set_type, &ty, true, ns, errors)?;
+            let set = match expr {
+                ast::Expression::AssignShiftLeft(_, _, _) |
+                ast::Expression::AssignShiftRight(_, _, _) => {
+                    let left_length = get_int_length(&ty, &loc, true, ns, errors)?;
+                    let right_length = get_int_length(&set_type, &e.loc(), false, ns, errors)?;
+
+                    // TODO: does shifting by negative value need compiletime/runtime check?
+                    if left_length == right_length {
+                        set
+                    } else if right_length < left_length && set_type.signed() {
+                        Expression::SignExt(ty.clone(), Box::new(set))
+                    } else if right_length < left_length && !set_type.signed() {
+                        Expression::ZeroExt(ty.clone(), Box::new(set))
+                    } else {
+                        Expression::Trunc(ty.clone(), Box::new(set))
+                    }
+                },
+                _ => {
+                    cast(&id.loc, set, &set_type, &ty, true, ns, errors)?
+                }
+            };
 
             let set = match expr {
                 ast::Expression::AssignAdd(_, _, _) => {
