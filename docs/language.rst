@@ -139,7 +139,7 @@ they are ignored by the compiler.
 
 String literals can be concatenated like they can in C or C++. Here the types are longer than
 the initializers; this means they are padded at the end with zeros. foo will contain the following
-bytes in hexidecimal ``41 42 43 44 00`` and bar will be ``41 00 00 00 00``.
+bytes in hexidecimal ``41 42 43 44 00 00`` and bar will be ``41 00 00 00 00``.
 
 These types can be used with bitwise operators ``|``, ``&``, ``^``, ``<<``, and ``>>``. When these
 operators are used, the type behaves exactly like the integer types. In this case think the type
