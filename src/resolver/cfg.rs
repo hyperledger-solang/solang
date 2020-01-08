@@ -1149,8 +1149,8 @@ fn coerce_int(
         (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(left_length)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(right_length)),
-        ) if allow_bytes && left_length == right_length => {
-            return Ok(resolver::Type::Primitive(ast::PrimitiveType::Bytes(*left_length)));
+        ) if allow_bytes => {
+            return Ok(resolver::Type::Primitive(ast::PrimitiveType::Bytes(std::cmp::max(*left_length, *right_length))));
         }
         _ => ()
     }
@@ -2302,12 +2302,17 @@ pub fn expression(
                 (var.pos, var.ty.clone())
             };
 
-            if !ty.ordered() {
-                errors.push(Output::error(
-                    id.loc,
-                    format!("variable {} not ordered", id.name.to_string()),
-                ));
-                return Err(());
+            match ty {
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(_)) |
+                resolver::Type::Primitive(ast::PrimitiveType::Int(_)) |
+                resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => (),
+                _ => {
+                    errors.push(Output::error(
+                        id.loc,
+                        format!("variable {} of incorrect type {}", id.name.to_string(), ty.to_string(ns)),
+                    ));
+                    return Err(());
+                }
             }
 
             let set = cast(&id.loc, set, &set_type, &ty, true, ns, errors)?;
