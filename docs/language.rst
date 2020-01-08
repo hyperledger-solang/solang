@@ -52,8 +52,14 @@ Types
 
 The following primitive types are supported:
 
+Boolean Type
+____________
+
 ``bool``
   This represents a single value which can be either ``true`` or ``false``
+
+Integer Types
+_____________
 
 ``uint``
   This represents a single unsigned integer of 256 bits wide. Values can be for example
@@ -93,10 +99,6 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
 
     implicit conversion would truncate from uint16 to uint8
 
-.. note::
-
-  The Ethereum Foundation Solidity compiler supports additional data types: address,
-  bytes and string. These will be implemented in Solang in early 2020.
 
 .. tip::
 
@@ -110,6 +112,58 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
 
   WebAssembly does not support this. This means that Solang has to emulate larger types with
   many WebAssembly instructions, resulting in larger contract code and higher gas cost.
+
+Fixed Length byte arrays
+________________________
+
+Solidity has a data type unique to the language. It is a fixed-length byte array of 1 to 32
+bytes, declared with ``bytes`` followed by the array length, for example:
+``bytes32``, ``bytes24``, ``bytes8``, or ``bytes1``.
+
+The arrays can be initialized with either a hex string or a string. If the string is shorter
+than the type, it is padded with zeros. For example:
+
+.. code-block:: javascript
+
+  bytes4 foo = "ABCD";
+  bytes4 bar = hex"41_42_43_44";
+
+In this case, foo and bar are initialized to the same value. The ascii value for ``A`` is 41,
+when written in hexidecimal. Underscores are allowed in hex strings; they exist for readability,
+they are ignored by the compiler.
+
+.. code-block:: javascript
+
+  bytes6 foo = "AB" "CD";
+  bytes5 bar = hex"41";
+
+String literals can be concatenated like they can in C or C++. Here the types are longer than
+the initializers; this means they are padded at the end with zeros. foo will contain the following
+bytes in hexidecimal ``41 42 43 44 00`` and bar will be ``41 00 00 00 00``.
+
+These types can be used with bitwise operators ``|``, ``&``, ``^``, ``<<``, and ``>>``. When these
+operators are used, the type behaves exactly like the integer types. In this case think the type
+not as an array but as a long number. For example, it is possible to shift by one bit:
+
+.. code-block:: javascript
+
+  bytes2 foo = hex"0101" << 1;
+  // foo is 02 02
+
+Since this is an array type, it is possible to read array elements too. They are indexed from zero,
+not one. It is not permitted to set array elements; the value of a bytesN type can only be changed
+by changing the entire value.
+
+.. code-block:: javascript
+
+  bytes6 wake_code = "elohim";
+  bytes1 second_letter = wake_code[1]; // second_letter is "l"
+
+.. note::
+
+  The Ethereum Foundation Solidity compiler supports additional data types: address
+  and string. These will be implemented in Solang in early 2020.
+
 
 Expressions
 -----------
@@ -244,6 +298,37 @@ The compiler will say:
 Now you can work around this by adding a cast to the argument to return ``return int64(bar);``,
 however it would be much nicer if the return value matched the argument. Multiple abs() could exists
 with overloaded functions, so that there is an ``abs()`` for each type.
+
+It is allowed to cast from a ``bytes`` type to ``int`` or ``uint`` (or vice versa), only if the length
+of the type is the same. This requires an explicit cast.
+
+.. code-block:: javascript
+
+  bytes4 selector = "ABCD";
+  uint32 selector_as_uint = uint32(selector);
+
+If the length also needs to change, then another cast is needed to adjust the length. Truncation and
+extension is different for integers and bytes types. Integers pad zeros on the left when extending,
+and truncate on the right. bytes pad on right when extending, and truncate on the left. For example:
+
+.. code-block:: javascript
+
+  bytes4 start = "ABCD";
+  uint64 start1 = uint64(uint4(start));
+  // first cast to int, then extend as int: start1 = 0x41424344
+  uint64 start2 = uint64(bytes8(start));
+  // first extend as bytes, then cast to int: start2 = 0x4142434400000000
+
+A similar example for truncation:
+
+.. code-block:: javascript
+
+  uint64 start = 0xdead_cafe;
+  bytes4 start1 = bytes4(uint32(start));
+  // first truncate as int, then cast: start1 = hex"cafe"
+  bytes4 start2 = bytes4(bytes8(start));
+  // first cast, then truncate as bytes: start2 = hex"dead"
+
 
 Enums
 -----
