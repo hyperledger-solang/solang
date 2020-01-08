@@ -2582,33 +2582,45 @@ pub fn expression(
         }
         ast::Expression::MemberAccess(loc, namespace, id) => {
             // Is it an enum
-            let e = match ns.resolve_enum(namespace) {
-                Some(v) => v,
-                None => {
-                    errors.push(Output::error(
-                        loc.clone(),
-                        format!("not found"),
-                    ));
-                    return Err(());
-                }
-            };
-
-            match ns.enums[e].values.get(&id.name) {
-                Some((_, val)) => {
-                    Ok((Expression::NumberLiteral(
-                            ns.enums[e].ty.bits(),
-                            BigInt::from_usize(*val).unwrap()
-                        ),
-                        resolver::Type::Enum(e)))
-                },
-                None => {
-                    errors.push(Output::error(
-                        id.loc.clone(),
-                        format!("enum {} does not have value {}", ns.enums[e].name, id.name),
-                    ));
-                    Err(())
+            if let Some(e) = ns.resolve_enum(namespace) {
+                return match ns.enums[e].values.get(&id.name) {
+                    Some((_, val)) => {
+                        Ok((Expression::NumberLiteral(
+                                ns.enums[e].ty.bits(),
+                                BigInt::from_usize(*val).unwrap()
+                            ),
+                            resolver::Type::Enum(e)))
+                    },
+                    None => {
+                        errors.push(Output::error(
+                            id.loc.clone(),
+                            format!("enum {} does not have value {}", ns.enums[e].name, id.name),
+                        ));
+                        Err(())
+                    }
                 }
             }
+
+            // is it an bytesN.length
+            if let &mut Some(ref mut tab) = vartab {
+                let var = tab.find(namespace, ns, errors)?;
+
+                if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
+                    if id.name == "length" {
+                        return Ok((
+                            Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
+                            resolver::Type::Primitive(ast::PrimitiveType::Uint(8))
+                        ));
+                    }
+                }
+            }
+
+            errors.push(Output::error(
+                loc.clone(),
+                format!("not found"),
+            ));
+
+            Err(())
         }
         ast::Expression::Or(loc, left, right) => {
             let boolty = resolver::Type::new_bool();
