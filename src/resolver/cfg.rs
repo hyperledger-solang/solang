@@ -1816,21 +1816,13 @@ pub fn expression(
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
-            let left_length = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
-            let right_length = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
+            let _ = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
+            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::ShiftLeft(
                     Box::new(left),
-                    Box::new(if left_length == right_length {
-                        right
-                    } else if right_length < left_length && right_type.signed() {
-                        Expression::SignExt(left_type.clone(), Box::new(right))
-                    } else if right_length < left_length && !right_type.signed() {
-                        Expression::ZeroExt(left_type.clone(), Box::new(right))
-                    } else {
-                        Expression::Trunc(left_type.clone(), Box::new(right))
-                    })
+                    Box::new(cast_shift_arg(right, right_length, &left_type)),
                 ),
                 left_type,
             ))
@@ -1841,21 +1833,13 @@ pub fn expression(
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
-            let left_length = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
-            let right_length = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
+            let _ = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
+            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
 
             Ok((
                 Expression::ShiftRight(
                     Box::new(left),
-                    Box::new(if left_length == right_length {
-                        right
-                    } else if right_length < left_length && right_type.signed() {
-                        Expression::SignExt(left_type.clone(), Box::new(right))
-                    } else if right_length < left_length && !right_type.signed() {
-                        Expression::ZeroExt(left_type.clone(), Box::new(right))
-                    } else {
-                        Expression::Trunc(left_type.clone(), Box::new(right))
-                    }),
+                    Box::new(cast_shift_arg(right, right_length, &left_type)),
                     left_type.signed()
                 ),
                 left_type,
@@ -2580,6 +2564,74 @@ pub fn expression(
 
             Err(())
         }
+        ast::Expression::IndexAccess(loc, var, Some(index)) => {
+            let id = match var.as_ref() {
+                ast::Expression::Variable(id) => id,
+                _ => unreachable!(),
+            };
+
+            let (index_expr, index_type) = expression(index, cfg, ns, vartab, errors)?;
+
+            let tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        loc.clone(), format!("cannot read variable {} in constant expression", id.name)));
+                    return Err(());
+                }
+            };
+
+            let var = tab.find(id, ns, errors)?;
+
+            let array_length = if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
+                n
+            } else {
+                errors.push(Output::error(
+                    loc.clone(), format!("variable {} is not an array", id.name)));
+                return Err(());
+            };
+
+            let (index_width, _) = get_int_length(&index_type, &index.loc(), false, ns, errors)?;
+
+            let pos = tab.temp(&ast::Identifier{ name: "index".to_owned(), loc: loc.clone()}, &index_type);
+
+            cfg.add(tab, Instr::Set{ res: pos, expr: index_expr });
+
+            let out_of_range = cfg.new_basic_block("out_of_range".to_string());
+            let in_range = cfg.new_basic_block("in_range".to_string());
+
+            // We're cheating a bit. Any signed value < 0 will also be caught by doing a unsigned compare
+            cfg.add(tab, Instr::BranchCond{ cond:
+                Expression::UMoreEqual(
+                    Box::new(Expression::Variable(index.loc(), pos)),
+                    Box::new(Expression::NumberLiteral(index_width, BigInt::from_u8(array_length).unwrap()))
+                ), true_: out_of_range, false_: in_range });
+
+            cfg.set_basic_block(out_of_range);
+            cfg.add(tab, Instr::AssertFailure{});
+
+            cfg.set_basic_block(in_range);
+
+            let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
+
+            Ok((
+                Expression::Trunc(res_ty.clone(),
+                    Box::new(Expression::ShiftRight(
+                        Box::new(Expression::Variable(loc.clone(), var.pos)),
+                        // shift by (array_length - 1 - index) * 8
+                        Box::new(Expression::ShiftLeft(
+                            Box::new(Expression::Subtract(
+                                Box::new(Expression::NumberLiteral(array_length as u16 * 8, BigInt::from_u8(array_length - 1).unwrap())),
+                                Box::new(cast_shift_arg(Expression::Variable(index.loc(), pos), index_width, &var.ty))),
+                            ),
+                            Box::new(Expression::NumberLiteral(array_length as u16 * 8, BigInt::from_u8(3).unwrap()))
+                        )),
+                        false
+                    ))
+                ),
+                res_ty,
+            ))
+        }
         ast::Expression::MemberAccess(loc, namespace, id) => {
             // Is it an enum
             if let Some(e) = ns.resolve_enum(namespace) {
@@ -2759,6 +2811,23 @@ pub fn expression(
             Ok((Expression::Variable(loc.clone(), pos), boolty))
         }
         _ => panic!("unimplemented: {:?}", expr)
+    }
+}
+
+// When generating shifts, llvm wants both arguments to have the same width. We want the
+// result of the shift to be left argument, so this function coercies the right argument
+// into the right length.
+fn cast_shift_arg(expr: Expression, from_width: u16, ty: &resolver::Type) -> Expression {
+    let to_width = ty.bits();
+
+    if from_width == to_width {
+        expr
+    } else if from_width < to_width && ty.signed() {
+        Expression::SignExt(ty.clone(), Box::new(expr))
+    } else if from_width < to_width && !ty.signed() {
+        Expression::ZeroExt(ty.clone(), Box::new(expr))
+    } else {
+        Expression::Trunc(ty.clone(), Box::new(expr))
     }
 }
 
