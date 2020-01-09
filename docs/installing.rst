@@ -2,12 +2,12 @@ Installing Solang
 =================
 
 The Solang compiler is a single binary. It can be installed in many different
-ways, so please pick whatever method suits your needs.
+ways, so please pick whichever method suits your needs.
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
-New images are automatically available on
+New images are automatically made available on
 `docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. Simply pull the latest docker image using:
 
 .. code-block:: bash
@@ -60,7 +60,7 @@ from source:
 You will need the llvm libraries for this to work, see
 `Installing the LLVM Libraries`_.
 
-Building solang from source
+Building Solang from source
 ---------------------------
 In order to build solang from source, you will need rust 1.33.0 or higher,
 and llvm version 8 or higher with the WebAssembly target enabled.
@@ -96,7 +96,7 @@ The output should be 8.0 or higher. Then check if the WebAssembly target is enab
 
   llc --version
 
-You should see wasm32 listed under the target. Lastly check that the static libraries are installed:
+You should see wasm32 listed under the targets. Lastly check that the static libraries are installed:
 
 .. code-block:: bash
 

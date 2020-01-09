@@ -3,7 +3,7 @@ Running Solang
 
 The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
-wasm file which is ready for deployment on a chain.
+wasm file which is ready for deployment on a chain, and an abi file.
 
 Two blockchains are supported right now:
 `Hyperledger Burrow <https://github.com/hyperledger/burrow>`_ and
@@ -13,8 +13,8 @@ Two blockchains are supported right now:
 
   Depending on which target Solang is compiling for, different language
   features are supported. For example, when compiling for substrate, the
-  constructor can be overloaded with different prototypes. With burrow, only
-  one constructor prototype is allowed.
+  constructor can be overloaded with different prototypes. With Hyperledger
+  Burrow, only one constructor prototype is allowed.
 
 Using Solang on the command line
 --------------------------------
@@ -31,7 +31,7 @@ Options:
 -v, \\-\\-verbose
   Make the output more verbose. The compiler tell you what contracts have been
   found in the source, and what files are generated. Without this option Solang
-  will be silent if there are no errors.
+  will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
   This takes one argument, which can either be ``burrow`` or ``substrate``.

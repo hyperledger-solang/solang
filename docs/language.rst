@@ -23,7 +23,11 @@ these caveats:
 Solidity Source File Structure
 ------------------------------
 
-A solidity file may have multiple contracts in them. If you compile a Solidity file containing:
+A solidity file may have multiple contracts in them. A contract is defined with the
+``contract`` keyword, following by the contract name and then the definition of the
+contract in curly braces ``{ }``. Multiple contracts maybe defined in one solidity
+source file. The name of the contract does not have to match the name of the file,
+although it this might be convenient.
 
 .. code-block:: javascript
 
@@ -39,7 +43,8 @@ A solidity file may have multiple contracts in them. If you compile a Solidity f
       }
   }
 
-Then Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI files for each contract.
+When compiling this, Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI
+files for each contract.
 
 .. note::
 
@@ -50,13 +55,13 @@ Then Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI files for 
 Types
 -----
 
-The following primitive types are supported:
+The following primitive types are supported.
 
 Boolean Type
 ____________
 
 ``bool``
-  This represents a single value which can be either ``true`` or ``false``
+  This represents a single value which can be either ``true`` or ``false``.
 
 Integer Types
 _____________
@@ -116,7 +121,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
 Fixed Length byte arrays
 ________________________
 
-Solidity has a data type unique to the language. It is a fixed-length byte array of 1 to 32
+Solidity has a primitive type unique to the language. It is a fixed-length byte array of 1 to 32
 bytes, declared with *bytes* followed by the array length, for example:
 ``bytes32``, ``bytes24``, ``bytes8``, or ``bytes1``. ``byte`` is an alias for ``byte1``, so
 ``byte`` is an array of 1 element. The arrays can be initialized with either a hex string or
@@ -129,7 +134,7 @@ a text string.
 
 The ascii value for ``A`` is 41, when written in hexidecimal. So, in this case, foo and bar
 are initialized to the same value. Underscores are allowed in hex strings; they exist for
-readability.  If the string is shorter than the type, it is padded with zeros. For example:
+readability. If the string is shorter than the type, it is padded with zeros. For example:
 
 .. code-block:: javascript
 
@@ -140,7 +145,7 @@ String literals can be concatenated like they can in C or C++. Here the types ar
 the initializers; this means they are padded at the end with zeros. foo will contain the following
 bytes in hexidecimal ``41 42 43 44 00 00`` and bar will be ``41 00 00 00 00``.
 
-These types can be used with bitwise operators ``|``, ``&``, ``^``, ``<<``, and ``>>``. When these
+These types can be used with the bitwise operators, ``|``, ``&``, ``^``, ``<<``, and ``>>``. When these
 operators are used, the type behaves like an unsigned integer type. In this case think the type
 not as an array but as a long number. For example, it is possible to shift by one bit:
 
@@ -151,7 +156,7 @@ not as an array but as a long number. For example, it is possible to shift by on
 
 Since this is an array type, it is possible to read array elements too. They are indexed from zero.
 It is not permitted to set array elements; the value of a bytesN type can only be changed
-by changing the entire value.
+by setting the entire array value.
 
 .. code-block:: javascript
 
@@ -171,23 +176,53 @@ is always the length of the type itself.
 Address Type
 ____________
 
-The ``address`` type holds the address of an account. It can be initialized with a special hexidecimal
-string. It has special capitalization, which is defined in
+The ``address`` type holds the address of an account. It can be initialized with a particular
+hexidecimal number, which is defined in
 `EIP-55 <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md>`_. Here is an example:
 
 .. code-block:: javascript
 
   address foo = 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91;
 
-The hexidecimal string has to have 40 characters, and not contain any underscores. If you do not know
-the correct capitalization then the compiler will tell you what it should be in an error message.
+The hexidecimal string has to have 40 characters, and not contain any underscores. The capitalization,
+i.e. whether ``a`` to ``f`` values are capitalized, is important. For example, when compiling:
+
+.. code-block:: javascript
+
+  address foo = 0xde709f2102306220921060314715629080e2fb77;
+
+The error message will tell you what capitalization is expected:
+
+.. code-block:: none
+
+  error: address literal has incorrect checksum. Expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
 ``address`` cannot be used in any arithmetic or bitwise operations. However, it can be cast to and from
-bytes types and integer types.
+bytes types and integer types and ``==`` and ``!=`` works for comparing two address types.
 
 .. code-block:: javascript
 
   address foo = address(0);
+
+Enums
+_____
+
+Solidity enums types have to be defined on the contract level. An enum has a type name, and a list of
+unique values. Enum types can used in public functions, but the value is represented as a ``uint8``
+in the ABI.
+
+.. code-block:: javascript
+
+  contract enum_example {
+      enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
+
+      function is_weekend(Weekday day) public pure returns (bool) {
+          return (day == Weekday.Saturday || day == Weekday.Sunday);
+      }
+  }
+
+An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
+is numbered from 0, like in C and Rust.
 
 .. note::
 
@@ -222,8 +257,8 @@ The assignment operator:
 
  	balance += 10;
 
-The exponation (or power) can be used to multiply a number N times by itself. This can only be done
-for unsigned types.
+The exponation (or power) can be used to multiply a number N times by itself,
+x :superscript:`y`. This can only be done for unsigned types.
 
 .. code-block:: javascript
 
@@ -302,7 +337,7 @@ Casting
 _______
 
 Solidity is strict about the sign of operations, and whether an assignment can truncate a value;
-these are fatal errors and Solang will refuse to compile it. You can force the compiler to
+these are errors and Solang will refuse to compile it. You can force the compiler to
 accept truncations or differences in sign by adding a cast, but this is best avoided. Often
 changing the parameters or return value of a function will avoid the need for casting.
 
@@ -360,26 +395,6 @@ A similar example for truncation:
 
 Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast.
 
-Enums
------
-
-Solidity enums types have to be defined on the contract level. An enum has a type name, and a list of
-unique values. Enum types can used in public functions, but the value is represented as a ``uint8``
-in the ABI.
-
-An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
-is numbered from 0, like in C and Rust:
-
-.. code-block:: javascript
-
-  contract enum_example {
-      enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
-
-      function is_weekend(Weekday day) public pure returns (bool) {
-          return (day == Weekday.Saturday || day == Weekday.Sunday);
-      }
-  }
-
 Contract Storage
 ----------------
 
@@ -396,7 +411,7 @@ calls on-chain. These are declared so:
           counters++;
       }
 
-      function count() public returns (uint) {
+      function count() public view returns (uint) {
           return counter;
       }
   }
