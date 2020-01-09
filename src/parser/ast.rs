@@ -216,7 +216,7 @@ pub enum Expression {
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
-    AddressLiteral(Loc, BigInt),
+    AddressLiteral(Loc, String),
     StringLiteral(Vec<StringLiteral>),
     HexLiteral(Vec<HexLiteral>),
     Variable(Identifier),

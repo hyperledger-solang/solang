@@ -3,40 +3,6 @@ pub mod solidity;
 
 use lalrpop_util::ParseError;
 use output::Output;
-use tiny_keccak::keccak256;
-
-/// Returns true if hex number confirms to https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
-pub fn is_hexstr_eip55(src: &str) -> bool {
-    if !src.starts_with("0x") || src.len() != 42 {
-        return false;
-    }
-
-    let address : String = src.chars().skip(2).map(|c| c.to_ascii_lowercase()).collect();
-
-    let hash = keccak256(address.as_bytes());
-
-    for (i, c) in src.chars().skip(2).enumerate() {
-        let is_upper = match c {
-            '0'..='9' => continue,
-            'a'..='f' => false,
-            'A'..='F' => true,
-            _ => unreachable!()
-        };
-
-        // hash is 32 bytes; find the i'th "nibble"
-        let nibble = hash[i >> 1] >> if (i & 1) != 0 {
-            0
-        } else {
-            4
-        };
-
-        if ((nibble & 8) != 0) != is_upper {
-            return false;
-        }
-    }
-
-    true
-}
 
 pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
     // parse phase
@@ -143,12 +109,4 @@ fn strip_comments_test() {
         strip_comments(&("foo /*|x\ny&*/ bar".to_string())),
         "foo     \n     bar"
     );
-}
-
-#[test]
-fn test_is_hexstr_eip55() {
-    assert!(is_hexstr_eip55("0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"));
-    assert!(is_hexstr_eip55("0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359"));
-    assert!(is_hexstr_eip55("0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB"));
-    assert!(is_hexstr_eip55("0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb"));
 }

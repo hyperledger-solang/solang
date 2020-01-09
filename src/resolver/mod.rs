@@ -11,6 +11,7 @@ pub mod cfg;
 mod functions;
 mod variables;
 mod builtin;
+mod address;
 
 use resolver::cfg::{ControlFlowGraph, Vartable, Instr};
 

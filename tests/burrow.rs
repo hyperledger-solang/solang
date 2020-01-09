@@ -421,7 +421,7 @@ fn address() {
                 assert(foo == 0x27b1fdb04752bbc536007a920d24acb045561c26);
 
                 // this literal is a number
-                int x = 0x27b1fdb04752bbc536007a920d24acb045561C26;
+                int x = 0x27b1fdb047_52bbc536007a920d24acb045561C26;
                 assert(int(foo) == x);
             }
 
