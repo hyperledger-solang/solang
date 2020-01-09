@@ -145,9 +145,9 @@ String literals can be concatenated like they can in C or C++. Here the types ar
 the initializers; this means they are padded at the end with zeros. foo will contain the following
 bytes in hexidecimal ``41 42 43 44 00 00`` and bar will be ``41 00 00 00 00``.
 
-These types can be used with the bitwise operators, ``|``, ``&``, ``^``, ``<<``, and ``>>``. When these
-operators are used, the type behaves like an unsigned integer type. In this case think the type
-not as an array but as a long number. For example, it is possible to shift by one bit:
+These types can be used with all the bitwise operators, ``~``, ``|``, ``&``, ``^``, ``<<``, and
+``>>``. When these operators are used, the type behaves like an unsigned integer type. In this case
+think the type not as an array but as a long number. For example, it is possible to shift by one bit:
 
 .. code-block:: javascript
 
@@ -160,8 +160,8 @@ by setting the entire array value.
 
 .. code-block:: javascript
 
-  bytes6 wake_code = "elohim";
-  bytes1 second_letter = wake_code[1]; // second_letter is "l"
+  bytes6 wake_code = "heotymeo";
+  bytes1 second_letter = wake_code[1]; // second_letter is "e"
 
 The length can be read using the ``.length`` member variable. Since this is a fixed size array, this
 is always the length of the type itself.
@@ -257,13 +257,18 @@ The assignment operator:
 
  	balance += 10;
 
-The exponation (or power) can be used to multiply a number N times by itself,
+The exponation (or power) can be used to multiply a number N times by itself, i.e.
 x :superscript:`y`. This can only be done for unsigned types.
 
 .. code-block:: javascript
 
   uint64 thousand = 1000;
   uint64 billion = thousand ** 3;
+
+.. note::
+
+  No overflow checking is done on the arithmetic operations, just like with the
+  Ethereum Foundation Solidity compiler.
 
 Bitwise operators
 _________________
