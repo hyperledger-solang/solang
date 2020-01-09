@@ -1020,6 +1020,10 @@ fn bytes_bitwise() {
                 assert(b4.length == 4);
             }
 
+            function complement(bytes3 a) public returns (bytes3) {
+                return ~a;
+            }
+
             function bytes_array(bytes7 foo, uint32 index) public returns (bytes1) {
                 return foo[index];
             }
@@ -1057,6 +1061,11 @@ fn bytes_bitwise() {
 
     // check length
     runtime.function(&mut store, "bytes_length", Vec::new());
+
+    // complement
+    runtime.function(&mut store, "complement", Bytes3([0xf3, 0x7d, 0x03]).encode());
+
+    assert_eq!(store.scratch, Bytes3([0x0c, 0x82, 0xfc]).encode());
 
     // array access
     let bytes7 = *b"NAWABRA";
