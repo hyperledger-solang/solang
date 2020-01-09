@@ -17,6 +17,8 @@ pub struct SubstrateTarget {
     slot_mapping: HashMap<usize, usize>
 }
 
+const ADDRESS_LENGTH: u64 = 20;
+
 impl SubstrateTarget {
     pub fn build<'a>(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Contract<'a> {
         let mut c = Contract::new(context, contract, filename);
@@ -287,6 +289,7 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Uint(n) |
                 ast::PrimitiveType::Int(n) => length += n as u64 / 8,
                 ast::PrimitiveType::Bytes(n) => length += n as u64,
+                ast::PrimitiveType::Address => length += ADDRESS_LENGTH,
                 _ => unimplemented!()
             }
         }
@@ -346,7 +349,6 @@ impl TargetRuntime for SubstrateTarget {
                     arglen = n as u64 / 8;
                 },
                 ast::PrimitiveType::Bytes(n) => {
-                    // Step over length
                     let m = contract.builder.build_alloca(ty.LLVMType(&contract.context), "");
 
                     // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
@@ -368,6 +370,25 @@ impl TargetRuntime for SubstrateTarget {
                     }
 
                     arglen = n as u64;
+                }
+                ast::PrimitiveType::Address => {
+                    let address = contract.builder.build_alloca(ty.LLVMType(&contract.context), "address");
+
+                    // byte order needs to be reversed
+                    contract.builder.build_call(
+                        contract.module.get_function("__beNtoleN").unwrap(),
+                        &[
+                            argsdata.into(),
+                            contract.builder.build_pointer_cast(address,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract.context.i32_type().const_int(ADDRESS_LENGTH, false).into()
+                        ],
+                        ""
+                    );
+
+                    args.push(address.into());
+
+                    arglen = ADDRESS_LENGTH;
                 }
                 _ => unimplemented!()
             }
@@ -401,6 +422,7 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Uint(n) |
                 ast::PrimitiveType::Int(n) => length += n as u64 / 8,
                 ast::PrimitiveType::Bytes(n) => length += n as u64,
+                ast::PrimitiveType::Address => length += ADDRESS_LENGTH,
                 _ => unimplemented!()
             }
         }
@@ -473,6 +495,21 @@ impl TargetRuntime for SubstrateTarget {
                     );
 
                     arglen = n as u64
+                }
+                ast::PrimitiveType::Address => {
+                    // byte order needs to be reversed
+                    contract.builder.build_call(
+                        contract.module.get_function("__leNtobeN").unwrap(),
+                        &[
+                            contract.builder.build_pointer_cast(args[i].into_pointer_value(),
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            argsdata.into(),
+                            contract.context.i32_type().const_int(ADDRESS_LENGTH, false).into()
+                        ],
+                        ""
+                    );
+
+                    arglen = ADDRESS_LENGTH
                 }
                 _ => unimplemented!()
             }
