@@ -335,45 +335,62 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
 }
 
 fn solty_to_scalety(ty: &resolver::Type, contract: &resolver::Contract) -> (String, usize) {
-    let solty = match &ty {
-        resolver::Type::Primitive(e) => e,
-        resolver::Type::Enum(ref i) => &contract.enums[*i].ty,
-        resolver::Type::Noreturn => unreachable!(),
-    };
-
-    match solty {
+    match ty_to_primitive(ty, contract) {
         ast::PrimitiveType::Bool => ("bool".into(), 1),
         ast::PrimitiveType::Uint(n) => (format!("u{}", n), (n / 8).into()),
         ast::PrimitiveType::Int(n) => (format!("i{}", n), (n / 8).into()),
+        ast::PrimitiveType::Bytes(n) => (format!("bytes{}", n), *n as usize),
+        ast::PrimitiveType::Address => ("address".into(), 20),
         _ => unreachable!()
     }
 }
 
 fn ty_to_abi(ty: &resolver::Type, contract: &resolver::Contract, registry: &mut Registry) -> ParamType {
-    let solty = match &ty {
-        resolver::Type::Primitive(e) => e,
-        resolver::Type::Enum(ref i) => &contract.enums[*i].ty,
-        resolver::Type::Noreturn => unreachable!(),
-    };
+    let primitive = ty_to_primitive(ty, contract);
 
-    let scalety = match solty {
+    match primitive {
+        ast::PrimitiveType::Bytes(n) => {
+            ParamType{
+                ty: registry.builtin_bytes_type(*n as usize),
+                display_name: vec!(),
+            }
+        },
+        ast::PrimitiveType::Address => {
+            ParamType{
+                ty: registry.builtin_bytes_type(160 as usize),
+                display_name: vec!(),
+            }
+        },
+        _ =>  {
+            let scalety = primitive_to_string(&primitive);
+
+            ParamType {
+                ty: registry.builtin_type(&scalety),
+                display_name: vec![ registry.string(&scalety.to_string()) ],
+            }
+        }
+    }
+}
+
+// For a given resolved type, return the underlying primitive
+fn ty_to_primitive<'a>(ty: &'a resolver::Type, resolved_contract: &'a resolver::Contract) -> &'a ast::PrimitiveType {
+    match ty {
+        resolver::Type::Primitive(e) => e,
+        resolver::Type::Enum(ref i) => &resolved_contract.enums[*i].ty,
+        resolver::Type::Noreturn => unreachable!(),
+    }
+}
+
+// For a given primitive, give the name as Substrate would like it (i.e. 64 bits
+// signed int is i64, not int64).
+fn primitive_to_string(ty: &ast::PrimitiveType) -> String {
+    match ty {
         ast::PrimitiveType::Bool => "bool".into(),
         ast::PrimitiveType::Uint(n) => format!("u{}", n),
         ast::PrimitiveType::Int(n) => format!("i{}", n),
         ast::PrimitiveType::Bytes(n) => format!("bytes{}", n),
+        ast::PrimitiveType::Address => "address".into(),
         _ => unreachable!()
-    };
-
-    if let ast::PrimitiveType::Bytes(n) = solty {
-        ParamType{
-            ty: registry.builtin_bytes_type(*n as usize),
-            display_name: vec!(),
-        }
-    } else {
-        ParamType {
-            ty: registry.builtin_type(&scalety),
-            display_name: vec![ registry.string(&scalety.to_string()) ],
-        }
     }
 }
 
