@@ -2,6 +2,7 @@ use num_bigint::BigInt;
 use num_bigint::Sign;
 use num_traits::One;
 use num_traits::FromPrimitive;
+use num_traits::Num;
 use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -13,6 +14,7 @@ use hex;
 use output;
 use output::Output;
 use resolver;
+use resolver::address::to_hexstr_eip55;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -1723,11 +1725,20 @@ pub fn expression(
                 }
             }
         }
-        ast::Expression::AddressLiteral(_, a) => {
-            Ok((
-                Expression::NumberLiteral(160, a.clone()),
-                resolver::Type::Primitive(ast::PrimitiveType::Address),
-            ))
+        ast::Expression::AddressLiteral(loc, n) => {
+            let address = to_hexstr_eip55(n);
+
+            if address == *n {
+                let s: String = address.chars().skip(2).collect();
+
+                Ok((
+                    Expression::NumberLiteral(160, BigInt::from_str_radix(&s, 16).unwrap()),
+                    resolver::Type::Primitive(ast::PrimitiveType::Address),
+                ))
+            } else {
+                errors.push(Output::error(loc.clone(), format!("address literal has incorrect checksum. Expected ‘{}’", address)));
+                Err(())
+            }
         }
         ast::Expression::Variable(id) => {
             if let &mut Some(ref mut tab) = vartab {

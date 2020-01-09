@@ -1,10 +1,10 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: b3f4767cb57ec9b643ca1e1ed237964c17f44d5c26643e20bddb81bf250cadd
+// sha256: 5681d96f956a4146759aa47017aee97771426a16281036222fa36a387c837a
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
 use parser::ast::*;
-use parser::{box_option, is_hexstr_eip55};
+use parser::box_option;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
@@ -18,7 +18,7 @@ mod __parse__SourceUnit {
     use num_bigint::BigInt;
     use num_traits::Num;
     use parser::ast::*;
-    use parser::{box_option, is_hexstr_eip55};
+    use parser::box_option;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -15467,7 +15467,7 @@ mod __intern_token {
     use num_bigint::BigInt;
     use num_traits::Num;
     use parser::ast::*;
-    use parser::{box_option, is_hexstr_eip55};
+    use parser::box_option;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -18487,12 +18487,14 @@ fn __action206<
 ) -> Expression
 {
     {
-        // from_str_radix does not like the 0x prefix
-        let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
+        let is_address = n.len() == 42 && n.starts_with("0x") && !n.chars().any(|c| c == '_');
 
-        if is_hexstr_eip55(n) {
-            Expression::AddressLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        if is_address {
+            Expression::AddressLiteral(Loc(l, r), n.to_string())
         } else {
+            // from_str_radix does not like the 0x prefix
+            let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
+
             Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
         }
     }
