@@ -117,20 +117,19 @@ Fixed Length byte arrays
 ________________________
 
 Solidity has a data type unique to the language. It is a fixed-length byte array of 1 to 32
-bytes, declared with ``bytes`` followed by the array length, for example:
-``bytes32``, ``bytes24``, ``bytes8``, or ``bytes1``.
-
-The arrays can be initialized with either a hex string or a string. If the string is shorter
-than the type, it is padded with zeros. For example:
+bytes, declared with *bytes* followed by the array length, for example:
+``bytes32``, ``bytes24``, ``bytes8``, or ``bytes1``. ``byte`` is an alias for ``byte1``, so
+``byte`` is an array of 1 element. The arrays can be initialized with either a hex string or
+a text string.
 
 .. code-block:: javascript
 
   bytes4 foo = "ABCD";
   bytes4 bar = hex"41_42_43_44";
 
-In this case, foo and bar are initialized to the same value. The ascii value for ``A`` is 41,
-when written in hexidecimal. Underscores are allowed in hex strings; they exist for readability,
-they are ignored by the compiler.
+The ascii value for ``A`` is 41, when written in hexidecimal. So, in this case, foo and bar
+are initialized to the same value. Underscores are allowed in hex strings; they exist for
+readability.  If the string is shorter than the type, it is padded with zeros. For example:
 
 .. code-block:: javascript
 
@@ -142,7 +141,7 @@ the initializers; this means they are padded at the end with zeros. foo will con
 bytes in hexidecimal ``41 42 43 44 00 00`` and bar will be ``41 00 00 00 00``.
 
 These types can be used with bitwise operators ``|``, ``&``, ``^``, ``<<``, and ``>>``. When these
-operators are used, the type behaves exactly like the integer types. In this case think the type
+operators are used, the type behaves like an unsigned integer type. In this case think the type
 not as an array but as a long number. For example, it is possible to shift by one bit:
 
 .. code-block:: javascript
@@ -150,8 +149,8 @@ not as an array but as a long number. For example, it is possible to shift by on
   bytes2 foo = hex"0101" << 1;
   // foo is 02 02
 
-Since this is an array type, it is possible to read array elements too. They are indexed from zero,
-not one. It is not permitted to set array elements; the value of a bytesN type can only be changed
+Since this is an array type, it is possible to read array elements too. They are indexed from zero.
+It is not permitted to set array elements; the value of a bytesN type can only be changed
 by changing the entire value.
 
 .. code-block:: javascript
@@ -159,10 +158,20 @@ by changing the entire value.
   bytes6 wake_code = "elohim";
   bytes1 second_letter = wake_code[1]; // second_letter is "l"
 
+The length can be read using the ``.length`` member variable. Since this is a fixed size array, this
+is always the length of the type itself.
+
+.. code-block:: javascript
+
+  bytes32 hash;
+  assert(hash.length == 32);
+  byte b;
+  assert(b.length == 1);
+
 .. note::
 
-  The Ethereum Foundation Solidity compiler supports additional data types: address
-  and string. These will be implemented in Solang in early 2020.
+  The Ethereum Foundation Solidity compiler supports additional data types: address,
+  bytes, and string. These will be implemented in Solang in early 2020.
 
 
 Expressions
@@ -329,6 +338,7 @@ A similar example for truncation:
   bytes4 start2 = bytes4(bytes8(start));
   // first cast, then truncate as bytes: start2 = hex"dead"
 
+Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast. 
 
 Enums
 -----

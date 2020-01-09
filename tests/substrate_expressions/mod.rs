@@ -1094,7 +1094,7 @@ fn bytesn_overflow_index_acccess() {
     // parse
     let (runtime, mut store) = build_solidity("
         contract test {
-            function bytes_array(bytes7 foo, int32 index) public returns (bytes1) {
+            function bytes_array(bytes7 foo, int32 index) public returns (byte) {
                 return foo[index];
             }
         }",

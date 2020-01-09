@@ -2583,6 +2583,8 @@ pub fn expression(
 
             let var = tab.find(id, ns, errors)?;
 
+            get_contract_storage(&var, cfg, tab);
+
             let array_length = if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
                 n
             } else {
