@@ -14,8 +14,8 @@ for `Substrate <https://substrate.dev/>`_ or
 `llvm <https://www.llvm.org/>`_ compiler framework to produce WebAssembly
 (wasm). As result, the output is highly optimized, which saves you in gas costs.
 
-Solang aims for compatibility with the Ethereum EVM Solidity compiler, but differences
-do exist. Where differences exists, this is noted in the documentation.
+Solang aims for compatibility with the Ethereum EVM Solidity compiler. Where
+differences exists, this is noted in the documentation.
 
 Many language features are not implemented yet. Anything which is documented
 is supported, though.
@@ -26,5 +26,5 @@ is supported, though.
 
    installing
    running
-   examples
    language
+   examples
