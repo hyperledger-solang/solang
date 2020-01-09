@@ -189,3 +189,83 @@ fn bytes() {
     assert_eq!(store.scratch, Bytes3(*b"XYW").encode());
 
 }
+
+#[test]
+fn address() {
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            address  foo = 0x1844674_4073709551616;
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "implicit conversion from uint80 to address not allowed");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070d;
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "address literal has incorrect checksum. Expected ‘0x8617E340B3D01FA5F11F306F4090FD50E238070D’");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            uint160 foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "implicit conversion would truncate from address to uint160");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+
+            function bar() private returns (bool) {
+                return foo > address(0);
+            }
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "expression of type address not allowed");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+
+            function bar() private returns (address) {
+                return foo + address(1);
+            }
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "expression of type address not allowed");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+
+            function bar() private returns (address) {
+                return foo | address(1);
+            }
+        }", &Target::Substrate);
+
+    assert_eq!(first_error(errors), "expression of type address not allowed");
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Address([u8; 20]);
+
+    // parse
+    let (runtime, mut store) = build_solidity("
+        contract test {
+            function check_return() public returns (address) {
+                return 0xde709f2102306220921060314715629080e2fb77;
+            }
+
+            function check_param(address a) public {
+                assert(a == 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91);
+            }
+        }");
+
+    runtime.function(&mut store, "check_return", Vec::new());
+
+    assert_eq!(store.scratch, Address([ 0xde, 0x70, 0x9f, 0x21, 0x02, 0x30, 0x62, 0x20, 0x92, 0x10, 0x60, 0x31, 0x47, 0x15, 0x62, 0x90, 0x80, 0xe2, 0xfb, 0x77 ]).encode());
+
+    let val = Address([ 0xE9, 0x43, 0x0d, 0x8C, 0x01, 0xC4, 0xE4, 0xBb, 0x33, 0xE4, 0x4f, 0xd7, 0x74, 0x89, 0x42, 0x08, 0x5D, 0x82, 0xfC, 0x91 ]).encode();
+
+    runtime.function(&mut store, "check_param", val);
+}
