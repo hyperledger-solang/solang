@@ -168,11 +168,31 @@ is always the length of the type itself.
   byte b;
   assert(b.length == 1);
 
+Address Type
+____________
+
+The ``address`` type holds the address of an account. It can be initialized with a special hexidecimal
+string. It has special capitalization, which is defined in
+`EIP-55 <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md>`_. Here is an example:
+
+.. code-block:: javascript
+
+  address foo = 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91;
+
+The hexidecimal string has to have 40 characters, and not contain any underscores. If you do not know
+the correct capitalization then the compiler will tell you what it should be in an error message.
+
+``address`` cannot be used in any arithmetic or bitwise operations. However, it can be cast to and from
+bytes types and integer types.
+
+.. code-block:: javascript
+
+  address foo = address(0);
+
 .. note::
 
-  The Ethereum Foundation Solidity compiler supports additional data types: address,
-  bytes, and string. These will be implemented in Solang in early 2020.
-
+  The Ethereum Foundation Solidity compiler supports additional data types:
+  bytes and string. These will be implemented in Solang in early 2020.
 
 Expressions
 -----------
@@ -338,7 +358,7 @@ A similar example for truncation:
   bytes4 start2 = bytes4(bytes8(start));
   // first cast, then truncate as bytes: start2 = hex"dead"
 
-Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast. 
+Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` requires a cast.
 
 Enums
 -----
