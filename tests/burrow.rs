@@ -472,10 +472,11 @@ fn bytes() {
             function passthrough(bytes4 bar) public view returns (bytes4) {
                 return bar;
             }
-/*
-            function entry(uint index) public view returns (byte) {
+
+            function entry(uint index) public view returns (bytes1) {
                 return foo[index];
             }
+
             function shiftedleft() public view returns (bytes4) {
                 return foo << 8;
             }
@@ -483,7 +484,6 @@ fn bytes() {
             function shiftedright() public view returns (bytes4) {
                 return foo >> 8;
             }
-*/
         }"##);
 
     runtime.constructor(&mut store, &[]);
@@ -507,4 +507,10 @@ fn bytes() {
     let val = vec!(ethabi::Token::FixedBytes(vec!(0x41, 0x42, 0x43, 0x44)));
 
     assert_eq!(runtime.function(&mut store, "passthrough", &val), val);
+
+    let val = vec!(ethabi::Token::Uint(ethereum_types::U256::from(1)));
+
+    let ret = runtime.function(&mut store, "entry", &val);
+
+    assert_eq!(ret, [ ethabi::Token::FixedBytes(vec!(0x22)) ]);
 }
