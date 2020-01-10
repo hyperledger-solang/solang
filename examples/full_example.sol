@@ -57,6 +57,40 @@ contract full_example {
 		return (fahrenheit - 32) * 5 / 9;
 	}
 
+	// is this number a power-of-two
+	function is_power_of_2(uint n) pure public returns (bool) {
+		return n != 0 && (n & (n - 1)) == 0;
+	}
+
+	// calculate the population count (number of set bits) using Brian Kerningham's way
+	function population_count(uint n) pure public returns (uint count) {
+		for (count = 0; n != 0; count++) {
+			n &= (n - 1);
+		}
+	}
+
+	// calculate the power of base to exp
+	function power(uint base, uint exp) pure public returns (uint) {
+		return base ** exp;
+	}
+
+	// returns true if the address is 0
+	function is_address_zero(address a) pure public returns (bool) {
+		return a == address(0);
+	}
+
+	// reverse the bytes in an array of 8 (endian swap)
+	function byte8reverse(bytes8 input) public pure returns (bytes8 out) {
+		out = ((input << 56) & hex"ff00_0000_0000_0000") |
+			  ((input << 40) & hex"00ff_0000_0000_0000") |
+			  ((input << 24) & hex"0000_ff00_0000_0000") |
+			  ((input <<  8) & hex"0000_00ff_0000_0000") |
+			  ((input >>  8) & hex"0000_0000_ff00_0000") |
+			  ((input >> 24) & hex"0000_0000_00ff_0000") |
+			  ((input >> 40) & hex"0000_0000_0000_ff00") |
+			  ((input >> 56) & hex"0000_0000_0000_00ff");
+	}
+
 	// This mocks a pid state
 	function get_pid_state(int64 _pid) pure private returns (State) {
 		int64 n = 8;
