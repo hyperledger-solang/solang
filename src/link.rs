@@ -30,6 +30,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
     // or something like that.
     let allowed_externs = |name: &str| {
         match target {
+            Target::Ewasm => name == "main",
             Target::Burrow => name == "constructor" || name == "function",
             Target::Substrate => name == "deploy" || name == "call"
         }
@@ -77,12 +78,24 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
             if imports[ind].field().starts_with("__") {
                 imports.remove(ind);
             } else {
+                if let Target::Ewasm = target {
+                    let module = imports[ind].module_mut();
+                    
+                    *module = "ethereum".to_string();
+                }
+
                 ind += 1;
             }
         }
 
+        let module = if let Target::Ewasm = target {
+            "memory"
+        } else {
+            "env"
+        };
+
         imports.push(ImportEntry::new(
-            "env".into(),
+            module.into(),
             "memory".into(),
             elements::External::Memory(elements::MemoryType::new(2, Some(2))),
         ));

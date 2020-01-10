@@ -61,7 +61,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .possible_values(&["substrate", "burrow"])
+                .possible_values(&["substrate", "burrow", "ewasm"])
                 .default_value("substrate")
         )
         .arg(
@@ -103,10 +103,12 @@ fn main() {
         match matches.value_of("TARGET") {
             Some("substrate") => solang::Target::Substrate,
             Some("burrow") => solang::Target::Burrow,
+            Some("ewasm") => solang::Target::Ewasm,
             _ => unreachable!()
         }
     };
     let verbose = matches.is_present("VERBOSE");
+    let opt = matches.value_of("OPT").unwrap();
 
     if verbose {
         eprintln!("info: Solang commit {}", env!("GIT_HASH"));
@@ -147,31 +149,71 @@ fn main() {
                 eprintln!("info: Generating LLVM IR for contract {} with target {}", resolved_contract.name, resolved_contract.target);
             }
 
-            let contract = resolved_contract.emit(&context, &filename);
+            let contract = resolved_contract.emit(&context, &filename, &opt);
 
             if let Some("llvm") = matches.value_of("EMIT") {
-                let llvm_filename = output_file(&contract.name, "ll");
+                if let Some(runtime) = &contract.runtime {
+                    // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
+                    // as a byte string
+                    let llvm_filename = output_file(&format!("{}_deploy", contract.name), "ll");
 
-                if verbose {
-                    eprintln!("info: Saving LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                    if verbose {
+                        eprintln!("info: Saving deployer LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                    }
+
+                    contract.dump_llvm(&llvm_filename).unwrap();
+
+                    let llvm_filename = output_file(&format!("{}_runtime", contract.name), "ll");
+
+                    if verbose {
+                        eprintln!("info: Saving runtime LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                    }
+
+                    runtime.dump_llvm(&llvm_filename).unwrap();
+                } else {
+                    let llvm_filename = output_file(&contract.name, "ll");
+
+                    if verbose {
+                        eprintln!("info: Saving LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                    }
+
+                    contract.dump_llvm(&llvm_filename).unwrap();
                 }
-
-                contract.dump_llvm(&llvm_filename).unwrap();
                 continue;
             }
 
             if let Some("bc") = matches.value_of("EMIT") {
-                let bc_filename = output_file(&contract.name, "bc");
+                // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
+                // as a byte string
+                if let Some(runtime) = &contract.runtime {
+                    let bc_filename = output_file(&format!("{}_deploy", contract.name), "bc");
 
-                if verbose {
-                    eprintln!("info: Saving LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                    if verbose {
+                        eprintln!("info: Saving deploy LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                    }
+
+                    contract.bitcode(&bc_filename);
+
+                    let bc_filename = output_file(&format!("{}_runtime", contract.name), "bc");
+
+                    if verbose {
+                        eprintln!("info: Saving runtime LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                    }
+
+                    runtime.bitcode(&bc_filename);
+                } else {
+                    let bc_filename = output_file(&contract.name, "bc");
+
+                    if verbose {
+                        eprintln!("info: Saving LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                    }
+
+                    contract.bitcode(&bc_filename);
                 }
-
-                contract.bitcode(&bc_filename);
                 continue;
             }
 
-            let obj = match contract.wasm(matches.value_of("OPT").unwrap()) {
+            let obj = match contract.wasm(&opt) {
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);

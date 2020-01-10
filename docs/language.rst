@@ -1,7 +1,7 @@
 Solidity Language
 =================
 
-The Solidity language support by Solang is compatible with the
+The Solidity language supported by Solang is compatible with the
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
 these caveats:
 
@@ -469,7 +469,7 @@ A constructor must be declared ``public``.
 .. note::
 
   Parity Substrate allows multiple constructors to be defined, which is not true for Hyperledge Burrow
-  or other Ethereum Style blockchains. So, when building for Substrate, multiple constructors can be
+  or ewasm. So, when building for Substrate, multiple constructors can be
   defined as long as their argument list is different (i.e. overloaded).
 
   When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.

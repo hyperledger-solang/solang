@@ -25,6 +25,7 @@ const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
 mod burrow;
 mod substrate;
+mod ewasm;
 
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
@@ -72,6 +73,7 @@ pub trait TargetRuntime {
 pub struct Contract<'a> {
     pub name: String,
     pub module: Module<'a>,
+    pub runtime: Option<Box<Contract<'a>>>,
     builder: Builder<'a>,
     context: &'a Context,
     target: Target,
@@ -82,10 +84,11 @@ pub struct Contract<'a> {
 }
 
 impl<'a> Contract<'a> {
-    pub fn build(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Self {
+    pub fn build(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str, opt: &str) -> Self {
         match contract.target {
             super::Target::Burrow => burrow::BurrowTarget::build(context, contract, filename),
             super::Target::Substrate => substrate::SubstrateTarget::build(context, contract, filename),
+            super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, filename, opt),
         }
     }
 
@@ -118,7 +121,7 @@ impl<'a> Contract<'a> {
         Ok(())
     }
 
-    pub fn new(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Self {
+    pub fn new(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str, runtime: Option<Box<Contract<'a>>>) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
         let target = Target::from_triple(WASMTRIPLE).unwrap();
@@ -134,6 +137,7 @@ impl<'a> Contract<'a> {
         Contract {
             name: contract.name.to_owned(),
             module: module,
+            runtime: runtime,
             builder: context.create_builder(),
             target: target,
             context: context,

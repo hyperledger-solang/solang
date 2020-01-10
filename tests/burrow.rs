@@ -138,7 +138,7 @@ impl TestRuntime {
 }
 
 fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (mut res, errors) = compile(src, "test.sol", &Target::Burrow);
+    let (mut res, errors) = compile(src, "test.sol", "default", &Target::Burrow);
 
     output::print_messages("test.sol", src, &errors, false);
 

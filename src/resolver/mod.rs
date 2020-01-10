@@ -387,8 +387,8 @@ impl Contract {
         abi::generate_abi(self, verbose)
     }
 
-    pub fn emit<'a>(&'a self, context: &'a inkwell::context::Context, filename: &'a str) -> emit::Contract {
-        emit::Contract::build(context, self, filename)
+    pub fn emit<'a>(&'a self, context: &'a inkwell::context::Context, filename: &'a str, opt: &str) -> emit::Contract {
+        emit::Contract::build(context, self, filename, opt)
     }
 }
 
