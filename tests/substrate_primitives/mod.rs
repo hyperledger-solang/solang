@@ -204,7 +204,7 @@ fn address() {
             address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070d;
         }", &Target::Substrate);
 
-    assert_eq!(first_error(errors), "address literal has incorrect checksum. Expected ‘0x8617E340B3D01FA5F11F306F4090FD50E238070D’");
+    assert_eq!(first_error(errors), "address literal has incorrect checksum, expected ‘0x8617E340B3D01FA5F11F306F4090FD50E238070D’");
 
     let (_, errors) = parse_and_resolve(
         "contract test {
