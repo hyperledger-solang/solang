@@ -28,14 +28,17 @@ pub enum Target {
     /// Parity Substrate, see https://substrate.dev/
     Substrate,
     /// Hyperledger Burrow, see https://github.com/hyperledger/burrow/
-    Burrow
+    Burrow,
+    /// Ethereum ewasm, see https://github.com/ewasm/design
+    Ewasm
 }
 
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Target::Substrate => write!(f, "Substrate"),
-            Target::Burrow => write!(f, "Burrow")
+            Target::Burrow => write!(f, "Burrow"),
+            Target::Ewasm => write!(f, "ewasm")
         }
     }
 }
@@ -47,7 +50,7 @@ impl fmt::Display for Target {
 /// compiler warnings, errors and informational messages are also provided.
 ///
 /// The ctx is the inkwell llvm context.
-pub fn compile(src: &str, filename: &str, target: &Target) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
+pub fn compile(src: &str, filename: &str, opt: &str, target: &Target) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();
 
     let ast = match parser::parse(src) {
@@ -64,9 +67,9 @@ pub fn compile(src: &str, filename: &str, target: &Target) -> (Vec<(Vec<u8>, Str
         let (abistr, _) = abi::generate_abi(c, false);
 
         // codegen
-        let contract = emit::Contract::build(&ctx, c, filename);
+        let contract = emit::Contract::build(&ctx, c, filename, opt);
 
-        let obj = contract.wasm("default").expect("llvm wasm emit should work");
+        let obj = contract.wasm(opt).expect("llvm wasm emit should work");
 
         let bc = link::link(&obj, target);
 

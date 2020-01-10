@@ -9,50 +9,77 @@ use inkwell::module::Linkage;
 use inkwell::AddressSpace;
 use inkwell::values::{PointerValue, IntValue, FunctionValue, BasicValueEnum};
 use inkwell::IntPredicate;
+use inkwell::attributes::{Attribute, AttributeLoc};
+
+use std::collections::HashMap;
 
 use super::{TargetRuntime, Contract};
 
-pub struct BurrowTarget {
+pub struct EwasmTarget {
+    /// This field maps a storage slot to llvm global
+    slot_mapping: HashMap<usize, usize>
 }
 
-impl BurrowTarget {
-    pub fn build<'a>(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, filename, None);
-        let b = BurrowTarget{};
+impl EwasmTarget {
+    pub fn build<'a>(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str, opt: &str) -> Contract<'a> {
+        // first emit runtime code
+        let mut runtime_code = Contract::new(context, contract, filename, None);
+        let mut b = EwasmTarget{
+            slot_mapping: HashMap::new()
+        };
 
         // externals
-        b.declare_externals(&mut c);
+        b.storage_keys(&mut runtime_code);
+        b.declare_externals(&mut runtime_code);
 
-        c.emit_functions(&b);
+        // FIXME: this also emits the constructors. We can either rely on lto linking
+        // to optimize them away or do not emit them.
+        runtime_code.emit_functions(&b);
 
-        b.emit_constructor_dispatch(&c);
-        b.emit_function_dispatch(&c);
+        b.emit_function_dispatch(&runtime_code);
 
-        c
+        let runtime_bs = runtime_code.wasm(opt).unwrap();
+
+        // Now we have the runtime code, create the deployer
+        let mut deploy_code = Contract::new(context, contract, filename, Some(Box::new(runtime_code)));
+        let mut b = EwasmTarget{
+            slot_mapping: HashMap::new()
+        };
+
+        // externals
+        b.storage_keys(&mut deploy_code);
+        b.declare_externals(&mut deploy_code);
+
+        // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
+        // no functions can be called from the constructor. We should either disallow this too
+        // and not emit functions, or use lto linking to optimize any unused functions away.
+        deploy_code.emit_functions(&b);
+
+        b.emit_constructor_dispatch(&mut deploy_code, &runtime_bs);
+
+        deploy_code
     }
 
-    fn declare_externals(&self, contract: &mut Contract) {
-        let ret = contract.context.void_type();
-        let args: Vec<BasicTypeEnum> = vec![
-            contract.context.i32_type().into(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic).into(),
-            contract.context.i32_type().into(),
-        ];
+    fn storage_keys<'a>(&mut self, contract: &'a mut Contract) {
+        for var in &contract.ns.variables {
+            if let resolver::ContractVariableType::Storage(slot) = var.var {
+                let mut key = slot.to_be_bytes().to_vec();
 
-        let ftype = ret.fn_type(&args, false);
+                // pad to the left
+                let mut padding = Vec::new();
 
-        contract.module.add_function("get_storage32", ftype, Some(Linkage::External));
-        contract.module.add_function("set_storage32", ftype, Some(Linkage::External));
+                padding.resize(32 - key.len(), 0u8);
+
+                key = padding.into_iter().chain(key.into_iter()).collect();
+
+                let v = contract.emit_global_string(&format!("sol::key::{}", var.name), &key, true);
+
+                self.slot_mapping.insert(slot, v);
+            }
+        }
     }
 
-    fn emit_constructor_dispatch(&self, contract: &Contract) {
-        let initializer = contract.emit_initializer(self);
-
-        // create start function
-        let ret = contract.context.void_type();
-        let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = contract.module.add_function("constructor", ftype, None);
-
+    fn main_prelude<'a>(&self, contract: &'a Contract, function: FunctionValue) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
 
         contract.builder.position_at_end(&entry);
@@ -63,58 +90,146 @@ impl BurrowTarget {
             &[],
             "");
 
+        // copy arguments from scratch buffer
+        let args_length = contract.builder.build_call(
+            contract.module.get_function("getCallDataSize").unwrap(),
+            &[],
+            "calldatasize").try_as_basic_value().left().unwrap();
+
+        let args = contract.builder.build_call(
+            contract.module.get_function("__malloc").unwrap(),
+            &[args_length],
+            ""
+        ).try_as_basic_value().left().unwrap().into_pointer_value();
+
+        contract.builder.build_call(
+            contract.module.get_function("callDataCopy").unwrap(),
+            &[
+                args.into(),
+                contract.context.i32_type().const_zero().into(),
+                args_length.into(),
+            ],
+            ""
+        );
+
+        let args = contract.builder.build_pointer_cast(args,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic), "").into();
+
+        (args, args_length.into_int_value())
+    }
+
+    fn declare_externals(&self, contract: &mut Contract) {
+        let ret = contract.context.void_type();
+        let args: Vec<BasicTypeEnum> = vec![
+            contract.context.i8_type().ptr_type(AddressSpace::Generic).into(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic).into(),
+        ];
+
+        let ftype = ret.fn_type(&args, false);
+
+        contract.module.add_function("storageStore", ftype, Some(Linkage::External));
+        contract.module.add_function("storageLoad", ftype, Some(Linkage::External));
+
+        contract.module.add_function(
+            "getCallDataSize",
+            contract.context.i32_type().fn_type(&[], false),
+            Some(Linkage::External)
+        );
+
+        contract.module.add_function(
+            "callDataCopy",
+            contract.context.void_type().fn_type(&[
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(),  // resultOffset
+                contract.context.i32_type().into(), // dataOffset
+                contract.context.i32_type().into(), // length
+            ], false),
+            Some(Linkage::External)
+        );
+
+        let noreturn = contract.context.create_enum_attribute(Attribute::get_named_enum_kind_id("noreturn"), 0);
+
+        // mark as noreturn
+        contract.module.add_function(
+            "finish",
+            contract.context.void_type().fn_type(&[
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // data_ptr
+                contract.context.i32_type().into(), // data_len
+            ], false),
+            Some(Linkage::External)
+        ).add_attribute(AttributeLoc::Function, noreturn);
+
+        // mark as noreturn
+        contract.module.add_function(
+            "revert",
+            contract.context.void_type().fn_type(&[
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // data_ptr
+                contract.context.i32_type().into(), // data_len
+            ], false),
+            Some(Linkage::External)
+        ).add_attribute(AttributeLoc::Function, noreturn);
+    }
+
+    fn emit_constructor_dispatch(&self, contract: &mut Contract, runtime: &[u8]) {
+        let initializer = contract.emit_initializer(self);
+
+        // create start function
+        let ret = contract.context.void_type();
+        let ftype = ret.fn_type(&[], false);
+        let function = contract.module.add_function("main", ftype, None);
+
+        // FIXME: If there is no constructor, do not copy the calldata (but check calldatasize == 0)
+        let (argsdata, length) = self.main_prelude(contract, function);
+
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
 
         if let Some(con) = contract.ns.constructors.get(0) {
             let mut args = Vec::new();
 
-            let arg = function.get_first_param().unwrap().into_pointer_value();
-            let length = contract.builder.build_load(arg, "length");
-
-            // step over length
-            let args_ptr = unsafe {
-                contract.builder.build_gep(arg,
-                    &[contract.context.i32_type().const_int(1, false).into()],
-                    "args_ptr")
-            };
-
             // insert abi decode
             self.abi_decode(
                 contract,
                 function,
                 &mut args,
-                args_ptr,
-                length.into_int_value(),
+                argsdata,
+                length,
                 con,
             );
 
             contract.builder.build_call(contract.constructors[0], &args, "");
         }
 
-        contract.builder.build_return(None);
+        // the deploy code should return the runtime wasm code
+        let runtime_code = contract.emit_global_string("runtime_code", runtime, true);
+
+        let runtime_ptr = contract.builder.build_pointer_cast(
+            contract.globals[runtime_code].as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "runtime_code");
+
+        contract.builder.build_call(
+            contract.module.get_function("finish").unwrap(),
+            &[
+                runtime_ptr.into(),
+                contract.context.i32_type().const_int(runtime.len() as u64, false).into()
+            ],
+            ""
+        );
+
+        // since finish is marked noreturn, this should be optimized away
+        // however it is needed to create valid LLVM IR
+        contract.builder.build_unreachable();
     }
 
     fn emit_function_dispatch(&self, contract: &Contract) {
         // create start function
-        let ret = contract.context.i32_type().ptr_type(AddressSpace::Generic);
-        let ftype = ret.fn_type(&[contract.context.i32_type().ptr_type(AddressSpace::Generic).into()], false);
-        let function = contract.module.add_function("function", ftype, None);
+        let ret = contract.context.void_type();
+        let ftype = ret.fn_type(&[], false);
+        let function = contract.module.add_function("main", ftype, None);
 
-        let entry = contract.context.append_basic_block(function, "entry");
+        let (argsdata, argslen) = self.main_prelude(contract, function);
+
         let fallback_block = contract.context.append_basic_block(function, "fallback");
-
-        contract.builder.position_at_end(&entry);
-
-        let data = function.get_first_param().unwrap().into_pointer_value();
-        let argslen = contract.builder.build_load(data, "length").into_int_value();
-
-        let argsdata = unsafe {
-            contract.builder.build_gep(
-                data,
-                &[contract.context.i32_type().const_int(1, false).into()],
-                "argsdata")
-        };
 
         contract.emit_function_dispatch(&contract.ns.functions, &contract.functions, argsdata, argslen, function, &fallback_block, self);
 
@@ -323,54 +438,80 @@ impl BurrowTarget {
             _ => unimplemented!(),
         }
     }
-
 }
 
-impl TargetRuntime for BurrowTarget {
+impl TargetRuntime for EwasmTarget {
     fn set_storage<'a>(&self, contract: &'a Contract, _function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
+        let key = contract.globals[self.slot_mapping[&(slot as usize)]];
+        // FIXME: no need to alloca for 256 bit value
+        let value = contract.builder.build_alloca(contract.context.custom_width_int_type(160), "value");
+
+        let value8 = contract.builder.build_pointer_cast(value,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "value8");
+
         contract.builder.build_call(
-            contract.module.get_function("set_storage32").unwrap(),
-            &[
-                contract.context.i32_type().const_int(slot as u64, false).into(),
-                contract.builder.build_pointer_cast(dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                dest.get_type().size_of().const_cast(
-                    contract.context.i32_type(), false).into()
-            ],
+            contract.module.get_function("__bzero8").unwrap(),
+            &[ value8.into(), contract.context.i32_type().const_int(4, false).into() ],
             "");
+
+        let val = contract.builder.build_load(dest, "value");
+
+        contract.builder.build_store(
+            contract.builder.build_pointer_cast(value, dest.get_type(), ""),
+            val);
+
+        contract.builder.build_call(
+            contract.module.get_function("storageLoad").unwrap(),
+            &[
+                contract.builder.build_pointer_cast(key.as_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                value8.into()
+            ], "");
     }
 
     fn get_storage<'a>(&self, contract: &'a Contract, _function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
+        let key = contract.globals[self.slot_mapping[&(slot as usize)]];
+        // FIXME: no need to alloca for 256 bit value
+        let value = contract.builder.build_alloca(contract.context.custom_width_int_type(256), "value");
+
         contract.builder.build_call(
-            contract.module.get_function("get_storage32").unwrap(),
+            contract.module.get_function("storageLoad").unwrap(),
             &[
-                contract.context.i32_type().const_int(slot as u64, false).into(),
-                contract.builder.build_pointer_cast(dest,
+                contract.builder.build_pointer_cast(key.as_pointer_value(),
                     contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                dest.get_type().size_of().const_cast(
-                    contract.context.i32_type(), false).into()
-            ],
+                contract.builder.build_pointer_cast(value,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into()
+            ], "");
+
+        let val = contract.builder.build_load(
+            contract.builder.build_pointer_cast(value, dest.get_type(), ""),
             "");
+
+        contract.builder.build_store(dest, val);
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
-        let dest = contract.builder.build_call(
-            contract.module.get_function("__malloc").unwrap(),
-            &[contract.context.i32_type().const_int(4, false).into()],
+        contract.builder.build_call(
+            contract.module.get_function("finish").unwrap(),
+            &[
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).const_zero().into(),
+                contract.context.i32_type().const_zero().into(),
+            ],
             ""
-        ).try_as_basic_value().left().unwrap().into_pointer_value();
+        );
 
-        contract.builder.build_store(
-            contract.builder.build_pointer_cast(dest,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                ""),
-            contract.context.i32_type().const_zero());
-
-        contract.builder.build_return(Some(&dest));
+        contract.builder.build_return(None);
     }
 
-    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, _length: IntValue) {
-        contract.builder.build_return(Some(&data));
+    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
+        contract.builder.build_call(
+            contract.module.get_function("finish").unwrap(),
+            &[ data.into(), length.into() ],
+            ""
+        );
+
+        contract.builder.build_return(None);
     }
 
     fn abi_encode<'b>(
@@ -380,27 +521,13 @@ impl TargetRuntime for BurrowTarget {
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let length = contract.context.i32_type().const_int(32 * args.len() as u64, false);
-        let data = contract.builder.build_call(
+        let mut data = contract.builder.build_call(
             contract.module.get_function("__malloc").unwrap(),
-            &[contract.context.i32_type().const_int(4 + 32 * args.len() as u64, false).into()],
+            &[contract.context.i32_type().const_int(32 * args.len() as u64, false).into()],
             ""
         ).try_as_basic_value().left().unwrap().into_pointer_value();
 
-        // write length
-        contract.builder.build_store(
-            contract.builder.build_pointer_cast(data,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                ""),
-            length);
-
         // malloc returns u8*
-        let abi_ptr = unsafe {
-            contract.builder.build_gep(
-                data,
-                &[ contract.context.i32_type().const_int(4, false).into()],
-                "abi_ptr")
-        };
-
         for (i, arg) in spec.returns.iter().enumerate() {
             // insert abi decode
             let ty = match arg.ty {
@@ -409,7 +536,15 @@ impl TargetRuntime for BurrowTarget {
                 resolver::Type::Noreturn => unreachable!(),
             };
 
-            self.emit_abi_encode_single_val(contract, &ty, abi_ptr, args[i]);
+            self.emit_abi_encode_single_val(contract, &ty, data, args[i]);
+
+            data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[ contract.context.i32_type().const_int(32, false).into()],
+                    &format!("abi{}", i)
+                )
+            };
         }
 
         (data, length)
@@ -569,6 +704,17 @@ impl TargetRuntime for BurrowTarget {
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract) {
+        contract.builder.build_call(
+            contract.module.get_function("revert").unwrap(),
+            &[
+                contract.context.i8_type().ptr_type(AddressSpace::Generic).const_zero().into(),
+                contract.context.i32_type().const_zero().into(),
+            ],
+            ""
+        );
+
+        // since revert is marked noreturn, this should be optimized away
+        // however it is needed to create valid LLVM IR
         contract.builder.build_unreachable();
     }
 }

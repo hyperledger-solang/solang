@@ -21,7 +21,7 @@ const ADDRESS_LENGTH: u64 = 20;
 
 impl SubstrateTarget {
     pub fn build<'a>(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, filename);
+        let mut c = Contract::new(context, contract, filename, None);
         let mut b = SubstrateTarget{
             slot_mapping: HashMap::new()
         };

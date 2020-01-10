@@ -5,11 +5,13 @@
 
 [<img align="right" width="640" src="docs/web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">](https://github.com/w3f/Web3-collaboration/blob/master/grants/accepted_grant_applications.md#wave-4)
 
-Welcome to solang, a new Solidity compiler written in rust which uses
+Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
 needs to be written in rust.
 
-solang is under active development right now, and should be documented at
+Solang targets Substrate, Hyperledger Burrow and ewasm.
+
+Solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at
 [our documentation](https://solang.readthedocs.io/en/latest/).
 
