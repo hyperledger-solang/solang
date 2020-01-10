@@ -177,25 +177,30 @@ Address Type
 ____________
 
 The ``address`` type holds the address of an account. It can be initialized with a particular
-hexidecimal number, which is defined in
-`EIP-55 <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md>`_. Here is an example:
+hexidecimal number, called an address literal. Here is an example:
 
 .. code-block:: javascript
 
   address foo = 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91;
 
-The hexidecimal string has to have 40 characters, and not contain any underscores. The capitalization,
-i.e. whether ``a`` to ``f`` values are capitalized, is important. For example, when compiling:
+The hexidecimal string has to have 40 characters, and not contain any underscores.
+The capitalization, i.e. whether ``a`` to ``f`` values are capitalized, is important.
+It is defined in
+`EIP-55 <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md>`_. For example,
+when compiling:
 
 .. code-block:: javascript
 
-  address foo = 0xde709f2102306220921060314715629080e2fb77;
+  address foo = 0xe9430d8C01C4E4Bb33E44fd7748942085D82fC91;
 
-The error message will tell you what capitalization is expected:
+Since the hexidecimal string is 40 characters without underscores, and the string does
+not match the EIP-55 encoding, the compiler will refused to compile this. To make this
+a regular hexidecimal number, not an address, add some leading zeros or some underscores.
+To make this an address, the compiler error message will give the correct capitalization:
 
 .. code-block:: none
 
-  error: address literal has incorrect checksum. Expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
+  error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
 ``address`` cannot be used in any arithmetic or bitwise operations. However, it can be cast to and from
 bytes types and integer types and ``==`` and ``!=`` works for comparing two address types.

@@ -1736,7 +1736,7 @@ pub fn expression(
                     resolver::Type::Primitive(ast::PrimitiveType::Address),
                 ))
             } else {
-                errors.push(Output::error(loc.clone(), format!("address literal has incorrect checksum. Expected ‘{}’", address)));
+                errors.push(Output::error(loc.clone(), format!("address literal has incorrect checksum, expected ‘{}’", address)));
                 Err(())
             }
         }
