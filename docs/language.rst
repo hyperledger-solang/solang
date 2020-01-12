@@ -23,9 +23,9 @@ these caveats:
 Solidity Source File Structure
 ------------------------------
 
-A solidity file may have multiple contracts in them. A contract is defined with the
-``contract`` keyword, following by the contract name and then the definition of the
-contract in curly braces ``{ }``. Multiple contracts maybe defined in one solidity
+A Solidity source file may have multiple contracts in them. A contract is defined
+with the ``contract`` keyword, following by the contract name and then the definition
+of the contract in curly braces ``{ }``. Multiple contracts maybe defined in one solidity
 source file. The name of the contract does not have to match the name of the file,
 although it this might be convenient.
 
@@ -46,10 +46,23 @@ although it this might be convenient.
 When compiling this, Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI
 files for each contract.
 
+Often, Solidity source files have a ``pragma solidity`` which specifies the Ethereum
+Foundation Solidity compiler version.
+
+.. code-block:: javascript
+
+  pragma solidity >=0.4.0 <0.4.8;
+
+Solang does not follow the Ethereum Foundation Solidity compiler version numbering scheme,
+so these pragma statements are silently ignored. Additionally, we feel that a language should
+not be locked into a particular compiler, and compiler version.
+
+All other pragma statements are ignored, but warned about.
+
 .. note::
 
   The Ethereum Foundation Solidity compiler can also contain other other elements other than
-  contracts: ``pragma``, ``import``, ``library``, ``interface``. These are not supported yet
+  contracts: ``import``, ``library``, ``interface``. These are not supported yet
   and these should not be included as they may result in parser errors.
 
 Types

@@ -4,8 +4,9 @@ use num_bigint::BigInt;
 use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
+use super::lexer::{Token, LexicalError};
 
-grammar;
+grammar<'input>(input: &'input str);
 
 pub SourceUnit: SourceUnit = {
     SourceUnitPart+ => SourceUnit(<>)
@@ -21,122 +22,18 @@ ImportDirective: StringLiteral = {
     "import" <s:StringLiteral> ";" => s
 }
 
-PragmaDirective: (Identifier, String) = {
-    "pragma" <i:Identifier> <s:PragmaValue> ";" => (i, s)
-}
-
-// This is actually defined as [^;]*, however that causes ambiguity for the lexer. So define it
-// in a much more restricted way. Hopefully lalrpop will restrict the lexer to only those tokens
-// possible during parsing.
-PragmaValue: String = {
-    r"\^0\.\d+\.\d+" => <>.to_string()
+PragmaDirective: (Identifier, StringLiteral) = {
+    // The lexer does special parsing for String literal which eats up the semicolon
+    "pragma" <i:Identifier> <s:StringLiteral> => (i, s)
 }
 
 PrimitiveType: PrimitiveType = {
     "bool" => PrimitiveType::Bool,
     "address" => PrimitiveType::Address,
     "string" => PrimitiveType::String,
-    "uint" => PrimitiveType::Uint(256),
-    "uint8" => PrimitiveType::Uint(8),
-    // for i in $(seq 8 8 256); do printf '    "uint%d" => PrimitiveType::Uint(%d),\n' $i $i; done
-    "uint16" => PrimitiveType::Uint(16),
-    "uint24" => PrimitiveType::Uint(24),
-    "uint32" => PrimitiveType::Uint(32),
-    "uint40" => PrimitiveType::Uint(40),
-    "uint48" => PrimitiveType::Uint(48),
-    "uint56" => PrimitiveType::Uint(56),
-    "uint64" => PrimitiveType::Uint(64),
-    "uint72" => PrimitiveType::Uint(72),
-    "uint80" => PrimitiveType::Uint(80),
-    "uint88" => PrimitiveType::Uint(88),
-    "uint96" => PrimitiveType::Uint(96),
-    "uint104" => PrimitiveType::Uint(104),
-    "uint112" => PrimitiveType::Uint(112),
-    "uint120" => PrimitiveType::Uint(120),
-    "uint128" => PrimitiveType::Uint(128),
-    "uint136" => PrimitiveType::Uint(136),
-    "uint144" => PrimitiveType::Uint(144),
-    "uint152" => PrimitiveType::Uint(152),
-    "uint160" => PrimitiveType::Uint(160),
-    "uint168" => PrimitiveType::Uint(168),
-    "uint176" => PrimitiveType::Uint(176),
-    "uint184" => PrimitiveType::Uint(184),
-    "uint192" => PrimitiveType::Uint(192),
-    "uint200" => PrimitiveType::Uint(200),
-    "uint208" => PrimitiveType::Uint(208),
-    "uint216" => PrimitiveType::Uint(216),
-    "uint224" => PrimitiveType::Uint(224),
-    "uint232" => PrimitiveType::Uint(232),
-    "uint240" => PrimitiveType::Uint(240),
-    "uint248" => PrimitiveType::Uint(248),
-    "uint256" => PrimitiveType::Uint(256),
-    "int" => PrimitiveType::Int(256),
-    "int8" => PrimitiveType::Int(8),
-    "int16" => PrimitiveType::Int(16),
-    "int24" => PrimitiveType::Int(24),
-    "int32" => PrimitiveType::Int(32),
-    "int40" => PrimitiveType::Int(40),
-    "int48" => PrimitiveType::Int(48),
-    "int56" => PrimitiveType::Int(56),
-    "int64" => PrimitiveType::Int(64),
-    "int72" => PrimitiveType::Int(72),
-    "int80" => PrimitiveType::Int(80),
-    "int88" => PrimitiveType::Int(88),
-    "int96" => PrimitiveType::Int(96),
-    "int104" => PrimitiveType::Int(104),
-    "int112" => PrimitiveType::Int(112),
-    "int120" => PrimitiveType::Int(120),
-    "int128" => PrimitiveType::Int(128),
-    "int136" => PrimitiveType::Int(136),
-    "int144" => PrimitiveType::Int(144),
-    "int152" => PrimitiveType::Int(152),
-    "int160" => PrimitiveType::Int(160),
-    "int168" => PrimitiveType::Int(168),
-    "int176" => PrimitiveType::Int(176),
-    "int184" => PrimitiveType::Int(184),
-    "int192" => PrimitiveType::Int(192),
-    "int200" => PrimitiveType::Int(200),
-    "int208" => PrimitiveType::Int(208),
-    "int216" => PrimitiveType::Int(216),
-    "int224" => PrimitiveType::Int(224),
-    "int232" => PrimitiveType::Int(232),
-    "int240" => PrimitiveType::Int(240),
-    "int248" => PrimitiveType::Int(248),
-    "int256" => PrimitiveType::Int(256),
-    "byte" => PrimitiveType::Bytes(1),
-    "bytes" => PrimitiveType::DynamicBytes,
-    "bytes1" => PrimitiveType::Bytes(1),
-    "bytes2" => PrimitiveType::Bytes(2),
-    "bytes3" => PrimitiveType::Bytes(3),
-    "bytes4" => PrimitiveType::Bytes(4),
-    "bytes5" => PrimitiveType::Bytes(5),
-    "bytes6" => PrimitiveType::Bytes(6),
-    "bytes7" => PrimitiveType::Bytes(7),
-    "bytes8" => PrimitiveType::Bytes(8),
-    "bytes9" => PrimitiveType::Bytes(9),
-    "bytes10" => PrimitiveType::Bytes(10),
-    "bytes11" => PrimitiveType::Bytes(11),
-    "bytes12" => PrimitiveType::Bytes(12),
-    "bytes13" => PrimitiveType::Bytes(13),
-    "bytes14" => PrimitiveType::Bytes(14),
-    "bytes15" => PrimitiveType::Bytes(15),
-    "bytes16" => PrimitiveType::Bytes(16),
-    "bytes17" => PrimitiveType::Bytes(17),
-    "bytes18" => PrimitiveType::Bytes(18),
-    "bytes19" => PrimitiveType::Bytes(19),
-    "bytes20" => PrimitiveType::Bytes(20),
-    "bytes21" => PrimitiveType::Bytes(21),
-    "bytes22" => PrimitiveType::Bytes(22),
-    "bytes23" => PrimitiveType::Bytes(23),
-    "bytes24" => PrimitiveType::Bytes(24),
-    "bytes25" => PrimitiveType::Bytes(25),
-    "bytes26" => PrimitiveType::Bytes(26),
-    "bytes27" => PrimitiveType::Bytes(27),
-    "bytes28" => PrimitiveType::Bytes(28),
-    "bytes29" => PrimitiveType::Bytes(29),
-    "bytes30" => PrimitiveType::Bytes(30),
-    "bytes31" => PrimitiveType::Bytes(31),
-    "bytes32" => PrimitiveType::Bytes(32),
+    Uint => PrimitiveType::Uint(<>),
+    Int => PrimitiveType::Int(<>),
+    Bytes => PrimitiveType::Bytes(<>),
 }
 
 Type: Type = {
@@ -151,7 +48,7 @@ StorageLocation: StorageLocation = {
 }
 
 Identifier: Identifier = {
-    <l:@L> <n:r"[a-zA-Z_$][a-zA-Z_$0-9]*"> <r:@R> => Identifier{loc: Loc(l, r), name: n.to_string()}
+    <l:@L> <n:LexIdentifier> <r:@R> => Identifier{loc: Loc(l, r), name: n.to_string()}
 }
 
 VariableDeclaration: Box<VariableDeclaration> = {
@@ -351,12 +248,12 @@ Precedence1: Expression = {
     <HexLiteral+> => Expression::HexLiteral(<>),
     <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
-    <l:@L> <n:r#"-?[0-9][0-9_]*"#> <r:@R> => {
+    <l:@L> <n:LexNumber> <r:@R> => {
         let s: String = n.chars().filter(|v| *v != '_').collect();
 
         Expression::NumberLiteral(Loc(l, r), BigInt::from_str(&s).unwrap())
     },
-    <l:@L> <n:r#"-?0x[0-9a-fA-F][0-9a-fA-F_]*"#> <r:@R> => {
+    <l:@L> <n:LexHexNumber> <r:@R> => {
         let is_address = n.len() == 42 && n.starts_with("0x") && !n.chars().any(|c| c == '_');
 
         if is_address {
@@ -371,18 +268,13 @@ Precedence1: Expression = {
 }
 
 StringLiteral: StringLiteral = {
-    <l:@L> <s:r#""([^"]|'\\'.)*""#> <r:@R> => {
-        let mut v = s.to_string();
-        v.remove(0);
-        let len = v.len();
-        v.remove(len - 1);
-
-        StringLiteral{ loc: Loc(l, r), string: v.replace("\\\n", "") }
+    <l:@L> <s:LexStringLiteral> <r:@R> => {
+        StringLiteral{ loc: Loc(l, r), string: s.replace("\\\n", "") }
     }
 }
 
 HexLiteral: HexLiteral = {
-    <l:@L> <s:r#"hex"[0-9a-fA-F_]*""#> <r:@R> => {
+    <l:@L> <s:LexHexLiteral> <r:@R> => {
         let v = s.to_string();
         let hex_len = v.len() - 5;
 
@@ -553,5 +445,108 @@ NonIfStatement: Statement = {
         let mut v = v;
         v.push(e);
         Statement::Emit(n, v)
+    }
+}
+
+extern {
+    type Location = usize;
+    type Error = LexicalError;
+
+    enum Token<'input> {
+        ";" => Token::Semicolon,
+        "import" => Token::Import,
+        "contract" => Token::Contract,
+        "pragma" => Token::Pragma,
+        "bool" => Token::Bool,
+        "address" => Token::Address,
+        "string" => Token::String,
+        Uint => Token::Uint(<u16>),
+        Int => Token::Int(<u16>),
+        Bytes => Token::Bytes(<u8>),
+        "memory" => Token::Memory,
+        "calldata" => Token::Calldata,
+        "storage" => Token::Storage,
+        LexIdentifier => Token::Identifier(<&'input str>),
+        LexStringLiteral => Token::StringLiteral(<&'input str>),
+        LexHexLiteral => Token::HexLiteral(<&'input str>),
+        LexNumber => Token::Number(<&'input str>),
+        LexHexNumber => Token::HexNumber(<&'input str>),
+        "struct" => Token::Struct,
+        "{" => Token::OpenCurlyBrace,
+        "}" => Token::CloseCurlyBrace,
+        "(" => Token::OpenParenthesis,
+        ")" => Token::CloseParenthesis,
+        "interface" => Token::Interface,
+        "library" => Token::Library,
+        "event" => Token::Event,
+        "enum" => Token::Enum,
+        "public" => Token::Public,
+        "private" => Token::Private,
+        "external" => Token::External,
+        "internal" => Token::Internal,
+        "constant" => Token::Constant,
+        "=" => Token::Assign,
+        "==" => Token::Equal,
+        "|=" => Token::BitwiseOrAssign,
+        "^=" => Token::BitwiseXorAssign,
+        "&=" => Token::BitwiseAndAssign,
+        "<<=" => Token::ShiftLeftAssign,
+        ">>=" => Token::ShiftRightAssign,
+        "+=" => Token::AddAssign,
+        "-=" => Token::SubtractAssign,
+        "*=" => Token::MulAssign,
+        "/=" => Token::DivideAssign,
+        "%=" => Token::ModuloAssign,
+        "?" => Token::Question,
+        ":" => Token::Colon,
+        "||" => Token::Or,
+        "&&" => Token::And,
+        "!=" => Token::NotEqual,
+        "<" => Token::Less,
+        "<=" => Token::LessEqual,
+        ">" => Token::More,
+        ">=" => Token::MoreEqual,
+        "|" => Token::BitwiseOr,
+        "&" => Token::BitwiseAnd,
+        "^" => Token::BitwiseXor,
+        "<<" => Token::ShiftLeft,
+        ">>" => Token::ShiftRight,
+        "+" => Token::Add,
+        "-" => Token::Subtract,
+        "*" => Token::Mul,
+        "/" => Token::Divide,
+        "%" => Token::Modulo,
+        "**" => Token::Power,
+        "!" => Token::Not,
+        "~" => Token::Complement,
+        "delete" => Token::Delete,
+        "new" => Token::New,
+        "++" => Token::Increment,
+        "--" => Token::Decrement,
+        "[" => Token::OpenBracket,
+        "]" => Token::CloseBracket,
+        "." => Token::Member,
+        "true" => Token::True,
+        "false" => Token::False,
+        "pure" => Token::Pure,
+        "view" => Token::View,
+        "payable" => Token::Payable,
+        "constructor" => Token::Constructor,
+        "function" => Token::Function,
+        "returns" => Token::Returns,
+        "return" => Token::Return,
+        "if" => Token::If,
+        "for" => Token::For,
+        "while" => Token::While,
+        "else" => Token::Else,
+        "_" => Token::Underscore,
+        "do" => Token::Do,
+        "continue" => Token::Continue,
+        "break" => Token::Break,
+        "throw" => Token::Throw,
+        "emit" => Token::Emit,
+        "," => Token::Comma,
+        "anonymous" => Token::Anonymous,
+        "indexed" => Token::Indexed,
     }
 }

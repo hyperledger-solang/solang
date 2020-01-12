@@ -36,7 +36,7 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
             },
         }
     }
-    
+
     contract.constructors.iter()
         .map(|f| ABI {
             name: "".to_owned(),
