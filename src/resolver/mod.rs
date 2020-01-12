@@ -397,10 +397,26 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
     let mut errors = Vec::new();
 
     for part in s.0 {
-        if let ast::SourceUnitPart::ContractDefinition(def) = part {
-            if let Some(c) = resolve_contract(def, &target, &mut errors) {
-                contracts.push(c)
-            }
+        match part {
+            ast::SourceUnitPart::ContractDefinition(def) => {
+                if let Some(c) = resolve_contract(def, &target, &mut errors) {
+                    contracts.push(c)
+                }
+            },
+            ast::SourceUnitPart::PragmaDirective(name, _) => {
+                if name.name == "solidity" {
+                    errors.push(Output::info(
+                        name.loc.clone(),
+                        format!("pragma solidity is ignored"),
+                    ));
+                } else {
+                    errors.push(Output::warning(
+                        name.loc.clone(),
+                        format!("pragma {} is ignored", name.name),
+                    ));
+                }
+            },
+            _ => unimplemented!()
         }
     }
 
