@@ -2,7 +2,7 @@
 use resolver::Contract;
 use Target;
 
-pub mod ethabi;
+pub mod ethereum;
 pub mod substrate;
 
 pub fn generate_abi(contract: &Contract, verbose: bool) -> (String, &'static str) {
@@ -13,7 +13,7 @@ pub fn generate_abi(contract: &Contract, verbose: bool) -> (String, &'static str
                 eprintln!("info: Generating Ethereum ABI for contract {}", contract.name);
             }
 
-            let abi = ethabi::gen_abi(contract);
+            let abi = ethereum::gen_abi(contract);
 
             (serde_json::to_string(&abi).unwrap(), "abi")
         },

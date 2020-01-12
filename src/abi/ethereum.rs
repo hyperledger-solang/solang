@@ -1,5 +1,5 @@
 // ethereum style ABIs
-// This is used by Hyperledger Burrow
+// This is used by Hyperledger Burrow and ewasm
 
 use parser::ast;
 use resolver::{Contract, Parameter, Type};
@@ -26,6 +26,17 @@ pub struct ABI {
 }
 
 pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
+    fn parameter_to_abi(param: &Parameter, contract: &Contract) -> ABIParam {
+        ABIParam {
+            name: param.name.to_string(),
+            ty: match &param.ty {
+                Type::Primitive(e) => e.to_string(),
+                Type::Enum(ref i) => contract.enums[*i].ty.to_string(),
+                Type::Noreturn => unreachable!(),
+            },
+        }
+    }
+    
     contract.constructors.iter()
         .map(|f| ABI {
             name: "".to_owned(),
@@ -76,15 +87,3 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
         )
         .collect()
 }
-
-fn parameter_to_abi(param: &Parameter, contract: &Contract) -> ABIParam {
-    ABIParam {
-        name: param.name.to_string(),
-        ty: match &param.ty {
-            Type::Primitive(e) => e.to_string(),
-            Type::Enum(ref i) => contract.enums[*i].ty.to_string(),
-            Type::Noreturn => unreachable!(),
-        },
-    }
-}
-

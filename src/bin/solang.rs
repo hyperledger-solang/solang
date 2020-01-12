@@ -20,7 +20,7 @@ pub struct EwasmContract {
 
 #[derive(Serialize)]
 pub struct JsonContract {
-    abi: Vec<abi::ethabi::ABI>,
+    abi: Vec<abi::ethereum::ABI>,
     ewasm: EwasmContract,
 }
 
@@ -239,7 +239,7 @@ fn main() {
                 json_contracts.insert(
                     contract.name.to_owned(),
                     JsonContract {
-                        abi: abi::ethabi::gen_abi(&resolved_contract),
+                        abi: abi::ethereum::gen_abi(&resolved_contract),
                         ewasm: EwasmContract {
                             wasm: hex::encode_upper(wasm),
                         },
