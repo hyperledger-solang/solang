@@ -46,24 +46,22 @@ although it this might be convenient.
 When compiling this, Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI
 files for each contract.
 
-Often, Solidity source files have a ``pragma solidity`` which specifies the Ethereum
-Foundation Solidity compiler version.
+Often, Solidity source files start with a ``pragma solidity`` which specifies the Ethereum
+Foundation Solidity compiler version which is permitted to compile this code. Solang does
+not follow the Ethereum Foundation Solidity compiler version numbering scheme, so these
+pragma statements are silently ignored. There is no need for a ``pragma solidity`` statement
+when using Solang.
 
 .. code-block:: javascript
 
   pragma solidity >=0.4.0 <0.4.8;
 
-Solang does not follow the Ethereum Foundation Solidity compiler version numbering scheme,
-so these pragma statements are silently ignored. Additionally, we feel that a language should
-not be locked into a particular compiler, and compiler version.
-
-All other pragma statements are ignored, but warned about.
+All other pragma statements are ignored, but generate warnings.
 
 .. note::
 
   The Ethereum Foundation Solidity compiler can also contain other other elements other than
-  contracts: ``import``, ``library``, ``interface``. These are not supported yet
-  and these should not be included as they may result in parser errors.
+  contracts: ``import``, ``library``, ``interface``. These are not supported yet.
 
 Types
 -----
