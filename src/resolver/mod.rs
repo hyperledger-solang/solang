@@ -412,7 +412,7 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
                 } else {
                     errors.push(Output::warning(
                         name.loc.clone(),
-                        format!("pragma {} is ignored", name.name),
+                        format!("pragma {} is not unknown, ignored", name.name),
                     ));
                 }
             },
