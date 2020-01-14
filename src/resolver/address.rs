@@ -1,7 +1,13 @@
 use tiny_keccak::keccak256;
 
-/// Returns true if hex number confirms to https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
+/// Returns an address in https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md format
+/// Assumes the src is hex number, starting with 0x, no underscores and 40 hexdigits long,
+/// i.e. an ethereum address.
 pub fn to_hexstr_eip55(src: &str) -> String {
+    assert_eq!(src.len(), 42);
+    assert!(src.starts_with("0x"));
+    assert!(src.chars().skip(2).all(|c| c.is_ascii_hexdigit()));
+
     let address : String = src.chars().skip(2).map(|c| c.to_ascii_lowercase()).collect();
 
     let hash = keccak256(address.as_bytes());
