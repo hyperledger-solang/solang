@@ -281,6 +281,7 @@ impl TargetRuntime for SubstrateTarget {
             let ty = match arg.ty {
                 resolver::Type::Primitive(e) => e,
                 resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::FixedArray(_, _) => unimplemented!(),
                 resolver::Type::Noreturn => unreachable!(),
             };
 
@@ -315,6 +316,7 @@ impl TargetRuntime for SubstrateTarget {
             let ty = match arg.ty {
                 resolver::Type::Primitive(e) => e,
                 resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::FixedArray(_, _) => unimplemented!(),
                 resolver::Type::Noreturn => unreachable!(),
             };
 
@@ -414,6 +416,7 @@ impl TargetRuntime for SubstrateTarget {
             let ty = match arg.ty {
                 resolver::Type::Primitive(e) => e,
                 resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::FixedArray(_, _) => unimplemented!(),
                 resolver::Type::Noreturn => unreachable!(),
             };
 
@@ -441,6 +444,7 @@ impl TargetRuntime for SubstrateTarget {
             let ty = match arg.ty {
                 resolver::Type::Primitive(e) => e,
                 resolver::Type::Enum(n) => contract.ns.enums[n].ty,
+                resolver::Type::FixedArray(_, _) => unimplemented!(),
                 resolver::Type::Noreturn => unreachable!(),
             };
 
