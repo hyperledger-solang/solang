@@ -1132,6 +1132,13 @@ fn get_int_length(
             ));
             return Err(());
         }
+        resolver::Type::FixedArray(_, _) => {
+            errors.push(Output::error(
+                *l_loc,
+                format!("type array {} not allowed", l.to_string(ns)),
+            ));
+            return Err(());
+        }
         resolver::Type::Noreturn => {
             unreachable!();
         }
@@ -3075,7 +3082,8 @@ impl resolver::Type {
         match self {
             resolver::Type::Primitive(e) => e.default(),
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
-            resolver::Type::Noreturn => unreachable!()
+            resolver::Type::Noreturn => unreachable!(),
+            resolver::Type::FixedArray(_, _) => unreachable!()
         }
     }
 }

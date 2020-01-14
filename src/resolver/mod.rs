@@ -18,6 +18,7 @@ use resolver::cfg::{ControlFlowGraph, Vartable, Instr};
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
     Primitive(ast::PrimitiveType),
+    FixedArray(Box<Type>, Vec<usize>),
     Enum(usize),
     Noreturn,
 }
@@ -26,7 +27,17 @@ impl Type {
     pub fn to_string(&self, ns: &Contract) -> String {
         match self {
             Type::Primitive(e) => e.to_string(),
-            Type::Enum(n) => format!("enum {}", ns.enums[*n].name),
+            Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
+            Type::FixedArray(ty, len) => format!("{}[{}]", ty.to_string(ns), len.iter().map(|l| format!("[{}]", l)).collect::<String>()),
+            Type::Noreturn => "no return".to_owned(),
+        }
+    }
+
+    pub fn to_primitive_string(&self, ns: &Contract) -> String {
+        match self {
+            Type::Primitive(e) => e.to_string(),
+            Type::Enum(n) => ns.enums[*n].ty.to_string(),
+            Type::FixedArray(ty, len) => format!("{}{}", ty.to_primitive_string(ns), len.iter().map(|l| format!("[{}]", l)).collect::<String>()),
             Type::Noreturn => "no return".to_owned(),
         }
     }
@@ -42,6 +53,7 @@ impl Type {
         match self {
             Type::Primitive(e) => e.signed(),
             Type::Enum(_) => false,
+            Type::FixedArray(_, _) => unreachable!(),
             Type::Noreturn => unreachable!(),
         }
     }
@@ -50,6 +62,7 @@ impl Type {
         match self {
             Type::Primitive(e) => e.ordered(),
             Type::Enum(_) => false,
+            Type::FixedArray(_, _) => unreachable!(),
             Type::Noreturn => unreachable!(),
         }
     }
@@ -96,11 +109,7 @@ impl FunctionDecl {
                 signature.push(',');
             }
 
-            signature.push_str(&match &p.ty {
-                Type::Primitive(e) => e.to_string(),
-                Type::Enum(i) => ns.enums[*i].ty.to_string(),
-                Type::Noreturn => unreachable!(),
-            });
+            signature.push_str(&p.ty.to_string(ns));
         }
 
         signature.push(')');
@@ -132,6 +141,7 @@ impl FunctionDecl {
                 sig.push_str(&match &p.ty {
                     Type::Primitive(e) => e.to_string(),
                     Type::Enum(i) => ns.enums[*i].name.to_owned(),
+                    Type::FixedArray(ty, len) => format!("{}{}", ty.to_string(ns), len.iter().map(|r| format!(":{}", r)).collect::<String>()),
                     Type::Noreturn => unreachable!(),
                 });
             }

@@ -1322,6 +1322,7 @@ impl resolver::Type {
         match self {
             resolver::Type::Primitive(e) => e.LLVMType(context),
             resolver::Type::Enum(n) => ns.enums[*n].ty.LLVMType(context),
+            resolver::Type::FixedArray(_, _) => unimplemented!(),
             resolver::Type::Noreturn => unreachable!(),
         }
     }
@@ -1330,6 +1331,7 @@ impl resolver::Type {
         match self {
             resolver::Type::Primitive(e) => e.stack_based(),
             resolver::Type::Enum(_) => false,
+            resolver::Type::FixedArray(_, _) => true,
             resolver::Type::Noreturn => unreachable!(),
         }
     }
