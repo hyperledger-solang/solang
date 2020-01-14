@@ -56,7 +56,8 @@ when using Solang.
 
   pragma solidity >=0.4.0 <0.4.8;
 
-All other pragma statements are ignored, but generate warnings.
+All other pragma statements are ignored, but generate warnings. Pragma must be terminated with
+a semicolon.
 
 .. note::
 

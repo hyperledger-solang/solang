@@ -250,7 +250,8 @@ pub enum LexicalError {
     EndofFileInHex(usize, usize),
     MissingNumber(usize, usize),
     InvalidCharacterInHexLiteral(usize, char),
-    UnrecognisedToken(usize, usize, String)
+    UnrecognisedToken(usize, usize, String),
+    PragmaMissingSemiColon(usize, usize),
 }
 
 impl LexicalError {
@@ -261,7 +262,8 @@ impl LexicalError {
             LexicalError::EndofFileInHex(_, _) => "end of file found in hex literal string".to_string(),
             LexicalError::MissingNumber(_, _) => "missing number".to_string(),
             LexicalError::InvalidCharacterInHexLiteral(_, ch) => format!("invalid character ‘{}’ in hex literal string", ch),
-            LexicalError::UnrecognisedToken(_, _, t) => format!("unrecognised token ‘{}’", t)
+            LexicalError::UnrecognisedToken(_, _, t) => format!("unrecognised token ‘{}’", t),
+            LexicalError::PragmaMissingSemiColon(_, _) => "pragma is missing terminating ‘;’".to_string(),
         }
     }
 
@@ -273,6 +275,7 @@ impl LexicalError {
             LexicalError::MissingNumber(start, end) => Loc(*start, *end),
             LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(*pos, *pos),
             LexicalError::UnrecognisedToken(start, end, _) => Loc(*start, *end),
+            LexicalError::PragmaMissingSemiColon(start, end) => Loc(*start, *end),
         }
     }
 }
@@ -734,7 +737,7 @@ impl<'input> Iterator for Lexer<'input> {
                     },
                     Some(_) => (),
                     None => {
-                        return Some(Err(LexicalError::EndOfFileInString(start, self.input.len())));
+                        return Some(Err(LexicalError::PragmaMissingSemiColon(start, self.input.len())));
                     }
                 }
             }
@@ -855,5 +858,13 @@ fn lexertest() {
 
     assert_eq!(tokens, vec!(
         Err(LexicalError::UnrecognisedToken(0, 3, "€".to_owned()))
+    ));
+
+    let tokens = Lexer::new(r#"pragma foo bar"#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(
+        Ok((0, Token::Pragma, 6)),
+        Ok((7, Token::Identifier("foo"), 10)),
+        Err(LexicalError::PragmaMissingSemiColon(11, 14))
     ));
 }
