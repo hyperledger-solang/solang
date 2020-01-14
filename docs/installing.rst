@@ -122,7 +122,7 @@ You will need ubuntu 18.04 with backports or later. Just run:
 
 .. code-block:: bash
 
-	sudo apt install curl llvm clang git zlib1g-dev cargo
+	sudo apt install curl llvm-8-dev clang-8 git zlib1g-dev cargo
 
 Installing LLVM on Fedora
 _________________________
