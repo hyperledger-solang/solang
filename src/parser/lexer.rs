@@ -812,7 +812,7 @@ impl<'input> Iterator for Lexer<'input> {
     }
 }
 
-/// Given an array of DocComments from the lexer, fold them into one String
+/// Given an array of DocComments from the lexer, fold them into strings (one per line)
 /// If the last entry is a block comment, return that.
 /// If the last entry is a line comment, return that and any
 /// preceding line comments. Any block comments preceding line
