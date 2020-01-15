@@ -97,6 +97,7 @@ struct StructField {
 pub struct Constructor {
     pub name: usize,
     pub selector: u32,
+    pub docs: Vec<String>,
     args: Vec<Param>
 }
 
@@ -104,6 +105,7 @@ pub struct Constructor {
 pub struct Message {
     pub name: usize,
     pub selector: u32,
+    pub docs: Vec<String>,
     mutates: bool,
     args: Vec<Param>,
     return_type: Option<ParamType>,
@@ -305,6 +307,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         name: registry.string("new"),
         selector: f.selector(),
         args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
+        docs: vec!(f.doc.to_string())
     }).collect();
 
     let messages = resolver_contract.functions.iter()
@@ -323,6 +326,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
             },
             selector: f.selector(),
             args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
+            docs: vec!(f.doc.to_string())
         }).collect();
 
     let contract = Contract{

@@ -4,7 +4,7 @@ use num_bigint::BigInt;
 use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
-use super::lexer::{Token, LexicalError};
+use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
 
 grammar<'input>(input: &'input str);
 
@@ -25,6 +25,10 @@ ImportDirective: StringLiteral = {
 PragmaDirective: (Identifier, StringLiteral) = {
     // The lexer does special parsing for String literal which eats up the semicolon
     "pragma" <i:Identifier> <s:StringLiteral> => (i, s)
+}
+
+DocComments: String = {
+    DocComment* => fold_doc_comments(<>)
 }
 
 PrimitiveType: PrimitiveType = {
@@ -61,8 +65,8 @@ VariableDeclaration: Box<VariableDeclaration> = {
 }
 
 StructDefinition: Box<StructDefinition> = {
-    "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")+> "}" => {
-        Box::new(StructDefinition{name: n, fields: v})
+    <d:DocComments> "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")+> "}" => {
+        Box::new(StructDefinition{doc: d, name: n, fields: v})
     }
 }
 
@@ -81,8 +85,8 @@ ContractPart: ContractPart = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <l:@L> <t:ContractType> <n:Identifier> "{" <p:(<ContractPart>)+> "}" <r:@R> => {
-        Box::new(ContractDefinition{loc: Loc(l, r), ty: t, name: n, parts: p})
+    <d:DocComments> <l:@L> <t:ContractType> <n:Identifier> "{" <p:(<ContractPart>)+> "}" <r:@R> => {
+        Box::new(ContractDefinition{doc: d, loc: Loc(l, r), ty: t, name: n, parts: p})
     }
 }
 
@@ -93,27 +97,27 @@ EventParameter: EventParameter = {
 }
 
 EventDefinition: Box<EventDefinition> = {
-    "event" <n:Identifier> "(" <v:(<EventParameter> ",")*> <e:EventParameter> ")" <a:"anonymous"?> ";" => {
+    <d:DocComments> "event" <n:Identifier> "(" <v:(<EventParameter> ",")*> <e:EventParameter> ")" <a:"anonymous"?> ";" => {
         let mut v = v;
         v.push(e);
         Box::new(EventDefinition{
-            name: n, fields: v, anonymous: match a { Some(_) => true, _ => false}
+            doc: d, name: n, fields: v, anonymous: match a { Some(_) => true, _ => false}
         })
     },
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
+    <d:DocComments> "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
         let mut v = v;
         v.push(e);
-        Box::new(EnumDefinition{name: n, values: v})
+        Box::new(EnumDefinition{doc: d, name: n, values: v})
     }
 }
 
 ContractVariableDefinition: Box<ContractVariableDefinition> = {
-    <l:@L> <t:Type> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <d:DocComments> <l:@L> <t:Type> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
         Box::new(ContractVariableDefinition{
-            loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
+            doc: d, loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
         })
     }
 }
@@ -309,13 +313,14 @@ FunctionAttribute: FunctionAttribute = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    <l:@L> "constructor" <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
+    <d:DocComments> <l:@L> "constructor" <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
         let returns = match r {
             None => vec!(),
             Some(v) => v,
         };
         
         Box::new(FunctionDefinition{
+            doc: d,
             loc: Loc(l, e),
             constructor: true,
             name: None,
@@ -325,13 +330,14 @@ FunctionDefinition: Box<FunctionDefinition> = {
             body: Statement::BlockStatement(b),
         })
     },
-    <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" <e:@R> => {
+    <d:DocComments> <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" <e:@R> => {
         let returns = match r {
             None => vec!(),
             Some(v) => v,
         };
         
         Box::new(FunctionDefinition{
+            doc: d,
             loc: Loc(l, e),
             constructor: false,
             name: n,
@@ -341,13 +347,14 @@ FunctionDefinition: Box<FunctionDefinition> = {
             body: Statement::Empty,
         })
     },
-    <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
+    <d:DocComments> <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
         let returns = match r {
             None => vec!(),
             Some(v) => v,
         };
         
         Box::new(FunctionDefinition{
+            doc: d,
             loc: Loc(l, e),
             constructor: false,
             name: n,
@@ -548,5 +555,6 @@ extern {
         "," => Token::Comma,
         "anonymous" => Token::Anonymous,
         "indexed" => Token::Indexed,
+        DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

@@ -79,6 +79,7 @@ mod test {
 
         let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
             ContractDefinition {
+                doc: "".to_string(),
                 loc: Loc(0, 325),
                 ty: ContractType::Contract,
                 name: Identifier {
@@ -87,6 +88,7 @@ mod test {
                 },
                 parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition {
+                        doc: "".to_string(),
                         name: Identifier {
                             loc: Loc(42, 54),
                             name: "Jurisdiction".to_string(),
@@ -128,6 +130,7 @@ mod test {
                     })),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
+                            doc: "".to_string(),
                             ty: Type::Primitive(PrimitiveType::String),
                             attrs: vec![],
                             name: Identifier {
@@ -140,6 +143,7 @@ mod test {
                     )),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
+                            doc: "".to_string(),
                             ty: Type::Primitive(PrimitiveType::Int(64)),
                             attrs: vec![],
                             name: Identifier {

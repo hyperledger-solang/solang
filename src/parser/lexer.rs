@@ -13,12 +13,19 @@ use super::ast::Loc;
 pub type Spanned<Token, Loc, Error> = Result<(Loc, Token, Loc), Error>;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
+pub enum CommentType {
+    Line,
+    Block
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Token<'input> {
     Identifier(&'input str),
     StringLiteral(&'input str),
     HexLiteral(&'input str),
     Number(&'input str),
     HexNumber(&'input str),
+    DocComment(CommentType, &'input str),
     Divide,
     Contract,
     Library,
@@ -137,6 +144,8 @@ pub enum Token<'input> {
 impl<'input> fmt::Display for Token<'input> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Token::DocComment(CommentType::Line, s) => write!(f, "///{}", s),
+            Token::DocComment(CommentType::Block, s) => write!(f, "/**{}\n*/", s),
             Token::Identifier(id) => write!(f, "{}", id),
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
@@ -482,9 +491,27 @@ impl<'input> Lexer<'input> {
                         }
                         Some((_, '/')) => {
                             // line comment
-                            while let Some((_, ch)) = self.chars.next() {
+                            self.chars.next();
+
+                            let doc_comment_start = match self.chars.peek() {
+                                Some((i, '/')) => Some(i + 1),
+                                _ => None
+                            };
+
+                            let mut last = start + 3;
+
+                            while let Some((i, ch)) = self.chars.next() {
                                 if ch == '\n' || ch == '\r' {
                                     break;
+                                }
+                                last = i;
+                            }
+
+                            if let Some(doc_start) = doc_comment_start {
+                                if last > doc_start {
+                                    return Some(Ok((start + 3,
+                                        Token::DocComment(CommentType::Line, &self.input[doc_start..=last]),
+                                        last + 1)));
                                 }
                             }
                         },
@@ -492,18 +519,34 @@ impl<'input> Lexer<'input> {
                             // multiline comment
                             self.chars.next();
 
+                            let doc_comment_start = match self.chars.peek() {
+                                Some((i, '*')) => Some(i + 1),
+                                _ => None
+                            };
+
+                            let mut last = start + 3;
                             let mut seen_star = false;
+
                             loop {
-                                if let Some((_, ch)) = self.chars.next() {
+                                if let Some((i, ch)) = self.chars.next() {
                                     if seen_star && ch == '/' {
                                         break;
                                     }
                                     seen_star = ch == '*';
+                                    last = i;
                                 } else {
                                     return Some(Err(LexicalError::EndOfFileInComment(start, self.input.len())));
                                 }
                             }
-                        },
+
+                            if let Some(doc_start) = doc_comment_start {
+                                if last > doc_start {
+                                    return Some(Ok((start + 3,
+                                        Token::DocComment(CommentType::Block, &self.input[doc_start..last]),
+                                        last)));
+                                }
+                            }
+                       },
                         _ => {
                             return Some(Ok((start, Token::Divide, start+1)));
                         }
@@ -769,6 +812,40 @@ impl<'input> Iterator for Lexer<'input> {
     }
 }
 
+/// Given an array of DocComments, fold them into one String
+/// If the last entry is a block comment, return that.
+/// If the last entry is a line comment, return that and any
+/// preceding line comments. Any block comments preceding line
+/// comments are ignored.
+pub fn fold_doc_comments(docs: Vec<(CommentType, &str)>) -> String {
+    if docs.is_empty() {
+        return String::new();
+    }
+
+    let mut comment = String::new();
+
+    for d in docs.iter().rev() {
+        match d {
+            (CommentType::Block, s) => {
+                return if comment.is_empty() {
+                    s.trim().chars().map(|c| if c == '\n' { ' ' } else { c }).collect()
+                } else {
+                    comment
+                };
+            },
+            (CommentType::Line, s) => {
+                if comment.is_empty() {
+                    comment = s.trim().to_string();
+                } else {
+                    comment = format!("{} {}", s.trim().to_string(), comment);
+                }
+            },
+        }
+    }
+
+    comment
+}
+
 #[test]
 fn lexertest() {
     let tokens = Lexer::new("bool").collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
@@ -867,4 +944,52 @@ fn lexertest() {
         Ok((7, Token::Identifier("foo"), 10)),
         Err(LexicalError::PragmaMissingSemiColon(11, 14))
     ));
+
+    let tokens = Lexer::new(r#"/// foo"#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(
+        Ok((3, Token::DocComment(CommentType::Line, " foo"), 7))
+    ));
+
+    let tokens = Lexer::new("/// jadajadadjada\n// bar").collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(
+        Ok((3, Token::DocComment(CommentType::Line, " jadajadadjada"), 17))
+    ));
+
+    let tokens = Lexer::new(r#"/** foo */"#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(
+        Ok((3, Token::DocComment(CommentType::Block, " foo "), 8))
+    ));
+
+    let tokens = Lexer::new("/** jadajadadjada */\n/* bar */").collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(
+        Ok((3, Token::DocComment(CommentType::Block, " jadajadadjada "), 18))
+    ));
+}
+
+#[test]
+fn doc_comment_lexer() {
+    let tokens = Lexer::new("/** jadajadad\njada */\n/* bar */").map(|e| match e {
+        Ok((_, Token::DocComment(t, s), _)) => (t, s),
+        _ => unreachable!()
+    }).collect();
+
+    assert_eq!(fold_doc_comments(tokens), "jadajadad jada");
+
+    let tokens = Lexer::new("/** bar *//** jadajadad\njada */\n/* bar */").map(|e| match e {
+        Ok((_, Token::DocComment(t, s), _)) => (t, s),
+        _ => unreachable!()
+    }).collect();
+
+    assert_eq!(fold_doc_comments(tokens), "jadajadad jada");
+
+    let tokens = Lexer::new("/// bar   \n///    jadajadad\n\n/* bar */").map(|e| match e {
+        Ok((_, Token::DocComment(t, s), _)) => (t, s),
+        _ => unreachable!()
+    }).collect();
+
+    assert_eq!(fold_doc_comments(tokens), "bar jadajadad");
 }
