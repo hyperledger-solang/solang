@@ -812,16 +812,12 @@ impl<'input> Iterator for Lexer<'input> {
     }
 }
 
-/// Given an array of DocComments, fold them into one String
+/// Given an array of DocComments from the lexer, fold them into one String
 /// If the last entry is a block comment, return that.
 /// If the last entry is a line comment, return that and any
 /// preceding line comments. Any block comments preceding line
 /// comments are ignored.
 pub fn fold_doc_comments(docs: Vec<(CommentType, &str)>) -> String {
-    if docs.is_empty() {
-        return String::new();
-    }
-
     let mut comment = String::new();
 
     for d in docs.iter().rev() {
