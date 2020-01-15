@@ -32,12 +32,14 @@ although it this might be convenient.
 .. code-block:: javascript
 
   contract A {
+      /// foo simply returns true
       function foo() public return (bool) {
           return true;
       }
   }
 
   contract B {
+      /// bar simply returns false
       function bar() public return (bool) {
           return false;
       }
@@ -501,14 +503,18 @@ Functions can be declared and called as follow:
   contact foo {
       uint bound = get_initial_bound();
 
+      /// get_initial_bound is called from the constructor
       function get_initial_bound() private returns (uint value) {
           value = 102;
       }
 
+      /** set bound for get with bound */
       function set_bound(uint _bound) public {
           bound = _bound;
       }
 
+      /// Clamp a value within a bound.
+      /// The bound can be set with set_bound().
       function get_with_bound(uint value) view public return (uint) {
           if (value < bound) {
               return value;
@@ -532,6 +538,9 @@ with a return statement with some values.
 Functions which are declared ``public`` will be present in the ABI and are callable
 externally. If a function is declared ``private`` then it is not callable externally,
 but it can be called from within the contract.
+
+Any DocComment before a function will be include in the ABI. Currently only Substrate
+supports documentation in the ABI.
 
 Function overloading
 ____________________

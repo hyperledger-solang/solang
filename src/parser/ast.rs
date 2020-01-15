@@ -93,6 +93,7 @@ pub struct VariableDeclaration {
 
 #[derive(Debug, PartialEq)]
 pub struct StructDefinition {
+    pub doc: String,
     pub name: Identifier,
     pub fields: Vec<Box<VariableDeclaration>>,
 }
@@ -115,6 +116,7 @@ pub enum ContractType {
 
 #[derive(Debug, PartialEq)]
 pub struct ContractDefinition {
+    pub doc: String,
     pub loc: Loc,
     pub ty: ContractType,
     pub name: Identifier,
@@ -130,6 +132,7 @@ pub struct EventParameter {
 
 #[derive(Debug, PartialEq)]
 pub struct EventDefinition {
+    pub doc: String,
     pub name: Identifier,
     pub fields: Vec<EventParameter>,
     pub anonymous: bool,
@@ -137,6 +140,7 @@ pub struct EventDefinition {
 
 #[derive(Debug, PartialEq)]
 pub struct EnumDefinition {
+    pub doc: String,
     pub name: Identifier,
     pub values: Vec<Identifier>,
 }
@@ -149,6 +153,7 @@ pub enum VariableAttribute {
 
 #[derive(Debug, PartialEq)]
 pub struct ContractVariableDefinition {
+    pub doc: String,
     pub loc: Loc,
     pub ty: Type,
     pub attrs: Vec<VariableAttribute>,
@@ -347,6 +352,7 @@ pub enum FunctionAttribute {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionDefinition {
+    pub doc: String,
     pub loc: Loc,
     pub constructor: bool,
     pub name: Option<Identifier>,
