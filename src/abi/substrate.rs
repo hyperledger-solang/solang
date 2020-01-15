@@ -377,6 +377,7 @@ fn ty_to_primitive<'a>(ty: &'a resolver::Type, resolved_contract: &'a resolver::
     match ty {
         resolver::Type::Primitive(e) => e,
         resolver::Type::Enum(ref i) => &resolved_contract.enums[*i].ty,
+        resolver::Type::FixedArray(_, _) => unimplemented!(),
         resolver::Type::Noreturn => unreachable!(),
     }
 }

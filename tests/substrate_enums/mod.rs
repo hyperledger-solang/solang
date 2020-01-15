@@ -61,7 +61,7 @@ fn test_cast_errors() {
             }
         }", &Target::Substrate);
 
-    assert_eq!(first_error(errors), "conversion from enum state to uint8 not possible");
+    assert_eq!(first_error(errors), "conversion from enum test.state to uint8 not possible");
 
     let (_, errors) = parse_and_resolve(
         "contract test {

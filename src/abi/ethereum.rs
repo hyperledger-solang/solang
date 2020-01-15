@@ -10,6 +10,8 @@ pub struct ABIParam {
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
+    #[serde(rename = "internalType")]
+    pub internal_ty: String,
 }
 
 #[derive(Serialize)]
@@ -30,6 +32,7 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
         ABIParam {
             name: param.name.to_string(),
             ty: param.ty.to_primitive_string(contract),
+            internal_ty: param.ty.to_string(contract),
         }
     }
 
