@@ -307,7 +307,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         name: registry.string("new"),
         selector: f.selector(),
         args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
-        docs: vec!(f.doc.to_string())
+        docs: f.doc.clone()
     }).collect();
 
     let messages = resolver_contract.functions.iter()
@@ -326,7 +326,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
             },
             selector: f.selector(),
             args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
-            docs: vec!(f.doc.to_string())
+            docs: f.doc.clone()
         }).collect();
 
     let contract = Contract{

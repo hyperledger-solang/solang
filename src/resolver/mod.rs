@@ -84,7 +84,7 @@ pub struct Parameter {
 }
 
 pub struct FunctionDecl {
-    pub doc: String,
+    pub doc: Vec<String>,
     pub loc: ast::Loc,
     pub name: String,
     pub fallback: bool,
@@ -99,7 +99,7 @@ pub struct FunctionDecl {
 }
 
 impl FunctionDecl {
-    fn new(loc: ast::Loc, name: String, doc: String, fallback: bool, ast_index: Option<usize>, mutability: Option<ast::StateMutability>,
+    fn new(loc: ast::Loc, name: String, doc: Vec<String>, fallback: bool, ast_index: Option<usize>, mutability: Option<ast::StateMutability>,
         visibility: ast::Visibility, params: Vec<Parameter>, returns: Vec<Parameter>, ns: &Contract) -> Self {
         let mut signature = name.to_owned();
 
@@ -158,7 +158,7 @@ pub enum ContractVariableType {
 }
 
 pub struct ContractVariable {
-    pub doc: String,
+    pub doc: Vec<String>,
     pub name: String,
     pub ty: Type,
     pub visibility: ast::Visibility,
@@ -182,7 +182,7 @@ pub enum Symbol {
 }
 
 pub struct Contract {
-    pub doc: String,
+    pub doc: Vec<String>,
     pub name: String,
     pub enums: Vec<EnumDecl>,
     // structs/events
@@ -443,7 +443,7 @@ fn resolve_contract(
 ) -> Option<Contract> {
     let mut ns = Contract {
         name: def.name.name.to_string(),
-        doc: def.doc.to_string(),
+        doc: def.doc.clone(),
         enums: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
@@ -508,7 +508,7 @@ fn resolve_contract(
     // Substrate requires one constructor
     if ns.constructors.is_empty() && target == &Target::Substrate {
         let mut fdecl = FunctionDecl::new(
-            ast::Loc(0, 0), "".to_owned(), "".to_owned(), false, None, None, ast::Visibility::Public(ast::Loc(0, 0)), Vec::new(), Vec::new(), &ns);
+            ast::Loc(0, 0), "".to_owned(), vec!(), false, None, None, ast::Visibility::Public(ast::Loc(0, 0)), Vec::new(), Vec::new(), &ns);
 
         let mut vartab = Vartable::new();
         let mut cfg = ControlFlowGraph::new();
@@ -630,7 +630,7 @@ fn enum_decl(enum_: &ast::EnumDefinition, errors: &mut Vec<Output>) -> EnumDecl 
 #[test]
 fn enum_256values_is_uint8() {
     let mut e = ast::EnumDefinition {
-        doc: "".into(),
+        doc: vec!(),
         name: ast::Identifier {
             loc: ast::Loc(0, 0),
             name: "foo".into(),

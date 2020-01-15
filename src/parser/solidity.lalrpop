@@ -27,7 +27,7 @@ PragmaDirective: (Identifier, StringLiteral) = {
     "pragma" <i:Identifier> <s:StringLiteral> => (i, s)
 }
 
-DocComments: String = {
+DocComments: Vec<String> = {
     DocComment* => fold_doc_comments(<>)
 }
 

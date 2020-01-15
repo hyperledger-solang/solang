@@ -128,7 +128,7 @@ fn var_decl(
 
     let sdecl = ContractVariable {
         name: s.name.name.to_string(),
-        doc: s.doc.to_string(),
+        doc: s.doc.clone(),
         visibility,
         ty,
         var

@@ -13,7 +13,7 @@ pub fn add_builtin_function(ns: &mut Contract) {
     };
 
     let mut assert = FunctionDecl::new(ast::Loc(0, 0), "assert".to_owned(),
-        "".to_owned(), false, None, None, ast::Visibility::Private(ast::Loc(0, 0)),
+        vec!(), false, None, None, ast::Visibility::Private(ast::Loc(0, 0)),
         vec!( Parameter {
             name: "arg0".to_owned(),
             ty: resolver::Type::Primitive(ast::PrimitiveType::Bool)

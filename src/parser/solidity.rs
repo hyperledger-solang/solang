@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: 8476e6a4746a6541976a465aa77b57e1b3b48294ada268cd96cf76ecbf396b9
+// sha256: 2aee7ed85c9a6eb869790b4a5296bf56032a29558968dec7fbc4c2aeeb259
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
@@ -57,7 +57,7 @@ mod __parse__SourceUnit {
         Variant25(ContractType),
         Variant26(Box<ContractVariableDefinition>),
         Variant27(::std::vec::Vec<(CommentType, &'input str)>),
-        Variant28(String),
+        Variant28(Vec<String>),
         Variant29(Box<EnumDefinition>),
         Variant30(Box<EventDefinition>),
         Variant31(FunctionAttribute),
@@ -6011,17 +6011,6 @@ mod __parse__SourceUnit {
             _ => panic!("symbol type mismatch")
         }
     }
-    fn __pop_Variant28<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, String, usize)
-     {
-        match __symbols.pop().unwrap() {
-            (__l, __Symbol::Variant28(__v), __r) => (__l, __v, __r),
-            _ => panic!("symbol type mismatch")
-        }
-    }
     fn __pop_Variant37<
       'input,
     >(
@@ -6074,6 +6063,17 @@ mod __parse__SourceUnit {
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant8(__v), __r) => (__l, __v, __r),
+            _ => panic!("symbol type mismatch")
+        }
+    }
+    fn __pop_Variant28<
+      'input,
+    >(
+        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, Vec<String>, usize)
+     {
+        match __symbols.pop().unwrap() {
+            (__l, __Symbol::Variant28(__v), __r) => (__l, __v, __r),
             _ => panic!("symbol type mismatch")
         }
     }
@@ -11919,7 +11919,7 @@ fn __action7<
 >(
     input: &'input str,
     (_, __0, _): (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
-) -> String
+) -> Vec<String>
 {
     fold_doc_comments(__0)
 }
@@ -12092,7 +12092,7 @@ fn __action22<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, n, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12198,7 +12198,7 @@ fn __action31<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, t, _): (usize, ContractType, usize),
     (_, n, _): (usize, Identifier, usize),
@@ -12233,7 +12233,7 @@ fn __action33<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, n, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12258,7 +12258,7 @@ fn __action34<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, n, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12279,7 +12279,7 @@ fn __action35<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, t, _): (usize, Type, usize),
     (_, a, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -13470,7 +13470,7 @@ fn __action120<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, a, _): (usize, Vec<Parameter>, usize),
@@ -13504,7 +13504,7 @@ fn __action121<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, n, _): (usize, ::std::option::Option<Identifier>, usize),
@@ -13539,7 +13539,7 @@ fn __action122<
     'input,
 >(
     input: &'input str,
-    (_, d, _): (usize, String, usize),
+    (_, d, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, n, _): (usize, ::std::option::Option<Identifier>, usize),
@@ -14759,7 +14759,7 @@ fn __action216<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -14796,7 +14796,7 @@ fn __action217<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -14906,7 +14906,7 @@ fn __action221<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Type, usize),
     __3: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -14943,7 +14943,7 @@ fn __action222<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Type, usize),
     __3: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -15049,7 +15049,7 @@ fn __action226<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -15086,7 +15086,7 @@ fn __action227<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -15121,7 +15121,7 @@ fn __action228<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, ::std::option::Option<Identifier>, usize),
@@ -15160,7 +15160,7 @@ fn __action229<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, ::std::option::Option<Identifier>, usize),
@@ -15197,7 +15197,7 @@ fn __action230<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, ::std::option::Option<Identifier>, usize),
@@ -15236,7 +15236,7 @@ fn __action231<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, ::std::option::Option<Identifier>, usize),
@@ -15365,7 +15365,7 @@ fn __action236<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15402,7 +15402,7 @@ fn __action237<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15439,7 +15439,7 @@ fn __action238<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15474,7 +15474,7 @@ fn __action239<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15671,7 +15671,7 @@ fn __action246<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15704,7 +15704,7 @@ fn __action247<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15887,7 +15887,7 @@ fn __action254<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, ContractType, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -15922,7 +15922,7 @@ fn __action255<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
@@ -15959,7 +15959,7 @@ fn __action256<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
@@ -15992,7 +15992,7 @@ fn __action257<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -16029,7 +16029,7 @@ fn __action258<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -16062,7 +16062,7 @@ fn __action259<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -16101,7 +16101,7 @@ fn __action260<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -16136,7 +16136,7 @@ fn __action261<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -16175,7 +16175,7 @@ fn __action262<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -18002,7 +18002,7 @@ fn __action327<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, ContractType, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -18035,7 +18035,7 @@ fn __action328<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
@@ -18070,7 +18070,7 @@ fn __action329<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
@@ -18101,7 +18101,7 @@ fn __action330<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -18136,7 +18136,7 @@ fn __action331<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -18167,7 +18167,7 @@ fn __action332<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -18204,7 +18204,7 @@ fn __action333<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -18237,7 +18237,7 @@ fn __action334<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -18274,7 +18274,7 @@ fn __action335<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -19973,7 +19973,7 @@ fn __action400<
     input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> String
+) -> Vec<String>
 {
     let __start0 = __lookbehind.clone();
     let __end0 = __lookahead.clone();
@@ -19995,7 +19995,7 @@ fn __action401<
 >(
     input: &'input str,
     __0: (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
-) -> String
+) -> Vec<String>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.2.clone();
@@ -20217,7 +20217,7 @@ fn __action408<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, Token<'input>, usize),
@@ -20250,7 +20250,7 @@ fn __action409<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -20283,7 +20283,7 @@ fn __action410<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, BlockStatement, usize),
@@ -20312,7 +20312,7 @@ fn __action411<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -20341,7 +20341,7 @@ fn __action412<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20376,7 +20376,7 @@ fn __action413<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20411,7 +20411,7 @@ fn __action414<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20442,7 +20442,7 @@ fn __action415<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20473,7 +20473,7 @@ fn __action416<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20508,7 +20508,7 @@ fn __action417<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20543,7 +20543,7 @@ fn __action418<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20574,7 +20574,7 @@ fn __action419<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20701,7 +20701,7 @@ fn __action424<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20734,7 +20734,7 @@ fn __action425<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, Token<'input>, usize),
@@ -20767,7 +20767,7 @@ fn __action426<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20802,7 +20802,7 @@ fn __action427<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -20837,7 +20837,7 @@ fn __action428<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20866,7 +20866,7 @@ fn __action429<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, Token<'input>, usize),
@@ -20895,7 +20895,7 @@ fn __action430<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20926,7 +20926,7 @@ fn __action431<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -20957,7 +20957,7 @@ fn __action432<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -20990,7 +20990,7 @@ fn __action433<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, Token<'input>, usize),
@@ -21023,7 +21023,7 @@ fn __action434<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -21058,7 +21058,7 @@ fn __action435<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -21093,7 +21093,7 @@ fn __action436<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -21122,7 +21122,7 @@ fn __action437<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, BlockStatement, usize),
@@ -21151,7 +21151,7 @@ fn __action438<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Parameter>, usize),
@@ -21182,7 +21182,7 @@ fn __action439<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Parameter>, usize),
     __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
@@ -22097,7 +22097,7 @@ fn __action464<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -22130,7 +22130,7 @@ fn __action465<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
@@ -22163,7 +22163,7 @@ fn __action466<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
@@ -22192,7 +22192,7 @@ fn __action467<
     'input,
 >(
     input: &'input str,
-    __0: (usize, String, usize),
+    __0: (usize, Vec<String>, usize),
     __1: (usize, Type, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
