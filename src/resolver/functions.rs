@@ -118,7 +118,7 @@ pub fn function_decl(
         None => ("".to_owned(), !f.constructor),
     };
 
-    let fdecl = FunctionDecl::new(f.loc, name, f.doc.to_string(), fallback, Some(i), mutability, visibility.unwrap(), params, returns, &ns);
+    let fdecl = FunctionDecl::new(f.loc, name, f.doc.clone(), fallback, Some(i), mutability, visibility.unwrap(), params, returns, &ns);
 
     if f.constructor {
         // In the eth solidity, only one constructor is allowed
@@ -242,7 +242,7 @@ fn signatures() {
     use super::*;
 
     let ns = Contract {
-        doc: String::from(""),
+        doc: vec!(),
         name: String::from("foo"),
         enums: Vec::new(),
         constructors: Vec::new(),
@@ -256,7 +256,7 @@ fn signatures() {
     };
 
     let fdecl = FunctionDecl::new(
-        ast::Loc(0, 0), "foo".to_owned(), "".to_owned(), false, Some(0), None, ast::Visibility::Public(ast::Loc(0, 0)),
+        ast::Loc(0, 0), "foo".to_owned(), vec!(), false, Some(0), None, ast::Visibility::Public(ast::Loc(0, 0)),
         vec!(
             Parameter {
                 name: "".to_string(),
