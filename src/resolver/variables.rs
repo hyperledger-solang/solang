@@ -1,14 +1,13 @@
-
-use parser::ast;
-use output::Output;
 use super::{Contract, ContractVariable, Symbol};
-use resolver::cfg::{ControlFlowGraph, Vartable, Instr, set_contract_storage, expression, cast};
+use output::Output;
+use parser::ast;
+use resolver::cfg::{cast, expression, set_contract_storage, ControlFlowGraph, Instr, Vartable};
 use resolver::ContractVariableType;
 
 pub fn contract_variables(
     def: &ast::ContractDefinition,
     ns: &mut Contract,
-    errors: &mut Vec<Output>
+    errors: &mut Vec<Output>,
 ) -> bool {
     let mut broken = false;
     let mut vartab = Vartable::new();
@@ -22,7 +21,7 @@ pub fn contract_variables(
         }
     }
 
-    cfg.add(&mut vartab, Instr::Return{ value: Vec::new() });
+    cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
 
     cfg.vars = vartab.drain();
 
@@ -104,13 +103,13 @@ fn var_decl(
 
         let (res, resty) = match expr {
             Ok((res, ty)) => (res, ty),
-            Err(()) => return false
+            Err(()) => return false,
         };
 
         // implicityly conversion to correct ty
         let res = match cast(&s.loc, res, &resty, &ty, true, &ns, errors) {
             Ok(res) => res,
-            Err(_) => return false
+            Err(_) => return false,
         };
 
         Some(res)
@@ -131,7 +130,7 @@ fn var_decl(
         doc: s.doc.clone(),
         visibility,
         ty,
-        var
+        var,
     };
 
     let pos = ns.variables.len();
@@ -139,7 +138,7 @@ fn var_decl(
     ns.variables.push(sdecl);
 
     if !ns.add_symbol(&s.name, Symbol::Variable(s.loc, pos), errors) {
-        return false
+        return false;
     }
 
     if let Some(res) = initializer {
@@ -148,7 +147,13 @@ fn var_decl(
         } else {
             let var = vartab.find(&s.name, ns, errors).unwrap();
 
-            cfg.add(vartab, Instr::Set{ res: var.pos, expr: res });
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    res: var.pos,
+                    expr: res,
+                },
+            );
 
             set_contract_storage(&s.name, &var, cfg, vartab, errors).unwrap();
         }

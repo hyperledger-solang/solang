@@ -5,72 +5,65 @@ use resolver;
 use serde::{Deserialize, Serialize};
 
 /// Substrate contracts abi consists of a a registry of strings and types, the contract itself
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Metadata {
     pub registry: Registry,
     storage: Storage,
-    pub contract: Contract
+    pub contract: Contract,
 }
 
 impl Metadata {
     pub fn get_function(&self, name: &str) -> Option<&Message> {
-        self.contract.messages.iter()
+        self.contract
+            .messages
+            .iter()
             .find(|m| name == self.registry.get_str(m.name))
     }
 }
 
 /// The registry holds strings and types. Presumably this is to avoid duplication
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Registry {
     strings: Vec<String>,
-    types: Vec<Type>
+    types: Vec<Type>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Array {
     #[serde(rename = "array.len")]
     len: usize,
     #[serde(rename = "array.type")]
-    ty: usize
+    ty: usize,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(untagged)]
 enum Type {
-    Builtin {
-        id: String,
-        def: String
-    },
-    BuiltinArray {
-        id: Array,
-        def: String
-    },
-    Struct {
-        id: CustomID,
-        def: StructDef
-    }
+    Builtin { id: String, def: String },
+    BuiltinArray { id: Array, def: String },
+    Struct { id: CustomID, def: StructDef },
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Contract {
     pub name: usize,
     pub constructors: Vec<Constructor>,
     pub messages: Vec<Message>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct BuiltinType {
     id: String,
-    def: String
+    def: String,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct StructType {
     id: CustomID,
-    def: StructDef
+    def: StructDef,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct CustomID {
     #[serde(rename = "custom.name")]
     name: usize,
@@ -80,28 +73,28 @@ struct CustomID {
     params: Vec<usize>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct StructDef {
     #[serde(rename = "struct.fields")]
-    fields: Vec<StructField>
+    fields: Vec<StructField>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct StructField {
     name: usize,
     #[serde(rename = "type")]
-    ty: usize
+    ty: usize,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Constructor {
     pub name: usize,
     pub selector: u32,
     pub docs: Vec<String>,
-    args: Vec<Param>
+    args: Vec<Param>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Message {
     pub name: usize,
     pub selector: u32,
@@ -111,55 +104,55 @@ pub struct Message {
     return_type: Option<ParamType>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct Param {
     name: usize,
     #[serde(rename = "type")]
     ty: ParamType,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct ParamType {
     ty: usize,
-    display_name: Vec<usize>
+    display_name: Vec<usize>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct Storage {
     #[serde(rename = "struct.type")]
     ty: usize,
     #[serde(rename = "struct.fields")]
-    fields: Vec<StorageLayout>
+    fields: Vec<StorageLayout>,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct LayoutField {
     #[serde(rename = "range.offset")]
     offset: String,
     #[serde(rename = "range.len")]
     len: usize,
     #[serde(rename = "range.elem_type")]
-    ty: usize
+    ty: usize,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 struct StorageLayout {
     name: usize,
-    layout: StorageFieldLayout
+    layout: StorageFieldLayout,
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(untagged)]
 enum StorageFieldLayout {
     Field(LayoutField),
-    Storage(Box<Storage>)
+    Storage(Box<Storage>),
 }
 
 /// Create a new registry and create new entries. Note that the registry is
 /// accessed by number, and the first entry is 1, not 0.
 impl Registry {
     fn new() -> Self {
-        Registry{
+        Registry {
             strings: Vec::new(),
             types: Vec::new(),
         }
@@ -191,8 +184,8 @@ impl Registry {
             match s {
                 Type::Builtin { id, .. } if id == ty => {
                     return i + 1;
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
 
@@ -212,10 +205,13 @@ impl Registry {
 
         for (i, s) in self.types.iter().enumerate() {
             match s {
-                Type::BuiltinArray { id: Array { len, ty }, .. } if *len == array_len && *ty == elem => {
+                Type::BuiltinArray {
+                    id: Array { len, ty },
+                    ..
+                } if *len == array_len && *ty == elem => {
                     return i + 1;
-                },
-                _ => ()
+                }
+                _ => (),
             }
         }
 
@@ -243,9 +239,7 @@ impl Registry {
                 namespace: Vec::new(),
                 params: Vec::new(),
             },
-            def: StructDef {
-                fields
-            }
+            def: StructDef { fields },
         });
 
         length + 1
@@ -259,83 +253,112 @@ pub fn load(bs: &str) -> Result<Metadata, serde_json::error::Error> {
 pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
     let mut registry = Registry::new();
 
-    let fields = resolver_contract.variables.iter()
+    let fields = resolver_contract
+        .variables
+        .iter()
         .filter(|v| !v.is_storage())
         .map(|v| {
             let (scalety, _) = solty_to_scalety(&v.ty, resolver_contract);
 
             StructField {
                 name: registry.string(&v.name),
-                ty: registry.builtin_type(&scalety)
+                ty: registry.builtin_type(&scalety),
             }
-        }).collect();
+        })
+        .collect();
 
     let storagety = registry.struct_type("storage", fields);
 
-    let fields = resolver_contract.variables.iter()
-        .filter_map(|v|  {
+    let fields = resolver_contract
+        .variables
+        .iter()
+        .filter_map(|v| {
             if let resolver::ContractVariableType::Storage(storage) = v.var {
                 let (scalety, len) = solty_to_scalety(&v.ty, resolver_contract);
 
                 Some(StorageLayout {
                     name: registry.string(&v.name),
-                    layout: StorageFieldLayout::Field(LayoutField{
+                    layout: StorageFieldLayout::Field(LayoutField {
                         offset: format!("0x{:064X}", storage),
                         len,
-                        ty: registry.builtin_type(&scalety)
-                    })
+                        ty: registry.builtin_type(&scalety),
+                    }),
                 })
             } else {
                 None
             }
-        }).collect();
+        })
+        .collect();
 
     let storage = Storage {
         ty: storagety,
-        fields: vec!(StorageLayout {
+        fields: vec![StorageLayout {
             name: registry.string("Storage"),
-            layout: StorageFieldLayout::Storage(Box::new(
-                Storage {
-                    ty: storagety,
-                    fields
-                }
-            ))
-        })
+            layout: StorageFieldLayout::Storage(Box::new(Storage {
+                ty: storagety,
+                fields,
+            })),
+        }],
     };
 
-    let constructors = resolver_contract.constructors.iter().map(|f| Constructor{
-        name: registry.string("new"),
-        selector: f.selector(),
-        args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
-        docs: f.doc.clone()
-    }).collect();
+    let constructors = resolver_contract
+        .constructors
+        .iter()
+        .map(|f| Constructor {
+            name: registry.string("new"),
+            selector: f.selector(),
+            args: f
+                .params
+                .iter()
+                .map(|p| parameter_to_abi(p, resolver_contract, &mut registry))
+                .collect(),
+            docs: f.doc.clone(),
+        })
+        .collect();
 
-    let messages = resolver_contract.functions.iter()
-        .filter(|f| if let ast::Visibility::Public(_) = f.visibility {
+    let messages = resolver_contract
+        .functions
+        .iter()
+        .filter(|f| {
+            if let ast::Visibility::Public(_) = f.visibility {
                 true
             } else {
                 false
-            })
-        .map(|f| Message{
+            }
+        })
+        .map(|f| Message {
             name: registry.string(&f.name),
             mutates: f.mutability.is_none(),
             return_type: match f.returns.len() {
                 0 => None,
-                1 => Some(ty_to_abi(&f.returns[0].ty, resolver_contract, &mut registry)),
-                _ => unreachable!()
+                1 => Some(ty_to_abi(
+                    &f.returns[0].ty,
+                    resolver_contract,
+                    &mut registry,
+                )),
+                _ => unreachable!(),
             },
             selector: f.selector(),
-            args: f.params.iter().map(|p| parameter_to_abi(p, resolver_contract, &mut registry)).collect(),
-            docs: f.doc.clone()
-        }).collect();
+            args: f
+                .params
+                .iter()
+                .map(|p| parameter_to_abi(p, resolver_contract, &mut registry))
+                .collect(),
+            docs: f.doc.clone(),
+        })
+        .collect();
 
-    let contract = Contract{
+    let contract = Contract {
         name: registry.string(&resolver_contract.name),
         constructors: constructors,
         messages: messages,
     };
 
-    Metadata{registry, storage, contract}
+    Metadata {
+        registry,
+        storage,
+        contract,
+    }
 }
 
 fn solty_to_scalety(ty: &resolver::Type, contract: &resolver::Contract) -> (String, usize) {
@@ -345,39 +368,42 @@ fn solty_to_scalety(ty: &resolver::Type, contract: &resolver::Contract) -> (Stri
         ast::PrimitiveType::Int(n) => (format!("i{}", n), (n / 8).into()),
         ast::PrimitiveType::Bytes(n) => (format!("bytes{}", n), *n as usize),
         ast::PrimitiveType::Address => ("address".into(), 20),
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
-fn ty_to_abi(ty: &resolver::Type, contract: &resolver::Contract, registry: &mut Registry) -> ParamType {
+fn ty_to_abi(
+    ty: &resolver::Type,
+    contract: &resolver::Contract,
+    registry: &mut Registry,
+) -> ParamType {
     let primitive = ty_to_primitive(ty, contract);
 
     match primitive {
-        ast::PrimitiveType::Bytes(n) => {
-            ParamType{
-                ty: registry.builtin_bytes_type(*n as usize),
-                display_name: vec!(),
-            }
+        ast::PrimitiveType::Bytes(n) => ParamType {
+            ty: registry.builtin_bytes_type(*n as usize),
+            display_name: vec![],
         },
-        ast::PrimitiveType::Address => {
-            ParamType{
-                ty: registry.builtin_bytes_type(160 as usize),
-                display_name: vec!(),
-            }
+        ast::PrimitiveType::Address => ParamType {
+            ty: registry.builtin_bytes_type(160 as usize),
+            display_name: vec![],
         },
-        _ =>  {
+        _ => {
             let scalety = primitive_to_string(&primitive);
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
-                display_name: vec![ registry.string(&scalety.to_string()) ],
+                display_name: vec![registry.string(&scalety.to_string())],
             }
         }
     }
 }
 
 // For a given resolved type, return the underlying primitive
-fn ty_to_primitive<'a>(ty: &'a resolver::Type, resolved_contract: &'a resolver::Contract) -> &'a ast::PrimitiveType {
+fn ty_to_primitive<'a>(
+    ty: &'a resolver::Type,
+    resolved_contract: &'a resolver::Contract,
+) -> &'a ast::PrimitiveType {
     match ty {
         resolver::Type::Primitive(e) => e,
         resolver::Type::Enum(ref i) => &resolved_contract.enums[*i].ty,
@@ -395,13 +421,17 @@ fn primitive_to_string(ty: &ast::PrimitiveType) -> String {
         ast::PrimitiveType::Int(n) => format!("i{}", n),
         ast::PrimitiveType::Bytes(n) => format!("bytes{}", n),
         ast::PrimitiveType::Address => "address".into(),
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
-fn parameter_to_abi(param: &resolver::Parameter, contract: &resolver::Contract, registry: &mut Registry) -> Param {
+fn parameter_to_abi(
+    param: &resolver::Parameter,
+    contract: &resolver::Contract,
+    registry: &mut Registry,
+) -> Param {
     Param {
         name: registry.string(&param.name),
-        ty: ty_to_abi(&param.ty, contract, registry)
+        ty: ty_to_abi(&param.ty, contract, registry),
     }
 }

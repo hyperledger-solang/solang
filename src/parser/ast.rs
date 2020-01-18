@@ -164,13 +164,13 @@ pub struct ContractVariableDefinition {
 #[derive(Debug, PartialEq)]
 pub struct StringLiteral {
     pub loc: Loc,
-    pub string: String
+    pub string: String,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct HexLiteral {
     pub loc: Loc,
-    pub hex: String
+    pub hex: String,
 }
 
 #[derive(Debug, PartialEq)]

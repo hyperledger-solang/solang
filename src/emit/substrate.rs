@@ -1,29 +1,32 @@
-
-use resolver;
 use parser::ast;
+use resolver;
 
 use inkwell::context::Context;
 use inkwell::module::Linkage;
+use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
-use inkwell::values::{BasicValueEnum, IntValue, PointerValue, FunctionValue};
 use inkwell::IntPredicate;
 
 use std::collections::HashMap;
 
-use super::{TargetRuntime, Contract};
+use super::{Contract, TargetRuntime};
 
 pub struct SubstrateTarget {
     /// This field maps a storage slot to llvm global
-    slot_mapping: HashMap<usize, usize>
+    slot_mapping: HashMap<usize, usize>,
 }
 
 const ADDRESS_LENGTH: u64 = 20;
 
 impl SubstrateTarget {
-    pub fn build<'a>(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str) -> Contract<'a> {
+    pub fn build<'a>(
+        context: &'a Context,
+        contract: &'a resolver::Contract,
+        filename: &'a str,
+    ) -> Contract<'a> {
         let mut c = Contract::new(context, contract, filename, None);
-        let mut b = SubstrateTarget{
-            slot_mapping: HashMap::new()
+        let mut b = SubstrateTarget {
+            slot_mapping: HashMap::new(),
         };
 
         b.storage_keys(&mut c);
@@ -51,7 +54,11 @@ impl SubstrateTarget {
         }
     }
 
-    fn public_function_prelude<'a>(&self, contract: &'a Contract, function: FunctionValue) -> (PointerValue<'a>, IntValue<'a>) {
+    fn public_function_prelude<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
 
         contract.builder.position_at_end(&entry);
@@ -60,19 +67,32 @@ impl SubstrateTarget {
         contract.builder.build_call(
             contract.module.get_function("__init_heap").unwrap(),
             &[],
-            "");
+            "",
+        );
 
         // copy arguments from scratch buffer
-        let args_length = contract.builder.build_call(
-            contract.module.get_function("ext_scratch_size").unwrap(),
-            &[],
-            "scratch_size").try_as_basic_value().left().unwrap();
+        let args_length = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_scratch_size").unwrap(),
+                &[],
+                "scratch_size",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
 
-        let args = contract.builder.build_call(
-            contract.module.get_function("__malloc").unwrap(),
-            &[args_length],
-            ""
-        ).try_as_basic_value().left().unwrap().into_pointer_value();
+        let args = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[args_length],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
 
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
@@ -81,11 +101,17 @@ impl SubstrateTarget {
                 contract.context.i32_type().const_zero().into(),
                 args_length.into(),
             ],
-            ""
+            "",
         );
 
-        let args = contract.builder.build_pointer_cast(args,
-            contract.context.i32_type().ptr_type(AddressSpace::Generic), "").into();
+        let args = contract
+            .builder
+            .build_pointer_cast(
+                args,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "",
+            )
+            .into();
 
         (args, args_length.into_int_value())
     }
@@ -95,54 +121,93 @@ impl SubstrateTarget {
         contract.module.add_function(
             "ext_scratch_size",
             contract.context.i32_type().fn_type(&[], false),
-            Some(Linkage::External)
+            Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_scratch_read",
-            contract.context.void_type().fn_type(&[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(),  // dest_ptr
-                contract.context.i32_type().into(), // offset
-                contract.context.i32_type().into(), // len
-            ], false),
-            Some(Linkage::External)
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // dest_ptr
+                    contract.context.i32_type().into(), // offset
+                    contract.context.i32_type().into(), // len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_scratch_write",
-            contract.context.void_type().fn_type(&[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(),  // dest_ptr
-                contract.context.i32_type().into(), // len
-            ], false),
-            Some(Linkage::External)
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // dest_ptr
+                    contract.context.i32_type().into(), // len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_set_storage",
-            contract.context.void_type().fn_type(&[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // key_ptr
-                contract.context.i32_type().into(), // value_non_null
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // value_ptr
-                contract.context.i32_type().into(), // value_len
-            ], false),
-            Some(Linkage::External)
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // key_ptr
+                    contract.context.i32_type().into(), // value_non_null
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // value_ptr
+                    contract.context.i32_type().into(), // value_len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_get_storage",
-            contract.context.i32_type().fn_type(&[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // key_ptr
-            ], false),
-            Some(Linkage::External)
+            contract.context.i32_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // key_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_return",
-            contract.context.void_type().fn_type(&[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).into(), // data_ptr
-                contract.context.i32_type().into(), // data_len
-            ], false),
-            Some(Linkage::External)
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // data_ptr
+                    contract.context.i32_type().into(), // data_len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
         );
     }
 
@@ -153,7 +218,8 @@ impl SubstrateTarget {
         let function = contract.module.add_function(
             "deploy",
             contract.context.i32_type().fn_type(&[], false),
-            None);
+            None,
+        );
 
         let (deploy_args, deploy_args_length) = self.public_function_prelude(contract, function);
 
@@ -162,7 +228,15 @@ impl SubstrateTarget {
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
-        contract.emit_function_dispatch(&contract.ns.constructors, &contract.constructors, deploy_args, deploy_args_length, function, &fallback_block, self);
+        contract.emit_function_dispatch(
+            &contract.ns.constructors,
+            &contract.constructors,
+            deploy_args,
+            deploy_args_length,
+            function,
+            &fallback_block,
+            self,
+        );
 
         // emit fallback code
         contract.builder.position_at_end(&fallback_block);
@@ -174,24 +248,34 @@ impl SubstrateTarget {
         let function = contract.module.add_function(
             "call",
             contract.context.i32_type().fn_type(&[], false),
-            None);
+            None,
+        );
 
         let (call_args, call_args_length) = self.public_function_prelude(contract, function);
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
-        contract.emit_function_dispatch(&contract.ns.functions, &contract.functions, call_args, call_args_length, function, &fallback_block, self);
+        contract.emit_function_dispatch(
+            &contract.ns.functions,
+            &contract.functions,
+            call_args,
+            call_args_length,
+            function,
+            &fallback_block,
+            self,
+        );
 
         // emit fallback code
         contract.builder.position_at_end(&fallback_block);
 
         if let Some(fallback) = contract.ns.fallback_function() {
-            contract.builder.build_call(
-                contract.functions[fallback],
-                &[],
-                "");
+            contract
+                .builder
+                .build_call(contract.functions[fallback], &[], "");
 
-            contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
+            contract
+                .builder
+                .build_return(Some(&contract.context.i32_type().const_zero()));
         } else {
             contract.builder.build_unreachable();
         }
@@ -199,67 +283,129 @@ impl SubstrateTarget {
 }
 
 impl TargetRuntime for SubstrateTarget {
-    fn set_storage<'a>(&self, contract: &'a Contract, _function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
+    fn set_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        _function: FunctionValue,
+        slot: u32,
+        dest: inkwell::values::PointerValue<'a>,
+    ) {
         // TODO: check for non-zero
         let key = contract.globals[self.slot_mapping[&(slot as usize)]];
 
         contract.builder.build_call(
             contract.module.get_function("ext_set_storage").unwrap(),
             &[
-                contract.builder.build_pointer_cast(key.as_pointer_value(),
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        key.as_pointer_value(),
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
                 contract.context.i32_type().const_int(1, false).into(),
-                contract.builder.build_pointer_cast(dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                dest.get_type().get_element_type().into_int_type().size_of().const_cast(
-                    contract.context.i32_type(), false).into()
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                dest.get_type()
+                    .get_element_type()
+                    .into_int_type()
+                    .size_of()
+                    .const_cast(contract.context.i32_type(), false)
+                    .into(),
             ],
-            "");
+            "",
+        );
     }
 
     /// Read from substrate storage
-    fn get_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>) {
+    fn get_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+        slot: u32,
+        dest: inkwell::values::PointerValue<'a>,
+    ) {
         let key = contract.globals[self.slot_mapping[&(slot as usize)]];
 
-        let exists = contract.builder.build_call(
-            contract.module.get_function("ext_get_storage").unwrap(),
-            &[
-                contract.builder.build_pointer_cast(key.as_pointer_value(),
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-            ],
-            "").try_as_basic_value().left().unwrap();
+        let exists = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_get_storage").unwrap(),
+                &[contract
+                    .builder
+                    .build_pointer_cast(
+                        key.as_pointer_value(),
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
 
         let exists = contract.builder.build_int_compare(
             IntPredicate::EQ,
             exists.into_int_value(),
             contract.context.i32_type().const_zero(),
-            "storage_exists");
+            "storage_exists",
+        );
 
-        let clear_block = contract.context.append_basic_block(function, "not_in_storage");
+        let clear_block = contract
+            .context
+            .append_basic_block(function, "not_in_storage");
         let retrieve_block = contract.context.append_basic_block(function, "in_storage");
-        let done_storage = contract.context.append_basic_block(function, "done_storage");
+        let done_storage = contract
+            .context
+            .append_basic_block(function, "done_storage");
 
-        contract.builder.build_conditional_branch(exists, &retrieve_block, &clear_block);
+        contract
+            .builder
+            .build_conditional_branch(exists, &retrieve_block, &clear_block);
 
         contract.builder.position_at_end(&retrieve_block);
 
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
             &[
-                contract.builder.build_pointer_cast(dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
                 contract.context.i32_type().const_zero().into(),
-                dest.get_type().get_element_type().into_int_type().size_of().const_cast(
-                    contract.context.i32_type(), false).into()
+                dest.get_type()
+                    .get_element_type()
+                    .into_int_type()
+                    .size_of()
+                    .const_cast(contract.context.i32_type(), false)
+                    .into(),
             ],
-            ""
+            "",
         );
 
         contract.builder.build_unconditional_branch(&done_storage);
 
         contract.builder.position_at_end(&clear_block);
 
-        contract.builder.build_store(dest, dest.get_type().get_element_type().into_int_type().const_zero());
+        contract.builder.build_store(
+            dest,
+            dest.get_type()
+                .get_element_type()
+                .into_int_type()
+                .const_zero(),
+        );
 
         contract.builder.build_unconditional_branch(&done_storage);
 
@@ -287,30 +433,39 @@ impl TargetRuntime for SubstrateTarget {
 
             match ty {
                 ast::PrimitiveType::Bool => length += 1,
-                ast::PrimitiveType::Uint(n) |
-                ast::PrimitiveType::Int(n) => length += n as u64 / 8,
+                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => length += n as u64 / 8,
                 ast::PrimitiveType::Bytes(n) => length += n as u64,
                 ast::PrimitiveType::Address => length += ADDRESS_LENGTH,
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
         let decode_block = contract.context.append_basic_block(function, "abi_decode");
-        let wrong_length_block = contract.context.append_basic_block(function, "wrong_abi_length");
+        let wrong_length_block = contract
+            .context
+            .append_basic_block(function, "wrong_abi_length");
 
-        let is_ok = contract.builder.build_int_compare(IntPredicate::EQ, datalength,
+        let is_ok = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            datalength,
             contract.context.i32_type().const_int(length, false),
-            "correct_length");
+            "correct_length",
+        );
 
-        contract.builder.build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
+        contract
+            .builder
+            .build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
 
         contract.builder.position_at_end(&wrong_length_block);
         contract.builder.build_unreachable();
 
         contract.builder.position_at_end(&decode_block);
 
-        let mut argsdata = contract.builder.build_pointer_cast(data,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic), "");
+        let mut argsdata = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
 
         for arg in spec.params.iter() {
             let ty = match arg.ty {
@@ -324,23 +479,38 @@ impl TargetRuntime for SubstrateTarget {
 
             match ty {
                 ast::PrimitiveType::Bool => {
-                    args.push(contract.builder.build_int_compare(IntPredicate::EQ,
-                        contract.builder.build_load(argsdata, "abi_bool").into_int_value(),
-                        contract.context.i8_type().const_int(1, false), "bool").into());
+                    args.push(
+                        contract
+                            .builder
+                            .build_int_compare(
+                                IntPredicate::EQ,
+                                contract
+                                    .builder
+                                    .build_load(argsdata, "abi_bool")
+                                    .into_int_value(),
+                                contract.context.i8_type().const_int(1, false),
+                                "bool",
+                            )
+                            .into(),
+                    );
                     arglen = 1;
-                },
-                ast::PrimitiveType::Uint(n) |
-                ast::PrimitiveType::Int(n) => {
+                }
+                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
                     let int_type = contract.context.custom_width_int_type(n as u32);
 
                     let val = contract.builder.build_load(
-                        contract.builder.build_pointer_cast(argsdata,
+                        contract.builder.build_pointer_cast(
+                            argsdata,
                             int_type.ptr_type(AddressSpace::Generic),
-                            ""),
-                        "");
+                            "",
+                        ),
+                        "",
+                    );
 
                     if ty.stack_based() {
-                        let m = contract.builder.build_alloca(ty.LLVMType(&contract.context), "");
+                        let m = contract
+                            .builder
+                            .build_alloca(ty.LLVMType(&contract.context), "");
 
                         contract.builder.build_store(m, val);
 
@@ -349,20 +519,32 @@ impl TargetRuntime for SubstrateTarget {
                         args.push(val);
                     }
                     arglen = n as u64 / 8;
-                },
+                }
                 ast::PrimitiveType::Bytes(n) => {
-                    let m = contract.builder.build_alloca(ty.LLVMType(&contract.context), "");
+                    let m = contract
+                        .builder
+                        .build_alloca(ty.LLVMType(&contract.context), "");
 
                     // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
                     contract.builder.build_call(
                         contract.module.get_function("__beNtoleN").unwrap(),
                         &[
                             argsdata.into(),
-                            contract.builder.build_pointer_cast(m,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                            contract.context.i32_type().const_int(n as u64, false).into()
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    m,
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(n as u64, false)
+                                .into(),
                         ],
-                        ""
+                        "",
                     );
 
                     if ty.stack_based() {
@@ -374,32 +556,45 @@ impl TargetRuntime for SubstrateTarget {
                     arglen = n as u64;
                 }
                 ast::PrimitiveType::Address => {
-                    let address = contract.builder.build_alloca(ty.LLVMType(&contract.context), "address");
+                    let address = contract
+                        .builder
+                        .build_alloca(ty.LLVMType(&contract.context), "address");
 
                     // byte order needs to be reversed
                     contract.builder.build_call(
                         contract.module.get_function("__beNtoleN").unwrap(),
                         &[
                             argsdata.into(),
-                            contract.builder.build_pointer_cast(address,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
-                            contract.context.i32_type().const_int(ADDRESS_LENGTH, false).into()
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    address,
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(ADDRESS_LENGTH, false)
+                                .into(),
                         ],
-                        ""
+                        "",
                     );
 
                     args.push(address.into());
 
                     arglen = ADDRESS_LENGTH;
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
 
             argsdata = unsafe {
                 contract.builder.build_gep(
                     argsdata,
-                    &[ contract.context.i32_type().const_int(arglen, false).into()],
-                    "abi_ptr")
+                    &[contract.context.i32_type().const_int(arglen, false).into()],
+                    "abi_ptr",
+                )
             };
         }
     }
@@ -422,21 +617,26 @@ impl TargetRuntime for SubstrateTarget {
 
             match ty {
                 ast::PrimitiveType::Bool => length += 1,
-                ast::PrimitiveType::Uint(n) |
-                ast::PrimitiveType::Int(n) => length += n as u64 / 8,
+                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => length += n as u64 / 8,
                 ast::PrimitiveType::Bytes(n) => length += n as u64,
                 ast::PrimitiveType::Address => length += ADDRESS_LENGTH,
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
         let length = contract.context.i32_type().const_int(length, false);
 
-        let data = contract.builder.build_call(
-            contract.module.get_function("__malloc").unwrap(),
-            &[ length.into() ],
-            ""
-        ).try_as_basic_value().left().unwrap().into_pointer_value();
+        let data = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
 
         let mut argsdata = data;
 
@@ -452,34 +652,47 @@ impl TargetRuntime for SubstrateTarget {
 
             match ty {
                 ast::PrimitiveType::Bool => {
-                    contract.builder.build_store(argsdata,
-                        contract.builder.build_int_z_extend(args[i].into_int_value(), contract.context.i8_type(), "bool")
+                    contract.builder.build_store(
+                        argsdata,
+                        contract.builder.build_int_z_extend(
+                            args[i].into_int_value(),
+                            contract.context.i8_type(),
+                            "bool",
+                        ),
                     );
                     arglen = 1;
-                },
-                ast::PrimitiveType::Uint(n) |
-                ast::PrimitiveType::Int(n) => {
+                }
+                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
                     let val = if args[i].is_pointer_value() {
                         // Value is a pointer to e.g i256. First we have to load the value
-                        contract.builder.build_load(args[i].into_pointer_value(), "")
+                        contract
+                            .builder
+                            .build_load(args[i].into_pointer_value(), "")
                     } else {
                         args[i]
                     };
 
                     contract.builder.build_store(
-                        contract.builder.build_pointer_cast(argsdata,
-                            val.into_int_value().get_type().ptr_type(AddressSpace::Generic),
-                            ""),
-                        val.into_int_value()
+                        contract.builder.build_pointer_cast(
+                            argsdata,
+                            val.into_int_value()
+                                .get_type()
+                                .ptr_type(AddressSpace::Generic),
+                            "",
+                        ),
+                        val.into_int_value(),
                     );
 
                     arglen = n as u64 / 8;
-                },
+                }
                 ast::PrimitiveType::Bytes(n) => {
                     let val = if args[i].is_pointer_value() {
                         args[i].into_pointer_value()
                     } else {
-                        let val = contract.builder.build_alloca(args[i].into_int_value().get_type(), &format!("bytes{}", n));
+                        let val = contract.builder.build_alloca(
+                            args[i].into_int_value().get_type(),
+                            &format!("bytes{}", n),
+                        );
 
                         contract.builder.build_store(val, args[i].into_int_value());
 
@@ -490,12 +703,22 @@ impl TargetRuntime for SubstrateTarget {
                     contract.builder.build_call(
                         contract.module.get_function("__leNtobeN").unwrap(),
                         &[
-                            contract.builder.build_pointer_cast(val,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    val,
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
                             argsdata.into(),
-                            contract.context.i32_type().const_int(n as u64, false).into()
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(n as u64, false)
+                                .into(),
                         ],
-                        ""
+                        "",
                     );
 
                     arglen = n as u64
@@ -505,24 +728,35 @@ impl TargetRuntime for SubstrateTarget {
                     contract.builder.build_call(
                         contract.module.get_function("__leNtobeN").unwrap(),
                         &[
-                            contract.builder.build_pointer_cast(args[i].into_pointer_value(),
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic), "").into(),
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    args[i].into_pointer_value(),
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
+                                )
+                                .into(),
                             argsdata.into(),
-                            contract.context.i32_type().const_int(ADDRESS_LENGTH, false).into()
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(ADDRESS_LENGTH, false)
+                                .into(),
                         ],
-                        ""
+                        "",
                     );
 
                     arglen = ADDRESS_LENGTH
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
 
             argsdata = unsafe {
                 contract.builder.build_gep(
                     argsdata,
-                    &[ contract.context.i32_type().const_int(arglen, false).into()],
-                    "abi_ptr")
+                    &[contract.context.i32_type().const_int(arglen, false).into()],
+                    "abi_ptr",
+                )
             };
         }
 
@@ -534,26 +768,32 @@ impl TargetRuntime for SubstrateTarget {
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_write").unwrap(),
             &[
-                contract.context.i8_type().ptr_type(AddressSpace::Generic).const_zero().into(),
+                contract
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_zero()
+                    .into(),
                 contract.context.i32_type().const_zero().into(),
             ],
-            ""
+            "",
         );
 
-        contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_write").unwrap(),
-            &[
-                data.into(),
-                length.into(),
-            ],
-            ""
+            &[data.into(), length.into()],
+            "",
         );
 
-        contract.builder.build_return(Some(&contract.context.i32_type().const_zero()));
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract) {

@@ -9,9 +9,9 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use solang::output;
-use solang::link;
 use solang::abi;
+use solang::link;
+use solang::output;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -62,12 +62,12 @@ fn main() {
                 .long("target")
                 .takes_value(true)
                 .possible_values(&["substrate", "burrow", "ewasm"])
-                .default_value("substrate")
+                .default_value("substrate"),
         )
         .arg(
             Arg::with_name("STD-JSON")
                 .help("mimic solidity json output on stdout")
-                .long("standard-json")
+                .long("standard-json"),
         )
         .arg(
             Arg::with_name("VERBOSE")
@@ -91,8 +91,7 @@ fn main() {
     };
 
     let output_file = |stem: &str, ext: &str| -> PathBuf {
-        Path::new(matches.value_of("OUTPUT").unwrap_or("."))
-            .join(format!("{}.{}", stem, ext))
+        Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
     };
 
     let context = inkwell::context::Context::create();
@@ -104,7 +103,7 @@ fn main() {
             Some("substrate") => solang::Target::Substrate,
             Some("burrow") => solang::Target::Burrow,
             Some("ewasm") => solang::Target::Ewasm,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     };
     let verbose = matches.is_present("VERBOSE");
@@ -146,7 +145,10 @@ fn main() {
             }
 
             if verbose {
-                eprintln!("info: Generating LLVM IR for contract {} with target {}", resolved_contract.name, resolved_contract.target);
+                eprintln!(
+                    "info: Generating LLVM IR for contract {} with target {}",
+                    resolved_contract.name, resolved_contract.target
+                );
             }
 
             let contract = resolved_contract.emit(&context, &filename, &opt);
@@ -158,7 +160,11 @@ fn main() {
                     let llvm_filename = output_file(&format!("{}_deploy", contract.name), "ll");
 
                     if verbose {
-                        eprintln!("info: Saving deployer LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                        eprintln!(
+                            "info: Saving deployer LLVM {} for contract {}",
+                            llvm_filename.display(),
+                            contract.name
+                        );
                     }
 
                     contract.dump_llvm(&llvm_filename).unwrap();
@@ -166,7 +172,11 @@ fn main() {
                     let llvm_filename = output_file(&format!("{}_runtime", contract.name), "ll");
 
                     if verbose {
-                        eprintln!("info: Saving runtime LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                        eprintln!(
+                            "info: Saving runtime LLVM {} for contract {}",
+                            llvm_filename.display(),
+                            contract.name
+                        );
                     }
 
                     runtime.dump_llvm(&llvm_filename).unwrap();
@@ -174,7 +184,11 @@ fn main() {
                     let llvm_filename = output_file(&contract.name, "ll");
 
                     if verbose {
-                        eprintln!("info: Saving LLVM {} for contract {}", llvm_filename.display(), contract.name);
+                        eprintln!(
+                            "info: Saving LLVM {} for contract {}",
+                            llvm_filename.display(),
+                            contract.name
+                        );
                     }
 
                     contract.dump_llvm(&llvm_filename).unwrap();
@@ -189,7 +203,11 @@ fn main() {
                     let bc_filename = output_file(&format!("{}_deploy", contract.name), "bc");
 
                     if verbose {
-                        eprintln!("info: Saving deploy LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                        eprintln!(
+                            "info: Saving deploy LLVM BC {} for contract {}",
+                            bc_filename.display(),
+                            contract.name
+                        );
                     }
 
                     contract.bitcode(&bc_filename);
@@ -197,7 +215,11 @@ fn main() {
                     let bc_filename = output_file(&format!("{}_runtime", contract.name), "bc");
 
                     if verbose {
-                        eprintln!("info: Saving runtime LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                        eprintln!(
+                            "info: Saving runtime LLVM BC {} for contract {}",
+                            bc_filename.display(),
+                            contract.name
+                        );
                     }
 
                     runtime.bitcode(&bc_filename);
@@ -205,7 +227,11 @@ fn main() {
                     let bc_filename = output_file(&contract.name, "bc");
 
                     if verbose {
-                        eprintln!("info: Saving LLVM BC {} for contract {}", bc_filename.display(), contract.name);
+                        eprintln!(
+                            "info: Saving LLVM BC {} for contract {}",
+                            bc_filename.display(),
+                            contract.name
+                        );
                     }
 
                     contract.bitcode(&bc_filename);
@@ -225,7 +251,11 @@ fn main() {
                 let obj_filename = output_file(&contract.name, "o");
 
                 if verbose {
-                    eprintln!("info: Saving Object {} for contract {}", obj_filename.display(), contract.name);
+                    eprintln!(
+                        "info: Saving Object {} for contract {}",
+                        obj_filename.display(),
+                        contract.name
+                    );
                 }
 
                 let mut file = File::create(obj_filename).unwrap();
@@ -249,7 +279,11 @@ fn main() {
                 let wasm_filename = output_file(&contract.name, "wasm");
 
                 if verbose {
-                    eprintln!("info: Saving WebAssembly {} for contract {}", wasm_filename.display(), contract.name);
+                    eprintln!(
+                        "info: Saving WebAssembly {} for contract {}",
+                        wasm_filename.display(),
+                        contract.name
+                    );
                 }
 
                 let mut file = File::create(wasm_filename).unwrap();
@@ -259,7 +293,11 @@ fn main() {
                 let abi_filename = output_file(&contract.name, abi_ext);
 
                 if verbose {
-                    eprintln!("info: Saving ABI {} for contract {}", abi_filename.display(), contract.name);
+                    eprintln!(
+                        "info: Saving ABI {} for contract {}",
+                        abi_filename.display(),
+                        contract.name
+                    );
                 }
 
                 file = File::create(abi_filename).unwrap();

@@ -1,6 +1,5 @@
-
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Encode, Decode};
+use parity_scale_codec_derive::{Decode, Encode};
 
 use super::{build_solidity, first_error, first_warning};
 use solang::{parse_and_resolve, Target};
@@ -11,7 +10,8 @@ fn constructors() {
     struct Val(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint64 result;
 
@@ -26,15 +26,17 @@ fn constructors() {
             function get() public returns (uint64) {
                 return result;
             }
-        }");
+        }",
+    );
 
     runtime.constructor(&mut store, 0, Vec::new());
     runtime.function(&mut store, "get", Vec::new());
 
     assert_eq!(store.scratch, Val(1).encode());
 
-        // parse
-        let (runtime, mut store) = build_solidity("
+    // parse
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint64 result;
 
@@ -49,7 +51,8 @@ fn constructors() {
             function get() public returns (uint64) {
                 return result;
             }
-        }");
+        }",
+    );
 
     runtime.constructor(&mut store, 1, Val(0xaabbccdd).encode());
     runtime.function(&mut store, "get", Vec::new());
@@ -63,7 +66,8 @@ fn fallback() {
     struct Val(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             int64 result = 102;
 
@@ -74,9 +78,10 @@ fn fallback() {
             function() external {
                 result = 356;
             }
-        }");
+        }",
+    );
 
-    runtime.raw_function(&mut store, [ 0xaa, 0xbb, 0xcc, 0xdd, 0xff ].to_vec());
+    runtime.raw_function(&mut store, [0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
     runtime.function(&mut store, "get", Vec::new());
 
     assert_eq!(store.scratch, Val(356).encode());
@@ -89,16 +94,18 @@ fn nofallback() {
     struct Val(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             int64 result = 102;
 
             function get() public returns (int64) {
                 return result;
             }
-        }");
+        }",
+    );
 
-    runtime.raw_function(&mut store, [ 0xaa, 0xbb, 0xcc, 0xdd, 0xff ].to_vec());
+    runtime.raw_function(&mut store, [0xaa, 0xbb, 0xcc, 0xdd, 0xff].to_vec());
     runtime.function(&mut store, "get", Vec::new());
 
     assert_eq!(store.scratch, Val(356).encode());
@@ -107,7 +114,8 @@ fn nofallback() {
 #[test]
 fn test_overloading() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint32 result = 1;
 
@@ -127,7 +135,8 @@ fn test_overloading() {
             function foo(uint32 x) private {
                 result = x + 10;
             }
-        }");
+        }",
+    );
 
     runtime.constructor(&mut store, 0, Vec::new());
 }
@@ -141,9 +150,14 @@ fn mutability() {
             function bar() public pure returns (int64) {
                 return foo;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "function declared pure but reads contract storage");
+    assert_eq!(
+        first_error(errors),
+        "function declared pure but reads contract storage"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
@@ -152,9 +166,14 @@ fn mutability() {
             function bar() public view {
                 foo = 102;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "function declared view but writes contract storage");
+    assert_eq!(
+        first_error(errors),
+        "function declared view but writes contract storage"
+    );
 }
 
 #[test]
@@ -181,7 +200,10 @@ fn shadowing() {
 
     let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
 
-    assert_eq!(first_warning(errors), "declaration of `result\' shadows state variable");
+    assert_eq!(
+        first_warning(errors),
+        "declaration of `result\' shadows state variable"
+    );
 
     // parse
     let (runtime, mut store) = build_solidity(src);
@@ -255,7 +277,8 @@ fn for_forever() {
 #[test]
 fn test_loops() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint32 result = 1;
 
@@ -302,7 +325,8 @@ fn test_loops() {
 
                 assert(n == 9);
             }
-        }");
+        }",
+    );
 
     runtime.constructor(&mut store, 0, Vec::new());
 }
@@ -395,7 +419,8 @@ fn args_and_returns() {
 
     assert_eq!(first_error(errors), "missing return statement");
 
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract foobar {
             function foo1() public returns (int32 a) {
                 a = -102;
@@ -405,7 +430,8 @@ fn args_and_returns() {
                 a = -102;
                 return 553;
             }
-        }");
+        }",
+    );
 
     runtime.function(&mut store, "foo1", Vec::new());
 

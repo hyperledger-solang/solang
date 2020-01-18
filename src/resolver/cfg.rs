@@ -1,18 +1,18 @@
 use num_bigint::BigInt;
 use num_bigint::Sign;
-use num_traits::One;
 use num_traits::FromPrimitive;
 use num_traits::Num;
+use num_traits::One;
 use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::LinkedList;
 use unescape::unescape;
 
-use parser::ast;
 use hex;
 use output;
 use output::Output;
+use parser::ast;
 use resolver;
 use resolver::address::to_hexstr_eip55;
 
@@ -99,9 +99,7 @@ pub enum Instr {
         true_: usize,
         false_: usize,
     },
-    AssertFailure {
-
-    }
+    AssertFailure {},
 }
 
 pub struct BasicBlock {
@@ -347,9 +345,7 @@ impl ControlFlowGraph {
             Instr::GetStorage { local, storage } => {
                 format!("getstorage %{} = %{}", *storage, self.vars[*local].id.name)
             }
-            Instr::AssertFailure {  } => {
-                format!("assert-failure")
-            }
+            Instr::AssertFailure {} => format!("assert-failure"),
             Instr::Call { res, func, args } => format!(
                 "{} = call {} {} {}",
                 {
@@ -438,29 +434,44 @@ pub fn generate_cfg(
 
         for (i, p) in ast_f.returns.iter().enumerate() {
             returns.push(if let Some(ref name) = p.name {
-                    if let Some(pos) = vartab.add(name, resolve_f.returns[i].ty.clone(), errors) {
-                        ns.check_shadowing(name, errors);
-
-                        // set to zero
-                        cfg.add(&mut vartab, Instr::Set { res: pos, expr: resolve_f.returns[i].ty.default(ns) });
-
-                        pos
-                    } else {
-                        // obs wrong but we had an error so will continue with bogus value to generate parser errors
-                        0
-                    }
-                } else {
-                    // this variable can never be assigned but will need a zero value
-                    let pos = vartab.temp(
-                        &ast::Identifier{ loc: ast::Loc(0, 0), name: format!("arg{}", i)},
-                        &resolve_f.returns[i].ty.clone());
+                if let Some(pos) = vartab.add(name, resolve_f.returns[i].ty.clone(), errors) {
+                    ns.check_shadowing(name, errors);
 
                     // set to zero
-                    cfg.add(&mut vartab, Instr::Set { res: pos, expr: resolve_f.returns[i].ty.default(ns) });
+                    cfg.add(
+                        &mut vartab,
+                        Instr::Set {
+                            res: pos,
+                            expr: resolve_f.returns[i].ty.default(ns),
+                        },
+                    );
 
                     pos
+                } else {
+                    // obs wrong but we had an error so will continue with bogus value to generate parser errors
+                    0
                 }
-            );
+            } else {
+                // this variable can never be assigned but will need a zero value
+                let pos = vartab.temp(
+                    &ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: format!("arg{}", i),
+                    },
+                    &resolve_f.returns[i].ty.clone(),
+                );
+
+                // set to zero
+                cfg.add(
+                    &mut vartab,
+                    Instr::Set {
+                        res: pos,
+                        expr: resolve_f.returns[i].ty.default(ns),
+                    },
+                );
+
+                pos
+            });
         }
 
         vartab.returns = returns;
@@ -506,7 +517,13 @@ fn check_return(
     }
 
     if f.returns.is_empty() || !vartab.returns.is_empty() {
-        bb.add(Instr::Return { value: vartab.returns.iter().map(|pos| Expression::Variable(ast::Loc(0, 0), *pos)).collect() });
+        bb.add(Instr::Return {
+            value: vartab
+                .returns
+                .iter()
+                .map(|pos| Expression::Variable(ast::Loc(0, 0), *pos))
+                .collect(),
+        });
 
         Ok(())
     } else {
@@ -529,7 +546,7 @@ fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut
                     storage: offset,
                 },
             );
-        },
+        }
         Storage::Constant(n) => {
             cfg.add(
                 vartab,
@@ -539,7 +556,7 @@ fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut
                 },
             );
         }
-        Storage::Local => ()
+        Storage::Local => (),
     }
 }
 
@@ -651,9 +668,16 @@ fn statement(
                 return Err(());
             }
 
-            cfg.add(vartab, Instr::Return { value:
-                vartab.returns.iter().map(|pos| Expression::Variable(ast::Loc(0, 0), *pos)).collect()
-            });
+            cfg.add(
+                vartab,
+                Instr::Return {
+                    value: vartab
+                        .returns
+                        .iter()
+                        .map(|pos| Expression::Variable(ast::Loc(0, 0), *pos))
+                        .collect(),
+                },
+            );
 
             Ok(false)
         }
@@ -1117,7 +1141,9 @@ fn get_int_length(
     Ok(match l {
         resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => (*n, false),
         resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => (*n, true),
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) if allow_bytes => (*n as u16 * 8, false),
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) if allow_bytes => {
+            (*n as u16 * 8, false)
+        }
         resolver::Type::Primitive(t) => {
             errors.push(Output::error(
                 *l_loc,
@@ -1159,9 +1185,11 @@ fn coerce_int(
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(left_length)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(right_length)),
         ) if allow_bytes => {
-            return Ok(resolver::Type::Primitive(ast::PrimitiveType::Bytes(std::cmp::max(*left_length, *right_length))));
+            return Ok(resolver::Type::Primitive(ast::PrimitiveType::Bytes(
+                std::cmp::max(*left_length, *right_length),
+            )));
         }
-        _ => ()
+        _ => (),
     }
 
     let (left_len, left_signed) = get_int_length(l, l_loc, false, ns, errors)?;
@@ -1220,7 +1248,7 @@ pub fn cast(
         (
             &Expression::NumberLiteral(_, ref n),
             &resolver::Type::Primitive(_),
-            &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len))
+            &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
         ) => {
             return if n.sign() == Sign::Minus {
                 errors.push(Output::type_error(
@@ -1228,7 +1256,7 @@ pub fn cast(
                     format!(
                         "implicit conversion cannot change negative number to {}",
                         to.to_string(ns)
-                    )
+                    ),
                 ));
 
                 Err(())
@@ -1246,11 +1274,11 @@ pub fn cast(
             } else {
                 Ok(Expression::NumberLiteral(to_len, n.clone()))
             }
-        },
+        }
         (
             &Expression::NumberLiteral(_, ref n),
             &resolver::Type::Primitive(_),
-            &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len))
+            &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
             return if n.bits() >= to_len as usize {
                 errors.push(Output::type_error(
@@ -1266,12 +1294,12 @@ pub fn cast(
             } else {
                 Ok(Expression::NumberLiteral(to_len, n.clone()))
             }
-        },
+        }
         // Literal strings can be implicitly lengthened
         (
             &Expression::BytesLiteral(ref bs),
             &resolver::Type::Primitive(_),
-            &resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len))
+            &resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
             return if bs.len() > to_len as usize {
                 errors.push(Output::type_error(
@@ -1291,9 +1319,9 @@ pub fn cast(
                 bs.resize(to_len as usize, 0);
 
                 Ok(Expression::BytesLiteral(bs))
-            }
-        },
-        _ => ()
+            };
+        }
+        _ => (),
     };
 
     match (from_conv, to_conv) {
@@ -1320,7 +1348,7 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        },
+        }
         (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
@@ -1344,13 +1372,11 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        },
+        }
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len))
-        ) if to_len > from_len => {
-            Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
-        },
+            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
+        ) if to_len > from_len => Ok(Expression::ZeroExt(to.clone(), Box::new(expr))),
         (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
@@ -1372,7 +1398,7 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        },
+        }
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
@@ -1394,13 +1420,13 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        },
+        }
         // Casting int to address
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Address),
-        ) |
-        (
+        )
+        | (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Address),
         ) => {
@@ -1420,13 +1446,13 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        },
+        }
         // Casting int address to int
         (
             resolver::Type::Primitive(ast::PrimitiveType::Address),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        ) |
-        (
+        )
+        | (
             resolver::Type::Primitive(ast::PrimitiveType::Address),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
@@ -1446,7 +1472,7 @@ pub fn cast(
             } else {
                 Ok(expr)
             }
-        },
+        }
         // Lengthing or shorting a fixed bytes array
         (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
@@ -1467,17 +1493,24 @@ pub fn cast(
 
                 Ok(Expression::ShiftLeft(
                     Box::new(Expression::ZeroExt(to.clone(), Box::new(expr))),
-                    Box::new(Expression::NumberLiteral(to_len as u16 * 8, BigInt::from_u8(shift).unwrap()))
+                    Box::new(Expression::NumberLiteral(
+                        to_len as u16 * 8,
+                        BigInt::from_u8(shift).unwrap(),
+                    )),
                 ))
             } else {
                 let shift = (from_len - to_len) * 8;
 
-                Ok(Expression::Trunc(to.clone(),
+                Ok(Expression::Trunc(
+                    to.clone(),
                     Box::new(Expression::ShiftRight(
                         Box::new(expr),
-                        Box::new(Expression::NumberLiteral(from_len as u16 * 8, BigInt::from_u8(shift).unwrap())),
-                        false
-                    ))
+                        Box::new(Expression::NumberLiteral(
+                            from_len as u16 * 8,
+                            BigInt::from_u8(shift).unwrap(),
+                        )),
+                        false,
+                    )),
                 ))
             }
         }
@@ -1486,8 +1519,8 @@ pub fn cast(
         (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        ) |
-        (
+        )
+        | (
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
@@ -1496,7 +1529,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1505,7 +1539,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1518,8 +1553,8 @@ pub fn cast(
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        ) |
-        (
+        )
+        | (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
@@ -1528,7 +1563,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1537,7 +1573,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1556,7 +1593,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1565,7 +1603,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1584,7 +1623,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1593,7 +1633,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns), from.to_string(ns)
+                        to.to_string(ns),
+                        from.to_string(ns)
                     ),
                 ));
                 Err(())
@@ -1681,7 +1722,7 @@ pub fn expression(
                 Expression::BytesLiteral(result.into_bytes()),
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
-        },
+        }
         ast::Expression::HexLiteral(v) => {
             let mut result = Vec::new();
 
@@ -1703,7 +1744,7 @@ pub fn expression(
                 Expression::BytesLiteral(result),
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
-        },
+        }
         ast::Expression::NumberLiteral(loc, b) => {
             // Return smallest type
             let bits = b.bits();
@@ -1743,7 +1784,13 @@ pub fn expression(
                     resolver::Type::Primitive(ast::PrimitiveType::Address),
                 ))
             } else {
-                errors.push(Output::error(loc.clone(), format!("address literal has incorrect checksum, expected ‘{}’", address)));
+                errors.push(Output::error(
+                    loc.clone(),
+                    format!(
+                        "address literal has incorrect checksum, expected ‘{}’",
+                        address
+                    ),
+                ));
                 Err(())
             }
         }
@@ -1754,7 +1801,9 @@ pub fn expression(
                 Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
             } else {
                 errors.push(Output::error(
-                    id.loc.clone(), format!("cannot read variable {} in constant expression", id.name)));
+                    id.loc.clone(),
+                    format!("cannot read variable {} in constant expression", id.name),
+                ));
                 Err(())
             }
         }
@@ -1762,7 +1811,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                false,
+                ns,
+                errors,
+            )?;
 
             Ok((
                 Expression::Add(
@@ -1776,7 +1833,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                false,
+                ns,
+                errors,
+            )?;
 
             Ok((
                 Expression::Subtract(
@@ -1790,7 +1855,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             Ok((
                 Expression::BitwiseOr(
@@ -1804,7 +1877,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             Ok((
                 Expression::BitwiseAnd(
@@ -1818,7 +1899,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             Ok((
                 Expression::BitwiseXor(
@@ -1858,7 +1947,7 @@ pub fn expression(
                 Expression::ShiftRight(
                     Box::new(left),
                     Box::new(cast_shift_arg(right, right_length, &left_type)),
-                    left_type.signed()
+                    left_type.signed(),
                 ),
                 left_type,
             ))
@@ -1867,7 +1956,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                false,
+                ns,
+                errors,
+            )?;
 
             Ok((
                 Expression::Multiply(
@@ -1881,7 +1978,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                false,
+                ns,
+                errors,
+            )?;
 
             if ty.signed() {
                 Ok((
@@ -1905,7 +2010,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), false, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                false,
+                ns,
+                errors,
+            )?;
 
             if ty.signed() {
                 Ok((
@@ -1931,7 +2044,10 @@ pub fn expression(
 
             // solc-0.5.13 does not allow either base or exp to be signed
             if base_type.signed() || exp_type.signed() {
-                errors.push(Output::error(loc.clone(), format!("exponation (**) is not allowed with signed types")));
+                errors.push(Output::error(
+                    loc.clone(),
+                    format!("exponation (**) is not allowed with signed types"),
+                ));
                 return Err(());
             }
 
@@ -1951,7 +2067,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             if ty.signed() {
                 Ok((
@@ -1975,7 +2099,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             if ty.signed() {
                 Ok((
@@ -1999,7 +2131,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             if ty.signed() {
                 Ok((
@@ -2023,7 +2163,15 @@ pub fn expression(
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
-            let ty = coerce_int(&left_type, &l.loc(), &right_type, &r.loc(), true, ns, errors)?;
+            let ty = coerce_int(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                true,
+                ns,
+                errors,
+            )?;
 
             if ty.signed() {
                 Ok((
@@ -2128,7 +2276,10 @@ pub fn expression(
 
             let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
-            Ok((Expression::Ternary(Box::new(cond), Box::new(left), Box::new(right)), ty))
+            Ok((
+                Expression::Ternary(Box::new(cond), Box::new(left), Box::new(right)),
+                ty,
+            ))
         }
 
         // pre/post decrement/increment
@@ -2145,7 +2296,9 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(), format!("cannot access variable {} in constant expression", id.name)));
+                        loc.clone(),
+                        format!("cannot access variable {} in constant expression", id.name),
+                    ));
                     return Err(());
                 }
             };
@@ -2273,7 +2426,9 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(), format!("cannot access variable {} in constant expression", id.name)));
+                        loc.clone(),
+                        format!("cannot access variable {} in constant expression", id.name),
+                    ));
                     return Err(());
                 }
             };
@@ -2314,7 +2469,9 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(), format!("cannot access variable {} in constant expression", id.name)));
+                        loc.clone(),
+                        format!("cannot access variable {} in constant expression", id.name),
+                    ));
                     return Err(());
                 }
             };
@@ -2327,21 +2484,25 @@ pub fn expression(
             };
 
             match ty {
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(_)) |
-                resolver::Type::Primitive(ast::PrimitiveType::Int(_)) |
-                resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => (),
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(_))
+                | resolver::Type::Primitive(ast::PrimitiveType::Int(_))
+                | resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => (),
                 _ => {
                     errors.push(Output::error(
                         id.loc,
-                        format!("variable {} of incorrect type {}", id.name.to_string(), ty.to_string(ns)),
+                        format!(
+                            "variable {} of incorrect type {}",
+                            id.name.to_string(),
+                            ty.to_string(ns)
+                        ),
                     ));
                     return Err(());
                 }
             };
 
             let set = match expr {
-                ast::Expression::AssignShiftLeft(_, _, _) |
-                ast::Expression::AssignShiftRight(_, _, _) => {
+                ast::Expression::AssignShiftLeft(_, _, _)
+                | ast::Expression::AssignShiftRight(_, _, _) => {
                     let left_length = get_int_length(&ty, &loc, true, ns, errors)?;
                     let right_length = get_int_length(&set_type, &e.loc(), false, ns, errors)?;
 
@@ -2355,10 +2516,8 @@ pub fn expression(
                     } else {
                         Expression::Trunc(ty.clone(), Box::new(set))
                     }
-                },
-                _ => {
-                    cast(&id.loc, set, &set_type, &ty, true, ns, errors)?
                 }
+                _ => cast(&id.loc, set, &set_type, &ty, true, ns, errors)?,
             };
 
             let set = match expr {
@@ -2371,21 +2530,27 @@ pub fn expression(
                 ast::Expression::AssignMultiply(_, _, _) => {
                     Expression::Multiply(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
                 }
-                ast::Expression::AssignOr(_, _, _) => {
-                    Expression::BitwiseOr(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
-                }
-                ast::Expression::AssignAnd(_, _, _) => {
-                    Expression::BitwiseAnd(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
-                }
-                ast::Expression::AssignXor(_, _, _) => {
-                    Expression::BitwiseXor(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
-                }
-                ast::Expression::AssignShiftLeft(_, _, _) => {
-                    Expression::ShiftLeft(Box::new(Expression::Variable(id.loc, pos)), Box::new(set))
-                }
-                ast::Expression::AssignShiftRight(_, _, _) => {
-                    Expression::ShiftRight(Box::new(Expression::Variable(id.loc, pos)), Box::new(set), ty.signed())
-                }
+                ast::Expression::AssignOr(_, _, _) => Expression::BitwiseOr(
+                    Box::new(Expression::Variable(id.loc, pos)),
+                    Box::new(set),
+                ),
+                ast::Expression::AssignAnd(_, _, _) => Expression::BitwiseAnd(
+                    Box::new(Expression::Variable(id.loc, pos)),
+                    Box::new(set),
+                ),
+                ast::Expression::AssignXor(_, _, _) => Expression::BitwiseXor(
+                    Box::new(Expression::Variable(id.loc, pos)),
+                    Box::new(set),
+                ),
+                ast::Expression::AssignShiftLeft(_, _, _) => Expression::ShiftLeft(
+                    Box::new(Expression::Variable(id.loc, pos)),
+                    Box::new(set),
+                ),
+                ast::Expression::AssignShiftRight(_, _, _) => Expression::ShiftRight(
+                    Box::new(Expression::Variable(id.loc, pos)),
+                    Box::new(set),
+                    ty.signed(),
+                ),
                 ast::Expression::AssignDivide(_, _, _) => {
                     if ty.signed() {
                         Expression::SDivide(
@@ -2477,7 +2642,9 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(), format!("cannot call function in constant expression")));
+                        loc.clone(),
+                        format!("cannot call function in constant expression"),
+                    ));
                     return Err(());
                 }
             };
@@ -2594,7 +2761,9 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(), format!("cannot read variable {} in constant expression", id.name)));
+                        loc.clone(),
+                        format!("cannot read variable {} in constant expression", id.name),
+                    ));
                     return Err(());
                 }
             };
@@ -2603,51 +2772,86 @@ pub fn expression(
 
             get_contract_storage(&var, cfg, tab);
 
-            let array_length = if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
-                n
-            } else {
-                errors.push(Output::error(
-                    loc.clone(), format!("variable {} is not an array", id.name)));
-                return Err(());
-            };
+            let array_length =
+                if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
+                    n
+                } else {
+                    errors.push(Output::error(
+                        loc.clone(),
+                        format!("variable {} is not an array", id.name),
+                    ));
+                    return Err(());
+                };
 
             let (index_width, _) = get_int_length(&index_type, &index.loc(), false, ns, errors)?;
 
-            let pos = tab.temp(&ast::Identifier{ name: "index".to_owned(), loc: loc.clone()}, &index_type);
+            let pos = tab.temp(
+                &ast::Identifier {
+                    name: "index".to_owned(),
+                    loc: loc.clone(),
+                },
+                &index_type,
+            );
 
-            cfg.add(tab, Instr::Set{ res: pos, expr: index_expr });
+            cfg.add(
+                tab,
+                Instr::Set {
+                    res: pos,
+                    expr: index_expr,
+                },
+            );
 
             let out_of_range = cfg.new_basic_block("out_of_range".to_string());
             let in_range = cfg.new_basic_block("in_range".to_string());
 
             // We're cheating a bit. Any signed value < 0 will also be caught by doing a unsigned compare
-            cfg.add(tab, Instr::BranchCond{ cond:
-                Expression::UMoreEqual(
-                    Box::new(Expression::Variable(index.loc(), pos)),
-                    Box::new(Expression::NumberLiteral(index_width, BigInt::from_u8(array_length).unwrap()))
-                ), true_: out_of_range, false_: in_range });
+            cfg.add(
+                tab,
+                Instr::BranchCond {
+                    cond: Expression::UMoreEqual(
+                        Box::new(Expression::Variable(index.loc(), pos)),
+                        Box::new(Expression::NumberLiteral(
+                            index_width,
+                            BigInt::from_u8(array_length).unwrap(),
+                        )),
+                    ),
+                    true_: out_of_range,
+                    false_: in_range,
+                },
+            );
 
             cfg.set_basic_block(out_of_range);
-            cfg.add(tab, Instr::AssertFailure{});
+            cfg.add(tab, Instr::AssertFailure {});
 
             cfg.set_basic_block(in_range);
 
             let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
 
             Ok((
-                Expression::Trunc(res_ty.clone(),
+                Expression::Trunc(
+                    res_ty.clone(),
                     Box::new(Expression::ShiftRight(
                         Box::new(Expression::Variable(loc.clone(), var.pos)),
                         // shift by (array_length - 1 - index) * 8
                         Box::new(Expression::ShiftLeft(
                             Box::new(Expression::Subtract(
-                                Box::new(Expression::NumberLiteral(array_length as u16 * 8, BigInt::from_u8(array_length - 1).unwrap())),
-                                Box::new(cast_shift_arg(Expression::Variable(index.loc(), pos), index_width, &var.ty))),
-                            ),
-                            Box::new(Expression::NumberLiteral(array_length as u16 * 8, BigInt::from_u8(3).unwrap()))
+                                Box::new(Expression::NumberLiteral(
+                                    array_length as u16 * 8,
+                                    BigInt::from_u8(array_length - 1).unwrap(),
+                                )),
+                                Box::new(cast_shift_arg(
+                                    Expression::Variable(index.loc(), pos),
+                                    index_width,
+                                    &var.ty,
+                                )),
+                            )),
+                            Box::new(Expression::NumberLiteral(
+                                array_length as u16 * 8,
+                                BigInt::from_u8(3).unwrap(),
+                            )),
                         )),
-                        false
-                    ))
+                        false,
+                    )),
                 ),
                 res_ty,
             ))
@@ -2656,13 +2860,13 @@ pub fn expression(
             // Is it an enum
             if let Some(e) = ns.resolve_enum(namespace) {
                 return match ns.enums[e].values.get(&id.name) {
-                    Some((_, val)) => {
-                        Ok((Expression::NumberLiteral(
-                                ns.enums[e].ty.bits(),
-                                BigInt::from_usize(*val).unwrap()
-                            ),
-                            resolver::Type::Enum(e)))
-                    },
+                    Some((_, val)) => Ok((
+                        Expression::NumberLiteral(
+                            ns.enums[e].ty.bits(),
+                            BigInt::from_usize(*val).unwrap(),
+                        ),
+                        resolver::Type::Enum(e),
+                    )),
                     None => {
                         errors.push(Output::error(
                             id.loc.clone(),
@@ -2670,7 +2874,7 @@ pub fn expression(
                         ));
                         Err(())
                     }
-                }
+                };
             }
 
             // is it an bytesN.length
@@ -2681,31 +2885,20 @@ pub fn expression(
                     if id.name == "length" {
                         return Ok((
                             Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
-                            resolver::Type::Primitive(ast::PrimitiveType::Uint(8))
+                            resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
                         ));
                     }
                 }
             }
 
-            errors.push(Output::error(
-                loc.clone(),
-                format!("not found"),
-            ));
+            errors.push(Output::error(loc.clone(), format!("not found")));
 
             Err(())
         }
         ast::Expression::Or(loc, left, right) => {
             let boolty = resolver::Type::new_bool();
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
-            let l = cast(
-                &loc,
-                l,
-                &l_type,
-                &boolty,
-                true,
-                ns,
-                errors,
-            )?;
+            let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
 
             let mut tab = match vartab {
                 &mut Some(ref mut tab) => tab,
@@ -2713,29 +2906,50 @@ pub fn expression(
                     // In constant context, no side effects so short-circut not necessary
                     let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
 
-                    return Ok((Expression::Or(
-                        Box::new(l),
-                        Box::new(cast(
-                            &loc,
-                            r,
-                            &r_type,
-                            &resolver::Type::new_bool(),
-                            true,
-                            ns,
-                            errors,
-                        )?)),
-                        resolver::Type::new_bool()
-                    ))
+                    return Ok((
+                        Expression::Or(
+                            Box::new(l),
+                            Box::new(cast(
+                                &loc,
+                                r,
+                                &r_type,
+                                &resolver::Type::new_bool(),
+                                true,
+                                ns,
+                                errors,
+                            )?),
+                        ),
+                        resolver::Type::new_bool(),
+                    ));
                 }
             };
 
-            let pos = tab.temp(&ast::Identifier{ name: "or".to_owned(), loc: loc.clone()}, &resolver::Type::new_bool());
+            let pos = tab.temp(
+                &ast::Identifier {
+                    name: "or".to_owned(),
+                    loc: loc.clone(),
+                },
+                &resolver::Type::new_bool(),
+            );
 
             let right_side = cfg.new_basic_block("or_right_side".to_string());
             let end_or = cfg.new_basic_block("or_end".to_string());
 
-            cfg.add(tab, Instr::Set{ res: pos, expr: Expression::BoolLiteral(true) });
-            cfg.add(tab, Instr::BranchCond{ cond: l, true_: end_or, false_: right_side });
+            cfg.add(
+                tab,
+                Instr::Set {
+                    res: pos,
+                    expr: Expression::BoolLiteral(true),
+                },
+            );
+            cfg.add(
+                tab,
+                Instr::BranchCond {
+                    cond: l,
+                    true_: end_or,
+                    false_: right_side,
+                },
+            );
             cfg.set_basic_block(right_side);
 
             let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
@@ -2749,14 +2963,14 @@ pub fn expression(
                 errors,
             )?;
 
-            cfg.add(tab, Instr::Set{ res: pos, expr: r });
+            cfg.add(tab, Instr::Set { res: pos, expr: r });
 
             let mut phis = HashSet::new();
             phis.insert(pos);
 
             cfg.set_phis(end_or, phis);
 
-            cfg.add(tab, Instr::Branch{ bb: end_or });
+            cfg.add(tab, Instr::Branch { bb: end_or });
 
             cfg.set_basic_block(end_or);
 
@@ -2765,15 +2979,7 @@ pub fn expression(
         ast::Expression::And(loc, left, right) => {
             let boolty = resolver::Type::new_bool();
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
-            let l = cast(
-                &loc,
-                l,
-                &l_type,
-                &boolty,
-                true,
-                ns,
-                errors,
-            )?;
+            let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
 
             let mut tab = match vartab {
                 &mut Some(ref mut tab) => tab,
@@ -2781,29 +2987,50 @@ pub fn expression(
                     // In constant context, no side effects so short-circut not necessary
                     let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
 
-                    return Ok((Expression::And(
-                        Box::new(l),
-                        Box::new(cast(
-                            &loc,
-                            r,
-                            &r_type,
-                            &resolver::Type::new_bool(),
-                            true,
-                            ns,
-                            errors,
-                        )?)),
-                        resolver::Type::new_bool()
-                    ))
+                    return Ok((
+                        Expression::And(
+                            Box::new(l),
+                            Box::new(cast(
+                                &loc,
+                                r,
+                                &r_type,
+                                &resolver::Type::new_bool(),
+                                true,
+                                ns,
+                                errors,
+                            )?),
+                        ),
+                        resolver::Type::new_bool(),
+                    ));
                 }
             };
 
-            let pos = tab.temp(&ast::Identifier{ name: "and".to_owned(), loc: loc.clone()}, &resolver::Type::new_bool());
+            let pos = tab.temp(
+                &ast::Identifier {
+                    name: "and".to_owned(),
+                    loc: loc.clone(),
+                },
+                &resolver::Type::new_bool(),
+            );
 
             let right_side = cfg.new_basic_block("and_right_side".to_string());
             let end_and = cfg.new_basic_block("and_end".to_string());
 
-            cfg.add(tab, Instr::Set{ res: pos, expr: Expression::BoolLiteral(false) });
-            cfg.add(tab, Instr::BranchCond{ cond: l, true_: right_side, false_: end_and });
+            cfg.add(
+                tab,
+                Instr::Set {
+                    res: pos,
+                    expr: Expression::BoolLiteral(false),
+                },
+            );
+            cfg.add(
+                tab,
+                Instr::BranchCond {
+                    cond: l,
+                    true_: right_side,
+                    false_: end_and,
+                },
+            );
             cfg.set_basic_block(right_side);
 
             let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
@@ -2817,20 +3044,20 @@ pub fn expression(
                 errors,
             )?;
 
-            cfg.add(tab, Instr::Set{ res: pos, expr: r });
+            cfg.add(tab, Instr::Set { res: pos, expr: r });
 
             let mut phis = HashSet::new();
             phis.insert(pos);
 
             cfg.set_phis(end_and, phis);
 
-            cfg.add(tab, Instr::Branch{ bb: end_and });
+            cfg.add(tab, Instr::Branch { bb: end_and });
 
             cfg.set_basic_block(end_and);
 
             Ok((Expression::Variable(loc.clone(), pos), boolty))
         }
-        _ => panic!("unimplemented: {:?}", expr)
+        _ => panic!("unimplemented: {:?}", expr),
     }
 }
 
@@ -2880,7 +3107,7 @@ pub struct Vartable {
     names: LinkedList<VarScope>,
     storage_vars: HashMap<String, usize>,
     dirty: Vec<DirtyTracker>,
-    returns: Vec<usize>
+    returns: Vec<usize>,
 }
 
 pub struct DirtyTracker {
@@ -3083,7 +3310,7 @@ impl resolver::Type {
             resolver::Type::Primitive(e) => e.default(),
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
             resolver::Type::Noreturn => unreachable!(),
-            resolver::Type::FixedArray(_, _) => unreachable!()
+            resolver::Type::FixedArray(_, _) => unreachable!(),
         }
     }
 }
@@ -3091,15 +3318,16 @@ impl resolver::Type {
 impl ast::PrimitiveType {
     fn default(&self) -> Expression {
         match self {
-            ast::PrimitiveType::Uint(b) |
-            ast::PrimitiveType::Int(b) => Expression::NumberLiteral(*b, BigInt::from(0)),
+            ast::PrimitiveType::Uint(b) | ast::PrimitiveType::Int(b) => {
+                Expression::NumberLiteral(*b, BigInt::from(0))
+            }
             ast::PrimitiveType::Bool => Expression::BoolLiteral(false),
             ast::PrimitiveType::Address => Expression::NumberLiteral(160, BigInt::from(0)),
             ast::PrimitiveType::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(*n as usize, 0);
                 Expression::BytesLiteral(l)
-            },
+            }
             ast::PrimitiveType::DynamicBytes => unimplemented!(),
             ast::PrimitiveType::String => unimplemented!(),
         }

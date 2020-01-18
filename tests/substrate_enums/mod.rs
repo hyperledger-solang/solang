@@ -1,6 +1,5 @@
-
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Encode, Decode};
+use parity_scale_codec_derive::{Decode, Encode};
 
 use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
@@ -11,7 +10,8 @@ fn weekdays() {
     struct Val(u8);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract enum_example {
             enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
 
@@ -38,7 +38,8 @@ fn weekdays() {
                 x = Weekday(2);
                 assert(x == Weekday.Wednesday);
             }
-        }");
+        }",
+    );
 
     runtime.function(&mut store, "is_weekend", Val(4).encode());
 
@@ -59,9 +60,14 @@ fn test_cast_errors() {
             function foo() public pure returns (uint8) {
                 return state.foo;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "conversion from enum test.state to uint8 not possible");
+    assert_eq!(
+        first_error(errors),
+        "conversion from enum test.state to uint8 not possible"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
@@ -69,7 +75,9 @@ fn test_cast_errors() {
             function foo() public pure returns (uint8) {
                 return uint8(state.foo);
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
     no_errors(errors);
 }

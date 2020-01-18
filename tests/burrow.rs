@@ -1,16 +1,16 @@
-extern crate solang;
-extern crate wasmi;
 extern crate ethabi;
 extern crate ethereum_types;
+extern crate solang;
+extern crate wasmi;
 
+use ethabi::Token;
 use std::collections::HashMap;
 use std::mem;
 use wasmi::memory_units::Pages;
 use wasmi::*;
-use ethabi::Token;
 
-use solang::{compile, Target};
 use solang::output;
+use solang::{compile, Target};
 
 struct ContractStorage {
     memory: MemoryRef,
@@ -90,7 +90,7 @@ impl ModuleImportResolver for ContractStorage {
 
 struct TestRuntime {
     module: ModuleRef,
-    abi: ethabi::Contract
+    abi: ethabi::Contract,
 }
 
 impl TestRuntime {
@@ -98,16 +98,23 @@ impl TestRuntime {
         let calldata = self.abi.functions[name].encode_input(args).unwrap();
         // need to prepend length
         store.memory.set_value(0, calldata.len() as u32).unwrap();
-        store.memory.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
+        store
+            .memory
+            .set(mem::size_of::<u32>() as u32, &calldata)
+            .unwrap();
 
-        let ret = self.module
+        let ret = self
+            .module
             .invoke_export("function", &[RuntimeValue::I32(0)], store)
             .expect("failed to call function");
 
         match ret {
             Some(RuntimeValue::I32(offset)) => {
                 let offset = offset as u32;
-                let returndata = store.memory.get(offset + mem::size_of::<u32>() as u32, 32).unwrap();
+                let returndata = store
+                    .memory
+                    .get(offset + mem::size_of::<u32>() as u32, 32)
+                    .unwrap();
 
                 println!("RETURNDATA: {}", hex::encode(&returndata));
 
@@ -123,9 +130,13 @@ impl TestRuntime {
 
             // need to prepend length
             store.memory.set_value(0, calldata.len() as u32).unwrap();
-            store.memory.set(mem::size_of::<u32>() as u32, &calldata).unwrap();
+            store
+                .memory
+                .set(mem::size_of::<u32>() as u32, &calldata)
+                .unwrap();
 
-            let ret = self.module
+            let ret = self
+                .module
                 .invoke_export("constructor", &[RuntimeValue::I32(0)], store)
                 .expect("failed to call constructor");
 
@@ -152,14 +163,17 @@ fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
     let store = ContractStorage::new();
 
     (
-        TestRuntime{
-            module: ModuleInstance::new(&module, &ImportsBuilder::new().with_resolver("env", &store))
-                .expect("Failed to instantiate module")
-                .run_start(&mut NopExternals)
-                .expect("Failed to run start function in module"),
+        TestRuntime {
+            module: ModuleInstance::new(
+                &module,
+                &ImportsBuilder::new().with_resolver("env", &store),
+            )
+            .expect("Failed to instantiate module")
+            .run_start(&mut NopExternals)
+            .expect("Failed to run start function in module"),
             abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         },
-        store
+        store,
     )
 }
 
@@ -177,7 +191,10 @@ fn simple_solidiy_compile_and_run() {
 
     let returns = runtime.function(&mut store, "foo", &[]);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(2))]);
+    assert_eq!(
+        returns,
+        vec![ethabi::Token::Uint(ethereum_types::U256::from(2))]
+    );
 }
 
 #[test]
@@ -228,21 +245,34 @@ contract test3 {
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;
 
-        let returns = runtime.function(&mut store, "foo", &[ethabi::Token::Uint(ethereum_types::U256::from(i))]);
+        let returns = runtime.function(
+            &mut store,
+            "foo",
+            &[ethabi::Token::Uint(ethereum_types::U256::from(i))],
+        );
 
-        assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]);
+        assert_eq!(
+            returns,
+            vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]
+        );
     }
 
     for i in 0..=50 {
         let res = (i + 1) * 10 + 1;
 
-        let returns = runtime.function(&mut store, "bar",
+        let returns = runtime.function(
+            &mut store,
+            "bar",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
-                ethabi::Token::Bool(true)
-            ]);
+                ethabi::Token::Bool(true),
+            ],
+        );
 
-        assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]);
+        assert_eq!(
+            returns,
+            vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]
+        );
     }
 
     for i in 0..=50 {
@@ -252,13 +282,19 @@ contract test3 {
             res *= 3;
         }
 
-        let returns = runtime.function(&mut store, "bar",
+        let returns = runtime.function(
+            &mut store,
+            "bar",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
-                ethabi::Token::Bool(false)
-            ]);
+                ethabi::Token::Bool(false),
+            ],
+        );
 
-        assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]);
+        assert_eq!(
+            returns,
+            vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]
+        );
     }
 
     for i in 1..=50 {
@@ -272,12 +308,16 @@ contract test3 {
             res += 1;
         }
 
-        let returns = runtime.function(&mut store, "baz",
-            &[
-                ethabi::Token::Uint(ethereum_types::U256::from(i)),
-            ]);
+        let returns = runtime.function(
+            &mut store,
+            "baz",
+            &[ethabi::Token::Uint(ethereum_types::U256::from(i))],
+        );
 
-        assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]);
+        assert_eq!(
+            returns,
+            vec![ethabi::Token::Uint(ethereum_types::U256::from(res))]
+        );
     }
 }
 
@@ -313,7 +353,10 @@ contract test {
 
     let returns = runtime.function(&mut store, "foo", &[]);
 
-    assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(102))]);
+    assert_eq!(
+        returns,
+        vec![ethabi::Token::Uint(ethereum_types::U256::from(102))]
+    );
 }
 
 #[test]
@@ -328,12 +371,16 @@ contract test {
     );
 
     for val in [102i32, 255, 256, 0x7fffffff].iter() {
-        let returns = runtime.function(&mut store, "foo",
-            &[
-                ethabi::Token::Uint(ethereum_types::U256::from(*val)),
-            ]);
+        let returns = runtime.function(
+            &mut store,
+            "foo",
+            &[ethabi::Token::Uint(ethereum_types::U256::from(*val))],
+        );
 
-        assert_eq!(returns, vec![ethabi::Token::Uint(ethereum_types::U256::from(*val))]);
+        assert_eq!(
+            returns,
+            vec![ethabi::Token::Uint(ethereum_types::U256::from(*val))]
+        );
     }
 }
 
@@ -411,7 +458,8 @@ fn large_ints_encoded() {
 
 #[test]
 fn address() {
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract address_tester {
             function encode_const() public returns (address) {
                 return 0x52908400098527886E0F7030069857D2E4169EE7;
@@ -428,19 +476,34 @@ fn address() {
             function allones() public returns (address) {
                 return address(1);
             }
-        }");
+        }",
+    );
 
     let ret = runtime.function(&mut store, "encode_const", &[]);
 
-    assert_eq!(ret, [ ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("52908400098527886E0F7030069857D2E4169EE7").unwrap())) ]);
+    assert_eq!(
+        ret,
+        [ethabi::Token::Address(ethereum_types::Address::from_slice(
+            &hex::decode("52908400098527886E0F7030069857D2E4169EE7").unwrap()
+        ))]
+    );
 
-    runtime.function(&mut store, "test_arg", &[
-        ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("27b1fdb04752bbc536007a920d24acb045561c26").unwrap()))
-    ]);
+    runtime.function(
+        &mut store,
+        "test_arg",
+        &[ethabi::Token::Address(ethereum_types::Address::from_slice(
+            &hex::decode("27b1fdb04752bbc536007a920d24acb045561c26").unwrap(),
+        ))],
+    );
 
     let ret = runtime.function(&mut store, "allones", &[]);
 
-    assert_eq!(ret, [ ethabi::Token::Address(ethereum_types::Address::from_slice(&hex::decode("0000000000000000000000000000000000000001").unwrap())) ]);
+    assert_eq!(
+        ret,
+        [ethabi::Token::Address(ethereum_types::Address::from_slice(
+            &hex::decode("0000000000000000000000000000000000000001").unwrap()
+        ))]
+    );
 
     // no arithmetic/bitwise allowed on address
     // no ordered comparison allowed
@@ -449,7 +512,8 @@ fn address() {
 
 #[test]
 fn bytes() {
-    let (runtime, mut store) = build_solidity(r##"
+    let (runtime, mut store) = build_solidity(
+        r##"
         contract bar {
             bytes4 constant foo = hex"11223344";
 
@@ -484,33 +548,45 @@ fn bytes() {
             function shiftedright() public view returns (bytes4) {
                 return foo >> 8;
             }
-        }"##);
+        }"##,
+    );
 
     runtime.constructor(&mut store, &[]);
 
     let ret = runtime.function(&mut store, "get_foo", &[]);
 
-    assert_eq!(ret, [ ethabi::Token::FixedBytes(vec!( 0x11, 0x22, 0x33, 0x44 )) ]);
+    assert_eq!(
+        ret,
+        [ethabi::Token::FixedBytes(vec!(0x11, 0x22, 0x33, 0x44))]
+    );
 
     let ret = runtime.function(&mut store, "bytes4asuint32", &[]);
 
-    assert_eq!(ret, [ ethabi::Token::Uint(ethereum_types::U256::from(0x11223344)) ]);
+    assert_eq!(
+        ret,
+        [ethabi::Token::Uint(ethereum_types::U256::from(0x11223344))]
+    );
 
     let ret = runtime.function(&mut store, "bytes4asuint64", &[]);
 
-    assert_eq!(ret, [ ethabi::Token::Uint(ethereum_types::U256::from(0x11223344_0000_0000u64)) ]);
+    assert_eq!(
+        ret,
+        [ethabi::Token::Uint(ethereum_types::U256::from(
+            0x11223344_0000_0000u64
+        ))]
+    );
 
     let ret = runtime.function(&mut store, "bytes4asbytes2", &[]);
 
-    assert_eq!(ret, [ ethabi::Token::FixedBytes(vec!(0x11, 0x22)) ]);
+    assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0x11, 0x22))]);
 
-    let val = vec!(ethabi::Token::FixedBytes(vec!(0x41, 0x42, 0x43, 0x44)));
+    let val = vec![ethabi::Token::FixedBytes(vec![0x41, 0x42, 0x43, 0x44])];
 
     assert_eq!(runtime.function(&mut store, "passthrough", &val), val);
 
-    let val = vec!(ethabi::Token::Uint(ethereum_types::U256::from(1)));
+    let val = vec![ethabi::Token::Uint(ethereum_types::U256::from(1))];
 
     let ret = runtime.function(&mut store, "entry", &val);
 
-    assert_eq!(ret, [ ethabi::Token::FixedBytes(vec!(0x22)) ]);
+    assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0x22))]);
 }

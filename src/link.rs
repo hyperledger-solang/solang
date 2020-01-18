@@ -1,10 +1,9 @@
-
-use Target;
 use parity_wasm;
 use parity_wasm::builder;
 use parity_wasm::elements::{
     ExportEntry, GlobalEntry, GlobalType, InitExpr, Internal, Module, ValueType,
 };
+use Target;
 
 use parity_wasm::elements;
 use parity_wasm::elements::{Deserialize, ImportEntry, VarUint32, VarUint7};
@@ -28,12 +27,10 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
     // FIXME: rather than filtering out functions which should not be exported, we should
     // rely on LLVM to optimize them away, with e.g. LLVMAddInternalizePassWithMustPreservePredicate()
     // or something like that.
-    let allowed_externs = |name: &str| {
-        match target {
-            Target::Ewasm => name == "main",
-            Target::Burrow => name == "constructor" || name == "function",
-            Target::Substrate => name == "deploy" || name == "call"
-        }
+    let allowed_externs = |name: &str| match target {
+        Target::Ewasm => name == "main",
+        Target::Burrow => name == "constructor" || name == "function",
+        Target::Substrate => name == "deploy" || name == "call",
     };
 
     for c in module.custom_sections() {
@@ -80,7 +77,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
             } else {
                 if let Target::Ewasm = target {
                     let module = imports[ind].module_mut();
-                    
+
                     *module = "ethereum".to_string();
                 }
 
