@@ -97,7 +97,7 @@ mod test {
                         },
                         fields: vec![
                             VariableDeclaration {
-                                typ: Type::Primitive(PrimitiveType::Bool),
+                                typ: Type::Primitive(PrimitiveType::Bool, Vec::new()),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(86, 92),
@@ -105,7 +105,7 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
-                                typ: Type::Primitive(PrimitiveType::Uint(256)),
+                                typ: Type::Primitive(PrimitiveType::Uint(256), Vec::new()),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(123, 129),
@@ -113,7 +113,7 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
-                                typ: Type::Primitive(PrimitiveType::Bytes(2)),
+                                typ: Type::Primitive(PrimitiveType::Bytes(2), Vec::new()),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(162, 169),
@@ -121,7 +121,7 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
-                                typ: Type::Primitive(PrimitiveType::Bytes(32)),
+                                typ: Type::Primitive(PrimitiveType::Bytes(32), Vec::new()),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(203, 209),
@@ -133,7 +133,7 @@ mod test {
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
                             doc: vec![],
-                            ty: Type::Primitive(PrimitiveType::String),
+                            ty: Type::Primitive(PrimitiveType::String, Vec::new()),
                             attrs: vec![],
                             name: Identifier {
                                 loc: Loc(260, 268),
@@ -146,7 +146,7 @@ mod test {
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
                             doc: vec![],
-                            ty: Type::Primitive(PrimitiveType::Int(64)),
+                            ty: Type::Primitive(PrimitiveType::Int(64), Vec::new()),
                             attrs: vec![],
                             name: Identifier {
                                 loc: Loc(296, 306),

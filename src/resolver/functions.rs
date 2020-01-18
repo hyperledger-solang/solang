@@ -40,7 +40,7 @@ pub fn function_decl(
     }
 
     for p in &f.params {
-        match ns.resolve_type(&p.typ, errors) {
+        match ns.resolve_type(&p.typ, Some(errors)) {
             Ok(s) => params.push(Parameter {
                 name: p
                     .name
@@ -53,7 +53,7 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
-        match ns.resolve_type(&r.typ, errors) {
+        match ns.resolve_type(&r.typ, Some(errors)) {
             Ok(s) => returns.push(Parameter {
                 name: r
                     .name
