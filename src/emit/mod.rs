@@ -5,6 +5,7 @@ use resolver::cfg;
 use std::path::Path;
 use std::str;
 
+use num_traits::ToPrimitive;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
@@ -14,7 +15,7 @@ use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::module::{Linkage, Module};
 use inkwell::targets::{CodeModel, FileType, RelocMode, Target};
 use inkwell::types::BasicTypeEnum;
-use inkwell::types::{IntType, StringRadix};
+use inkwell::types::{BasicType, IntType, StringRadix};
 use inkwell::values::{
     BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
 };
@@ -238,16 +239,20 @@ impl<'a> Contract<'a> {
         e: &cfg::Expression,
         vartab: &[Variable<'a>],
         runtime: &dyn TargetRuntime,
-    ) -> IntValue<'a> {
+    ) -> BasicValueEnum<'a> {
         match e {
-            cfg::Expression::BoolLiteral(val) => {
-                self.context.bool_type().const_int(*val as u64, false)
-            }
+            cfg::Expression::BoolLiteral(val) => self
+                .context
+                .bool_type()
+                .const_int(*val as u64, false)
+                .into(),
             cfg::Expression::NumberLiteral(bits, n) => {
                 let ty = self.context.custom_width_int_type(*bits as _);
                 let s = n.to_string();
 
-                ty.const_int_from_string(&s, StringRadix::Decimal).unwrap()
+                ty.const_int_from_string(&s, StringRadix::Decimal)
+                    .unwrap()
+                    .into()
             }
             cfg::Expression::BytesLiteral(bs) => {
                 let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
@@ -257,22 +262,23 @@ impl<'a> Contract<'a> {
 
                 ty.const_int_from_string(&s, StringRadix::Hexadecimal)
                     .unwrap()
+                    .into()
             }
             cfg::Expression::Add(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_int_add(left, right, "")
+                self.builder.build_int_add(left, right, "").into()
             }
             cfg::Expression::Subtract(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_int_sub(left, right, "")
+                self.builder.build_int_sub(left, right, "").into()
             }
             cfg::Expression::Multiply(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 let bits = left.get_type().get_bit_width();
 
@@ -316,37 +322,40 @@ impl<'a> Contract<'a> {
                         "",
                     );
 
-                    self.builder.build_load(o, "mul").into_int_value()
+                    self.builder.build_load(o, "mul")
                 } else {
-                    self.builder.build_int_mul(left, right, "")
+                    self.builder.build_int_mul(left, right, "").into()
                 }
             }
             cfg::Expression::UDivide(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                let bits = left.get_type().get_bit_width();
+                let bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
                     let f = self.udivmod(bits, runtime);
 
-                    let rem = self.builder.build_alloca(left.get_type(), "");
+                    let rem = self
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
 
                     self.builder
-                        .build_call(f, &[left.into(), right.into(), rem.into()], "udiv")
+                        .build_call(f, &[left, right, rem.into()], "udiv")
                         .try_as_basic_value()
                         .left()
                         .unwrap()
-                        .into_int_value()
                 } else {
-                    self.builder.build_int_unsigned_div(left, right, "")
+                    self.builder
+                        .build_int_unsigned_div(left.into_int_value(), right.into_int_value(), "")
+                        .into()
                 }
             }
             cfg::Expression::SDivide(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                let bits = left.get_type().get_bit_width();
+                let bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
                     let f = self.sdivmod(bits, runtime);
@@ -354,20 +363,21 @@ impl<'a> Contract<'a> {
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
                     self.builder
-                        .build_call(f, &[left.into(), right.into(), rem.into()], "udiv")
+                        .build_call(f, &[left, right, rem.into()], "udiv")
                         .try_as_basic_value()
                         .left()
                         .unwrap()
-                        .into_int_value()
                 } else {
-                    self.builder.build_int_signed_div(left, right, "")
+                    self.builder
+                        .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
+                        .into()
                 }
             }
             cfg::Expression::UModulo(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                let bits = left.get_type().get_bit_width();
+                let bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
                     let f = self.udivmod(bits, runtime);
@@ -375,18 +385,20 @@ impl<'a> Contract<'a> {
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
                     self.builder
-                        .build_call(f, &[left.into(), right.into(), rem.into()], "udiv");
+                        .build_call(f, &[left, right, rem.into()], "udiv");
 
-                    self.builder.build_load(rem, "urem").into_int_value()
+                    self.builder.build_load(rem, "urem")
                 } else {
-                    self.builder.build_int_unsigned_rem(left, right, "")
+                    self.builder
+                        .build_int_unsigned_rem(left.into_int_value(), right.into_int_value(), "")
+                        .into()
                 }
             }
             cfg::Expression::SModulo(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                let bits = left.get_type().get_bit_width();
+                let bits = left.into_int_value().get_type().get_bit_width();
 
                 if bits > 64 {
                     let f = self.sdivmod(bits, runtime);
@@ -394,191 +406,218 @@ impl<'a> Contract<'a> {
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
                     self.builder
-                        .build_call(f, &[left.into(), right.into(), rem.into()], "sdiv");
+                        .build_call(f, &[left, right, rem.into()], "sdiv");
 
-                    self.builder.build_load(rem, "srem").into_int_value()
+                    self.builder.build_load(rem, "srem")
                 } else {
-                    self.builder.build_int_signed_rem(left, right, "")
+                    self.builder
+                        .build_int_signed_rem(left.into_int_value(), right.into_int_value(), "")
+                        .into()
                 }
             }
             cfg::Expression::Power(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                let bits = left.get_type().get_bit_width();
+                let bits = left.into_int_value().get_type().get_bit_width();
 
                 let f = self.upower(bits);
 
                 self.builder
-                    .build_call(f, &[left.into(), right.into()], "power")
+                    .build_call(f, &[left, right], "power")
                     .try_as_basic_value()
                     .left()
                     .unwrap()
-                    .into_int_value()
             }
             cfg::Expression::Equal(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::EQ, left, right, "")
+                    .into()
             }
             cfg::Expression::NotEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::NE, left, right, "")
+                    .into()
             }
             cfg::Expression::SMore(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SGT, left, right, "")
+                    .into()
             }
             cfg::Expression::SMoreEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SGE, left, right, "")
+                    .into()
             }
             cfg::Expression::SLess(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SLT, left, right, "")
+                    .into()
             }
             cfg::Expression::SLessEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SLE, left, right, "")
+                    .into()
             }
             cfg::Expression::UMore(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::UGT, left, right, "")
+                    .into()
             }
             cfg::Expression::UMoreEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::UGE, left, right, "")
+                    .into()
             }
             cfg::Expression::ULess(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::ULT, left, right, "")
+                    .into()
             }
             cfg::Expression::ULessEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::ULE, left, right, "")
+                    .into()
             }
             cfg::Expression::Variable(_, s) => {
                 if vartab[*s].stack {
                     self.builder
                         .build_load(vartab[*s].value.into_pointer_value(), "")
-                        .into_int_value()
                 } else {
-                    vartab[*s].value.into_int_value()
+                    vartab[*s].value
                 }
             }
             cfg::Expression::ZeroExt(t, e) => {
-                let e = self.expression(e, vartab, runtime);
+                let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.LLVMType(self.ns, &self.context);
 
-                self.builder.build_int_z_extend(e, ty, "")
+                self.builder
+                    .build_int_z_extend(e, ty.into_int_type(), "")
+                    .into()
             }
             cfg::Expression::UnaryMinus(e) => {
-                let e = self.expression(e, vartab, runtime);
+                let e = self.expression(e, vartab, runtime).into_int_value();
 
-                self.builder.build_int_neg(e, "")
+                self.builder.build_int_neg(e, "").into()
             }
             cfg::Expression::SignExt(t, e) => {
-                let e = self.expression(e, vartab, runtime);
+                let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.LLVMType(self.ns, &self.context);
 
-                self.builder.build_int_s_extend(e, ty, "")
+                self.builder
+                    .build_int_s_extend(e, ty.into_int_type(), "")
+                    .into()
             }
             cfg::Expression::Trunc(t, e) => {
-                let e = self.expression(e, vartab, runtime);
+                let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.LLVMType(self.ns, &self.context);
 
-                self.builder.build_int_truncate(e, ty, "")
+                self.builder
+                    .build_int_truncate(e, ty.into_int_type(), "")
+                    .into()
             }
             cfg::Expression::Not(e) => {
-                let e = self.expression(e, vartab, runtime);
+                let e = self.expression(e, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
+                    .into()
             }
             cfg::Expression::Complement(e) => {
-                let e = self.expression(e, vartab, runtime);
+                let e = self.expression(e, vartab, runtime).into_int_value();
 
-                self.builder.build_not(e, "")
+                self.builder.build_not(e, "").into()
             }
             cfg::Expression::Or(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_or(left, right, "")
+                self.builder.build_or(left, right, "").into()
             }
             cfg::Expression::And(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_and(left, right, "")
+                self.builder.build_and(left, right, "").into()
             }
             cfg::Expression::BitwiseOr(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_or(left, right, "")
+                self.builder.build_or(left, right, "").into()
             }
             cfg::Expression::BitwiseAnd(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_and(left, right, "")
+                self.builder.build_and(left, right, "").into()
             }
             cfg::Expression::BitwiseXor(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_xor(left, right, "")
+                self.builder.build_xor(left, right, "").into()
             }
             cfg::Expression::ShiftLeft(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
-                self.builder.build_left_shift(left, right, "")
+                self.builder.build_left_shift(left, right, "").into()
             }
             cfg::Expression::ShiftRight(l, r, signed) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
-
-                self.builder.build_right_shift(left, right, *signed, "")
-            }
-            cfg::Expression::Ternary(c, l, r) => {
-                let cond = self.expression(c, vartab, runtime);
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder
-                    .build_select(cond, left, right, "")
-                    .into_int_value()
+                    .build_right_shift(left, right, *signed, "")
+                    .into()
+            }
+            cfg::Expression::IndexAccess(a, i) => {
+                let array = self.expression(a, vartab, runtime).into_pointer_value();
+                let index = self.expression(i, vartab, runtime).into_int_value();
+
+                unsafe {
+                    self.builder
+                        .build_gep(array, &[index], "index_access")
+                        .into()
+                }
+            }
+            cfg::Expression::Ternary(c, l, r) => {
+                let cond = self.expression(c, vartab, runtime).into_int_value();
+                let left = self.expression(l, vartab, runtime).into_int_value();
+                let right = self.expression(r, vartab, runtime).into_int_value();
+
+                self.builder.build_select(cond, left, right, "")
             }
             cfg::Expression::Poison => unreachable!(),
         }
@@ -609,7 +648,7 @@ impl<'a> Contract<'a> {
             args.push(if p.ty.stack_based() {
                 ty.ptr_type(AddressSpace::Generic).into()
             } else {
-                ty.into()
+                ty
             });
         }
 
@@ -617,6 +656,7 @@ impl<'a> Contract<'a> {
             f.returns[0]
                 .ty
                 .LLVMType(self.ns, &self.context)
+                .into_int_type()
                 .fn_type(&args, false)
         } else {
             // add return values
@@ -752,7 +792,7 @@ impl<'a> Contract<'a> {
                             self.builder
                                 .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
                         } else {
-                            w.vars[*res].value = value_ref.into();
+                            w.vars[*res].value = value_ref;
                         }
                     }
                     cfg::Instr::Constant { res, constant } => {
@@ -762,7 +802,7 @@ impl<'a> Contract<'a> {
                             self.builder
                                 .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
                         } else {
-                            w.vars[*res].value = value_ref.into();
+                            w.vars[*res].value = value_ref;
                         }
                     }
                     cfg::Instr::Branch { bb: dest } => {
@@ -837,8 +877,11 @@ impl<'a> Contract<'a> {
                         };
 
                         self.builder.position_at_end(&pos);
-                        self.builder
-                            .build_conditional_branch(cond, &bb_true, &bb_false);
+                        self.builder.build_conditional_branch(
+                            cond.into_int_value(),
+                            &bb_true,
+                            &bb_false,
+                        );
                     }
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
@@ -871,7 +914,7 @@ impl<'a> Contract<'a> {
 
                                 m.into()
                             } else {
-                                val.into()
+                                val
                             });
                         }
 
@@ -1683,11 +1726,23 @@ impl ast::PrimitiveType {
 
 impl resolver::Type {
     #[allow(non_snake_case)]
-    fn LLVMType<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> IntType<'a> {
+    fn LLVMType<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
         match self {
-            resolver::Type::Primitive(e) => e.LLVMType(context),
-            resolver::Type::Enum(n) => ns.enums[*n].ty.LLVMType(context),
-            resolver::Type::FixedArray(_, _) => unimplemented!(),
+            resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.LLVMType(context)),
+            resolver::Type::Enum(n) => BasicTypeEnum::IntType(ns.enums[*n].ty.LLVMType(context)),
+            resolver::Type::FixedArray(base_ty, dims) => {
+                let ty = base_ty.LLVMType(ns, context).into_int_type();
+
+                let mut dims = dims.iter();
+
+                let mut aty = ty.array_type(dims.next().unwrap().to_u32().unwrap());
+
+                for dim in dims {
+                    aty = ty.array_type(dim.to_u32().unwrap());
+                }
+
+                BasicTypeEnum::ArrayType(aty)
+            }
             resolver::Type::Noreturn => unreachable!(),
         }
     }

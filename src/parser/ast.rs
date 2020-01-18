@@ -1,3 +1,4 @@
+use super::lexer::LexicalError;
 use num_bigint::BigInt;
 use std::fmt;
 
@@ -29,12 +30,6 @@ pub enum PrimitiveType {
     Uint(u16),
     Bytes(u8),
     DynamicBytes,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Type {
-    Primitive(PrimitiveType),
-    Unresolved(Identifier),
 }
 
 impl PrimitiveType {
@@ -77,6 +72,12 @@ impl fmt::Display for PrimitiveType {
             PrimitiveType::DynamicBytes => write!(f, "bytes"),
         }
     }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Type {
+    Primitive(PrimitiveType, Vec<Option<(Loc, BigInt)>>),
+    Unresolved(Identifier, Vec<Option<(Loc, BigInt)>>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -181,7 +182,7 @@ pub struct HexLiteral {
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
-    New(Loc, PrimitiveType),
+    New(Loc, Type),
     IndexAccess(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Identifier, Identifier),
     FunctionCall(Loc, Type, Vec<Expression>),
@@ -229,6 +230,7 @@ pub enum Expression {
     StringLiteral(Vec<StringLiteral>),
     HexLiteral(Vec<HexLiteral>),
     Variable(Identifier),
+    ArrayLiteral(Loc, Vec<Expression>),
 }
 
 impl Expression {
@@ -281,6 +283,7 @@ impl Expression {
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, _)
             | Expression::AddressLiteral(loc, _)
+            | Expression::ArrayLiteral(loc, _)
             | Expression::Variable(Identifier { loc, .. }) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
@@ -396,5 +399,41 @@ impl Statement {
     pub fn loc(&self) -> Loc {
         // FIXME add to parser
         Loc(0, 0)
+    }
+}
+
+// An array type can look like foo[2], if foo is an enum type. The lalrpop parses
+// this as an expression, so we need to convert it to Type and check there are
+// no unexpected expressions types.
+pub fn expr_to_type(expr: Expression) -> Result<Type, LexicalError> {
+    let mut dimensions = Vec::new();
+
+    let mut expr = expr;
+
+    loop {
+        expr = match expr {
+            Expression::IndexAccess(_, r, None) => {
+                dimensions.push(None);
+
+                *r
+            }
+            Expression::IndexAccess(_, r, Some(index)) => {
+                let loc = index.loc();
+                dimensions.push(match *index {
+                    Expression::NumberLiteral(_, n) => Some((loc, n)),
+                    _ => {
+                        return Err(LexicalError::UnexpectedExpressionArrayDimension(
+                            loc.0, loc.1,
+                        ))
+                    }
+                });
+                *r
+            }
+            Expression::Variable(id) => return Ok(Type::Unresolved(id, dimensions)),
+            _ => {
+                let loc = expr.loc();
+                return Err(LexicalError::NonIdentifierInTypeName(loc.0, loc.1));
+            }
+        }
     }
 }

@@ -3,6 +3,7 @@ use num_bigint::Sign;
 use num_traits::FromPrimitive;
 use num_traits::Num;
 use num_traits::One;
+use num_traits::Zero;
 use std::cmp;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -56,6 +57,7 @@ pub enum Expression {
     UnaryMinus(Box<Expression>),
 
     Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
+    IndexAccess(Box<Expression>, Box<Expression>),
 
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
@@ -607,7 +609,15 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let var_ty = ns.resolve_type(&decl.typ, errors)?;
+            let var_ty = ns.resolve_type(&decl.typ, Some(errors))?;
+
+            if var_ty.size_hint() > BigInt::from(1024 * 1024) {
+                errors.push(Output::error(
+                    stmt.loc(),
+                    "type to large to fit into memory".to_string(),
+                ));
+                return Err(());
+            }
 
             let e_t = if let Some(init) = init {
                 let (expr, init_ty) = expression(init, cfg, ns, &mut Some(vartab), errors)?;
@@ -1209,6 +1219,39 @@ fn coerce_int(
     ))
 }
 
+/// Try to convert a BigInt into a Expression::NumberLiteral. This checks for sign,
+/// width and creates to correct Type.
+fn bigint_to_expression(
+    loc: &ast::Loc,
+    n: &BigInt,
+    errors: &mut Vec<Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // Return smallest type
+    let bits = n.bits();
+
+    let int_size = if bits < 7 { 8 } else { (bits + 7) & !7 } as u16;
+
+    if n.sign() == Sign::Minus {
+        if bits > 255 {
+            errors.push(Output::error(*loc, format!("{} is too large", n)));
+            Err(())
+        } else {
+            Ok((
+                Expression::NumberLiteral(int_size, n.clone()),
+                resolver::Type::Primitive(ast::PrimitiveType::Int(int_size)),
+            ))
+        }
+    } else if bits > 256 {
+        errors.push(Output::error(*loc, format!("{} is too large", n)));
+        Err(())
+    } else {
+        Ok((
+            Expression::NumberLiteral(int_size, n.clone()),
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
+        ))
+    }
+}
+
 pub fn cast(
     loc: &ast::Loc,
     expr: Expression,
@@ -1737,32 +1780,7 @@ pub fn expression(
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
         }
-        ast::Expression::NumberLiteral(loc, b) => {
-            // Return smallest type
-            let bits = b.bits();
-
-            let int_size = if bits < 7 { 8 } else { (bits + 7) & !7 } as u16;
-
-            if b.sign() == Sign::Minus {
-                if bits > 255 {
-                    errors.push(Output::error(*loc, format!("{} is too large", b)));
-                    Err(())
-                } else {
-                    Ok((
-                        Expression::NumberLiteral(int_size, b.clone()),
-                        resolver::Type::Primitive(ast::PrimitiveType::Int(int_size)),
-                    ))
-                }
-            } else if bits > 256 {
-                errors.push(Output::error(*loc, format!("{} is too large", b)));
-                Err(())
-            } else {
-                Ok((
-                    Expression::NumberLiteral(int_size, b.clone()),
-                    resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
-                ))
-            }
-        }
+        ast::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, errors),
         ast::Expression::AddressLiteral(loc, n) => {
             let address = to_hexstr_eip55(n);
 
@@ -2583,12 +2601,9 @@ pub fn expression(
             Ok((Expression::Variable(id.loc, pos), ty))
         }
         ast::Expression::FunctionCall(loc, ty, args) => {
-            let to = match ty {
-                ast::Type::Primitive(e) => Some(resolver::Type::Primitive(*e)),
-                ast::Type::Unresolved(s) => match ns.resolve_enum(s) {
-                    Some(v) => Some(resolver::Type::Enum(v)),
-                    None => None,
-                },
+            let to = match ns.resolve_type(ty, None) {
+                Ok(ty) => Some(ty),
+                Err(_) => None,
             };
 
             // Cast
@@ -2609,7 +2624,7 @@ pub fn expression(
                 };
             }
 
-            let funcs = if let ast::Type::Unresolved(s) = ty {
+            let funcs = if let ast::Type::Unresolved(s, _) = ty {
                 ns.resolve_func(s, errors)?
             } else {
                 unreachable!();
@@ -2758,18 +2773,20 @@ pub fn expression(
 
             get_contract_storage(&var, cfg, tab);
 
-            let array_length =
-                if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
-                    n
-                } else {
+            let array_length = match var.ty {
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(n),
+                resolver::Type::FixedArray(_, _) => var.ty.array_length().clone(),
+                _ => {
                     errors.push(Output::error(
                         *loc,
-                        format!("variable {} is not an array", id.name),
+                        format!("variable ‘{}’ is not an array", id.name),
                     ));
                     return Err(());
-                };
+                }
+            };
 
             let (index_width, _) = get_int_length(&index_type, &index.loc(), false, ns, errors)?;
+            let array_width = array_length.bits();
 
             let pos = tab.temp(
                 &ast::Identifier {
@@ -2790,57 +2807,107 @@ pub fn expression(
             let out_of_range = cfg.new_basic_block("out_of_range".to_string());
             let in_range = cfg.new_basic_block("in_range".to_string());
 
-            // We're cheating a bit. Any signed value < 0 will also be caught by doing a unsigned compare
-            cfg.add(
-                tab,
-                Instr::BranchCond {
-                    cond: Expression::UMoreEqual(
-                        Box::new(Expression::Variable(index.loc(), pos)),
-                        Box::new(Expression::NumberLiteral(
-                            index_width,
-                            BigInt::from_u8(array_length).unwrap(),
-                        )),
-                    ),
-                    true_: out_of_range,
-                    false_: in_range,
-                },
-            );
+            if index_type.signed() {
+                // first check that our index is not negative
+                let positive = cfg.new_basic_block("positive".to_string());
+
+                cfg.add(
+                    tab,
+                    Instr::BranchCond {
+                        cond: Expression::SLess(
+                            Box::new(Expression::Variable(index.loc(), pos)),
+                            Box::new(Expression::NumberLiteral(index_width, BigInt::zero())),
+                        ),
+                        true_: out_of_range,
+                        false_: positive,
+                    },
+                );
+
+                cfg.set_basic_block(positive);
+
+                // If the index if of less bits than the array length, don't bother checking
+                if index_width as usize >= array_width {
+                    cfg.add(
+                        tab,
+                        Instr::BranchCond {
+                            cond: Expression::SMoreEqual(
+                                Box::new(Expression::Variable(index.loc(), pos)),
+                                Box::new(Expression::NumberLiteral(index_width, array_length)),
+                            ),
+                            true_: out_of_range,
+                            false_: in_range,
+                        },
+                    );
+                } else {
+                    cfg.add(tab, Instr::Branch { bb: in_range });
+                }
+            } else if index_width as usize <= array_width {
+                cfg.add(
+                    tab,
+                    Instr::BranchCond {
+                        cond: Expression::UMoreEqual(
+                            Box::new(Expression::Variable(index.loc(), pos)),
+                            Box::new(Expression::NumberLiteral(index_width, array_length)),
+                        ),
+                        true_: out_of_range,
+                        false_: in_range,
+                    },
+                );
+            } else {
+                // if the index is less bits than the array, it is always in range
+                cfg.add(tab, Instr::Branch { bb: in_range });
+            }
 
             cfg.set_basic_block(out_of_range);
             cfg.add(tab, Instr::AssertFailure {});
 
             cfg.set_basic_block(in_range);
 
-            let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
+            match var.ty {
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
+                    let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
 
-            Ok((
-                Expression::Trunc(
-                    res_ty.clone(),
-                    Box::new(Expression::ShiftRight(
-                        Box::new(Expression::Variable(*loc, var.pos)),
-                        // shift by (array_length - 1 - index) * 8
-                        Box::new(Expression::ShiftLeft(
-                            Box::new(Expression::Subtract(
-                                Box::new(Expression::NumberLiteral(
-                                    array_length as u16 * 8,
-                                    BigInt::from_u8(array_length - 1).unwrap(),
+                    Ok((
+                        Expression::Trunc(
+                            res_ty.clone(),
+                            Box::new(Expression::ShiftRight(
+                                Box::new(Expression::Variable(*loc, var.pos)),
+                                // shift by (array_length - 1 - index) * 8
+                                Box::new(Expression::ShiftLeft(
+                                    Box::new(Expression::Subtract(
+                                        Box::new(Expression::NumberLiteral(
+                                            array_length as u16 * 8,
+                                            BigInt::from_u8(array_length - 1).unwrap(),
+                                        )),
+                                        Box::new(cast_shift_arg(
+                                            Expression::Variable(index.loc(), pos),
+                                            index_width,
+                                            &var.ty,
+                                        )),
+                                    )),
+                                    Box::new(Expression::NumberLiteral(
+                                        array_length as u16 * 8,
+                                        BigInt::from_u8(3).unwrap(),
+                                    )),
                                 )),
-                                Box::new(cast_shift_arg(
-                                    Expression::Variable(index.loc(), pos),
-                                    index_width,
-                                    &var.ty,
-                                )),
+                                false,
                             )),
-                            Box::new(Expression::NumberLiteral(
-                                array_length as u16 * 8,
-                                BigInt::from_u8(3).unwrap(),
-                            )),
-                        )),
-                        false,
-                    )),
-                ),
-                res_ty,
-            ))
+                        ),
+                        res_ty,
+                    ))
+                }
+                resolver::Type::FixedArray(_, _) => Ok((
+                    Expression::IndexAccess(
+                        Box::new(Expression::Variable(id.loc, var.pos)),
+                        Box::new(Expression::Variable(*loc, pos)),
+                    ),
+                    var.ty.deref(),
+                )),
+                _ => {
+                    // should not happen as type-checking already done
+                    unreachable!();
+                }
+            }
         }
         ast::Expression::MemberAccess(loc, namespace, id) => {
             // Is it an enum
@@ -2863,17 +2930,25 @@ pub fn expression(
                 };
             }
 
-            // is it an bytesN.length
+            // is it an bytesN.length / array.length
             if let Some(ref mut tab) = *vartab {
                 let var = tab.find(namespace, ns, errors)?;
 
-                if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
-                    if id.name == "length" {
-                        return Ok((
-                            Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
-                            resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
-                        ));
+                match var.ty {
+                    resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+                        if id.name == "length" {
+                            return Ok((
+                                Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
+                                resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
+                            ));
+                        }
                     }
+                    resolver::Type::FixedArray(_, dim) => {
+                        if id.name == "length" {
+                            return bigint_to_expression(loc, dim.last().unwrap(), errors);
+                        }
+                    }
+                    _ => (),
                 }
             }
 

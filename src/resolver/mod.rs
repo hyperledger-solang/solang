@@ -1,5 +1,8 @@
 use abi;
 use emit;
+use num_bigint::BigInt;
+use num_traits::Signed;
+use num_traits::Zero;
 use output::{Note, Output};
 use parser::ast;
 use std::collections::HashMap;
@@ -18,7 +21,7 @@ use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
     Primitive(ast::PrimitiveType),
-    FixedArray(Box<Type>, Vec<usize>),
+    FixedArray(Box<Type>, Vec<BigInt>),
     Enum(usize),
     Noreturn,
 }
@@ -47,6 +50,50 @@ impl Type {
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
             Type::Noreturn => "no return".to_owned(),
+        }
+    }
+
+    /// Give the type of an array after dereference. This can only be used on
+    /// array types and will cause a panic otherwise.
+    pub fn deref(&self) -> Self {
+        match self {
+            Type::FixedArray(ty, dim) if dim.len() > 1 => {
+                Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec())
+            }
+            Type::FixedArray(ty, dim) if dim.len() == 1 => *ty.clone(),
+            _ => panic!("deref on non-array"),
+        }
+    }
+
+    /// Give the length of the outer array. This can only be called on array types
+    /// and will panic otherwise.
+    pub fn array_length(&self) -> &BigInt {
+        match self {
+            Type::FixedArray(_, dim) => dim.last().unwrap(),
+            _ => panic!("array_length on non-array"),
+        }
+    }
+
+    /// Calculate how much memory we expect this type to use when allocated on the
+    /// stack or on the heap. Depending on the llvm implementation there might be
+    /// padding between elements which is not accounted for.
+    pub fn size_hint(&self) -> BigInt {
+        match self {
+            Type::Enum(_) => BigInt::from(1),
+            Type::Primitive(ast::PrimitiveType::Bool) => BigInt::from(1),
+            Type::Primitive(ast::PrimitiveType::Address) => BigInt::from(20),
+            Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
+            Type::Primitive(ast::PrimitiveType::Uint(n))
+            | Type::Primitive(ast::PrimitiveType::Int(n)) => BigInt::from(n / 8),
+            Type::FixedArray(ty, dims) => {
+                let mut size = ty.size_hint();
+
+                for dim in dims {
+                    size *= dim;
+                }
+                size
+            }
+            _ => unimplemented!(),
         }
     }
 
@@ -282,26 +329,83 @@ impl Contract {
         true
     }
 
-    pub fn resolve_type(&self, id: &ast::Type, errors: &mut Vec<Output>) -> Result<Type, ()> {
+    /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
+    pub fn resolve_type(
+        &self,
+        id: &ast::Type,
+        errors: Option<&mut Vec<Output>>,
+    ) -> Result<Type, ()> {
         match id {
-            ast::Type::Primitive(e) => Ok(Type::Primitive(*e)),
-            ast::Type::Unresolved(s) => match self.symbols.get(&s.name) {
+            ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::Primitive(*p)),
+            ast::Type::Primitive(p, dimensions) => {
+                // resolve
+
+                let mut fixed = true;
+                let mut fixed_dimensions = Vec::new();
+
+                for d in dimensions.iter() {
+                    if let Some((loc, n)) = d {
+                        if n.is_zero() {
+                            if let Some(errors) = errors {
+                                errors.push(Output::decl_error(
+                                    *loc,
+                                    "zero size of array declared".to_string(),
+                                ));
+                            }
+                            return Err(());
+                        } else if n.is_negative() {
+                            if let Some(errors) = errors {
+                                errors.push(Output::decl_error(
+                                    *loc,
+                                    "negative size of array declared".to_string(),
+                                ));
+                            }
+                            return Err(());
+                        }
+                        fixed_dimensions.push(n.clone());
+                    } else {
+                        fixed = false;
+                    }
+                }
+
+                if fixed {
+                    Ok(Type::FixedArray(
+                        Box::new(Type::Primitive(*p)),
+                        fixed_dimensions,
+                    ))
+                } else {
+                    unimplemented!();
+                }
+            }
+            ast::Type::Unresolved(id, _) => match self.symbols.get(&id.name) {
                 None => {
-                    errors.push(Output::decl_error(
-                        s.loc,
-                        format!("`{}' is not declared", s.name),
-                    ));
+                    if let Some(errors) = errors {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("`{}' is not declared", id.name),
+                        ));
+                    }
                     Err(())
                 }
                 Some(Symbol::Enum(_, n)) => Ok(Type::Enum(*n)),
                 Some(Symbol::Function(_)) => {
-                    errors.push(Output::decl_error(
-                        s.loc,
-                        format!("`{}' is a function", s.name),
-                    ));
+                    if let Some(errors) = errors {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("`{}' is a function", id.name),
+                        ));
+                    }
                     Err(())
                 }
-                Some(Symbol::Variable(_, n)) => Ok(self.variables[*n].ty.clone()),
+                Some(Symbol::Variable(_, _)) => {
+                    if let Some(errors) = errors {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("`{}' is a contract variable", id.name),
+                        ));
+                    }
+                    Err(())
+                }
             },
         }
     }

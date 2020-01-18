@@ -5,6 +5,7 @@ use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
 use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
+use lalrpop_util::ParseError;
 
 grammar<'input>(input: &'input str);
 
@@ -40,9 +41,15 @@ PrimitiveType: PrimitiveType = {
     Bytes => PrimitiveType::Bytes(<>),
 }
 
+ArrayDimension: Option<(Loc, BigInt)> = {
+    "[" "]" => None,
+    "[" <l:@L> <n:LexNumber> <r:@R> "]" => Some((Loc(l, r), BigInt::from_str(n).unwrap()))
+}
+
 Type: Type = {
-    PrimitiveType => Type::Primitive(<>),
-    Identifier => Type::Unresolved(<>),
+    <p:PrimitiveType> => Type::Primitive(p, Vec::new()),
+    <p:PrimitiveType> <d:ArrayDimension+> => Type::Primitive(p, d),
+    Precedence0 =>? expr_to_type(<>).map_err(|e| ParseError::User { error: e }),
 }
 
 StorageLocation: StorageLocation = {
@@ -230,14 +237,10 @@ Precedence2: Expression = {
     <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc(a, b), Box::new(e)),
     <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc(a, b), Box::new(e)),
     Precedence1,
+    Precedence0,
 }
 
 Precedence1: Expression = {
-    <a:@L> <e:Precedence1> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
-    <a:@L> <e:Precedence1> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
-    <a:@L> "new" <t:PrimitiveType> <b:@R> => Expression::New(Loc(a, b), t),
-    <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i)),
-    <a:@L> <n:Identifier> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), n, i),
     <a:@L> <i:Type> "(" ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), i, Vec::new())
     },
@@ -246,10 +249,23 @@ Precedence1: Expression = {
         v.push(e);
         Expression::FunctionCall(Loc(a, b), i, v)
     },
+}
+
+Precedence0: Expression = {
+    <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
+    <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
+    <a:@L> "new" <t:Type> <b:@R> "(" ")" => Expression::New(Loc(a, b), t),
+    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i)),
+    <a:@L> <n:Identifier> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), n, i),
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
+    <a:@L> "[" <v:(<Precedence0> ",")*> <e:Precedence0> "]" <b:@R> => {
+        let mut v = v;
+        v.push(e);
+        Expression::ArrayLiteral(Loc(a, b), v)
+    },
     <i:Identifier> => Expression::Variable(i),
     "(" <e:Expression> ")" => e,
     <l:@L> <n:LexNumber> <r:@R> => {
