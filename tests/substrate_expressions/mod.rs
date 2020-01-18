@@ -120,7 +120,7 @@ fn large_loops() {
 
     runtime.function(&mut store, "baz", args);
 
-    let mut rets = Val64(7000_000_000).encode();
+    let mut rets = Val64(7000000000).encode();
     rets.resize(32, 0);
 
     assert_eq!(store.scratch, rets);
@@ -485,7 +485,7 @@ fn divisions128() {
     if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
         assert_eq!(r, -100);
     } else {
-        assert!(false);
+        panic!();
     }
 
     runtime.function(&mut store, "return_pos", Vec::new());
@@ -493,7 +493,7 @@ fn divisions128() {
     if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
         assert_eq!(r, 255);
     } else {
-        assert!(false);
+        panic!();
     }
 
     runtime.function(&mut store, "do_div", Args(-9900, -100).encode());
@@ -501,7 +501,7 @@ fn divisions128() {
     if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
         assert_eq!(r, 99);
     } else {
-        assert!(false);
+        panic!();
     }
 
     runtime.function(
@@ -513,7 +513,7 @@ fn divisions128() {
     if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
         assert_eq!(r, 1012131313180);
     } else {
-        assert!(false);
+        panic!();
     }
 
     runtime.function(&mut store, "do_signed_test", Vec::new());
@@ -881,7 +881,7 @@ fn power() {
     assert_eq!(store.scratch, Val(2345).encode());
 
     // n ** 0 = 0
-    let args = Val(0xdeadbeef)
+    let args = Val(0xdead_beef)
         .encode()
         .into_iter()
         .chain(Val(0).encode().into_iter())
@@ -895,7 +895,7 @@ fn power() {
     let args = Val(0)
         .encode()
         .into_iter()
-        .chain(Val(0xdeadbeef).encode().into_iter())
+        .chain(Val(0xdead_beef).encode().into_iter())
         .collect();
 
     runtime.function(&mut store, "power", args);
@@ -1065,10 +1065,10 @@ fn multiply() {
 
         // the result is truncated to $size bytes. We do this here by converting to Vec<u8> and truncating
         // it. A truncating bigint multiply would be nicer.
-        let (_, mut foo) = (a * b).to_bytes_le();
-        foo.resize(size, 0);
+        let (_, mut res) = (a * b).to_bytes_le();
+        res.resize(size, 0);
 
-        assert_eq!(foo, store.scratch);
+        assert_eq!(res, store.scratch);
     }
 }
 

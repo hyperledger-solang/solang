@@ -94,7 +94,7 @@ impl BurrowTarget {
             let args_ptr = unsafe {
                 contract.builder.build_gep(
                     arg,
-                    &[contract.context.i32_type().const_int(1, false).into()],
+                    &[contract.context.i32_type().const_int(1, false)],
                     "args_ptr",
                 )
             };
@@ -141,7 +141,7 @@ impl BurrowTarget {
         let argsdata = unsafe {
             contract.builder.build_gep(
                 data,
-                &[contract.context.i32_type().const_int(1, false).into()],
+                &[contract.context.i32_type().const_int(1, false)],
                 "argsdata",
             )
         };
@@ -174,7 +174,7 @@ impl BurrowTarget {
     fn emit_abi_encode_single_val(
         &self,
         contract: &Contract,
-        ty: &ast::PrimitiveType,
+        ty: ast::PrimitiveType,
         dest: PointerValue,
         val: BasicValueEnum,
     ) {
@@ -206,7 +206,7 @@ impl BurrowTarget {
                 let dest = unsafe {
                     contract.builder.build_gep(
                         dest8,
-                        &[contract.context.i32_type().const_int(31, false).into()],
+                        &[contract.context.i32_type().const_int(31, false)],
                         "",
                     )
                 };
@@ -254,7 +254,7 @@ impl BurrowTarget {
                 let dest = unsafe {
                     contract.builder.build_gep(
                         dest8,
-                        &[contract.context.i32_type().const_int(31, false).into()],
+                        &[contract.context.i32_type().const_int(31, false)],
                         "",
                     )
                 };
@@ -266,8 +266,8 @@ impl BurrowTarget {
             | ast::PrimitiveType::Int(_) => {
                 let n = match ty {
                     ast::PrimitiveType::Address => 160,
-                    ast::PrimitiveType::Uint(b) => *b,
-                    ast::PrimitiveType::Int(b) => *b,
+                    ast::PrimitiveType::Uint(b) => b,
+                    ast::PrimitiveType::Int(b) => b,
                     _ => unreachable!(),
                 };
 
@@ -373,7 +373,7 @@ impl BurrowTarget {
             }
             ast::PrimitiveType::Bytes(b) => {
                 // first clear/set the upper bits
-                if *b < 32 {
+                if b < 32 {
                     let dest8 = contract.builder.build_pointer_cast(
                         dest,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -392,7 +392,7 @@ impl BurrowTarget {
 
                 // no need to allocate space for each uint64
                 // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
+                let int_type = contract.context.custom_width_int_type(b as u32 * 8);
                 let type_size = int_type.size_of();
 
                 let store = if ty.stack_based() {
@@ -571,7 +571,7 @@ impl TargetRuntime for BurrowTarget {
         let abi_ptr = unsafe {
             contract.builder.build_gep(
                 data,
-                &[contract.context.i32_type().const_int(4, false).into()],
+                &[contract.context.i32_type().const_int(4, false)],
                 "abi_ptr",
             )
         };
@@ -585,7 +585,7 @@ impl TargetRuntime for BurrowTarget {
                 resolver::Type::Noreturn => unreachable!(),
             };
 
-            self.emit_abi_encode_single_val(contract, &ty, abi_ptr, args[i]);
+            self.emit_abi_encode_single_val(contract, ty, abi_ptr, args[i]);
         }
 
         (data, length)
@@ -756,14 +756,11 @@ impl TargetRuntime for BurrowTarget {
                     }
                 }
                 ast::PrimitiveType::Bytes(1) => contract.builder.build_load(
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            data,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
+                    contract.builder.build_pointer_cast(
+                        data,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
                     "bytes1",
                 ),
                 ast::PrimitiveType::Bytes(b) => {

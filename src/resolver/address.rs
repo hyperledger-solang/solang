@@ -16,8 +16,7 @@ pub fn to_hexstr_eip55(src: &str) -> String {
 
     let hash = keccak256(address.as_bytes());
 
-    return "0x"
-        .chars()
+    "0x".chars()
         .chain(address.chars().enumerate().map(|(i, c)| {
             match c {
                 '0'..='9' => c,
@@ -34,7 +33,7 @@ pub fn to_hexstr_eip55(src: &str) -> String {
                 _ => unreachable!(),
             }
         }))
-        .collect();
+        .collect()
 }
 
 #[test]

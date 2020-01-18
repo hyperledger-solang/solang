@@ -99,19 +99,16 @@ impl SubstrateTarget {
             &[
                 args.into(),
                 contract.context.i32_type().const_zero().into(),
-                args_length.into(),
+                args_length,
             ],
             "",
         );
 
-        let args = contract
-            .builder
-            .build_pointer_cast(
-                args,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                "",
-            )
-            .into();
+        let args = contract.builder.build_pointer_cast(
+            args,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
 
         (args, args_length.into_int_value())
     }
@@ -592,7 +589,7 @@ impl TargetRuntime for SubstrateTarget {
             argsdata = unsafe {
                 contract.builder.build_gep(
                     argsdata,
-                    &[contract.context.i32_type().const_int(arglen, false).into()],
+                    &[contract.context.i32_type().const_int(arglen, false)],
                     "abi_ptr",
                 )
             };
@@ -754,7 +751,7 @@ impl TargetRuntime for SubstrateTarget {
             argsdata = unsafe {
                 contract.builder.build_gep(
                     argsdata,
-                    &[contract.context.i32_type().const_int(arglen, false).into()],
+                    &[contract.context.i32_type().const_int(arglen, false)],
                     "abi_ptr",
                 )
             };

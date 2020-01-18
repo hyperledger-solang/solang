@@ -47,11 +47,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
                         exports.push(ExportEntry::new(name, Internal::Function(index)));
                     }
                 }
-                Symbol::Global(SymbolGlobal {
-                    flags: _,
-                    index: _,
-                    name: _,
-                }) => {
+                Symbol::Global(SymbolGlobal { .. }) => {
                     // FIXME: Here we're assuming it's the stack pointer
                     // Stack is 64 KiB for now -- size of one page.
                     globals.push(GlobalEntry::new(

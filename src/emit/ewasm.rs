@@ -129,19 +129,16 @@ impl EwasmTarget {
             &[
                 args.into(),
                 contract.context.i32_type().const_zero().into(),
-                args_length.into(),
+                args_length,
             ],
             "",
         );
 
-        let args = contract
-            .builder
-            .build_pointer_cast(
-                args,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                "",
-            )
-            .into();
+        let args = contract.builder.build_pointer_cast(
+            args,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
 
         (args, args_length.into_int_value())
     }
@@ -328,7 +325,7 @@ impl EwasmTarget {
     fn emit_abi_encode_single_val(
         &self,
         contract: &Contract,
-        ty: &ast::PrimitiveType,
+        ty: ast::PrimitiveType,
         dest: PointerValue,
         val: BasicValueEnum,
     ) {
@@ -360,7 +357,7 @@ impl EwasmTarget {
                 let dest = unsafe {
                     contract.builder.build_gep(
                         dest8,
-                        &[contract.context.i32_type().const_int(31, false).into()],
+                        &[contract.context.i32_type().const_int(31, false)],
                         "",
                     )
                 };
@@ -408,7 +405,7 @@ impl EwasmTarget {
                 let dest = unsafe {
                     contract.builder.build_gep(
                         dest8,
-                        &[contract.context.i32_type().const_int(31, false).into()],
+                        &[contract.context.i32_type().const_int(31, false)],
                         "",
                     )
                 };
@@ -420,8 +417,8 @@ impl EwasmTarget {
             | ast::PrimitiveType::Int(_) => {
                 let n = match ty {
                     ast::PrimitiveType::Address => 160,
-                    ast::PrimitiveType::Uint(b) => *b,
-                    ast::PrimitiveType::Int(b) => *b,
+                    ast::PrimitiveType::Uint(b) => b,
+                    ast::PrimitiveType::Int(b) => b,
                     _ => unreachable!(),
                 };
 
@@ -527,7 +524,7 @@ impl EwasmTarget {
             }
             ast::PrimitiveType::Bytes(b) => {
                 // first clear/set the upper bits
-                if *b < 32 {
+                if b < 32 {
                     let dest8 = contract.builder.build_pointer_cast(
                         dest,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -546,7 +543,7 @@ impl EwasmTarget {
 
                 // no need to allocate space for each uint64
                 // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
+                let int_type = contract.context.custom_width_int_type(b as u32 * 8);
                 let type_size = int_type.size_of();
 
                 let store = if ty.stack_based() {
@@ -756,12 +753,12 @@ impl TargetRuntime for EwasmTarget {
                 resolver::Type::Noreturn => unreachable!(),
             };
 
-            self.emit_abi_encode_single_val(contract, &ty, data, args[i]);
+            self.emit_abi_encode_single_val(contract, ty, data, args[i]);
 
             data = unsafe {
                 contract.builder.build_gep(
                     data,
-                    &[contract.context.i32_type().const_int(32, false).into()],
+                    &[contract.context.i32_type().const_int(32, false)],
                     &format!("abi{}", i),
                 )
             };
@@ -935,14 +932,11 @@ impl TargetRuntime for EwasmTarget {
                     }
                 }
                 ast::PrimitiveType::Bytes(1) => contract.builder.build_load(
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            data,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
+                    contract.builder.build_pointer_cast(
+                        data,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
                     "bytes1",
                 ),
                 ast::PrimitiveType::Bytes(b) => {

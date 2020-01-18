@@ -350,8 +350,8 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
 
     let contract = Contract {
         name: registry.string(&resolver_contract.name),
-        constructors: constructors,
-        messages: messages,
+        constructors,
+        messages,
     };
 
     Metadata {
@@ -389,7 +389,7 @@ fn ty_to_abi(
             display_name: vec![],
         },
         _ => {
-            let scalety = primitive_to_string(&primitive);
+            let scalety = primitive_to_string(*primitive);
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
@@ -414,7 +414,7 @@ fn ty_to_primitive<'a>(
 
 // For a given primitive, give the name as Substrate would like it (i.e. 64 bits
 // signed int is i64, not int64).
-fn primitive_to_string(ty: &ast::PrimitiveType) -> String {
+fn primitive_to_string(ty: ast::PrimitiveType) -> String {
     match ty {
         ast::PrimitiveType::Bool => "bool".into(),
         ast::PrimitiveType::Uint(n) => format!("u{}", n),

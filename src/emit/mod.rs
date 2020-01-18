@@ -171,11 +171,11 @@ impl<'a> Contract<'a> {
 
         Contract {
             name: contract.name.to_owned(),
-            module: module,
-            runtime: runtime,
+            module,
+            runtime,
             builder: context.create_builder(),
-            target: target,
-            context: context,
+            target,
+            context,
             ns: contract,
             constructors: Vec::new(),
             functions: Vec::new(),
@@ -236,7 +236,7 @@ impl<'a> Contract<'a> {
     fn expression(
         &self,
         e: &cfg::Expression,
-        vartab: &Vec<Variable<'a>>,
+        vartab: &[Variable<'a>],
         runtime: &dyn TargetRuntime,
     ) -> IntValue<'a> {
         match e {
@@ -677,7 +677,7 @@ impl<'a> Contract<'a> {
                     if !cfg.vars[*v].ty.stack_based() {
                         let ty = cfg.vars[*v].ty.LLVMType(self.ns, &self.context);
 
-                        phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name).into());
+                        phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
                     }
                 }
             }
@@ -712,10 +712,7 @@ impl<'a> Contract<'a> {
             }
         }
 
-        work.push_back(Work {
-            bb_no: 0,
-            vars: vars,
-        });
+        work.push_back(Work { bb_no: 0, vars });
 
         loop {
             let mut w = match work.pop_front() {
@@ -943,7 +940,7 @@ impl<'a> Contract<'a> {
         let not_fallback = self.builder.build_int_compare(
             IntPredicate::UGE,
             argslen,
-            self.context.i32_type().const_int(4, false).into(),
+            self.context.i32_type().const_int(4, false),
             "",
         );
 
@@ -960,14 +957,14 @@ impl<'a> Contract<'a> {
         let argsdata = unsafe {
             self.builder.build_gep(
                 argsdata,
-                &[self.context.i32_type().const_int(1, false).into()],
+                &[self.context.i32_type().const_int(1, false)],
                 "argsdata",
             )
         };
 
         let argslen = self.builder.build_int_sub(
-            argslen.into(),
-            self.context.i32_type().const_int(4, false).into(),
+            argslen,
+            self.context.i32_type().const_int(4, false),
             "argslen",
         );
 
@@ -1397,7 +1394,7 @@ impl<'a> Contract<'a> {
             .builder
             .build_call(
                 self.udivmod(bit, runtime),
-                &[dividend_abs.into(), divisor_abs.into(), rem.into()],
+                &[dividend_abs, divisor_abs, rem.into()],
                 "quotient",
             )
             .try_as_basic_value()
@@ -1676,13 +1673,13 @@ impl ast::PrimitiveType {
         }
     }
 
-    fn stack_based(&self) -> bool {
+    fn stack_based(self) -> bool {
         match self {
             ast::PrimitiveType::Bool => false,
-            ast::PrimitiveType::Int(n) => *n > 64,
-            ast::PrimitiveType::Uint(n) => *n > 64,
+            ast::PrimitiveType::Int(n) => n > 64,
+            ast::PrimitiveType::Uint(n) => n > 64,
             ast::PrimitiveType::Address => true,
-            ast::PrimitiveType::Bytes(n) => *n > 8,
+            ast::PrimitiveType::Bytes(n) => n > 8,
             _ => unimplemented!(),
         }
     }
@@ -1709,7 +1706,7 @@ impl resolver::Type {
     }
 }
 
-static STDLIB_IR: &'static [u8] = include_bytes!("../../stdlib/stdlib.bc");
+static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
 
 fn load_stdlib(context: &Context) -> Module {
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
