@@ -1,7 +1,7 @@
-use parser::ast;
+use super::{Contract, FunctionDecl, Parameter, Symbol};
 use output::Output;
+use parser::ast;
 use Target;
-use super::{Contract, Parameter, FunctionDecl, Symbol};
 
 pub fn function_decl(
     f: &ast::FunctionDefinition,
@@ -102,10 +102,7 @@ pub fn function_decl(
     }
 
     if visibility == None {
-        errors.push(Output::error(
-            f.loc,
-            format!("no visibility specified"),
-        ));
+        errors.push(Output::error(f.loc, format!("no visibility specified")));
         success = false;
     }
 
@@ -118,7 +115,18 @@ pub fn function_decl(
         None => ("".to_owned(), !f.constructor),
     };
 
-    let fdecl = FunctionDecl::new(f.loc, name, f.doc.clone(), fallback, Some(i), mutability, visibility.unwrap(), params, returns, &ns);
+    let fdecl = FunctionDecl::new(
+        f.loc,
+        name,
+        f.doc.clone(),
+        fallback,
+        Some(i),
+        mutability,
+        visibility.unwrap(),
+        params,
+        returns,
+        &ns,
+    );
 
     if f.constructor {
         // In the eth solidity, only one constructor is allowed
@@ -139,7 +147,7 @@ pub fn function_decl(
             _ => {
                 errors.push(Output::error(
                     f.loc,
-                    "constructor function must be declared public".to_owned()
+                    "constructor function must be declared public".to_owned(),
                 ));
                 return false;
             }
@@ -152,15 +160,15 @@ pub fn function_decl(
                     format!("constructor cannot be declared pure"),
                 ));
                 return false;
-            },
+            }
             Some(ast::StateMutability::View(loc)) => {
                 errors.push(Output::error(
                     loc,
                     format!("constructor cannot be declared view"),
                 ));
                 return false;
-            },
-            _ => ()
+            }
+            _ => (),
         }
 
         for v in ns.constructors.iter() {
@@ -226,7 +234,7 @@ pub fn function_decl(
         } else {
             errors.push(Output::error(
                 f.loc,
-                "fallback function must be declared external".to_owned()
+                "fallback function must be declared external".to_owned(),
             ));
             return false;
         }
@@ -242,7 +250,7 @@ fn signatures() {
     use super::*;
 
     let ns = Contract {
-        doc: vec!(),
+        doc: vec![],
         name: String::from("foo"),
         enums: Vec::new(),
         constructors: Vec::new(),
@@ -256,17 +264,26 @@ fn signatures() {
     };
 
     let fdecl = FunctionDecl::new(
-        ast::Loc(0, 0), "foo".to_owned(), vec!(), false, Some(0), None, ast::Visibility::Public(ast::Loc(0, 0)),
-        vec!(
+        ast::Loc(0, 0),
+        "foo".to_owned(),
+        vec![],
+        false,
+        Some(0),
+        None,
+        ast::Visibility::Public(ast::Loc(0, 0)),
+        vec![
             Parameter {
                 name: "".to_string(),
-                ty: Type::Primitive(ast::PrimitiveType::Uint(8))
+                ty: Type::Primitive(ast::PrimitiveType::Uint(8)),
             },
             Parameter {
                 name: "".to_string(),
-                ty: Type::Primitive(ast::PrimitiveType::Address)
+                ty: Type::Primitive(ast::PrimitiveType::Address),
             },
-        ), Vec::new(), &ns);
+        ],
+        Vec::new(),
+        &ns,
+    );
 
     assert_eq!(fdecl.signature, "foo(uint8,address)");
 }

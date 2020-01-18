@@ -1,31 +1,32 @@
-
+use hex;
 use parser::ast;
 use resolver;
 use resolver::cfg;
-use std::str;
 use std::path::Path;
-use hex;
+use std::str;
 
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
-use inkwell::types::BasicTypeEnum;
-use inkwell::OptimizationLevel;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
-use inkwell::module::{Module, Linkage};
 use inkwell::memory_buffer::MemoryBuffer;
-use inkwell::targets::{CodeModel, RelocMode, FileType, Target};
-use inkwell::AddressSpace;
+use inkwell::module::{Linkage, Module};
+use inkwell::targets::{CodeModel, FileType, RelocMode, Target};
+use inkwell::types::BasicTypeEnum;
 use inkwell::types::{IntType, StringRadix};
-use inkwell::values::{PointerValue, IntValue, PhiValue, FunctionValue, BasicValueEnum, GlobalValue};
+use inkwell::values::{
+    BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
+};
+use inkwell::AddressSpace;
 use inkwell::IntPredicate;
+use inkwell::OptimizationLevel;
 
 const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
 mod burrow;
-mod substrate;
 mod ewasm;
+mod substrate;
 
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
@@ -41,8 +42,20 @@ struct Variable<'a> {
 
 pub trait TargetRuntime {
     // Access storage
-    fn set_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
-    fn get_storage<'a>(&self, contract: &'a Contract, function: FunctionValue, slot: u32, dest: inkwell::values::PointerValue<'a>);
+    fn set_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+        slot: u32,
+        dest: inkwell::values::PointerValue<'a>,
+    );
+    fn get_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+        slot: u32,
+        dest: inkwell::values::PointerValue<'a>,
+    );
 
     fn abi_decode<'b>(
         &self,
@@ -84,10 +97,17 @@ pub struct Contract<'a> {
 }
 
 impl<'a> Contract<'a> {
-    pub fn build(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str, opt: &str) -> Self {
+    pub fn build(
+        context: &'a Context,
+        contract: &'a resolver::Contract,
+        filename: &'a str,
+        opt: &str,
+    ) -> Self {
         match contract.target {
             super::Target::Burrow => burrow::BurrowTarget::build(context, contract, filename),
-            super::Target::Substrate => substrate::SubstrateTarget::build(context, contract, filename),
+            super::Target::Substrate => {
+                substrate::SubstrateTarget::build(context, contract, filename)
+            }
             super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, filename, opt),
         }
     }
@@ -98,14 +118,24 @@ impl<'a> Contract<'a> {
             "less" => OptimizationLevel::Less,
             "default" => OptimizationLevel::Default,
             "aggressive" => OptimizationLevel::Aggressive,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
-        let target_machine = self.target.create_target_machine(WASMTRIPLE, "", "", opt, RelocMode::Default, CodeModel::Default).unwrap();
+        let target_machine = self
+            .target
+            .create_target_machine(
+                WASMTRIPLE,
+                "",
+                "",
+                opt,
+                RelocMode::Default,
+                CodeModel::Default,
+            )
+            .unwrap();
 
         match target_machine.write_to_memory_buffer(&self.module, FileType::Object) {
             Ok(o) => Ok(o.as_slice().to_vec()),
-            Err(s) => Err(s.to_string())
+            Err(s) => Err(s.to_string()),
         }
     }
 
@@ -121,7 +151,12 @@ impl<'a> Contract<'a> {
         Ok(())
     }
 
-    pub fn new(context: &'a Context, contract: &'a resolver::Contract, filename: &'a str, runtime: Option<Box<Contract<'a>>>) -> Self {
+    pub fn new(
+        context: &'a Context,
+        contract: &'a resolver::Contract,
+        filename: &'a str,
+        runtime: Option<Box<Contract<'a>>>,
+    ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
         let target = Target::from_triple(WASMTRIPLE).unwrap();
@@ -153,7 +188,9 @@ impl<'a> Contract<'a> {
     fn emit_global_string(&mut self, name: &str, data: &[u8], constant: bool) -> usize {
         let ty = self.context.i8_type().array_type(data.len() as u32);
 
-        let gv = self.module.add_global(ty, Some(AddressSpace::Generic), name);
+        let gv = self
+            .module
+            .add_global(ty, Some(AddressSpace::Generic), name);
 
         gv.set_linkage(Linkage::Internal);
 
@@ -182,8 +219,17 @@ impl<'a> Contract<'a> {
             self.functions.push(f);
         }
 
-        self.constructors = self.ns.constructors.iter()
-            .map(|func| self.emit_func(&format!("sol::constructor{}", func.wasm_symbol(&self.ns)), func, runtime))
+        self.constructors = self
+            .ns
+            .constructors
+            .iter()
+            .map(|func| {
+                self.emit_func(
+                    &format!("sol::constructor{}", func.wasm_symbol(&self.ns)),
+                    func,
+                    runtime,
+                )
+            })
             .collect();
     }
 
@@ -191,7 +237,7 @@ impl<'a> Contract<'a> {
         &self,
         e: &cfg::Expression,
         vartab: &Vec<Variable<'a>>,
-        runtime: &dyn TargetRuntime
+        runtime: &dyn TargetRuntime,
     ) -> IntValue<'a> {
         match e {
             cfg::Expression::BoolLiteral(val) => {
@@ -209,7 +255,8 @@ impl<'a> Contract<'a> {
                 // hex"11223344" should become i32 0x11223344
                 let s = hex::encode(bs);
 
-                ty.const_int_from_string(&s, StringRadix::Hexadecimal).unwrap()
+                ty.const_int_from_string(&s, StringRadix::Hexadecimal)
+                    .unwrap()
             }
             cfg::Expression::Add(l, r) => {
                 let left = self.expression(l, vartab, runtime);
@@ -240,15 +287,34 @@ impl<'a> Contract<'a> {
                     self.builder.build_call(
                         self.module.get_function("__mul32").unwrap(),
                         &[
-                            self.builder.build_pointer_cast(l,
-                                    self.context.i32_type().ptr_type(AddressSpace::Generic), "left").into(),
-                            self.builder.build_pointer_cast(r,
-                                    self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
-                            self.builder.build_pointer_cast(o,
-                                    self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
-                            self.context.i32_type().const_int(bits as u64 / 32, false).into(),
+                            self.builder
+                                .build_pointer_cast(
+                                    l,
+                                    self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                    "left",
+                                )
+                                .into(),
+                            self.builder
+                                .build_pointer_cast(
+                                    r,
+                                    self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                    "right",
+                                )
+                                .into(),
+                            self.builder
+                                .build_pointer_cast(
+                                    o,
+                                    self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                    "output",
+                                )
+                                .into(),
+                            self.context
+                                .i32_type()
+                                .const_int(bits as u64 / 32, false)
+                                .into(),
                         ],
-                        "");
+                        "",
+                    );
 
                     self.builder.build_load(o, "mul").into_int_value()
                 } else {
@@ -266,8 +332,12 @@ impl<'a> Contract<'a> {
 
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
-                    self.builder.build_call(f, &[ left.into(), right.into(), rem.into() ], "udiv")
-                        .try_as_basic_value().left().unwrap().into_int_value()
+                    self.builder
+                        .build_call(f, &[left.into(), right.into(), rem.into()], "udiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_int_value()
                 } else {
                     self.builder.build_int_unsigned_div(left, right, "")
                 }
@@ -283,8 +353,12 @@ impl<'a> Contract<'a> {
 
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
-                    self.builder.build_call(f, &[ left.into(), right.into(), rem.into() ], "udiv")
-                        .try_as_basic_value().left().unwrap().into_int_value()
+                    self.builder
+                        .build_call(f, &[left.into(), right.into(), rem.into()], "udiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_int_value()
                 } else {
                     self.builder.build_int_signed_div(left, right, "")
                 }
@@ -300,11 +374,12 @@ impl<'a> Contract<'a> {
 
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
-                    self.builder.build_call(f, &[ left.into(), right.into(), rem.into() ], "udiv");
+                    self.builder
+                        .build_call(f, &[left.into(), right.into(), rem.into()], "udiv");
 
                     self.builder.build_load(rem, "urem").into_int_value()
                 } else {
-                   self.builder.build_int_unsigned_rem(left, right, "")
+                    self.builder.build_int_unsigned_rem(left, right, "")
                 }
             }
             cfg::Expression::SModulo(l, r) => {
@@ -318,11 +393,12 @@ impl<'a> Contract<'a> {
 
                     let rem = self.builder.build_alloca(left.get_type(), "");
 
-                    self.builder.build_call(f, &[ left.into(), right.into(), rem.into() ], "sdiv");
+                    self.builder
+                        .build_call(f, &[left.into(), right.into(), rem.into()], "sdiv");
 
                     self.builder.build_load(rem, "srem").into_int_value()
                 } else {
-                   self.builder.build_int_signed_rem(left, right, "")
+                    self.builder.build_int_signed_rem(left, right, "")
                 }
             }
             cfg::Expression::Power(l, r) => {
@@ -333,71 +409,88 @@ impl<'a> Contract<'a> {
 
                 let f = self.upower(bits);
 
-                self.builder.build_call(f, &[ left.into(), right.into() ], "power").try_as_basic_value().left().unwrap().into_int_value()
+                self.builder
+                    .build_call(f, &[left.into(), right.into()], "power")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value()
             }
             cfg::Expression::Equal(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::EQ, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::EQ, left, right, "")
             }
             cfg::Expression::NotEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::NE, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::NE, left, right, "")
             }
             cfg::Expression::SMore(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::SGT, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::SGT, left, right, "")
             }
             cfg::Expression::SMoreEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::SGE, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::SGE, left, right, "")
             }
             cfg::Expression::SLess(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::SLT, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::SLT, left, right, "")
             }
             cfg::Expression::SLessEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::SLE, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::SLE, left, right, "")
             }
             cfg::Expression::UMore(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::UGT, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::UGT, left, right, "")
             }
             cfg::Expression::UMoreEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::UGE, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::UGE, left, right, "")
             }
             cfg::Expression::ULess(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::ULT, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::ULT, left, right, "")
             }
             cfg::Expression::ULessEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::ULE, left, right, "")
+                self.builder
+                    .build_int_compare(IntPredicate::ULE, left, right, "")
             }
             cfg::Expression::Variable(_, s) => {
                 if vartab[*s].stack {
-                    self.builder.build_load(vartab[*s].value.into_pointer_value(), "").into_int_value()
+                    self.builder
+                        .build_load(vartab[*s].value.into_pointer_value(), "")
+                        .into_int_value()
                 } else {
                     vartab[*s].value.into_int_value()
                 }
@@ -428,7 +521,8 @@ impl<'a> Contract<'a> {
             cfg::Expression::Not(e) => {
                 let e = self.expression(e, vartab, runtime);
 
-                self.builder.build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
+                self.builder
+                    .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
             }
             cfg::Expression::Complement(e) => {
                 let e = self.expression(e, vartab, runtime);
@@ -482,22 +576,32 @@ impl<'a> Contract<'a> {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
-                self.builder.build_select(cond, left, right, "").into_int_value()
+                self.builder
+                    .build_select(cond, left, right, "")
+                    .into_int_value()
             }
-            cfg::Expression::Poison => unreachable!()
+            cfg::Expression::Poison => unreachable!(),
         }
     }
 
     fn emit_initializer(&self, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
-        let function = self.module.add_function("storage_initializers",
-            self.context.void_type().fn_type(&[], false), Some(Linkage::Internal));
+        let function = self.module.add_function(
+            "storage_initializers",
+            self.context.void_type().fn_type(&[], false),
+            Some(Linkage::Internal),
+        );
 
         self.emit_cfg(&self.ns.initializer, None, function, runtime);
 
         function
     }
 
-    fn emit_func(&self, fname: &str, f: &resolver::FunctionDecl, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
+    fn emit_func(
+        &self,
+        fname: &str,
+        f: &resolver::FunctionDecl,
+        runtime: &dyn TargetRuntime,
+    ) -> FunctionValue<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
 
         for p in &f.params {
@@ -510,16 +614,25 @@ impl<'a> Contract<'a> {
         }
 
         let ftype = if f.wasm_return {
-            f.returns[0].ty.LLVMType(self.ns, &self.context).fn_type(&args, false)
+            f.returns[0]
+                .ty
+                .LLVMType(self.ns, &self.context)
+                .fn_type(&args, false)
         } else {
             // add return values
             for p in &f.returns {
-                args.push(p.ty.LLVMType(self.ns, &self.context).ptr_type(AddressSpace::Generic).into());
+                args.push(
+                    p.ty.LLVMType(self.ns, &self.context)
+                        .ptr_type(AddressSpace::Generic)
+                        .into(),
+                );
             }
             self.context.void_type().fn_type(&args, false)
         };
 
-        let function = self.module.add_function(&fname, ftype, Some(Linkage::Internal));
+        let function = self
+            .module
+            .add_function(&fname, ftype, Some(Linkage::Internal));
 
         let cfg = match f.cfg {
             Some(ref cfg) => cfg,
@@ -531,7 +644,13 @@ impl<'a> Contract<'a> {
         function
     }
 
-    fn emit_cfg(&self, cfg: &cfg::ControlFlowGraph, resolver_function: Option<&resolver::FunctionDecl>, function: FunctionValue<'a>, runtime: &dyn TargetRuntime) {
+    fn emit_cfg(
+        &self,
+        cfg: &cfg::ControlFlowGraph,
+        resolver_function: Option<&resolver::FunctionDecl>,
+        function: FunctionValue<'a>,
+        runtime: &dyn TargetRuntime,
+    ) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
             bb: inkwell::basic_block::BasicBlock,
@@ -583,8 +702,10 @@ impl<'a> Contract<'a> {
                 }
                 cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
                     vars.push(Variable {
-                        value: self.builder.build_alloca(
-                            v.ty.LLVMType(self.ns, &self.context), &v.id.name).into(),
+                        value: self
+                            .builder
+                            .build_alloca(v.ty.LLVMType(self.ns, &self.context), &v.id.name)
+                            .into(),
                         stack: true,
                     });
                 }
@@ -617,7 +738,7 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Return { value } if value.is_empty() => {
                         self.builder.build_return(None);
-                    },
+                    }
                     cfg::Instr::Return { value } if resolver_function.unwrap().wasm_return => {
                         let retval = self.expression(&value[0], &w.vars, runtime);
                         self.builder.build_return(Some(&retval));
@@ -635,7 +756,8 @@ impl<'a> Contract<'a> {
                     cfg::Instr::Set { res, expr } => {
                         let value_ref = self.expression(expr, &w.vars, runtime);
                         if w.vars[*res].stack {
-                            self.builder.build_store(w.vars[*res].value.into_pointer_value(), value_ref);
+                            self.builder
+                                .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
                         } else {
                             w.vars[*res].value = value_ref.into();
                         }
@@ -644,7 +766,8 @@ impl<'a> Contract<'a> {
                         let const_expr = &self.ns.constants[*constant];
                         let value_ref = self.expression(const_expr, &w.vars, runtime);
                         if w.vars[*res].stack {
-                            self.builder.build_store(w.vars[*res].value.into_pointer_value(), value_ref);
+                            self.builder
+                                .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
                         } else {
                             w.vars[*res].value = value_ref.into();
                         }
@@ -664,7 +787,7 @@ impl<'a> Contract<'a> {
 
                         for (v, phi) in bb.phis.iter() {
                             if !w.vars[*v].value.is_pointer_value() {
-                                phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                phi.add_incoming(&[(&w.vars[*v].value, &pos)]);
                             }
                         }
 
@@ -693,7 +816,7 @@ impl<'a> Contract<'a> {
 
                             for (v, phi) in bb.phis.iter() {
                                 if !w.vars[*v].value.is_pointer_value() {
-                                    phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                    phi.add_incoming(&[(&w.vars[*v].value, &pos)]);
                                 }
                             }
 
@@ -713,7 +836,7 @@ impl<'a> Contract<'a> {
 
                             for (v, phi) in bb.phis.iter() {
                                 if !w.vars[*v].value.is_pointer_value() {
-                                    phi.add_incoming(&[ (&w.vars[*v].value, &pos) ]);
+                                    phi.add_incoming(&[(&w.vars[*v].value, &pos)]);
                                 }
                             }
 
@@ -721,7 +844,8 @@ impl<'a> Contract<'a> {
                         };
 
                         self.builder.position_at_end(&pos);
-                        self.builder.build_conditional_branch(cond, &bb_true, &bb_false);
+                        self.builder
+                            .build_conditional_branch(cond, &bb_true, &bb_false);
                     }
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
@@ -746,7 +870,9 @@ impl<'a> Contract<'a> {
 
                             parms.push(if ty.stack_based() {
                                 // copy onto stack
-                                let m = self.builder.build_alloca(ty.LLVMType(self.ns, &self.context), "");
+                                let m = self
+                                    .builder
+                                    .build_alloca(ty.LLVMType(self.ns, &self.context), "");
 
                                 self.builder.build_store(m, val);
 
@@ -758,22 +884,32 @@ impl<'a> Contract<'a> {
 
                         if !res.is_empty() && !f.wasm_return {
                             for v in f.returns.iter() {
-                                parms.push(self.builder.build_alloca(
-                                    v.ty.LLVMType(self.ns, &self.context), &v.name).into(),
+                                parms.push(
+                                    self.builder
+                                        .build_alloca(
+                                            v.ty.LLVMType(self.ns, &self.context),
+                                            &v.name,
+                                        )
+                                        .into(),
                                 );
                             }
                         }
 
-                        let ret = self.builder.build_call(
-                            self.functions[*func],
-                            &parms, "").try_as_basic_value().left();
+                        let ret = self
+                            .builder
+                            .build_call(self.functions[*func], &parms, "")
+                            .try_as_basic_value()
+                            .left();
 
                         if res.len() > 0 {
                             if f.wasm_return {
                                 w.vars[res[0]].value = ret.unwrap().into();
                             } else {
                                 for (i, v) in f.returns.iter().enumerate() {
-                                    let val = self.builder.build_load(parms[f.params.len() + i].into_pointer_value(), &v.name);
+                                    let val = self.builder.build_load(
+                                        parms[f.params.len() + i].into_pointer_value(),
+                                        &v.name,
+                                    );
 
                                     let dest = w.vars[res[i]].value;
 
@@ -791,14 +927,16 @@ impl<'a> Contract<'a> {
         }
     }
 
-    pub fn emit_function_dispatch(&self,
-                resolver_functions: &Vec<resolver::FunctionDecl>,
-                functions: &Vec<FunctionValue>,
-                argsdata: inkwell::values::PointerValue,
-                argslen: inkwell::values::IntValue,
-                function: inkwell::values::FunctionValue,
-                fallback_block: &inkwell::basic_block::BasicBlock,
-                runtime: &dyn TargetRuntime) {
+    pub fn emit_function_dispatch(
+        &self,
+        resolver_functions: &Vec<resolver::FunctionDecl>,
+        functions: &Vec<FunctionValue>,
+        argsdata: inkwell::values::PointerValue,
+        argslen: inkwell::values::IntValue,
+        function: inkwell::values::FunctionValue,
+        fallback_block: &inkwell::basic_block::BasicBlock,
+        runtime: &dyn TargetRuntime,
+    ) {
         // create start function
         let switch_block = self.context.append_basic_block(function, "switch");
 
@@ -806,11 +944,13 @@ impl<'a> Contract<'a> {
             IntPredicate::UGE,
             argslen,
             self.context.i32_type().const_int(4, false).into(),
-            "");
+            "",
+        );
 
         let nomatch = self.context.append_basic_block(function, "nomatch");
 
-        self.builder.build_conditional_branch(not_fallback, &switch_block, &nomatch);
+        self.builder
+            .build_conditional_branch(not_fallback, &switch_block, &nomatch);
 
         self.builder.position_at_end(&switch_block);
 
@@ -821,13 +961,14 @@ impl<'a> Contract<'a> {
             self.builder.build_gep(
                 argsdata,
                 &[self.context.i32_type().const_int(1, false).into()],
-                "argsdata")
+                "argsdata",
+            )
         };
 
         let argslen = self.builder.build_int_sub(
             argslen.into(),
             self.context.i32_type().const_int(4, false).into(),
-            "argslen"
+            "argslen",
         );
 
         let mut cases = Vec::new();
@@ -858,22 +999,25 @@ impl<'a> Contract<'a> {
             // add return values as pointer arguments at the end
             if !f.returns.is_empty() && !f.wasm_return {
                 for v in f.returns.iter() {
-                    args.push(self.builder.build_alloca(
-                        v.ty.LLVMType(self.ns, &self.context), &v.name).into(),
+                    args.push(
+                        self.builder
+                            .build_alloca(v.ty.LLVMType(self.ns, &self.context), &v.name)
+                            .into(),
                     );
                 }
             }
 
-            let ret = self.builder.build_call(
-                functions[i],
-                &args,
-                "").try_as_basic_value().left();
+            let ret = self
+                .builder
+                .build_call(functions[i], &args, "")
+                .try_as_basic_value()
+                .left();
 
             if f.returns.is_empty() {
                 // return ABI of length 0
                 runtime.return_empty_abi(&self);
             } else if f.wasm_return {
-                let (data, length) = runtime.abi_encode(&self, &[ ret.unwrap() ], &f);
+                let (data, length) = runtime.abi_encode(&self, &[ret.unwrap()], &f);
 
                 runtime.return_abi(&self, data, length);
             } else {
@@ -895,9 +1039,8 @@ impl<'a> Contract<'a> {
 
         //let c = cases.into_iter().map(|(id, bb)| (id, &bb)).collect();
 
-        self.builder.build_switch(
-            fid.into_int_value(), fallback_block,
-            &c);
+        self.builder
+            .build_switch(fid.into_int_value(), fallback_block, &c);
 
         self.builder.position_at_end(&nomatch);
 
@@ -920,7 +1063,18 @@ impl<'a> Contract<'a> {
         let pos = self.builder.get_insert_block().unwrap();
 
         // __udivmod256(dividend, divisor, *rem) -> quotient
-        let function = self.module.add_function(&name, ty.fn_type(&[ ty.into(), ty.into(), ty.ptr_type(AddressSpace::Generic).into() ], false), None);
+        let function = self.module.add_function(
+            &name,
+            ty.fn_type(
+                &[
+                    ty.into(),
+                    ty.into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
+                ],
+                false,
+            ),
+            None,
+        );
 
         let entry = self.context.append_basic_block(function, "entry");
 
@@ -932,8 +1086,14 @@ impl<'a> Contract<'a> {
 
         let error = self.context.append_basic_block(function, "error");
         let next = self.context.append_basic_block(function, "next");
-        let is_zero = self.builder.build_int_compare(IntPredicate::EQ, divisor, ty.const_zero(), "divisor_is_zero");
-        self.builder.build_conditional_branch(is_zero, &error, &next);
+        let is_zero = self.builder.build_int_compare(
+            IntPredicate::EQ,
+            divisor,
+            ty.const_zero(),
+            "divisor_is_zero",
+        );
+        self.builder
+            .build_conditional_branch(is_zero, &error, &next);
 
         self.builder.position_at_end(&error);
         // throw division by zero error should be an assert
@@ -942,8 +1102,14 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(&next);
         let is_one_block = self.context.append_basic_block(function, "is_one_block");
         let next = self.context.append_basic_block(function, "next");
-        let is_one = self.builder.build_int_compare(IntPredicate::EQ, divisor, ty.const_int(1, false), "divisor_is_one");
-        self.builder.build_conditional_branch(is_one, &is_one_block, &next);
+        let is_one = self.builder.build_int_compare(
+            IntPredicate::EQ,
+            divisor,
+            ty.const_int(1, false),
+            "divisor_is_one",
+        );
+        self.builder
+            .build_conditional_branch(is_one, &is_one_block, &next);
 
         // return quotient: dividend, rem: 0
         self.builder.position_at_end(&is_one_block);
@@ -953,8 +1119,11 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(&next);
         let is_eq_block = self.context.append_basic_block(function, "is_eq_block");
         let next = self.context.append_basic_block(function, "next");
-        let is_eq = self.builder.build_int_compare(IntPredicate::EQ, dividend, divisor, "is_eq");
-        self.builder.build_conditional_branch(is_eq, &is_eq_block, &next);
+        let is_eq = self
+            .builder
+            .build_int_compare(IntPredicate::EQ, dividend, divisor, "is_eq");
+        self.builder
+            .build_conditional_branch(is_eq, &is_eq_block, &next);
 
         // return rem: 0, quotient: 1
         self.builder.position_at_end(&is_eq_block);
@@ -965,10 +1134,24 @@ impl<'a> Contract<'a> {
 
         let is_toobig_block = self.context.append_basic_block(function, "is_toobig_block");
         let next = self.context.append_basic_block(function, "next");
-        let dividend_is_zero = self.builder.build_int_compare(IntPredicate::EQ, dividend, ty.const_zero(), "dividend_is_zero");
-        let dividend_lt_divisor  = self.builder.build_int_compare(IntPredicate::ULT, dividend, divisor, "dividend_lt_divisor");
+        let dividend_is_zero = self.builder.build_int_compare(
+            IntPredicate::EQ,
+            dividend,
+            ty.const_zero(),
+            "dividend_is_zero",
+        );
+        let dividend_lt_divisor = self.builder.build_int_compare(
+            IntPredicate::ULT,
+            dividend,
+            divisor,
+            "dividend_lt_divisor",
+        );
         self.builder.build_conditional_branch(
-            self.builder.build_or(dividend_is_zero, dividend_lt_divisor, ""), &is_toobig_block, &next);
+            self.builder
+                .build_or(dividend_is_zero, dividend_lt_divisor, ""),
+            &is_toobig_block,
+            &next,
+        );
 
         // return quotient: 0, rem: divisor
         self.builder.position_at_end(&is_toobig_block);
@@ -981,35 +1164,70 @@ impl<'a> Contract<'a> {
 
         let dividend_bits = self.builder.build_int_sub(
             ty.const_int(bit as u64 - 1, false),
-            self.builder.build_call(ctlz, &[ dividend.into(), self.context.bool_type().const_int(1, false).into() ], "")
-                .try_as_basic_value().left().unwrap().into_int_value(),
-            "dividend_bits"
+            self.builder
+                .build_call(
+                    ctlz,
+                    &[
+                        dividend.into(),
+                        self.context.bool_type().const_int(1, false).into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            "dividend_bits",
         );
 
         let divisor_bits = self.builder.build_int_sub(
             ty.const_int(bit as u64 - 1, false),
-            self.builder.build_call(ctlz, &[ divisor.into(), self.context.bool_type().const_int(1, false).into() ], "")
-                .try_as_basic_value().left().unwrap().into_int_value(),
-            "dividend_bits"
+            self.builder
+                .build_call(
+                    ctlz,
+                    &[
+                        divisor.into(),
+                        self.context.bool_type().const_int(1, false).into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            "dividend_bits",
         );
 
-        let copyd1 = self.builder.build_left_shift(divisor,
-                self.builder.build_int_sub(dividend_bits, divisor_bits, ""), "copyd");
+        let copyd1 = self.builder.build_left_shift(
+            divisor,
+            self.builder.build_int_sub(dividend_bits, divisor_bits, ""),
+            "copyd",
+        );
 
-        let adder1 = self.builder.build_left_shift(ty.const_int(1, false),
-            self.builder.build_int_sub(dividend_bits, divisor_bits, ""), "adder");
+        let adder1 = self.builder.build_left_shift(
+            ty.const_int(1, false),
+            self.builder.build_int_sub(dividend_bits, divisor_bits, ""),
+            "adder",
+        );
 
         let true_block = self.context.append_basic_block(function, "true");
         let while_cond_block = self.context.append_basic_block(function, "while_cond");
 
-        let comp = self.builder.build_int_compare(IntPredicate::UGT, copyd1, dividend, "");
+        let comp = self
+            .builder
+            .build_int_compare(IntPredicate::UGT, copyd1, dividend, "");
 
-        self.builder.build_conditional_branch(comp, &true_block, &while_cond_block);
+        self.builder
+            .build_conditional_branch(comp, &true_block, &while_cond_block);
 
         self.builder.position_at_end(&true_block);
 
-        let copyd2 = self.builder.build_right_shift(copyd1, ty.const_int(1, false), false, "");
-        let adder2 = self.builder.build_right_shift(adder1, ty.const_int(1, false), false, "");
+        let copyd2 = self
+            .builder
+            .build_right_shift(copyd1, ty.const_int(1, false), false, "");
+        let adder2 = self
+            .builder
+            .build_right_shift(adder1, ty.const_int(1, false), false, "");
         self.builder.build_unconditional_branch(&while_cond_block);
 
         let while_body_block = self.context.append_basic_block(function, "while_body");
@@ -1018,21 +1236,26 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(&while_cond_block);
 
         let quotient = self.builder.build_phi(ty, "quotient");
-        quotient.add_incoming(&[ (&ty.const_zero(), &next) ]);
-        quotient.add_incoming(&[ (&ty.const_zero(), &true_block) ]);
+        quotient.add_incoming(&[(&ty.const_zero(), &next)]);
+        quotient.add_incoming(&[(&ty.const_zero(), &true_block)]);
 
         let remainder = self.builder.build_phi(ty, "remainder");
-        remainder.add_incoming(&[ (&dividend, &next) ]);
-        remainder.add_incoming(&[ (&dividend, &true_block) ]);
+        remainder.add_incoming(&[(&dividend, &next)]);
+        remainder.add_incoming(&[(&dividend, &true_block)]);
 
         let copyd = self.builder.build_phi(ty, "copyd");
-        copyd.add_incoming(&[ (&copyd1, &next), (&copyd2, &true_block) ]);
+        copyd.add_incoming(&[(&copyd1, &next), (&copyd2, &true_block)]);
         let adder = self.builder.build_phi(ty, "adder");
-        adder.add_incoming(&[ (&adder1, &next), (&adder2, &true_block) ]);
+        adder.add_incoming(&[(&adder1, &next), (&adder2, &true_block)]);
 
-        let loop_cond = self.builder.build_int_compare(IntPredicate::UGE,
-                remainder.as_basic_value().into_int_value(), divisor, "loop_cond");
-        self.builder.build_conditional_branch(loop_cond, &while_body_block, &while_end_block);
+        let loop_cond = self.builder.build_int_compare(
+            IntPredicate::UGE,
+            remainder.as_basic_value().into_int_value(),
+            divisor,
+            "loop_cond",
+        );
+        self.builder
+            .build_conditional_branch(loop_cond, &while_body_block, &while_end_block);
 
         self.builder.position_at_end(&while_body_block);
 
@@ -1040,15 +1263,28 @@ impl<'a> Contract<'a> {
         let post_if_block = self.context.append_basic_block(function, "post_if_block");
 
         self.builder.build_conditional_branch(
-                self.builder.build_int_compare(IntPredicate::UGE,
-                    remainder.as_basic_value().into_int_value(), copyd.as_basic_value().into_int_value(), ""),
-                &if_true_block,
-                &post_if_block);
+            self.builder.build_int_compare(
+                IntPredicate::UGE,
+                remainder.as_basic_value().into_int_value(),
+                copyd.as_basic_value().into_int_value(),
+                "",
+            ),
+            &if_true_block,
+            &post_if_block,
+        );
 
         self.builder.position_at_end(&if_true_block);
 
-        let remainder2 = self.builder.build_int_sub(remainder.as_basic_value().into_int_value(), copyd.as_basic_value().into_int_value(), "remainder");
-        let quotient2 = self.builder.build_or(quotient.as_basic_value().into_int_value(), adder.as_basic_value().into_int_value(), "quotient");
+        let remainder2 = self.builder.build_int_sub(
+            remainder.as_basic_value().into_int_value(),
+            copyd.as_basic_value().into_int_value(),
+            "remainder",
+        );
+        let quotient2 = self.builder.build_or(
+            quotient.as_basic_value().into_int_value(),
+            adder.as_basic_value().into_int_value(),
+            "quotient",
+        );
 
         self.builder.build_unconditional_branch(&post_if_block);
 
@@ -1057,23 +1293,41 @@ impl<'a> Contract<'a> {
         let quotient3 = self.builder.build_phi(ty, "quotient3");
         let remainder3 = self.builder.build_phi(ty, "remainder");
 
-        let copyd3 = self.builder.build_right_shift(copyd.as_basic_value().into_int_value(), ty.const_int(1, false), false, "copyd");
-        let adder3 = self.builder.build_right_shift(adder.as_basic_value().into_int_value(), ty.const_int(1, false), false, "adder");
-        copyd.add_incoming(&[ (&copyd3, &post_if_block) ]);
-        adder.add_incoming(&[ (&adder3, &post_if_block) ]);
+        let copyd3 = self.builder.build_right_shift(
+            copyd.as_basic_value().into_int_value(),
+            ty.const_int(1, false),
+            false,
+            "copyd",
+        );
+        let adder3 = self.builder.build_right_shift(
+            adder.as_basic_value().into_int_value(),
+            ty.const_int(1, false),
+            false,
+            "adder",
+        );
+        copyd.add_incoming(&[(&copyd3, &post_if_block)]);
+        adder.add_incoming(&[(&adder3, &post_if_block)]);
 
-        quotient3.add_incoming(&[ (&quotient2, &if_true_block), (&quotient.as_basic_value(), &while_body_block) ]);
-        remainder3.add_incoming(&[ (&remainder2, &if_true_block), (&remainder.as_basic_value(), &while_body_block) ]);
+        quotient3.add_incoming(&[
+            (&quotient2, &if_true_block),
+            (&quotient.as_basic_value(), &while_body_block),
+        ]);
+        remainder3.add_incoming(&[
+            (&remainder2, &if_true_block),
+            (&remainder.as_basic_value(), &while_body_block),
+        ]);
 
-        quotient.add_incoming(&[ (&quotient3.as_basic_value(), &post_if_block) ]);
-        remainder.add_incoming(&[ (&remainder3.as_basic_value(), &post_if_block) ]);
+        quotient.add_incoming(&[(&quotient3.as_basic_value(), &post_if_block)]);
+        remainder.add_incoming(&[(&remainder3.as_basic_value(), &post_if_block)]);
 
         self.builder.build_unconditional_branch(&while_cond_block);
 
         self.builder.position_at_end(&while_end_block);
 
-        self.builder.build_store(rem, remainder.as_basic_value().into_int_value());
-        self.builder.build_return(Some(&quotient.as_basic_value().into_int_value()));
+        self.builder
+            .build_store(rem, remainder.as_basic_value().into_int_value());
+        self.builder
+            .build_return(Some(&quotient.as_basic_value().into_int_value()));
 
         self.builder.position_at_end(&pos);
 
@@ -1091,7 +1345,18 @@ impl<'a> Contract<'a> {
         let pos = self.builder.get_insert_block().unwrap();
 
         // __sdivmod256(dividend, divisor, *rem) -> quotient
-        let function = self.module.add_function(&name, ty.fn_type(&[ ty.into(), ty.into(), ty.ptr_type(AddressSpace::Generic).into() ], false), None);
+        let function = self.module.add_function(
+            &name,
+            ty.fn_type(
+                &[
+                    ty.into(),
+                    ty.into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
+                ],
+                false,
+            ),
+            None,
+        );
 
         let entry = self.context.append_basic_block(function, "entry");
 
@@ -1101,28 +1366,62 @@ impl<'a> Contract<'a> {
         let divisor = function.get_nth_param(1).unwrap().into_int_value();
         let rem = function.get_nth_param(2).unwrap().into_pointer_value();
 
-        let dividend_negative = self.builder.build_int_compare(IntPredicate::SLT, dividend, ty.const_zero(), "dividend_negative");
-        let divisor_negative = self.builder.build_int_compare(IntPredicate::SLT, divisor, ty.const_zero(), "divisor_negative");
+        let dividend_negative = self.builder.build_int_compare(
+            IntPredicate::SLT,
+            dividend,
+            ty.const_zero(),
+            "dividend_negative",
+        );
+        let divisor_negative = self.builder.build_int_compare(
+            IntPredicate::SLT,
+            divisor,
+            ty.const_zero(),
+            "divisor_negative",
+        );
 
-        let dividend_abs = self.builder.build_select(dividend_negative,
-                self.builder.build_int_neg(dividend, "dividen_neg"),
-                dividend, "dividend_abs");
+        let dividend_abs = self.builder.build_select(
+            dividend_negative,
+            self.builder.build_int_neg(dividend, "dividen_neg"),
+            dividend,
+            "dividend_abs",
+        );
 
-        let divisor_abs = self.builder.build_select(divisor_negative,
-                    self.builder.build_int_neg(divisor, "divisor_neg"),
-                    divisor, "divisor_abs");
+        let divisor_abs = self.builder.build_select(
+            divisor_negative,
+            self.builder.build_int_neg(divisor, "divisor_neg"),
+            divisor,
+            "divisor_abs",
+        );
 
-        let quotient = self.builder.build_call(self.udivmod(bit, runtime), &[ dividend_abs.into(), divisor_abs.into(), rem.into() ], "quotient")
-                .try_as_basic_value().left().unwrap().into_int_value();
+        let quotient = self
+            .builder
+            .build_call(
+                self.udivmod(bit, runtime),
+                &[dividend_abs.into(), divisor_abs.into(), rem.into()],
+                "quotient",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         let quotient = self.builder.build_select(
-                self.builder.build_int_compare(IntPredicate::NE, dividend_negative, divisor_negative, "two_negatives"),
-                self.builder.build_int_neg(quotient, "quotient_neg"), quotient, "quotient");
+            self.builder.build_int_compare(
+                IntPredicate::NE,
+                dividend_negative,
+                divisor_negative,
+                "two_negatives",
+            ),
+            self.builder.build_int_neg(quotient, "quotient_neg"),
+            quotient,
+            "quotient",
+        );
 
         let negrem = self.context.append_basic_block(function, "negative_rem");
         let posrem = self.context.append_basic_block(function, "positive_rem");
 
-        self.builder.build_conditional_branch(dividend_negative, &negrem, &posrem);
+        self.builder
+            .build_conditional_branch(dividend_negative, &negrem, &posrem);
 
         self.builder.position_at_end(&posrem);
 
@@ -1132,7 +1431,10 @@ impl<'a> Contract<'a> {
 
         let remainder = self.builder.build_load(rem, "remainder").into_int_value();
 
-        self.builder.build_store(rem, self.builder.build_int_neg(remainder, "negative_remainder"));
+        self.builder.build_store(
+            rem,
+            self.builder.build_int_neg(remainder, "negative_remainder"),
+        );
 
         self.builder.build_return(Some(&quotient));
 
@@ -1169,7 +1471,9 @@ impl<'a> Contract<'a> {
         let pos = self.builder.get_insert_block().unwrap();
 
         // __upower(base, exp)
-        let function = self.module.add_function(&name, ty.fn_type(&[ ty.into(), ty.into() ], false), None);
+        let function =
+            self.module
+                .add_function(&name, ty.fn_type(&[ty.into(), ty.into()], false), None);
 
         let entry = self.context.append_basic_block(function, "entry");
         let loop_block = self.context.append_basic_block(function, "loop");
@@ -1188,51 +1492,90 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(&loop_block);
         let base = self.builder.build_phi(ty, "base");
-        base.add_incoming(&[ (&function.get_nth_param(0).unwrap(), &entry) ]);
+        base.add_incoming(&[(&function.get_nth_param(0).unwrap(), &entry)]);
 
         let exp = self.builder.build_phi(ty, "exp");
-        exp.add_incoming(&[ (&function.get_nth_param(1).unwrap(), &entry) ]);
+        exp.add_incoming(&[(&function.get_nth_param(1).unwrap(), &entry)]);
 
         let result = self.builder.build_phi(ty, "result");
-        result.add_incoming(&[ (&ty.const_int(1, false), &entry) ]);
+        result.add_incoming(&[(&ty.const_int(1, false), &entry)]);
 
-        let lowbit = self.builder.build_int_truncate(exp.as_basic_value().into_int_value(), self.context.bool_type(), "bit");
+        let lowbit = self.builder.build_int_truncate(
+            exp.as_basic_value().into_int_value(),
+            self.context.bool_type(),
+            "bit",
+        );
 
-        self.builder.build_conditional_branch(lowbit, &multiply, &nomultiply);
+        self.builder
+            .build_conditional_branch(lowbit, &multiply, &nomultiply);
 
         self.builder.position_at_end(&multiply);
 
         let result2 = if bit > 64 {
-            self.builder.build_store(l, result.as_basic_value().into_int_value());
-            self.builder.build_store(r, base.as_basic_value().into_int_value());
+            self.builder
+                .build_store(l, result.as_basic_value().into_int_value());
+            self.builder
+                .build_store(r, base.as_basic_value().into_int_value());
 
             self.builder.build_call(
                 self.module.get_function("__mul32").unwrap(),
                 &[
-                    self.builder.build_pointer_cast(l,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic), "left").into(),
-                    self.builder.build_pointer_cast(r,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
-                    self.builder.build_pointer_cast(o,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
-                    self.context.i32_type().const_int(bit as u64 / 32, false).into(),
+                    self.builder
+                        .build_pointer_cast(
+                            l,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "left",
+                        )
+                        .into(),
+                    self.builder
+                        .build_pointer_cast(
+                            r,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "right",
+                        )
+                        .into(),
+                    self.builder
+                        .build_pointer_cast(
+                            o,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "output",
+                        )
+                        .into(),
+                    self.context
+                        .i32_type()
+                        .const_int(bit as u64 / 32, false)
+                        .into(),
                 ],
-                "");
+                "",
+            );
 
             self.builder.build_load(o, "result").into_int_value()
         } else {
-            self.builder.build_int_mul(result.as_basic_value().into_int_value(),
-                base.as_basic_value().into_int_value(), "result")
+            self.builder.build_int_mul(
+                result.as_basic_value().into_int_value(),
+                base.as_basic_value().into_int_value(),
+                "result",
+            )
         };
 
         self.builder.build_unconditional_branch(&nomultiply);
         self.builder.position_at_end(&nomultiply);
 
         let result3 = self.builder.build_phi(ty, "result");
-        result3.add_incoming(&[ (&result.as_basic_value(), &loop_block), (&result2, &multiply) ]);
+        result3.add_incoming(&[
+            (&result.as_basic_value(), &loop_block),
+            (&result2, &multiply),
+        ]);
 
-        let exp2 = self.builder.build_right_shift(exp.as_basic_value().into_int_value(), ty.const_int(1, false), false, "exp");
-        let zero = self.builder.build_int_compare(IntPredicate::EQ, exp2, ty.const_zero(), "zero");
+        let exp2 = self.builder.build_right_shift(
+            exp.as_basic_value().into_int_value(),
+            ty.const_int(1, false),
+            false,
+            "exp",
+        );
+        let zero = self
+            .builder
+            .build_int_compare(IntPredicate::EQ, exp2, ty.const_zero(), "zero");
 
         self.builder.build_conditional_branch(zero, &done, &notdone);
 
@@ -1243,31 +1586,55 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(&notdone);
 
         let base2 = if bit > 64 {
-            self.builder.build_store(l, base.as_basic_value().into_int_value());
-            self.builder.build_store(r, base.as_basic_value().into_int_value());
+            self.builder
+                .build_store(l, base.as_basic_value().into_int_value());
+            self.builder
+                .build_store(r, base.as_basic_value().into_int_value());
 
             self.builder.build_call(
                 self.module.get_function("__mul32").unwrap(),
                 &[
-                    self.builder.build_pointer_cast(l,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic), "left").into(),
-                    self.builder.build_pointer_cast(r,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic), "right").into(),
-                    self.builder.build_pointer_cast(o,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic), "output").into(),
-                    self.context.i32_type().const_int(bit as u64 / 32, false).into(),
+                    self.builder
+                        .build_pointer_cast(
+                            l,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "left",
+                        )
+                        .into(),
+                    self.builder
+                        .build_pointer_cast(
+                            r,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "right",
+                        )
+                        .into(),
+                    self.builder
+                        .build_pointer_cast(
+                            o,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "output",
+                        )
+                        .into(),
+                    self.context
+                        .i32_type()
+                        .const_int(bit as u64 / 32, false)
+                        .into(),
                 ],
-                "");
+                "",
+            );
 
             self.builder.build_load(o, "base").into_int_value()
         } else {
-            self.builder.build_int_mul(base.as_basic_value().into_int_value(),
-                base.as_basic_value().into_int_value(), "base")
+            self.builder.build_int_mul(
+                base.as_basic_value().into_int_value(),
+                base.as_basic_value().into_int_value(),
+                "base",
+            )
         };
 
-        base.add_incoming(&[ (&base2, &notdone) ]);
-        result.add_incoming(&[ (&result3.as_basic_value(), &notdone) ]);
-        exp.add_incoming(&[ (&exp2, &notdone) ]);
+        base.add_incoming(&[(&base2, &notdone)]);
+        result.add_incoming(&[(&result3.as_basic_value(), &notdone)]);
+        exp.add_incoming(&[(&exp2, &notdone)]);
 
         self.builder.build_unconditional_branch(&loop_block);
 
@@ -1285,7 +1652,11 @@ impl<'a> Contract<'a> {
             return f;
         }
 
-        self.module.add_function(&name, ty.fn_type(&[ ty.into(), self.context.bool_type().into() ], false), None)
+        self.module.add_function(
+            &name,
+            ty.fn_type(&[ty.into(), self.context.bool_type().into()], false),
+            None,
+        )
     }
 }
 
@@ -1294,8 +1665,9 @@ impl ast::PrimitiveType {
     fn LLVMType<'a>(&self, context: &'a Context) -> IntType<'a> {
         match self {
             ast::PrimitiveType::Bool => context.bool_type(),
-            ast::PrimitiveType::Int(n) |
-            ast::PrimitiveType::Uint(n) => context.custom_width_int_type(*n as u32),
+            ast::PrimitiveType::Int(n) | ast::PrimitiveType::Uint(n) => {
+                context.custom_width_int_type(*n as u32)
+            }
             ast::PrimitiveType::Address => context.custom_width_int_type(20 * 8),
             ast::PrimitiveType::Bytes(n) => context.custom_width_int_type(*n as u32 * 8),
             _ => {

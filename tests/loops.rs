@@ -1,8 +1,7 @@
-
 extern crate solang;
 
-use solang::{parse_and_resolve, Target};
 use solang::output;
+use solang::{parse_and_resolve, Target};
 
 fn first_error(errors: Vec<output::Output>) -> String {
     for m in errors.iter().filter(|m| m.level == output::Level::Error) {
@@ -24,7 +23,9 @@ fn test_infinite_loop() {
                 }
                 return 0;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
     assert_eq!(first_error(errors), "unreachable statement");
 }

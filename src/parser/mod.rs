@@ -1,6 +1,6 @@
 pub mod ast;
-pub mod solidity;
 pub mod lexer;
+pub mod solidity;
 
 use lalrpop_util::ParseError;
 use output::Output;
@@ -56,13 +56,12 @@ pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
 #[cfg(test)]
 mod test {
     use parser::ast::*;
-    use parser::solidity;
     use parser::lexer;
+    use parser::solidity;
 
     #[test]
     fn parse_test() {
-        let src =
-                "contract foo {
+        let src = "contract foo {
                     struct Jurisdiction {
                         bool exists;
                         uint keyIdx;
@@ -79,7 +78,7 @@ mod test {
 
         let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
             ContractDefinition {
-                doc: vec!(),
+                doc: vec![],
                 loc: Loc(0, 325),
                 ty: ContractType::Contract,
                 name: Identifier {
@@ -88,7 +87,7 @@ mod test {
                 },
                 parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition {
-                        doc: vec!(),
+                        doc: vec![],
                         name: Identifier {
                             loc: Loc(42, 54),
                             name: "Jurisdiction".to_string(),
@@ -130,7 +129,7 @@ mod test {
                     })),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
-                            doc: vec!(),
+                            doc: vec![],
                             ty: Type::Primitive(PrimitiveType::String),
                             attrs: vec![],
                             name: Identifier {
@@ -143,7 +142,7 @@ mod test {
                     )),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
-                            doc: vec!(),
+                            doc: vec![],
                             ty: Type::Primitive(PrimitiveType::Int(64)),
                             attrs: vec![],
                             name: Identifier {

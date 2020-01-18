@@ -36,7 +36,9 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
         }
     }
 
-    contract.constructors.iter()
+    contract
+        .constructors
+        .iter()
         .map(|f| ABI {
             name: "".to_owned(),
             constant: match &f.cfg {
@@ -52,37 +54,58 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
                 _ => false,
             },
             ty: "constructor".to_owned(),
-            inputs: f.params.iter().map(|p| parameter_to_abi(p, contract)).collect(),
-            outputs: f.returns.iter().map(|p| parameter_to_abi(p, contract)).collect(),
+            inputs: f
+                .params
+                .iter()
+                .map(|p| parameter_to_abi(p, contract))
+                .collect(),
+            outputs: f
+                .returns
+                .iter()
+                .map(|p| parameter_to_abi(p, contract))
+                .collect(),
         })
-        .chain(contract.functions.iter()
-            .filter(|f| if let ast::Visibility::Public(_) = f.visibility {
-                true
-            } else {
-                false
-            })
-            .map(|f| ABI {
-                name: f.name.to_owned(),
-                constant: match &f.cfg {
-                    Some(cfg) => !cfg.writes_contract_storage,
-                    None => false,
-                },
-                mutability: match &f.mutability {
-                    Some(n) => n.to_string(),
-                    None => "nonpayable",
-                },
-                payable: match &f.mutability {
-                    Some(ast::StateMutability::Payable(_)) => true,
-                    _ => false,
-                },
-                ty: if f.name == "" {
-                    "fallback".to_owned()
-                } else {
-                    "function".to_owned()
-                },
-                inputs: f.params.iter().map(|p| parameter_to_abi(p, contract)).collect(),
-                outputs: f.returns.iter().map(|p| parameter_to_abi(p, contract)).collect(),
-            })
+        .chain(
+            contract
+                .functions
+                .iter()
+                .filter(|f| {
+                    if let ast::Visibility::Public(_) = f.visibility {
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .map(|f| ABI {
+                    name: f.name.to_owned(),
+                    constant: match &f.cfg {
+                        Some(cfg) => !cfg.writes_contract_storage,
+                        None => false,
+                    },
+                    mutability: match &f.mutability {
+                        Some(n) => n.to_string(),
+                        None => "nonpayable",
+                    },
+                    payable: match &f.mutability {
+                        Some(ast::StateMutability::Payable(_)) => true,
+                        _ => false,
+                    },
+                    ty: if f.name == "" {
+                        "fallback".to_owned()
+                    } else {
+                        "function".to_owned()
+                    },
+                    inputs: f
+                        .params
+                        .iter()
+                        .map(|p| parameter_to_abi(p, contract))
+                        .collect(),
+                    outputs: f
+                        .returns
+                        .iter()
+                        .map(|p| parameter_to_abi(p, contract))
+                        .collect(),
+                }),
         )
         .collect()
 }

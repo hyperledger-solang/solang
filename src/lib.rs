@@ -1,20 +1,20 @@
 extern crate clap;
 extern crate hex;
+extern crate inkwell;
 extern crate lalrpop_util;
 extern crate lazy_static;
 extern crate num_bigint;
+extern crate num_derive;
 extern crate num_traits;
 extern crate parity_wasm;
 extern crate serde;
+extern crate serde_derive;
 extern crate tiny_keccak;
 extern crate unescape;
-extern crate inkwell;
-extern crate num_derive;
-extern crate serde_derive;
 
+pub mod abi;
 pub mod link;
 pub mod output;
-pub mod abi;
 
 mod emit;
 mod parser;
@@ -30,7 +30,7 @@ pub enum Target {
     /// Hyperledger Burrow, see https://github.com/hyperledger/burrow/
     Burrow,
     /// Ethereum ewasm, see https://github.com/ewasm/design
-    Ewasm
+    Ewasm,
 }
 
 impl fmt::Display for Target {
@@ -38,7 +38,7 @@ impl fmt::Display for Target {
         match self {
             Target::Substrate => write!(f, "Substrate"),
             Target::Burrow => write!(f, "Burrow"),
-            Target::Ewasm => write!(f, "ewasm")
+            Target::Ewasm => write!(f, "ewasm"),
         }
     }
 }
@@ -50,7 +50,12 @@ impl fmt::Display for Target {
 /// compiler warnings, errors and informational messages are also provided.
 ///
 /// The ctx is the inkwell llvm context.
-pub fn compile(src: &str, filename: &str, opt: &str, target: &Target) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
+pub fn compile(
+    src: &str,
+    filename: &str,
+    opt: &str,
+    target: &Target,
+) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();
 
     let ast = match parser::parse(src) {
@@ -63,18 +68,21 @@ pub fn compile(src: &str, filename: &str, opt: &str, target: &Target) -> (Vec<(V
     // resolve
     let (contracts, errors) = resolver::resolver(ast, target);
 
-    let results = contracts.iter().map(|c| {
-        let (abistr, _) = abi::generate_abi(c, false);
+    let results = contracts
+        .iter()
+        .map(|c| {
+            let (abistr, _) = abi::generate_abi(c, false);
 
-        // codegen
-        let contract = emit::Contract::build(&ctx, c, filename, opt);
+            // codegen
+            let contract = emit::Contract::build(&ctx, c, filename, opt);
 
-        let obj = contract.wasm(opt).expect("llvm wasm emit should work");
+            let obj = contract.wasm(opt).expect("llvm wasm emit should work");
 
-        let bc = link::link(&obj, target);
+            let bc = link::link(&obj, target);
 
-        (bc, abistr)
-    }).collect();
+            (bc, abistr)
+        })
+        .collect();
 
     (results, errors)
 }
@@ -84,7 +92,10 @@ pub fn compile(src: &str, filename: &str, opt: &str, target: &Target) -> (Vec<(V
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(src: &str, target: &Target) -> (Vec<resolver::Contract>, Vec<output::Output>) {
+pub fn parse_and_resolve(
+    src: &str,
+    target: &Target,
+) -> (Vec<resolver::Contract>, Vec<output::Output>) {
     let ast = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {

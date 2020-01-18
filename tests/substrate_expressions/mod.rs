@@ -1,11 +1,11 @@
-use parity_scale_codec::{Encode, Decode};
-use parity_scale_codec_derive::{Encode, Decode};
+use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec_derive::{Decode, Encode};
 
 use super::{build_solidity, first_error, no_errors};
-use solang::{parse_and_resolve, Target};
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use rand::Rng;
+use solang::{parse_and_resolve, Target};
 
 #[test]
 fn celcius_and_fahrenheit() {
@@ -13,7 +13,8 @@ fn celcius_and_fahrenheit() {
     struct Val(u32);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function celcius2fahrenheit(int32 celcius) pure public returns (int32) {
                 int32 fahrenheit = celcius * 9 / 5 + 32;
@@ -44,7 +45,8 @@ fn digits() {
     struct Val64(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function digitslen(uint64 val) pure public returns (uint32) {
                 uint32 count = 0;
@@ -88,7 +90,8 @@ fn large_loops() {
     struct Val64(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function foo(uint val) pure public returns (uint) {
                 for (uint i =0 ; i < 100; i++ ) {
@@ -245,18 +248,28 @@ fn test_cast_errors() {
             function foo(uint bar) public {
                 bool is_nonzero = bar;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "conversion from uint256 to bool not possible");
+    assert_eq!(
+        first_error(errors),
+        "conversion from uint256 to bool not possible"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
             function foobar(uint foo, int bar) public returns (bool) {
                 return (foo < bar);
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "implicit conversion would change sign from uint256 to int256");
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion would change sign from uint256 to int256"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
@@ -264,7 +277,9 @@ fn test_cast_errors() {
                 foo = bar;
                 return false;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
     no_errors(errors);
 
@@ -275,9 +290,14 @@ fn test_cast_errors() {
                 foo = bar;
                 return false;
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "implicit conversion would change sign from int16 to uint32");
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion would change sign from int16 to uint32"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract foo {
@@ -307,7 +327,9 @@ fn test_cast_errors() {
             function set_enum_x(X b) public {
                 set_x(uint32(b));
             }
-        }", &Target::Substrate);
+        }",
+        &Target::Substrate,
+    );
 
     no_errors(errors);
 }
@@ -316,7 +338,8 @@ fn test_cast_errors() {
 #[should_panic]
 fn divisions_by_zero() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public returns (uint){
                 uint256 val = 100;
@@ -332,7 +355,8 @@ fn divisions_by_zero() {
 #[test]
 fn divisions() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint constant large = 101213131318098987934191741;
             function do_test() public returns (uint) {
@@ -355,7 +379,8 @@ fn divisions() {
 #[test]
 fn divisions64() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint64 constant large = 101213131318098987;
             function do_test() public returns (uint) {
@@ -384,7 +409,8 @@ fn divisions128() {
     struct Rets(i128);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint128 constant large = 101213131318098987;
             uint128 constant small = 99;
@@ -478,7 +504,11 @@ fn divisions128() {
         assert!(false);
     }
 
-    runtime.function(&mut store, "do_div", Args(-101213131318098987, -100000).encode());
+    runtime.function(
+        &mut store,
+        "do_div",
+        Args(-101213131318098987, -100000).encode(),
+    );
 
     if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
         assert_eq!(r, 1012131313180);
@@ -492,7 +522,8 @@ fn divisions128() {
 #[test]
 fn divisions256() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint256 constant large = 101213131318098987;
             uint256 constant small = 99;
@@ -522,7 +553,8 @@ fn divisions256() {
 #[test]
 fn complement() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public {
                 uint8 x1 = 0;
@@ -553,7 +585,8 @@ fn complement() {
 #[test]
 fn bitwise() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public {
                 uint8 x1 = 0xf0;
@@ -620,7 +653,8 @@ fn bitwise() {
 #[test]
 fn shift() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public {
                 uint8 x1 = 0xf0;
@@ -647,7 +681,8 @@ fn shift() {
 #[test]
 fn assign_bitwise() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public {
                 uint8 x1 = 0xf0;
@@ -725,7 +760,8 @@ fn assign_bitwise() {
 #[test]
 fn assign_shift() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public {
                 uint8 x1 = 0xf0;
@@ -756,7 +792,8 @@ fn assign_shift() {
 #[test]
 fn ternary() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function do_test() public {
                 uint8 x1 = 0xf0;
@@ -774,7 +811,8 @@ fn ternary() {
 #[test]
 fn short_circuit() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint32 counter;
 
@@ -811,36 +849,54 @@ fn power() {
     struct Val(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract c {
             function power(uint64 base, uint64 exp) public returns (uint64) {
                 return base ** exp;
             }
-        }");
+        }",
+    );
 
     // 4**5 = 1024
-    let args = Val(4).encode().into_iter().chain(Val(5).encode().into_iter()).collect();
+    let args = Val(4)
+        .encode()
+        .into_iter()
+        .chain(Val(5).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(1024).encode());
 
     // n ** 1 = n
-    let args = Val(2345).encode().into_iter().chain(Val(1).encode().into_iter()).collect();
+    let args = Val(2345)
+        .encode()
+        .into_iter()
+        .chain(Val(1).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(2345).encode());
 
     // n ** 0 = 0
-    let args = Val(0xdeadbeef).encode().into_iter().chain(Val(0).encode().into_iter()).collect();
+    let args = Val(0xdeadbeef)
+        .encode()
+        .into_iter()
+        .chain(Val(0).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(1).encode());
 
     // 0 ** n = 0
-    let args = Val(0).encode().into_iter().chain(Val(0xdeadbeef).encode().into_iter()).collect();
+    let args = Val(0)
+        .encode()
+        .into_iter()
+        .chain(Val(0xdeadbeef).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
@@ -851,27 +907,42 @@ fn power() {
             function power(uint64 base, int64 exp) public returns (uint64) {
                 return base ** exp;
             }
-       }", &Target::Substrate);
+       }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+    assert_eq!(
+        first_error(errors),
+        "exponation (**) is not allowed with signed types"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
             function power(int64 base, uint64 exp) public returns (int64) {
                 return base ** exp;
             }
-       }", &Target::Substrate);
+       }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+    assert_eq!(
+        first_error(errors),
+        "exponation (**) is not allowed with signed types"
+    );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
             function power(int64 base, int64 exp) public returns (int64) {
                 return base ** exp;
             }
-       }", &Target::Substrate);
+       }",
+        &Target::Substrate,
+    );
 
-    assert_eq!(first_error(errors), "exponation (**) is not allowed with signed types");
+    assert_eq!(
+        first_error(errors),
+        "exponation (**) is not allowed with signed types"
+    );
 }
 
 #[test]
@@ -880,47 +951,72 @@ fn large_power() {
     struct Val(u128);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract c {
             function power(uint128 base, uint128 exp) public returns (uint128) {
                 return base ** exp;
             }
-        }");
+        }",
+    );
 
     // 4**5 = 1024
-    let args = Val(4).encode().into_iter().chain(Val(5).encode().into_iter()).collect();
+    let args = Val(4)
+        .encode()
+        .into_iter()
+        .chain(Val(5).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(1024).encode());
 
     // n ** 1 = n
-    let args = Val(2345).encode().into_iter().chain(Val(1).encode().into_iter()).collect();
+    let args = Val(2345)
+        .encode()
+        .into_iter()
+        .chain(Val(1).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(2345).encode());
 
     // n ** 0 = 0
-    let args = Val(0xdeadbeef).encode().into_iter().chain(Val(0).encode().into_iter()).collect();
+    let args = Val(0xdeadbeef)
+        .encode()
+        .into_iter()
+        .chain(Val(0).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(1).encode());
 
     // 0 ** n = 0
-    let args = Val(0).encode().into_iter().chain(Val(0xdeadbeef).encode().into_iter()).collect();
+    let args = Val(0)
+        .encode()
+        .into_iter()
+        .chain(Val(0xdeadbeef).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
     assert_eq!(store.scratch, Val(0).encode());
 
     // 10 ** 36 = 1000000000000000000000000000000000000
-    let args = Val(10).encode().into_iter().chain(Val(36).encode().into_iter()).collect();
+    let args = Val(10)
+        .encode()
+        .into_iter()
+        .chain(Val(36).encode().into_iter())
+        .collect();
 
     runtime.function(&mut store, "power", args);
 
-    assert_eq!(store.scratch, Val(1000000000000000000000000000000000000).encode());
+    assert_eq!(
+        store.scratch,
+        Val(1000000000000000000000000000000000000).encode()
+    );
 }
 
 #[test]
@@ -928,12 +1024,14 @@ fn multiply() {
     let mut rng = rand::thread_rng();
     let size = 32;
 
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract c {
             function multiply(uint a, uint b) public returns (uint) {
                 return a * b;
             }
-        }");
+        }",
+    );
 
     let mut rand = || -> (BigInt, Vec<u8>) {
         let length = rng.gen::<usize>() % size;
@@ -953,7 +1051,11 @@ fn multiply() {
 
         println!("in: a:{:?} b:{:?}", a_data, b_data);
 
-        runtime.function(&mut store, "multiply", a_data.into_iter().chain(b_data.into_iter()).collect());
+        runtime.function(
+            &mut store,
+            "multiply",
+            a_data.into_iter().chain(b_data.into_iter()).collect(),
+        );
 
         println!("out: res:{:?}", store.scratch);
 
@@ -980,7 +1082,8 @@ fn bytes_bitwise() {
     struct BytesArray([u8; 7], u32);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract c {
             function or(bytes5 x) public returns (bytes5 y) {
                 y = x | hex\"80808080\";
@@ -1027,43 +1130,94 @@ fn bytes_bitwise() {
             function bytes_array(bytes7 foo, uint32 index) public returns (bytes1) {
                 return foo[index];
             }
-        }");
+        }",
+    );
 
-    runtime.function(&mut store, "or", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+    runtime.function(
+        &mut store,
+        "or",
+        Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode(),
+    );
 
-    assert_eq!(store.scratch, Bytes5([0x81, 0x81, 0x81, 0x81, 0x01]).encode());
+    assert_eq!(
+        store.scratch,
+        Bytes5([0x81, 0x81, 0x81, 0x81, 0x01]).encode()
+    );
 
-    runtime.function(&mut store, "and", Bytes5([ 0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+    runtime.function(
+        &mut store,
+        "and",
+        Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode(),
+    );
 
     assert_eq!(store.scratch, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
 
-    runtime.function(&mut store, "xor", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
+    runtime.function(
+        &mut store,
+        "xor",
+        Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode(),
+    );
 
-    assert_eq!(store.scratch, Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode());
+    assert_eq!(
+        store.scratch,
+        Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode()
+    );
 
     // shifty-shift
-    runtime.function(&mut store, "shift_left", Bytes3([0xf3, 0x7d, 0x03]).encode());
+    runtime.function(
+        &mut store,
+        "shift_left",
+        Bytes3([0xf3, 0x7d, 0x03]).encode(),
+    );
 
-    assert_eq!(store.scratch, Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode());
+    assert_eq!(
+        store.scratch,
+        Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
+    );
 
-    runtime.function(&mut store, "shift_right", Bytes3([0xf3, 0x7d, 0x03]).encode());
+    runtime.function(
+        &mut store,
+        "shift_right",
+        Bytes3([0xf3, 0x7d, 0x03]).encode(),
+    );
 
-    assert_eq!(store.scratch, Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode());
+    assert_eq!(
+        store.scratch,
+        Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
+    );
 
     // assignment versions
-    runtime.function(&mut store, "shift_left2", Bytes3([0xf3, 0x7d, 0x03]).encode());
+    runtime.function(
+        &mut store,
+        "shift_left2",
+        Bytes3([0xf3, 0x7d, 0x03]).encode(),
+    );
 
-    assert_eq!(store.scratch, Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode());
+    assert_eq!(
+        store.scratch,
+        Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
+    );
 
-    runtime.function(&mut store, "shift_right2", Bytes3([0xf3, 0x7d, 0x03]).encode());
+    runtime.function(
+        &mut store,
+        "shift_right2",
+        Bytes3([0xf3, 0x7d, 0x03]).encode(),
+    );
 
-    assert_eq!(store.scratch, Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode());
+    assert_eq!(
+        store.scratch,
+        Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
+    );
 
     // check length
     runtime.function(&mut store, "bytes_length", Vec::new());
 
     // complement
-    runtime.function(&mut store, "complement", Bytes3([0xf3, 0x7d, 0x03]).encode());
+    runtime.function(
+        &mut store,
+        "complement",
+        Bytes3([0xf3, 0x7d, 0x03]).encode(),
+    );
 
     assert_eq!(store.scratch, Bytes3([0x0c, 0x82, 0xfc]).encode());
 
@@ -1072,7 +1226,7 @@ fn bytes_bitwise() {
     for i in 0..6 {
         runtime.function(&mut store, "bytes_array", BytesArray(bytes7, i).encode());
 
-        assert_eq!(store.scratch, [ bytes7[i as usize] ]);
+        assert_eq!(store.scratch, [bytes7[i as usize]]);
     }
 }
 
@@ -1083,7 +1237,8 @@ fn bytesn_underflow_index_acccess() {
     struct BytesArray([u8; 7], i32);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function bytes_array(bytes7 foo, int32 index) public returns (bytes1) {
                 return foo[index];
@@ -1091,7 +1246,11 @@ fn bytesn_underflow_index_acccess() {
         }",
     );
 
-    runtime.function(&mut store, "bytes_array", BytesArray(*b"nawabra", -1).encode());
+    runtime.function(
+        &mut store,
+        "bytes_array",
+        BytesArray(*b"nawabra", -1).encode(),
+    );
 }
 
 #[test]
@@ -1101,7 +1260,8 @@ fn bytesn_overflow_index_acccess() {
     struct BytesArray([u8; 7], i32);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function bytes_array(bytes7 foo, int32 index) public returns (byte) {
                 return foo[index];
@@ -1109,5 +1269,9 @@ fn bytesn_overflow_index_acccess() {
         }",
     );
 
-    runtime.function(&mut store, "bytes_array", BytesArray(*b"nawabra", 7).encode());
+    runtime.function(
+        &mut store,
+        "bytes_array",
+        BytesArray(*b"nawabra", 7).encode(),
+    );
 }

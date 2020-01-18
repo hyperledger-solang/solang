@@ -1,19 +1,18 @@
-
-use parser::ast;
+use abi;
+use emit;
 use output::{Note, Output};
+use parser::ast;
 use std::collections::HashMap;
 use tiny_keccak::keccak256;
 use Target;
-use abi;
-use emit;
 
+mod address;
+mod builtin;
 pub mod cfg;
 mod functions;
 mod variables;
-mod builtin;
-mod address;
 
-use resolver::cfg::{ControlFlowGraph, Vartable, Instr};
+use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
@@ -28,7 +27,11 @@ impl Type {
         match self {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
-            Type::FixedArray(ty, len) => format!("{}[{}]", ty.to_string(ns), len.iter().map(|l| format!("[{}]", l)).collect::<String>()),
+            Type::FixedArray(ty, len) => format!(
+                "{}[{}]",
+                ty.to_string(ns),
+                len.iter().map(|l| format!("[{}]", l)).collect::<String>()
+            ),
             Type::Noreturn => "no return".to_owned(),
         }
     }
@@ -37,7 +40,11 @@ impl Type {
         match self {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => ns.enums[*n].ty.to_string(),
-            Type::FixedArray(ty, len) => format!("{}{}", ty.to_primitive_string(ns), len.iter().map(|l| format!("[{}]", l)).collect::<String>()),
+            Type::FixedArray(ty, len) => format!(
+                "{}{}",
+                ty.to_primitive_string(ns),
+                len.iter().map(|l| format!("[{}]", l)).collect::<String>()
+            ),
             Type::Noreturn => "no return".to_owned(),
         }
     }
@@ -99,8 +106,18 @@ pub struct FunctionDecl {
 }
 
 impl FunctionDecl {
-    fn new(loc: ast::Loc, name: String, doc: Vec<String>, fallback: bool, ast_index: Option<usize>, mutability: Option<ast::StateMutability>,
-        visibility: ast::Visibility, params: Vec<Parameter>, returns: Vec<Parameter>, ns: &Contract) -> Self {
+    fn new(
+        loc: ast::Loc,
+        name: String,
+        doc: Vec<String>,
+        fallback: bool,
+        ast_index: Option<usize>,
+        mutability: Option<ast::StateMutability>,
+        visibility: ast::Visibility,
+        params: Vec<Parameter>,
+        returns: Vec<Parameter>,
+        ns: &Contract,
+    ) -> Self {
         let mut signature = name.to_owned();
 
         signature.push('(');
@@ -117,8 +134,19 @@ impl FunctionDecl {
 
         let wasm_return = returns.len() == 1 && !returns[0].ty.stack_based();
 
-        FunctionDecl{
-            doc, loc, name, fallback, signature, ast_index, mutability, visibility, params, returns, wasm_return, cfg: None
+        FunctionDecl {
+            doc,
+            loc,
+            name,
+            fallback,
+            signature,
+            ast_index,
+            mutability,
+            visibility,
+            params,
+            returns,
+            wasm_return,
+            cfg: None,
         }
     }
 
@@ -142,7 +170,11 @@ impl FunctionDecl {
                 sig.push_str(&match &p.ty {
                     Type::Primitive(e) => e.to_string(),
                     Type::Enum(i) => ns.enums[*i].name.to_owned(),
-                    Type::FixedArray(ty, len) => format!("{}{}", ty.to_string(ns), len.iter().map(|r| format!(":{}", r)).collect::<String>()),
+                    Type::FixedArray(ty, len) => format!(
+                        "{}{}",
+                        ty.to_string(ns),
+                        len.iter().map(|r| format!(":{}", r)).collect::<String>()
+                    ),
                     Type::Noreturn => unreachable!(),
                 });
             }
@@ -154,7 +186,7 @@ impl FunctionDecl {
 
 pub enum ContractVariableType {
     Storage(usize),
-    Constant(usize)
+    Constant(usize),
 }
 
 pub struct ContractVariable {
@@ -162,7 +194,7 @@ pub struct ContractVariable {
     pub name: String,
     pub ty: Type,
     pub visibility: ast::Visibility,
-    pub var: ContractVariableType
+    pub var: ContractVariableType,
 }
 
 impl ContractVariable {
@@ -280,7 +312,11 @@ impl Contract {
         }
     }
 
-    pub fn resolve_func(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Result<&Vec<(ast::Loc, usize)>, ()> {
+    pub fn resolve_func(
+        &self,
+        id: &ast::Identifier,
+        errors: &mut Vec<Output>,
+    ) -> Result<&Vec<(ast::Loc, usize)>, ()> {
         match self.symbols.get(&id.name) {
             Some(Symbol::Function(v)) => Ok(v),
             _ => {
@@ -400,7 +436,12 @@ impl Contract {
         abi::generate_abi(self, verbose)
     }
 
-    pub fn emit<'a>(&'a self, context: &'a inkwell::context::Context, filename: &'a str, opt: &str) -> emit::Contract {
+    pub fn emit<'a>(
+        &'a self,
+        context: &'a inkwell::context::Context,
+        filename: &'a str,
+        opt: &str,
+    ) -> emit::Contract {
         emit::Contract::build(context, self, filename, opt)
     }
 }
@@ -415,7 +456,7 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
                 if let Some(c) = resolve_contract(def, &target, &mut errors) {
                     contracts.push(c)
                 }
-            },
+            }
             ast::SourceUnitPart::PragmaDirective(name, _) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
@@ -428,8 +469,8 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
                         format!("unknown pragma {} ignored", name.name),
                     ));
                 }
-            },
-            _ => unimplemented!()
+            }
+            _ => unimplemented!(),
         }
     }
 
@@ -498,8 +539,8 @@ fn resolve_contract(
         if let Some(ast_index) = ns.constructors[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
                 match cfg::generate_cfg(ast_f, &ns.constructors[f], &ns, errors) {
-                    Ok(c) =>  ns.constructors[f].cfg = Some(c),
-                    Err(_) => broken = true
+                    Ok(c) => ns.constructors[f].cfg = Some(c),
+                    Err(_) => broken = true,
                 }
             }
         }
@@ -508,12 +549,22 @@ fn resolve_contract(
     // Substrate requires one constructor
     if ns.constructors.is_empty() && target == &Target::Substrate {
         let mut fdecl = FunctionDecl::new(
-            ast::Loc(0, 0), "".to_owned(), vec!(), false, None, None, ast::Visibility::Public(ast::Loc(0, 0)), Vec::new(), Vec::new(), &ns);
+            ast::Loc(0, 0),
+            "".to_owned(),
+            vec![],
+            false,
+            None,
+            None,
+            ast::Visibility::Public(ast::Loc(0, 0)),
+            Vec::new(),
+            Vec::new(),
+            &ns,
+        );
 
         let mut vartab = Vartable::new();
         let mut cfg = ControlFlowGraph::new();
 
-        cfg.add(&mut vartab, Instr::Return{ value: Vec::new() });
+        cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
         cfg.vars = vartab.drain();
 
         fdecl.cfg = Some(Box::new(cfg));
@@ -532,13 +583,17 @@ fn resolve_contract(
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
                                         loc.clone(),
-                                        format!("function declared pure but writes contract storage"),
+                                        format!(
+                                            "function declared pure but writes contract storage"
+                                        ),
                                     ));
                                     broken = true;
                                 } else if c.reads_contract_storage {
                                     errors.push(Output::error(
                                         loc.clone(),
-                                        format!("function declared pure but reads contract storage"),
+                                        format!(
+                                            "function declared pure but reads contract storage"
+                                        ),
                                     ));
                                     broken = true;
                                 }
@@ -547,7 +602,9 @@ fn resolve_contract(
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
                                         loc.clone(),
-                                        format!("function declared view but writes contract storage"),
+                                        format!(
+                                            "function declared view but writes contract storage"
+                                        ),
                                     ));
                                     broken = true;
                                 } else if !c.reads_contract_storage {
@@ -578,7 +635,7 @@ fn resolve_contract(
                         }
                         ns.functions[f].cfg = Some(c);
                     }
-                    Err(_) => broken = true
+                    Err(_) => broken = true,
                 }
             }
         }
@@ -630,7 +687,7 @@ fn enum_decl(enum_: &ast::EnumDefinition, errors: &mut Vec<Output>) -> EnumDecl 
 #[test]
 fn enum_256values_is_uint8() {
     let mut e = ast::EnumDefinition {
-        doc: vec!(),
+        doc: vec![],
         name: ast::Identifier {
             loc: ast::Loc(0, 0),
             name: "foo".into(),

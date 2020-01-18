@@ -1,6 +1,5 @@
-
 use parity_scale_codec::Encode;
-use parity_scale_codec_derive::{Encode, Decode};
+use parity_scale_codec_derive::{Decode, Encode};
 
 use super::build_solidity;
 
@@ -8,11 +7,12 @@ use super::build_solidity;
 fn simple_solidiy_compile_and_run() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
-        value: u32
+        value: u32,
     }
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function foo() public returns (uint32) {
                 return 2;
@@ -22,7 +22,7 @@ fn simple_solidiy_compile_and_run() {
 
     runtime.function(&mut store, "foo", Vec::new());
 
-    let ret = FooReturn{ value: 2 };
+    let ret = FooReturn { value: 2 };
 
     assert_eq!(store.scratch, ret.encode());
 }
@@ -30,7 +30,8 @@ fn simple_solidiy_compile_and_run() {
 #[test]
 fn flipper() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract flipper {
             bool private value;
 
@@ -69,11 +70,12 @@ fn flipper() {
 fn contract_storage_initializers() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
-        value: u32
+        value: u32,
     }
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint32 a = 100;
             uint32 b = 200;
@@ -92,7 +94,7 @@ fn contract_storage_initializers() {
 
     runtime.function(&mut store, "foo", Vec::new());
 
-    let ret = FooReturn{ value: 400 };
+    let ret = FooReturn { value: 400 };
 
     assert_eq!(store.scratch, ret.encode());
 }
@@ -101,11 +103,12 @@ fn contract_storage_initializers() {
 fn contract_constants() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct FooReturn {
-        value: u32
+        value: u32,
     }
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             uint32 constant a = 300 + 100;
 
@@ -120,7 +123,7 @@ fn contract_constants() {
 
     runtime.function(&mut store, "foo", Vec::new());
 
-    let ret = FooReturn{ value: 400 };
+    let ret = FooReturn { value: 400 };
 
     assert_eq!(store.scratch, ret.encode());
 }
@@ -152,7 +155,8 @@ fn large_contract_variables() {
 #[test]
 fn assert_ok() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function foo() public pure returns (uint32) {
                 assert(true);
@@ -170,7 +174,8 @@ fn assert_ok() {
 #[should_panic]
 fn assert_not_ok() {
     // parse
-    let (runtime, mut store) = build_solidity("
+    let (runtime, mut store) = build_solidity(
+        "
         contract test {
             function foo() public pure returns (uint32) {
                 assert(false);
