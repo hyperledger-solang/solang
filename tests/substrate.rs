@@ -260,19 +260,17 @@ pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
 }
 
 pub fn first_error(errors: Vec<output::Output>) -> String {
-    for m in errors.iter().filter(|m| m.level == output::Level::Error) {
-        return m.message.to_owned();
+    match errors.iter().find(|m| m.level == output::Level::Error) {
+        Some(m) => m.message.to_owned(),
+        None => panic!("no errors found"),
     }
-
-    panic!("no errors detected");
 }
 
 pub fn first_warning(errors: Vec<output::Output>) -> String {
-    for m in errors.iter().filter(|m| m.level == output::Level::Warning) {
-        return m.message.to_owned();
+    match errors.iter().find(|m| m.level == output::Level::Warning) {
+        Some(m) => m.message.to_owned(),
+        None => panic!("no warnings found"),
     }
-
-    panic!("no errors detected");
 }
 
 pub fn no_errors(errors: Vec<output::Output>) {

@@ -301,7 +301,7 @@ contract test3 {
         let mut res = i;
 
         for _ in 0..100 {
-            res = res * 7;
+            res *= 7;
             if res > 200 {
                 break;
             }
@@ -370,7 +370,7 @@ contract test {
 }"##,
     );
 
-    for val in [102i32, 255, 256, 0x7fffffff].iter() {
+    for val in [102i32, 255, 256, 0x7fff_ffff].iter() {
         let returns = runtime.function(
             &mut store,
             "foo",

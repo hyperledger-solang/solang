@@ -4,11 +4,10 @@ use solang::output;
 use solang::{parse_and_resolve, Target};
 
 fn first_error(errors: Vec<output::Output>) -> String {
-    for m in errors.iter().filter(|m| m.level == output::Level::Error) {
-        return m.message.to_owned();
+    match errors.iter().find(|m| m.level == output::Level::Error) {
+        Some(m) => m.message.to_owned(),
+        None => panic!("no errors detected"),
     }
-
-    panic!("no errors detected");
 }
 
 #[test]
