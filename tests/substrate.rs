@@ -22,7 +22,10 @@ use solang::output;
 use solang::{compile, Target};
 
 mod substrate_enums;
+
+#[allow(clippy::unreadable_literal)]
 mod substrate_expressions;
+
 mod substrate_first;
 mod substrate_functions;
 mod substrate_primitives;
@@ -189,7 +192,7 @@ pub struct TestRuntime {
 }
 
 impl TestRuntime {
-    pub fn constructor<'a>(&self, store: &mut ContractStorage, index: usize, args: Vec<u8>) {
+    pub fn constructor(&self, store: &mut ContractStorage, index: usize, args: Vec<u8>) {
         let m = &self.abi.contract.constructors[index];
 
         store.scratch = m
@@ -205,7 +208,7 @@ impl TestRuntime {
             .expect("failed to call function");
     }
 
-    pub fn function<'a>(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
+    pub fn function(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
         store.scratch = m
@@ -221,7 +224,7 @@ impl TestRuntime {
             .expect("failed to call function");
     }
 
-    pub fn raw_function<'a>(&self, store: &mut ContractStorage, input: Vec<u8>) {
+    pub fn raw_function(&self, store: &mut ContractStorage, input: Vec<u8>) {
         store.scratch = input;
 
         self.module

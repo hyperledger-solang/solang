@@ -37,14 +37,14 @@ pub enum Type {
 }
 
 impl PrimitiveType {
-    pub fn signed(&self) -> bool {
+    pub fn signed(self) -> bool {
         match self {
             PrimitiveType::Int(_) => true,
             _ => false,
         }
     }
 
-    pub fn ordered(&self) -> bool {
+    pub fn ordered(self) -> bool {
         match self {
             PrimitiveType::Int(_) => true,
             PrimitiveType::Uint(_) => true,
@@ -52,13 +52,13 @@ impl PrimitiveType {
         }
     }
 
-    pub fn bits(&self) -> u16 {
+    pub fn bits(self) -> u16 {
         match self {
             PrimitiveType::Address => 160,
             PrimitiveType::Bool => 1,
-            PrimitiveType::Int(n) => *n,
-            PrimitiveType::Uint(n) => *n,
-            PrimitiveType::Bytes(n) => (*n * 8) as u16,
+            PrimitiveType::Int(n) => n,
+            PrimitiveType::Uint(n) => n,
+            PrimitiveType::Bytes(n) => n as u16 * 8,
             _ => panic!("{} not fixed size", self.to_string()),
         }
     }
@@ -277,7 +277,7 @@ impl Expression {
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, _)
             | Expression::AddressLiteral(loc, _)
-            | Expression::Variable(Identifier { loc, name: _ }) => loc.clone(),
+            | Expression::Variable(Identifier { loc, .. }) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
         }
@@ -311,7 +311,7 @@ impl StateMutability {
         match self {
             StateMutability::Pure(loc)
             | StateMutability::View(loc)
-            | StateMutability::Payable(loc) => loc.clone(),
+            | StateMutability::Payable(loc) => *loc,
         }
     }
 }
@@ -339,7 +339,7 @@ impl Visibility {
             Visibility::Public(loc)
             | Visibility::External(loc)
             | Visibility::Internal(loc)
-            | Visibility::Private(loc) => loc.clone(),
+            | Visibility::Private(loc) => *loc,
         }
     }
 }

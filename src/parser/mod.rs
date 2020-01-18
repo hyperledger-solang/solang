@@ -1,5 +1,7 @@
 pub mod ast;
 pub mod lexer;
+
+#[allow(clippy::all)]
 pub mod solidity;
 
 use lalrpop_util::ParseError;

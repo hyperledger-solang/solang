@@ -37,7 +37,7 @@ fn various_constants() {
 
     runtime.function(&mut store, "foo", Vec::new());
 
-    assert_eq!(store.scratch, FooReturn(0xdeadcafe).encode());
+    assert_eq!(store.scratch, FooReturn(0xdead_cafe).encode());
 
     // parse
     let (runtime, mut store) = build_solidity(
@@ -51,7 +51,7 @@ fn various_constants() {
 
     runtime.function(&mut store, "foo", Vec::new());
 
-    assert_eq!(store.scratch, Foo64Return(-0x7afedeaddeedcafe).encode());
+    assert_eq!(store.scratch, Foo64Return(-0x7afe_dead_deed_cafe).encode());
 }
 
 #[test]
@@ -341,8 +341,8 @@ fn address() {
     );
 
     let val = Address([
-        0xE9, 0x43, 0x0d, 0x8C, 0x01, 0xC4, 0xE4, 0xBb, 0x33, 0xE4, 0x4f, 0xd7, 0x74, 0x89, 0x42,
-        0x08, 0x5D, 0x82, 0xfC, 0x91,
+        0xE9, 0x43, 0x0d, 0x8c, 0x01, 0xc4, 0xe4, 0xbb, 0x33, 0xE4, 0x4f, 0xd7, 0x74, 0x89, 0x42,
+        0x08, 0x5D, 0x82, 0xfc, 0x91,
     ])
     .encode();
 

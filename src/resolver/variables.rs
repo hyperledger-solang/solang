@@ -52,25 +52,25 @@ fn var_decl(
             ast::VariableAttribute::Constant(loc) => {
                 if is_constant {
                     errors.push(Output::warning(
-                        loc.clone(),
-                        format!("duplicate constant attribute"),
+                        *loc,
+                        "duplicate constant attribute".to_string(),
                     ));
                 }
                 is_constant = true;
             }
             ast::VariableAttribute::Visibility(ast::Visibility::External(loc)) => {
                 errors.push(Output::error(
-                    loc.clone(),
-                    format!("variable cannot be declared external"),
+                    *loc,
+                    "variable cannot be declared external".to_string(),
                 ));
                 return false;
             }
             ast::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     errors.push(Output::error_with_note(
-                        v.loc().clone(),
+                        v.loc(),
                         format!("variable visibility redeclared `{}'", v.to_string()),
-                        e.loc().clone(),
+                        e.loc(),
                         format!("location of previous declaration of `{}'", e.to_string()),
                     ));
                     return false;
@@ -116,8 +116,8 @@ fn var_decl(
     } else {
         if is_constant {
             errors.push(Output::decl_error(
-                s.loc.clone(),
-                format!("missing initializer for constant"),
+                s.loc,
+                "missing initializer for constant".to_string(),
             ));
             return false;
         }

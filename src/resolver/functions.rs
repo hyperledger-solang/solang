@@ -18,14 +18,14 @@ pub fn function_decl(
     if f.constructor && !f.returns.is_empty() {
         errors.push(Output::warning(
             f.loc,
-            format!("constructor cannot have return values"),
+            "constructor cannot have return values".to_string(),
         ));
         return false;
     } else if !f.constructor && f.name == None {
         if !f.returns.is_empty() {
             errors.push(Output::warning(
                 f.loc,
-                format!("fallback function cannot have return values"),
+                "fallback function cannot have return values".to_string(),
             ));
             success = false;
         }
@@ -33,7 +33,7 @@ pub fn function_decl(
         if !f.params.is_empty() {
             errors.push(Output::warning(
                 f.loc,
-                format!("fallback function cannot have parameters"),
+                "fallback function cannot have parameters".to_string(),
             ));
             success = false;
         }
@@ -73,9 +73,9 @@ pub fn function_decl(
             ast::FunctionAttribute::StateMutability(m) => {
                 if let Some(e) = &mutability {
                     errors.push(Output::error_with_note(
-                        m.loc().clone(),
+                        m.loc(),
                         format!("function redeclared `{}'", m.to_string()),
-                        e.loc().clone(),
+                        e.loc(),
                         format!("location of previous declaration of `{}'", e.to_string()),
                     ));
                     success = false;
@@ -87,9 +87,9 @@ pub fn function_decl(
             ast::FunctionAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     errors.push(Output::error_with_note(
-                        v.loc().clone(),
+                        v.loc(),
                         format!("function redeclared `{}'", v.to_string()),
-                        e.loc().clone(),
+                        e.loc(),
                         format!("location of previous declaration of `{}'", e.to_string()),
                     ));
                     success = false;
@@ -102,7 +102,7 @@ pub fn function_decl(
     }
 
     if visibility == None {
-        errors.push(Output::error(f.loc, format!("no visibility specified")));
+        errors.push(Output::error(f.loc, "no visibility specified".to_string()));
         success = false;
     }
 
@@ -157,14 +157,14 @@ pub fn function_decl(
             Some(ast::StateMutability::Pure(loc)) => {
                 errors.push(Output::error(
                     loc,
-                    format!("constructor cannot be declared pure"),
+                    "constructor cannot be declared pure".to_string(),
                 ));
                 return false;
             }
             Some(ast::StateMutability::View(loc)) => {
                 errors.push(Output::error(
                     loc,
-                    format!("constructor cannot be declared view"),
+                    "constructor cannot be declared view".to_string(),
                 ));
                 return false;
             }
@@ -195,7 +195,7 @@ pub fn function_decl(
                     errors.push(Output::error_with_note(
                         f.loc,
                         "overloaded function with this signature already exist".to_string(),
-                        o.0.clone(),
+                        o.0,
                         "location of previous definition".to_string(),
                     ));
                     return false;

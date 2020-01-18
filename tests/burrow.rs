@@ -564,7 +564,9 @@ fn bytes() {
 
     assert_eq!(
         ret,
-        [ethabi::Token::Uint(ethereum_types::U256::from(0x11223344))]
+        [ethabi::Token::Uint(ethereum_types::U256::from(
+            0x11_22_33_44
+        ))]
     );
 
     let ret = runtime.function(&mut store, "bytes4asuint64", &[]);
@@ -572,7 +574,7 @@ fn bytes() {
     assert_eq!(
         ret,
         [ethabi::Token::Uint(ethereum_types::U256::from(
-            0x11223344_0000_0000u64
+            0x1122_3344_0000_0000u64
         ))]
     );
 

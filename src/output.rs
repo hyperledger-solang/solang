@@ -184,7 +184,7 @@ impl Output {
     }
 }
 
-pub fn print_messages(filename: &str, src: &str, messages: &Vec<Output>, verbose: bool) {
+pub fn print_messages(filename: &str, src: &str, messages: &[Output], verbose: bool) {
     let pos = FilePostitions::new(src);
 
     for msg in messages {
@@ -215,7 +215,7 @@ pub struct OutputJson {
     pub formattedMessage: String,
 }
 
-pub fn message_as_json(filename: &str, src: &str, messages: &Vec<Output>) -> Vec<OutputJson> {
+pub fn message_as_json(filename: &str, src: &str, messages: &[Output]) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
     let pos = FilePostitions::new(src);

@@ -374,9 +374,9 @@ impl<'input> Lexer<'input> {
         keywords.insert(String::from("_"), Token::Underscore);
 
         Lexer {
-            input: input,
+            input,
             chars: input.char_indices().peekable(),
-            keywords: keywords,
+            keywords,
             pragma_state: PragmaParserState::NotParsingPragma,
         }
     }
@@ -427,11 +427,11 @@ impl<'input> Lexer<'input> {
             self.chars.next();
         }
 
-        return Some(Ok((
+        Some(Ok((
             start,
             Token::Number(&self.input[start..=end]),
             end + 1,
-        )));
+        )))
     }
 
     fn next(&mut self) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
@@ -516,7 +516,7 @@ impl<'input> Lexer<'input> {
 
                     return Some(Ok((
                         start,
-                        Token::StringLiteral(&self.input[start + 1..=end - 1]),
+                        Token::StringLiteral(&self.input[start + 1..end]),
                         end + 1,
                     )));
                 }

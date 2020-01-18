@@ -241,7 +241,7 @@ impl Contract {
                     errors.push(Output::error_with_note(
                         id.loc,
                         format!("{} is already defined as enum", id.name.to_string()),
-                        e.clone(),
+                        *e,
                         "location of previous definition".to_string(),
                     ));
                 }
@@ -250,7 +250,7 @@ impl Contract {
 
                     for e in v {
                         notes.push(Note {
-                            pos: e.0.clone(),
+                            pos: e.0,
                             message: "location of previous definition".into(),
                         });
                     }
@@ -268,7 +268,7 @@ impl Contract {
                             "{} is already defined as state variable",
                             id.name.to_string()
                         ),
-                        e.clone(),
+                        *e,
                         "location of previous definition".to_string(),
                     ));
                 }
@@ -321,8 +321,8 @@ impl Contract {
             Some(Symbol::Function(v)) => Ok(v),
             _ => {
                 errors.push(Output::error(
-                    id.loc.clone(),
-                    format!("unknown function or type"),
+                    id.loc,
+                    "unknown function or type".to_string(),
                 ));
 
                 Err(())
@@ -334,21 +334,21 @@ impl Contract {
         match self.symbols.get(&id.name) {
             None => {
                 errors.push(Output::decl_error(
-                    id.loc.clone(),
+                    id.loc,
                     format!("`{}' is not declared", id.name),
                 ));
                 Err(())
             }
             Some(Symbol::Enum(_, _)) => {
                 errors.push(Output::decl_error(
-                    id.loc.clone(),
+                    id.loc,
                     format!("`{}' is an enum", id.name),
                 ));
                 Err(())
             }
             Some(Symbol::Function(_)) => {
                 errors.push(Output::decl_error(
-                    id.loc.clone(),
+                    id.loc,
                     format!("`{}' is a function", id.name),
                 ));
                 Err(())
@@ -363,15 +363,15 @@ impl Contract {
                 errors.push(Output::warning_with_note(
                     id.loc,
                     format!("declaration of `{}' shadows enum", id.name),
-                    loc.clone(),
-                    format!("previous declaration of enum"),
+                    *loc,
+                    "previous declaration of enum".to_string(),
                 ));
             }
             Some(Symbol::Function(v)) => {
                 let notes = v
                     .iter()
                     .map(|(pos, _)| Note {
-                        pos: pos.clone(),
+                        pos: *pos,
                         message: "previous declaration of function".to_owned(),
                     })
                     .collect();
@@ -385,8 +385,8 @@ impl Contract {
                 errors.push(Output::warning_with_note(
                     id.loc,
                     format!("declaration of `{}' shadows state variable", id.name),
-                    loc.clone(),
-                    format!("previous declaration of state variable"),
+                    *loc,
+                    "previous declaration of state variable".to_string(),
                 ));
             }
             None => {}
@@ -399,7 +399,7 @@ impl Contract {
                 return Some(i);
             }
         }
-        return None;
+        None
     }
 
     pub fn to_string(&self) -> String {
@@ -460,12 +460,12 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
             ast::SourceUnitPart::PragmaDirective(name, _) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
-                        name.loc.clone(),
-                        format!("pragma solidity is ignored"),
+                        name.loc,
+                        "pragma solidity is ignored".to_string(),
                     ));
                 } else {
                     errors.push(Output::warning(
-                        name.loc.clone(),
+                        name.loc,
                         format!("unknown pragma {} ignored", name.name),
                     ));
                 }
@@ -582,18 +582,16 @@ fn resolve_contract(
                             Some(ast::StateMutability::Pure(loc)) => {
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
-                                        loc.clone(),
-                                        format!(
-                                            "function declared pure but writes contract storage"
-                                        ),
+                                        *loc,
+                                        "function declared pure but writes contract storage"
+                                            .to_string(),
                                     ));
                                     broken = true;
                                 } else if c.reads_contract_storage {
                                     errors.push(Output::error(
-                                        loc.clone(),
-                                        format!(
-                                            "function declared pure but reads contract storage"
-                                        ),
+                                        *loc,
+                                        "function declared pure but reads contract storage"
+                                            .to_string(),
                                     ));
                                     broken = true;
                                 }
@@ -601,16 +599,15 @@ fn resolve_contract(
                             Some(ast::StateMutability::View(loc)) => {
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
-                                        loc.clone(),
-                                        format!(
-                                            "function declared view but writes contract storage"
-                                        ),
+                                        *loc,
+                                        "function declared view but writes contract storage"
+                                            .to_string(),
                                     ));
                                     broken = true;
                                 } else if !c.reads_contract_storage {
                                     errors.push(Output::warning(
-                                        loc.clone(),
-                                        format!("function can be declared pure"),
+                                        *loc,
+                                        "function can be declared pure".to_string(),
                                     ));
                                 }
                             }
@@ -622,13 +619,13 @@ fn resolve_contract(
 
                                 if !c.writes_contract_storage && !c.reads_contract_storage {
                                     errors.push(Output::warning(
-                                        loc.clone(),
-                                        format!("function can be declare pure"),
+                                        *loc,
+                                        "function can be declare pure".to_string(),
                                     ));
                                 } else if !c.writes_contract_storage {
                                     errors.push(Output::warning(
-                                        loc.clone(),
-                                        format!("function can be declared view"),
+                                        *loc,
+                                        "function can be declared view".to_string(),
                                     ));
                                 }
                             }
@@ -668,7 +665,7 @@ fn enum_decl(enum_: &ast::EnumDefinition, errors: &mut Vec<Output>) -> EnumDecl 
             errors.push(Output::error_with_note(
                 e.loc,
                 format!("duplicate enum value {}", e.name),
-                prev.0.clone(),
+                prev.0,
                 "location of previous definition".to_string(),
             ));
             continue;

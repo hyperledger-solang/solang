@@ -54,10 +54,10 @@ fn constructors() {
         }",
     );
 
-    runtime.constructor(&mut store, 1, Val(0xaabbccdd).encode());
+    runtime.constructor(&mut store, 1, Val(0xaa_bb_cc_dd).encode());
     runtime.function(&mut store, "get", Vec::new());
 
-    assert_eq!(store.scratch, Val(0xaabbccdd).encode());
+    assert_eq!(store.scratch, Val(0xaa_bb_cc_dd).encode());
 }
 
 #[test]
