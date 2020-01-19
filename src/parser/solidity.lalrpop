@@ -55,13 +55,13 @@ Identifier: Identifier = {
     <l:@L> <n:LexIdentifier> <r:@R> => Identifier{loc: Loc(l, r), name: n.to_string()}
 }
 
-VariableDeclaration: Box<VariableDeclaration> = {
-    <t:Type> <s:StorageLocation> <i:Identifier> => Box::new(VariableDeclaration{
+VariableDeclaration: VariableDeclaration = {
+    <t:Type> <s:StorageLocation> <i:Identifier> => VariableDeclaration {
         typ: t, storage: s, name: i
-    }),
-    <t:Type> <i:Identifier> => Box::new(VariableDeclaration{ 
+    },
+    <t:Type> <i:Identifier> => VariableDeclaration {
         typ: t, storage: StorageLocation::Default, name: i
-    })
+    }
 }
 
 StructDefinition: Box<StructDefinition> = {

@@ -1,4 +1,5 @@
 use num_bigint::BigInt;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Loc(pub usize, pub usize);
@@ -62,16 +63,18 @@ impl PrimitiveType {
             _ => panic!("{} not fixed size", self.to_string()),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl fmt::Display for PrimitiveType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PrimitiveType::Address => "address".to_string(),
-            PrimitiveType::Bool => "bool".to_string(),
-            PrimitiveType::String => "string".to_string(),
-            PrimitiveType::Int(n) => format!("int{}", n),
-            PrimitiveType::Uint(n) => format!("uint{}", n),
-            PrimitiveType::Bytes(n) => format!("bytes{}", n),
-            PrimitiveType::DynamicBytes => "bytes".to_string(),
+            PrimitiveType::Address => write!(f, "address"),
+            PrimitiveType::Bool => write!(f, "bool"),
+            PrimitiveType::String => write!(f, "string"),
+            PrimitiveType::Int(n) => write!(f, "int{}", n),
+            PrimitiveType::Uint(n) => write!(f, "uint{}", n),
+            PrimitiveType::Bytes(n) => write!(f, "bytes{}", n),
+            PrimitiveType::DynamicBytes => write!(f, "bytes"),
         }
     }
 }
@@ -95,7 +98,7 @@ pub struct VariableDeclaration {
 pub struct StructDefinition {
     pub doc: Vec<String>,
     pub name: Identifier,
-    pub fields: Vec<Box<VariableDeclaration>>,
+    pub fields: Vec<VariableDeclaration>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -372,7 +375,7 @@ pub enum Statement {
     While(Expression, Box<Statement>),
     PlaceHolder,
     Expression(Expression),
-    VariableDefinition(Box<VariableDeclaration>, Option<Expression>),
+    VariableDefinition(VariableDeclaration, Option<Expression>),
     For(
         Option<Box<Statement>>,
         Option<Box<Expression>>,
