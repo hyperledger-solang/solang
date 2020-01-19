@@ -114,6 +114,7 @@ impl BasicBlock {
     }
 }
 
+#[derive(Default)]
 pub struct ControlFlowGraph {
     pub vars: Vec<Variable>,
     pub bb: Vec<BasicBlock>,
@@ -345,7 +346,7 @@ impl ControlFlowGraph {
             Instr::GetStorage { local, storage } => {
                 format!("getstorage %{} = %{}", *storage, self.vars[*local].id.name)
             }
-            Instr::AssertFailure {} => format!("assert-failure"),
+            Instr::AssertFailure {} => "assert-failure".to_string(),
             Instr::Call { res, func, args } => format!(
                 "{} = call {} {} {}",
                 {
@@ -529,9 +530,9 @@ fn check_return(
     } else {
         errors.push(Output::error(
             f.body.loc(),
-            format!("missing return statement"),
+            "missing return statement".to_string(),
         ));
-        return Err(());
+        Err(())
     }
 }
 
@@ -582,7 +583,7 @@ pub fn set_contract_storage(
         }
         Storage::Constant(_) => {
             errors.push(Output::type_error(
-                id.loc.clone(),
+                id.loc,
                 format!("cannot assign to constant {}", id.name),
             ));
             Err(())
@@ -627,13 +628,7 @@ fn statement(
                 ns.check_shadowing(&decl.name, errors);
 
                 if let Some(expr) = e_t {
-                    cfg.add(
-                        vartab,
-                        Instr::Set {
-                            res: pos,
-                            expr: expr,
-                        },
-                    );
+                    cfg.add(vartab, Instr::Set { res: pos, expr });
                 }
             }
             Ok(true)
@@ -644,7 +639,10 @@ fn statement(
 
             for stmt in bs {
                 if !reachable {
-                    errors.push(Output::error(stmt.loc(), format!("unreachable statement")));
+                    errors.push(Output::error(
+                        stmt.loc(),
+                        "unreachable statement".to_string(),
+                    ));
                     return Err(());
                 }
                 reachable = statement(&stmt, f, cfg, ns, vartab, loops, errors)?;
@@ -659,7 +657,7 @@ fn statement(
 
             if vartab.returns.len() != no_returns {
                 errors.push(Output::error(
-                    loc.clone(),
+                    *loc,
                     format!(
                         "missing return value, {} return values expected",
                         no_returns
@@ -686,7 +684,7 @@ fn statement(
 
             if no_returns > 0 && returns.is_empty() {
                 errors.push(Output::error(
-                    loc.clone(),
+                    *loc,
                     format!(
                         "missing return value, {} return values expected",
                         no_returns
@@ -697,15 +695,15 @@ fn statement(
 
             if no_returns == 0 && !returns.is_empty() {
                 errors.push(Output::error(
-                    loc.clone(),
-                    format!("function has no return values"),
+                    *loc,
+                    "function has no return values".to_string(),
                 ));
                 return Err(());
             }
 
             if no_returns != returns.len() {
                 errors.push(Output::error(
-                    loc.clone(),
+                    *loc,
                     format!(
                         "incorrect number of return values, expected {} but got {}",
                         no_returns,
@@ -837,7 +835,7 @@ fn statement(
             None => {
                 errors.push(Output::error(
                     stmt.loc(),
-                    format!("break statement not in loop"),
+                    "break statement not in loop".to_string(),
                 ));
                 Err(())
             }
@@ -850,7 +848,7 @@ fn statement(
             None => {
                 errors.push(Output::error(
                     stmt.loc(),
-                    format!("continue statement not in loop"),
+                    "continue statement not in loop".to_string(),
                 ));
                 Err(())
             }
@@ -1324,6 +1322,7 @@ pub fn cast(
         _ => (),
     };
 
+    #[allow(clippy::comparison_chain)]
     match (from_conv, to_conv) {
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
@@ -1524,7 +1523,7 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
-            return if implicit {
+            if implicit {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1558,7 +1557,7 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
-            return if implicit {
+            if implicit {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1588,7 +1587,7 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Address),
         ) => {
-            return if implicit {
+            if implicit {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1618,7 +1617,7 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::Address),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
-            return if implicit {
+            if implicit {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1651,23 +1650,19 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::String),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
-            match &expr {
-                Expression::BytesLiteral(from_str) => {
-                    if from_str.len() > to_len as usize {
-                        errors.push(Output::type_error(
-                            *loc,
-                            format!(
-                                "string of {} bytes is too long to fit into {}",
-                                from_str.len(),
-                                to.to_string(ns)
-                            ),
-                        ));
-                        return Err(());
-                    }
+            if let Expression::BytesLiteral(from_str) = &expr {
+                if from_str.len() > to_len as usize {
+                    errors.push(Output::type_error(
+                        *loc,
+                        format!(
+                            "string of {} bytes is too long to fit into {}",
+                            from_str.len(),
+                            to.to_string(ns)
+                        ),
+                    ));
+                    return Err(());
                 }
-                _ => (),
             }
-
             Ok(expr)
         }
         _ => {
@@ -1708,7 +1703,7 @@ pub fn expression(
                     None => {
                         // would be helpful if unescape told us what/where the problem was
                         errors.push(Output::error(
-                            s.loc.clone(),
+                            s.loc,
                             format!("string \"{}\" has invalid escape", s.string),
                         ));
                         return Err(());
@@ -1729,7 +1724,7 @@ pub fn expression(
             for s in v {
                 if (s.hex.len() % 2) != 0 {
                     errors.push(Output::error(
-                        s.loc.clone(),
+                        s.loc,
                         format!("hex string \"{}\" has odd number of characters", s.hex),
                     ));
                     return Err(());
@@ -1753,7 +1748,7 @@ pub fn expression(
 
             if b.sign() == Sign::Minus {
                 if bits > 255 {
-                    errors.push(Output::error(loc.clone(), format!("{} is too large", b)));
+                    errors.push(Output::error(*loc, format!("{} is too large", b)));
                     Err(())
                 } else {
                     Ok((
@@ -1761,16 +1756,14 @@ pub fn expression(
                         resolver::Type::Primitive(ast::PrimitiveType::Int(int_size)),
                     ))
                 }
+            } else if bits > 256 {
+                errors.push(Output::error(*loc, format!("{} is too large", b)));
+                Err(())
             } else {
-                if bits > 256 {
-                    errors.push(Output::error(loc.clone(), format!("{} is too large", b)));
-                    Err(())
-                } else {
-                    Ok((
-                        Expression::NumberLiteral(int_size, b.clone()),
-                        resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
-                    ))
-                }
+                Ok((
+                    Expression::NumberLiteral(int_size, b.clone()),
+                    resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
+                ))
             }
         }
         ast::Expression::AddressLiteral(loc, n) => {
@@ -1785,7 +1778,7 @@ pub fn expression(
                 ))
             } else {
                 errors.push(Output::error(
-                    loc.clone(),
+                    *loc,
                     format!(
                         "address literal has incorrect checksum, expected ‘{}’",
                         address
@@ -1795,13 +1788,13 @@ pub fn expression(
             }
         }
         ast::Expression::Variable(id) => {
-            if let &mut Some(ref mut tab) = vartab {
+            if let Some(ref mut tab) = *vartab {
                 let v = tab.find(id, ns, errors)?;
                 get_contract_storage(&v, cfg, tab);
-                Ok((Expression::Variable(id.loc, v.pos), v.ty.clone()))
+                Ok((Expression::Variable(id.loc, v.pos), v.ty))
             } else {
                 errors.push(Output::error(
-                    id.loc.clone(),
+                    id.loc,
                     format!("cannot read variable {} in constant expression", id.name),
                 ));
                 Err(())
@@ -2045,8 +2038,8 @@ pub fn expression(
             // solc-0.5.13 does not allow either base or exp to be signed
             if base_type.signed() || exp_type.signed() {
                 errors.push(Output::error(
-                    loc.clone(),
-                    format!("exponation (**) is not allowed with signed types"),
+                    *loc,
+                    "exponation (**) is not allowed with signed types".to_string(),
                 ));
                 return Err(());
             }
@@ -2296,7 +2289,7 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(),
+                        *loc,
                         format!("cannot access variable {} in constant expression", id.name),
                     ));
                     return Err(());
@@ -2319,7 +2312,7 @@ pub fn expression(
                         vartab,
                         Instr::Set {
                             res: temp_pos,
-                            expr: Expression::Variable(id.loc.clone(), pos),
+                            expr: Expression::Variable(id.loc, pos),
                         },
                     );
                     cfg.add(
@@ -2327,7 +2320,7 @@ pub fn expression(
                         Instr::Set {
                             res: pos,
                             expr: Expression::Add(
-                                Box::new(Expression::Variable(id.loc.clone(), pos)),
+                                Box::new(Expression::Variable(id.loc, pos)),
                                 Box::new(Expression::NumberLiteral(ty.bits(), One::one())),
                             ),
                         },
@@ -2335,7 +2328,7 @@ pub fn expression(
 
                     set_contract_storage(id, &var, cfg, vartab, errors)?;
 
-                    Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
+                    Ok((Expression::Variable(id.loc, temp_pos), ty))
                 }
                 ast::Expression::PostDecrement(_, _) => {
                     let temp_pos = vartab.temp(id, &ty);
@@ -2343,7 +2336,7 @@ pub fn expression(
                         vartab,
                         Instr::Set {
                             res: temp_pos,
-                            expr: Expression::Variable(id.loc.clone(), pos),
+                            expr: Expression::Variable(id.loc, pos),
                         },
                     );
                     cfg.add(
@@ -2351,7 +2344,7 @@ pub fn expression(
                         Instr::Set {
                             res: pos,
                             expr: Expression::Subtract(
-                                Box::new(Expression::Variable(id.loc.clone(), pos)),
+                                Box::new(Expression::Variable(id.loc, pos)),
                                 Box::new(Expression::NumberLiteral(ty.bits(), One::one())),
                             ),
                         },
@@ -2359,7 +2352,7 @@ pub fn expression(
 
                     set_contract_storage(id, &var, cfg, vartab, errors)?;
 
-                    Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
+                    Ok((Expression::Variable(id.loc, temp_pos), ty))
                 }
                 ast::Expression::PreIncrement(_, _) => {
                     let temp_pos = vartab.temp(id, &ty);
@@ -2368,7 +2361,7 @@ pub fn expression(
                         Instr::Set {
                             res: pos,
                             expr: Expression::Add(
-                                Box::new(Expression::Variable(id.loc.clone(), pos)),
+                                Box::new(Expression::Variable(id.loc, pos)),
                                 Box::new(Expression::NumberLiteral(ty.bits(), One::one())),
                             ),
                         },
@@ -2377,13 +2370,13 @@ pub fn expression(
                         vartab,
                         Instr::Set {
                             res: temp_pos,
-                            expr: Expression::Variable(id.loc.clone(), pos),
+                            expr: Expression::Variable(id.loc, pos),
                         },
                     );
 
                     set_contract_storage(id, &var, cfg, vartab, errors)?;
 
-                    Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
+                    Ok((Expression::Variable(id.loc, temp_pos), ty))
                 }
                 ast::Expression::PreDecrement(_, _) => {
                     let temp_pos = vartab.temp(id, &ty);
@@ -2392,7 +2385,7 @@ pub fn expression(
                         Instr::Set {
                             res: pos,
                             expr: Expression::Subtract(
-                                Box::new(Expression::Variable(id.loc.clone(), pos)),
+                                Box::new(Expression::Variable(id.loc, pos)),
                                 Box::new(Expression::NumberLiteral(ty.bits(), One::one())),
                             ),
                         },
@@ -2401,13 +2394,13 @@ pub fn expression(
                         vartab,
                         Instr::Set {
                             res: temp_pos,
-                            expr: Expression::Variable(id.loc.clone(), pos),
+                            expr: Expression::Variable(id.loc, pos),
                         },
                     );
 
                     set_contract_storage(id, &var, cfg, vartab, errors)?;
 
-                    Ok((Expression::Variable(id.loc.clone(), temp_pos), ty))
+                    Ok((Expression::Variable(id.loc, temp_pos), ty))
                 }
                 _ => unreachable!(),
             }
@@ -2426,7 +2419,7 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(),
+                        *loc,
                         format!("cannot access variable {} in constant expression", id.name),
                     ));
                     return Err(());
@@ -2445,7 +2438,7 @@ pub fn expression(
 
             set_contract_storage(id, &var, cfg, vartab, errors)?;
 
-            Ok((Expression::Variable(id.loc.clone(), var.pos), var.ty))
+            Ok((Expression::Variable(id.loc, var.pos), var.ty))
         }
 
         ast::Expression::AssignAdd(loc, var, e)
@@ -2469,7 +2462,7 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(),
+                        *loc,
                         format!("cannot access variable {} in constant expression", id.name),
                     ));
                     return Err(());
@@ -2590,7 +2583,7 @@ pub fn expression(
 
             set_contract_storage(id, &var, cfg, tab, errors)?;
 
-            Ok((Expression::Variable(id.loc.clone(), pos), ty))
+            Ok((Expression::Variable(id.loc, pos), ty))
         }
         ast::Expression::FunctionCall(loc, ty, args) => {
             let to = match ty {
@@ -2604,15 +2597,12 @@ pub fn expression(
             // Cast
             if let Some(to) = to {
                 return if args.is_empty() {
-                    errors.push(Output::error(
-                        loc.clone(),
-                        format!("missing argument to cast"),
-                    ));
+                    errors.push(Output::error(*loc, "missing argument to cast".to_string()));
                     Err(())
                 } else if args.len() > 1 {
                     errors.push(Output::error(
-                        loc.clone(),
-                        format!("too many arguments to cast"),
+                        *loc,
+                        "too many arguments to cast".to_string(),
                     ));
                     Err(())
                 } else {
@@ -2642,8 +2632,8 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(),
-                        format!("cannot call function in constant expression"),
+                        *loc,
+                        "cannot call function in constant expression".to_string(),
                     ));
                     return Err(());
                 }
@@ -2657,7 +2647,7 @@ pub fn expression(
 
                 if func.params.len() != args.len() {
                     temp_errors.push(Output::error(
-                        loc.clone(),
+                        *loc,
                         format!(
                             "function expects {} arguments, {} provided",
                             func.params.len(),
@@ -2698,15 +2688,14 @@ pub fn expression(
                 // .. what about return value?
                 if func.returns.len() > 1 {
                     errors.push(Output::error(
-                        loc.clone(),
-                        format!(
-                            "in expression context a function cannot return more than one value"
-                        ),
+                        *loc,
+                        "in expression context a function cannot return more than one value"
+                            .to_string(),
                     ));
                     return Err(());
                 }
 
-                if func.returns.len() > 0 {
+                if !func.returns.is_empty() {
                     let ty = &func.returns[0].ty;
                     let id = ast::Identifier {
                         loc: ast::Loc(0, 0),
@@ -2723,7 +2712,7 @@ pub fn expression(
                         },
                     );
 
-                    return Ok((Expression::Variable(id.loc.clone(), temp_pos), ty.clone()));
+                    return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
                 } else {
                     cfg.add(
                         tab,
@@ -2742,8 +2731,8 @@ pub fn expression(
                 errors.append(&mut temp_errors);
             } else {
                 errors.push(Output::error(
-                    loc.clone(),
-                    format!("cannot find overloaded function which matches signature"),
+                    *loc,
+                    "cannot find overloaded function which matches signature".to_string(),
                 ));
             }
 
@@ -2761,7 +2750,7 @@ pub fn expression(
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
-                        loc.clone(),
+                        *loc,
                         format!("cannot read variable {} in constant expression", id.name),
                     ));
                     return Err(());
@@ -2777,7 +2766,7 @@ pub fn expression(
                     n
                 } else {
                     errors.push(Output::error(
-                        loc.clone(),
+                        *loc,
                         format!("variable {} is not an array", id.name),
                     ));
                     return Err(());
@@ -2788,7 +2777,7 @@ pub fn expression(
             let pos = tab.temp(
                 &ast::Identifier {
                     name: "index".to_owned(),
-                    loc: loc.clone(),
+                    loc: *loc,
                 },
                 &index_type,
             );
@@ -2831,7 +2820,7 @@ pub fn expression(
                 Expression::Trunc(
                     res_ty.clone(),
                     Box::new(Expression::ShiftRight(
-                        Box::new(Expression::Variable(loc.clone(), var.pos)),
+                        Box::new(Expression::Variable(*loc, var.pos)),
                         // shift by (array_length - 1 - index) * 8
                         Box::new(Expression::ShiftLeft(
                             Box::new(Expression::Subtract(
@@ -2869,7 +2858,7 @@ pub fn expression(
                     )),
                     None => {
                         errors.push(Output::error(
-                            id.loc.clone(),
+                            id.loc,
                             format!("enum {} does not have value {}", ns.enums[e].name, id.name),
                         ));
                         Err(())
@@ -2878,7 +2867,7 @@ pub fn expression(
             }
 
             // is it an bytesN.length
-            if let &mut Some(ref mut tab) = vartab {
+            if let Some(ref mut tab) = *vartab {
                 let var = tab.find(namespace, ns, errors)?;
 
                 if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
@@ -2891,7 +2880,7 @@ pub fn expression(
                 }
             }
 
-            errors.push(Output::error(loc.clone(), format!("not found")));
+            errors.push(Output::error(*loc, "not found".to_string()));
 
             Err(())
         }
@@ -2927,7 +2916,7 @@ pub fn expression(
             let pos = tab.temp(
                 &ast::Identifier {
                     name: "or".to_owned(),
-                    loc: loc.clone(),
+                    loc: *loc,
                 },
                 &resolver::Type::new_bool(),
             );
@@ -2974,7 +2963,7 @@ pub fn expression(
 
             cfg.set_basic_block(end_or);
 
-            Ok((Expression::Variable(loc.clone(), pos), boolty))
+            Ok((Expression::Variable(*loc, pos), boolty))
         }
         ast::Expression::And(loc, left, right) => {
             let boolty = resolver::Type::new_bool();
@@ -3008,7 +2997,7 @@ pub fn expression(
             let pos = tab.temp(
                 &ast::Identifier {
                     name: "and".to_owned(),
-                    loc: loc.clone(),
+                    loc: *loc,
                 },
                 &resolver::Type::new_bool(),
             );
@@ -3055,7 +3044,7 @@ pub fn expression(
 
             cfg.set_basic_block(end_and);
 
-            Ok((Expression::Variable(loc.clone(), pos), boolty))
+            Ok((Expression::Variable(*loc, pos), boolty))
         }
         _ => panic!("unimplemented: {:?}", expr),
     }
@@ -3102,6 +3091,7 @@ pub struct Variable {
 
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
+#[derive(Default)]
 pub struct Vartable {
     vars: Vec<Variable>,
     names: LinkedList<VarScope>,
@@ -3138,7 +3128,7 @@ impl Vartable {
             errors.push(Output::error_with_note(
                 id.loc,
                 format!("{} is already declared", id.name.to_string()),
-                prev.id.loc.clone(),
+                prev.id.loc,
                 "location of previous declaration".to_string(),
             ));
             return None;

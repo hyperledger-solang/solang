@@ -63,6 +63,7 @@ impl PrimitiveType {
         }
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         match self {
             PrimitiveType::Address => "address".to_string(),
@@ -92,6 +93,7 @@ pub struct VariableDeclaration {
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::vec_box)]
 pub struct StructDefinition {
     pub doc: Vec<String>,
     pub name: Identifier,

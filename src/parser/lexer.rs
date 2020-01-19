@@ -264,6 +264,7 @@ pub enum LexicalError {
 }
 
 impl LexicalError {
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         match self {
             LexicalError::EndOfFileInComment(_, _) => "end of file found in comment".to_string(),

@@ -402,6 +402,7 @@ impl Contract {
         None
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         let mut s = format!("#\n# Contract: {}\n#\n\n", self.name);
 
