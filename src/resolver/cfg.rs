@@ -4,6 +4,7 @@ use num_traits::FromPrimitive;
 use num_traits::Num;
 use num_traits::One;
 use std::cmp;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::LinkedList;
@@ -1327,8 +1328,8 @@ pub fn cast(
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        ) => {
-            if from_len > to_len {
+        ) => match from_len.cmp(&to_len) {
+            Ordering::Greater => {
                 if implicit {
                     errors.push(Output::type_error(
                         *loc,
@@ -1342,17 +1343,15 @@ pub fn cast(
                 } else {
                     Ok(Expression::Trunc(to.clone(), Box::new(expr)))
                 }
-            } else if from_len < to_len {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
-            } else {
-                Ok(expr)
             }
-        }
+            Ordering::Less => Ok(Expression::ZeroExt(to.clone(), Box::new(expr))),
+            Ordering::Equal => Ok(expr),
+        },
         (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) => {
-            if from_len > to_len {
+        ) => match from_len.cmp(&to_len) {
+            Ordering::Greater => {
                 if implicit {
                     errors.push(Output::type_error(
                         *loc,
@@ -1366,12 +1365,10 @@ pub fn cast(
                 } else {
                     Ok(Expression::Trunc(to.clone(), Box::new(expr)))
                 }
-            } else if from_len < to_len {
-                Ok(Expression::SignExt(to.clone(), Box::new(expr)))
-            } else {
-                Ok(expr)
             }
-        }
+            Ordering::Less => Ok(Expression::SignExt(to.clone(), Box::new(expr))),
+            Ordering::Equal => Ok(expr),
+        },
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
@@ -3306,16 +3303,16 @@ impl resolver::Type {
 }
 
 impl ast::PrimitiveType {
-    fn default(&self) -> Expression {
+    fn default(self) -> Expression {
         match self {
             ast::PrimitiveType::Uint(b) | ast::PrimitiveType::Int(b) => {
-                Expression::NumberLiteral(*b, BigInt::from(0))
+                Expression::NumberLiteral(b, BigInt::from(0))
             }
             ast::PrimitiveType::Bool => Expression::BoolLiteral(false),
             ast::PrimitiveType::Address => Expression::NumberLiteral(160, BigInt::from(0)),
             ast::PrimitiveType::Bytes(n) => {
                 let mut l = Vec::new();
-                l.resize(*n as usize, 0);
+                l.resize(n as usize, 0);
                 Expression::BytesLiteral(l)
             }
             ast::PrimitiveType::DynamicBytes => unimplemented!(),

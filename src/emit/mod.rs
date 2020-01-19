@@ -715,7 +715,7 @@ impl<'a> Contract<'a> {
 
         work.push_back(Work { bb_no: 0, vars });
 
-        while let Some(ref mut w) = work.pop_front() {
+        while let Some(mut w) = work.pop_front() {
             let bb = blocks.get(&w.bb_no).unwrap();
 
             self.builder.position_at_end(&bb.bb);

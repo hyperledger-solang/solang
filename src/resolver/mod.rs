@@ -3,6 +3,7 @@ use emit;
 use output::{Note, Output};
 use parser::ast;
 use std::collections::HashMap;
+use std::fmt;
 use tiny_keccak::keccak256;
 use Target;
 
@@ -402,37 +403,6 @@ impl Contract {
         None
     }
 
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
-        let mut s = format!("#\n# Contract: {}\n#\n\n", self.name);
-
-        s.push_str("# storage initializer\n");
-        s.push_str(&self.initializer.to_string(self));
-        s.push_str("\n");
-
-        for f in &self.constructors {
-            s.push_str(&format!("# constructor {}\n", f.signature));
-
-            if let Some(ref cfg) = f.cfg {
-                s.push_str(&cfg.to_string(self));
-            }
-        }
-
-        for (i, f) in self.functions.iter().enumerate() {
-            if f.name != "" {
-                s.push_str(&format!("# function({}) {}\n", i, f.signature));
-            } else {
-                s.push_str(&format!("# fallback({})\n", i));
-            }
-
-            if let Some(ref cfg) = f.cfg {
-                s.push_str(&cfg.to_string(self));
-            }
-        }
-
-        s
-    }
-
     pub fn abi(&self, verbose: bool) -> (String, &'static str) {
         abi::generate_abi(self, verbose)
     }
@@ -444,6 +414,37 @@ impl Contract {
         opt: &str,
     ) -> emit::Contract {
         emit::Contract::build(context, self, filename, opt)
+    }
+}
+
+impl fmt::Display for Contract {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "#\n# Contract: {}\n#\n\n", self.name)?;
+
+        writeln!(f, "# storage initializer")?;
+        writeln!(f, "{}", &self.initializer.to_string(self))?;
+
+        for func in &self.constructors {
+            writeln!(f, "# constructor {}", func.signature)?;
+
+            if let Some(ref cfg) = func.cfg {
+                write!(f, "{}", &cfg.to_string(self))?;
+            }
+        }
+
+        for (i, func) in self.functions.iter().enumerate() {
+            if func.name != "" {
+                writeln!(f, "# function({}) {}", i, func.signature)?;
+            } else {
+                writeln!(f, "# fallback({})", i)?;
+            }
+
+            if let Some(ref cfg) = func.cfg {
+                writeln!(f, "{}", &cfg.to_string(self))?;
+            }
+        }
+
+        Ok(())
     }
 }
 
