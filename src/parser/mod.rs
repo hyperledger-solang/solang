@@ -2,6 +2,7 @@ pub mod ast;
 pub mod lexer;
 
 #[allow(clippy::all)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 pub mod solidity;
 
 use lalrpop_util::ParseError;
@@ -95,38 +96,38 @@ mod test {
                             name: "Jurisdiction".to_string(),
                         },
                         fields: vec![
-                            Box::new(VariableDeclaration {
+                            VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Bool),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(86, 92),
                                     name: "exists".to_string(),
                                 },
-                            }),
-                            Box::new(VariableDeclaration {
+                            },
+                            VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Uint(256)),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(123, 129),
                                     name: "keyIdx".to_string(),
                                 },
-                            }),
-                            Box::new(VariableDeclaration {
+                            },
+                            VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Bytes(2)),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(162, 169),
                                     name: "country".to_string(),
                                 },
-                            }),
-                            Box::new(VariableDeclaration {
+                            },
+                            VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Bytes(32)),
                                 storage: StorageLocation::Default,
                                 name: Identifier {
                                     loc: Loc(203, 209),
                                     name: "region".to_string(),
                                 },
-                            }),
+                            },
                         ],
                     })),
                     ContractPart::ContractVariableDefinition(Box::new(

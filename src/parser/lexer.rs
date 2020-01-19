@@ -263,27 +263,29 @@ pub enum LexicalError {
     PragmaMissingSemiColon(usize, usize),
 }
 
-impl LexicalError {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for LexicalError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LexicalError::EndOfFileInComment(_, _) => "end of file found in comment".to_string(),
+            LexicalError::EndOfFileInComment(_, _) => write!(f, "end of file found in comment"),
             LexicalError::EndOfFileInString(_, _) => {
-                "end of file found in string literal".to_string()
+                write!(f, "end of file found in string literal")
             }
             LexicalError::EndofFileInHex(_, _) => {
-                "end of file found in hex literal string".to_string()
+                write!(f, "end of file found in hex literal string")
             }
-            LexicalError::MissingNumber(_, _) => "missing number".to_string(),
+            LexicalError::MissingNumber(_, _) => write!(f, "missing number"),
             LexicalError::InvalidCharacterInHexLiteral(_, ch) => {
-                format!("invalid character ‘{}’ in hex literal string", ch)
+                write!(f, "invalid character ‘{}’ in hex literal string", ch)
             }
-            LexicalError::UnrecognisedToken(_, _, t) => format!("unrecognised token ‘{}’", t),
+            LexicalError::UnrecognisedToken(_, _, t) => write!(f, "unrecognised token ‘{}’", t),
             LexicalError::PragmaMissingSemiColon(_, _) => {
-                "pragma is missing terminating ‘;’".to_string()
+                write!(f, "pragma is missing terminating ‘;’")
             }
         }
     }
+}
 
+impl LexicalError {
     pub fn loc(&self) -> Loc {
         match self {
             LexicalError::EndOfFileInComment(start, end) => Loc(*start, *end),

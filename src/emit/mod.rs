@@ -731,7 +731,7 @@ impl<'a> Contract<'a> {
             for ins in &cfg.bb[w.bb_no].instr {
                 match ins {
                     cfg::Instr::FuncArg { res, arg } => {
-                        w.vars[*res].value = function.get_nth_param(*arg as u32).unwrap().into();
+                        w.vars[*res].value = function.get_nth_param(*arg as u32).unwrap();
                     }
                     cfg::Instr::Return { value } if value.is_empty() => {
                         self.builder.build_return(None);
@@ -898,9 +898,9 @@ impl<'a> Contract<'a> {
                             .try_as_basic_value()
                             .left();
 
-                        if res.len() > 0 {
+                        if !res.is_empty() {
                             if f.wasm_return {
-                                w.vars[res[0]].value = ret.unwrap().into();
+                                w.vars[res[0]].value = ret.unwrap();
                             } else {
                                 for (i, v) in f.returns.iter().enumerate() {
                                     let val = self.builder.build_load(
@@ -913,7 +913,7 @@ impl<'a> Contract<'a> {
                                     if dest.is_pointer_value() {
                                         self.builder.build_store(dest.into_pointer_value(), val);
                                     } else {
-                                        w.vars[res[i]].value = val.into();
+                                        w.vars[res[i]].value = val;
                                     }
                                 }
                             }
@@ -926,8 +926,8 @@ impl<'a> Contract<'a> {
 
     pub fn emit_function_dispatch(
         &self,
-        resolver_functions: &Vec<resolver::FunctionDecl>,
-        functions: &Vec<FunctionValue>,
+        resolver_functions: &[resolver::FunctionDecl],
+        functions: &[FunctionValue],
         argsdata: inkwell::values::PointerValue,
         argslen: inkwell::values::IntValue,
         function: inkwell::values::FunctionValue,
