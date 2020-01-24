@@ -294,12 +294,31 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-
+            Expression::IndexAccess(a, i) => format!(
+                "{}[{}]",
+                self.expr_to_string(ns, a),
+                self.expr_to_string(ns, i)
+            ),
+            Expression::Or(l, r) => format!(
+                "({} || {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::And(l, r) => format!(
+                "({} && {})",
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
+            Expression::Ternary(c, l, r) => format!(
+                "({} ? {} : {})",
+                self.expr_to_string(ns, c),
+                self.expr_to_string(ns, l),
+                self.expr_to_string(ns, r)
+            ),
             Expression::Not(e) => format!("!{}", self.expr_to_string(ns, e)),
             Expression::Complement(e) => format!("~{}", self.expr_to_string(ns, e)),
             Expression::UnaryMinus(e) => format!("-{}", self.expr_to_string(ns, e)),
-
-            _ => String::from(""),
+            Expression::Poison => "☠".to_string(),
         }
     }
 
