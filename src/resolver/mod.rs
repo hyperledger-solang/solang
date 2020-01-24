@@ -166,19 +166,15 @@ impl FunctionDecl {
         returns: Vec<Parameter>,
         ns: &Contract,
     ) -> Self {
-        let mut signature = name.to_owned();
-
-        signature.push('(');
-
-        for (i, p) in params.iter().enumerate() {
-            if i > 0 {
-                signature.push(',');
-            }
-
-            signature.push_str(&p.ty.to_string(ns));
-        }
-
-        signature.push(')');
+        let signature = format!(
+            "{}({})",
+            name,
+            params
+                .iter()
+                .map(|p| p.ty.to_primitive_string(ns))
+                .collect::<Vec<String>>()
+                .join(",")
+        );
 
         let wasm_return = returns.len() == 1 && !returns[0].ty.stack_based();
 
