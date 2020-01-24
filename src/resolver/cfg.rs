@@ -114,6 +114,7 @@ impl BasicBlock {
     }
 }
 
+#[derive(Default)]
 pub struct ControlFlowGraph {
     pub vars: Vec<Variable>,
     pub bb: Vec<BasicBlock>,
@@ -1321,6 +1322,7 @@ pub fn cast(
         _ => (),
     };
 
+    #[allow(clippy::comparison_chain)]
     match (from_conv, to_conv) {
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
@@ -1648,23 +1650,19 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::String),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
-            match &expr {
-                Expression::BytesLiteral(from_str) => {
-                    if from_str.len() > to_len as usize {
-                        errors.push(Output::type_error(
-                            *loc,
-                            format!(
-                                "string of {} bytes is too long to fit into {}",
-                                from_str.len(),
-                                to.to_string(ns)
-                            ),
-                        ));
-                        return Err(());
-                    }
+            if let Expression::BytesLiteral(from_str) = &expr {
+                if from_str.len() > to_len as usize {
+                    errors.push(Output::type_error(
+                        *loc,
+                        format!(
+                            "string of {} bytes is too long to fit into {}",
+                            from_str.len(),
+                            to.to_string(ns)
+                        ),
+                    ));
+                    return Err(());
                 }
-                _ => (),
             }
-
             Ok(expr)
         }
         _ => {
@@ -1790,7 +1788,7 @@ pub fn expression(
             }
         }
         ast::Expression::Variable(id) => {
-            if let &mut Some(ref mut tab) = vartab {
+            if let Some(ref mut tab) = *vartab {
                 let v = tab.find(id, ns, errors)?;
                 get_contract_storage(&v, cfg, tab);
                 Ok((Expression::Variable(id.loc, v.pos), v.ty))
@@ -2869,7 +2867,7 @@ pub fn expression(
             }
 
             // is it an bytesN.length
-            if let &mut Some(ref mut tab) = vartab {
+            if let Some(ref mut tab) = *vartab {
                 let var = tab.find(namespace, ns, errors)?;
 
                 if let resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) = var.ty {
@@ -3093,6 +3091,7 @@ pub struct Variable {
 
 struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
+#[derive(Default)]
 pub struct Vartable {
     vars: Vec<Variable>,
     names: LinkedList<VarScope>,

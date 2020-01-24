@@ -95,6 +95,7 @@ pub struct VariableDeclaration {
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::vec_box)]
 pub struct StructDefinition {
     pub doc: Vec<String>,
     pub name: Identifier,

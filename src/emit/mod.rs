@@ -644,6 +644,7 @@ impl<'a> Contract<'a> {
         function
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn emit_cfg(
         &self,
         cfg: &cfg::ControlFlowGraph,
@@ -714,12 +715,7 @@ impl<'a> Contract<'a> {
 
         work.push_back(Work { bb_no: 0, vars });
 
-        loop {
-            let mut w = match work.pop_front() {
-                Some(w) => w,
-                None => break,
-            };
-
+        while let Some(ref mut w) = work.pop_front() {
             let bb = blocks.get(&w.bb_no).unwrap();
 
             self.builder.position_at_end(&bb.bb);
@@ -1037,7 +1033,7 @@ impl<'a> Contract<'a> {
         //let c = cases.into_iter().map(|(id, bb)| (id, &bb)).collect();
 
         self.builder
-            .build_switch(fid.into_int_value(), fallback_block, &c);
+            .build_switch(fid.into_int_value(), &fallback_block, &c);
 
         self.builder.position_at_end(&nomatch);
 
