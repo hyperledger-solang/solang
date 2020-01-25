@@ -603,14 +603,18 @@ impl<'a> Contract<'a> {
                     .into()
             }
             cfg::Expression::IndexAccess(a, i) => {
-                let array = self.expression(a, vartab, runtime).into_pointer_value();
+                let array = vartab[*a].value.into_pointer_value();
                 let index = self.expression(i, vartab, runtime).into_int_value();
 
-                unsafe {
-                    self.builder
-                        .build_gep(array, &[index], "index_access")
-                        .into()
-                }
+                let pointer = unsafe {
+                    self.builder.build_gep(
+                        array,
+                        &[self.context.i32_type().const_zero(), index],
+                        "index_access",
+                    )
+                };
+
+                self.builder.build_load(pointer, "index_access")
             }
             cfg::Expression::Ternary(c, l, r) => {
                 let cond = self.expression(c, vartab, runtime).into_int_value();
@@ -1697,6 +1701,7 @@ impl<'a> Contract<'a> {
 }
 
 impl ast::PrimitiveType {
+    /// Return the llvm type for this primitive. Non-primitives will panic and should be generated via resolver::Type.llvm_Type()
     fn llvm_type<'a>(&self, context: &'a Context) -> IntType<'a> {
         match self {
             ast::PrimitiveType::Bool => context.bool_type(),
@@ -1724,6 +1729,7 @@ impl ast::PrimitiveType {
 }
 
 impl resolver::Type {
+    /// Return the llvm type for the resolved type.
     fn llvm_type<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
         match self {
             resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.llvm_type(context)),
@@ -1757,6 +1763,8 @@ impl resolver::Type {
 
 static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
 
+/// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
+/// the solang library
 fn load_stdlib(context: &Context) -> Module {
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
 
