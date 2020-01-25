@@ -57,7 +57,7 @@ pub enum Expression {
     UnaryMinus(Box<Expression>),
 
     Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
-    IndexAccess(Box<Expression>, Box<Expression>),
+    IndexAccess(usize, Box<Expression>),
 
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
@@ -294,11 +294,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::IndexAccess(a, i) => format!(
-                "{}[{}]",
-                self.expr_to_string(ns, a),
-                self.expr_to_string(ns, i)
-            ),
+            Expression::IndexAccess(a, i) => {
+                format!("%{}[{}]", self.vars[*a].id.name, self.expr_to_string(ns, i))
+            }
             Expression::Or(l, r) => format!(
                 "({} || {})",
                 self.expr_to_string(ns, l),
@@ -2782,7 +2780,7 @@ pub fn expression(
                 None => {
                     errors.push(Output::error(
                         *loc,
-                        format!("cannot read variable {} in constant expression", id.name),
+                        format!("cannot read variable ‘{}’ in constant expression", id.name),
                     ));
                     return Err(());
                 }
@@ -2917,8 +2915,8 @@ pub fn expression(
                 }
                 resolver::Type::FixedArray(_, _) => Ok((
                     Expression::IndexAccess(
-                        Box::new(Expression::Variable(id.loc, var.pos)),
-                        Box::new(Expression::Variable(*loc, pos)),
+                        var.pos,
+                        Box::new(Expression::Variable(index.loc(), pos)),
                     ),
                     var.ty.deref(),
                 )),
