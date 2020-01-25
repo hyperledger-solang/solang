@@ -307,9 +307,9 @@ impl LexicalError {
     }
 }
 
-// Lexer should be aware of whether the last two tokens were
-// pragma followed by identifier. If this is true, then special parsing should be
-// done for the pragma value
+/// Lexer should be aware of whether the last two tokens were
+/// pragma followed by identifier. If this is true, then special parsing should be
+/// done for the pragma value
 pub enum PragmaParserState {
     NotParsingPragma,
     SeenPragma,

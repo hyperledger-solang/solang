@@ -1,4 +1,5 @@
-use super::cfg::{ControlFlowGraph, Expression, Instr, Vartable};
+use super::cfg::{ControlFlowGraph, Instr, Vartable};
+use super::expression::Expression;
 use parser::ast;
 use resolver;
 

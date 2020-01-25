@@ -13,10 +13,12 @@ use Target;
 mod address;
 mod builtin;
 pub mod cfg;
+pub mod expression;
 mod functions;
 mod variables;
 
 use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
+use resolver::expression::Expression;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
@@ -265,7 +267,7 @@ pub struct Contract {
     pub constructors: Vec<FunctionDecl>,
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<ContractVariable>,
-    pub constants: Vec<cfg::Expression>,
+    pub constants: Vec<Expression>,
     pub initializer: cfg::ControlFlowGraph,
     pub target: Target,
     top_of_contract_storage: usize,

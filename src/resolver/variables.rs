@@ -1,7 +1,8 @@
 use super::{Contract, ContractVariable, Symbol};
 use output::Output;
 use parser::ast;
-use resolver::cfg::{cast, expression, set_contract_storage, ControlFlowGraph, Instr, Vartable};
+use resolver::cfg::{set_contract_storage, ControlFlowGraph, Instr, Vartable};
+use resolver::expression::{cast, expression};
 use resolver::ContractVariableType;
 
 pub fn contract_variables(
