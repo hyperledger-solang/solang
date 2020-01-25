@@ -519,7 +519,7 @@ impl<'a> Contract<'a> {
             }
             cfg::Expression::ZeroExt(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
-                let ty = t.LLVMType(self.ns, &self.context);
+                let ty = t.llvm_type(self.ns, &self.context);
 
                 self.builder
                     .build_int_z_extend(e, ty.into_int_type(), "")
@@ -532,7 +532,7 @@ impl<'a> Contract<'a> {
             }
             cfg::Expression::SignExt(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
-                let ty = t.LLVMType(self.ns, &self.context);
+                let ty = t.llvm_type(self.ns, &self.context);
 
                 self.builder
                     .build_int_s_extend(e, ty.into_int_type(), "")
@@ -540,7 +540,7 @@ impl<'a> Contract<'a> {
             }
             cfg::Expression::Trunc(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
-                let ty = t.LLVMType(self.ns, &self.context);
+                let ty = t.llvm_type(self.ns, &self.context);
 
                 self.builder
                     .build_int_truncate(e, ty.into_int_type(), "")
@@ -644,7 +644,7 @@ impl<'a> Contract<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
 
         for p in &f.params {
-            let ty = p.ty.LLVMType(self.ns, self.context);
+            let ty = p.ty.llvm_type(self.ns, self.context);
             args.push(if p.ty.stack_based() {
                 ty.ptr_type(AddressSpace::Generic).into()
             } else {
@@ -655,14 +655,14 @@ impl<'a> Contract<'a> {
         let ftype = if f.wasm_return {
             f.returns[0]
                 .ty
-                .LLVMType(self.ns, &self.context)
+                .llvm_type(self.ns, &self.context)
                 .into_int_type()
                 .fn_type(&args, false)
         } else {
             // add return values
             for p in &f.returns {
                 args.push(
-                    p.ty.LLVMType(self.ns, &self.context)
+                    p.ty.llvm_type(self.ns, &self.context)
                         .ptr_type(AddressSpace::Generic)
                         .into(),
                 );
@@ -716,7 +716,7 @@ impl<'a> Contract<'a> {
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
                     if !cfg.vars[*v].ty.stack_based() {
-                        let ty = cfg.vars[*v].ty.LLVMType(self.ns, &self.context);
+                        let ty = cfg.vars[*v].ty.llvm_type(self.ns, &self.context);
 
                         phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
                     }
@@ -745,7 +745,7 @@ impl<'a> Contract<'a> {
                     vars.push(Variable {
                         value: self
                             .builder
-                            .build_alloca(v.ty.LLVMType(self.ns, &self.context), &v.id.name)
+                            .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.id.name)
                             .into(),
                         stack: true,
                     });
@@ -908,7 +908,7 @@ impl<'a> Contract<'a> {
                                 // copy onto stack
                                 let m = self
                                     .builder
-                                    .build_alloca(ty.LLVMType(self.ns, &self.context), "");
+                                    .build_alloca(ty.llvm_type(self.ns, &self.context), "");
 
                                 self.builder.build_store(m, val);
 
@@ -923,7 +923,7 @@ impl<'a> Contract<'a> {
                                 parms.push(
                                     self.builder
                                         .build_alloca(
-                                            v.ty.LLVMType(self.ns, &self.context),
+                                            v.ty.llvm_type(self.ns, &self.context),
                                             &v.name,
                                         )
                                         .into(),
@@ -1037,7 +1037,7 @@ impl<'a> Contract<'a> {
                 for v in f.returns.iter() {
                     args.push(
                         self.builder
-                            .build_alloca(v.ty.LLVMType(self.ns, &self.context), &v.name)
+                            .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.name)
                             .into(),
                     );
                 }
@@ -1697,8 +1697,7 @@ impl<'a> Contract<'a> {
 }
 
 impl ast::PrimitiveType {
-    #[allow(non_snake_case)]
-    fn LLVMType<'a>(&self, context: &'a Context) -> IntType<'a> {
+    fn llvm_type<'a>(&self, context: &'a Context) -> IntType<'a> {
         match self {
             ast::PrimitiveType::Bool => context.bool_type(),
             ast::PrimitiveType::Int(n) | ast::PrimitiveType::Uint(n) => {
@@ -1725,20 +1724,19 @@ impl ast::PrimitiveType {
 }
 
 impl resolver::Type {
-    #[allow(non_snake_case)]
-    fn LLVMType<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
+    fn llvm_type<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
         match self {
-            resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.LLVMType(context)),
-            resolver::Type::Enum(n) => BasicTypeEnum::IntType(ns.enums[*n].ty.LLVMType(context)),
+            resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.llvm_type(context)),
+            resolver::Type::Enum(n) => BasicTypeEnum::IntType(ns.enums[*n].ty.llvm_type(context)),
             resolver::Type::FixedArray(base_ty, dims) => {
-                let ty = base_ty.LLVMType(ns, context).into_int_type();
+                let ty = base_ty.llvm_type(ns, context).into_int_type();
 
                 let mut dims = dims.iter();
 
                 let mut aty = ty.array_type(dims.next().unwrap().to_u32().unwrap());
 
                 for dim in dims {
-                    aty = ty.array_type(dim.to_u32().unwrap());
+                    aty = aty.array_type(dim.to_u32().unwrap());
                 }
 
                 BasicTypeEnum::ArrayType(aty)
