@@ -2,6 +2,7 @@ use hex;
 use parser::ast;
 use resolver;
 use resolver::cfg;
+use resolver::expression::Expression;
 use std::path::Path;
 use std::str;
 
@@ -236,17 +237,17 @@ impl<'a> Contract<'a> {
 
     fn expression(
         &self,
-        e: &cfg::Expression,
+        e: &Expression,
         vartab: &[Variable<'a>],
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
-            cfg::Expression::BoolLiteral(val) => self
+            Expression::BoolLiteral(val) => self
                 .context
                 .bool_type()
                 .const_int(*val as u64, false)
                 .into(),
-            cfg::Expression::NumberLiteral(bits, n) => {
+            Expression::NumberLiteral(bits, n) => {
                 let ty = self.context.custom_width_int_type(*bits as _);
                 let s = n.to_string();
 
@@ -254,7 +255,7 @@ impl<'a> Contract<'a> {
                     .unwrap()
                     .into()
             }
-            cfg::Expression::BytesLiteral(bs) => {
+            Expression::BytesLiteral(bs) => {
                 let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
 
                 // hex"11223344" should become i32 0x11223344
@@ -264,19 +265,19 @@ impl<'a> Contract<'a> {
                     .unwrap()
                     .into()
             }
-            cfg::Expression::Add(l, r) => {
+            Expression::Add(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_int_add(left, right, "").into()
             }
-            cfg::Expression::Subtract(l, r) => {
+            Expression::Subtract(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_int_sub(left, right, "").into()
             }
-            cfg::Expression::Multiply(l, r) => {
+            Expression::Multiply(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -327,7 +328,7 @@ impl<'a> Contract<'a> {
                     self.builder.build_int_mul(left, right, "").into()
                 }
             }
-            cfg::Expression::UDivide(l, r) => {
+            Expression::UDivide(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
@@ -351,7 +352,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            cfg::Expression::SDivide(l, r) => {
+            Expression::SDivide(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
@@ -373,7 +374,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            cfg::Expression::UModulo(l, r) => {
+            Expression::UModulo(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
@@ -394,7 +395,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            cfg::Expression::SModulo(l, r) => {
+            Expression::SModulo(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
@@ -415,7 +416,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            cfg::Expression::Power(l, r) => {
+            Expression::Power(l, r) => {
                 let left = self.expression(l, vartab, runtime);
                 let right = self.expression(r, vartab, runtime);
 
@@ -429,7 +430,7 @@ impl<'a> Contract<'a> {
                     .left()
                     .unwrap()
             }
-            cfg::Expression::Equal(l, r) => {
+            Expression::Equal(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -437,7 +438,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::EQ, left, right, "")
                     .into()
             }
-            cfg::Expression::NotEqual(l, r) => {
+            Expression::NotEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -445,7 +446,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::NE, left, right, "")
                     .into()
             }
-            cfg::Expression::SMore(l, r) => {
+            Expression::SMore(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -453,7 +454,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SGT, left, right, "")
                     .into()
             }
-            cfg::Expression::SMoreEqual(l, r) => {
+            Expression::SMoreEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -461,7 +462,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SGE, left, right, "")
                     .into()
             }
-            cfg::Expression::SLess(l, r) => {
+            Expression::SLess(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -469,7 +470,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SLT, left, right, "")
                     .into()
             }
-            cfg::Expression::SLessEqual(l, r) => {
+            Expression::SLessEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -477,7 +478,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SLE, left, right, "")
                     .into()
             }
-            cfg::Expression::UMore(l, r) => {
+            Expression::UMore(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -485,7 +486,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::UGT, left, right, "")
                     .into()
             }
-            cfg::Expression::UMoreEqual(l, r) => {
+            Expression::UMoreEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -493,7 +494,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::UGE, left, right, "")
                     .into()
             }
-            cfg::Expression::ULess(l, r) => {
+            Expression::ULess(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -501,7 +502,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::ULT, left, right, "")
                     .into()
             }
-            cfg::Expression::ULessEqual(l, r) => {
+            Expression::ULessEqual(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -509,7 +510,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::ULE, left, right, "")
                     .into()
             }
-            cfg::Expression::Variable(_, s) => {
+            Expression::Variable(_, s) => {
                 if vartab[*s].stack {
                     self.builder
                         .build_load(vartab[*s].value.into_pointer_value(), "")
@@ -517,7 +518,7 @@ impl<'a> Contract<'a> {
                     vartab[*s].value
                 }
             }
-            cfg::Expression::ZeroExt(t, e) => {
+            Expression::ZeroExt(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
 
@@ -525,12 +526,12 @@ impl<'a> Contract<'a> {
                     .build_int_z_extend(e, ty.into_int_type(), "")
                     .into()
             }
-            cfg::Expression::UnaryMinus(e) => {
+            Expression::UnaryMinus(e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
 
                 self.builder.build_int_neg(e, "").into()
             }
-            cfg::Expression::SignExt(t, e) => {
+            Expression::SignExt(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
 
@@ -538,7 +539,7 @@ impl<'a> Contract<'a> {
                     .build_int_s_extend(e, ty.into_int_type(), "")
                     .into()
             }
-            cfg::Expression::Trunc(t, e) => {
+            Expression::Trunc(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
 
@@ -546,55 +547,55 @@ impl<'a> Contract<'a> {
                     .build_int_truncate(e, ty.into_int_type(), "")
                     .into()
             }
-            cfg::Expression::Not(e) => {
+            Expression::Not(e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
                     .into()
             }
-            cfg::Expression::Complement(e) => {
+            Expression::Complement(e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
 
                 self.builder.build_not(e, "").into()
             }
-            cfg::Expression::Or(l, r) => {
+            Expression::Or(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_or(left, right, "").into()
             }
-            cfg::Expression::And(l, r) => {
+            Expression::And(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_and(left, right, "").into()
             }
-            cfg::Expression::BitwiseOr(l, r) => {
+            Expression::BitwiseOr(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_or(left, right, "").into()
             }
-            cfg::Expression::BitwiseAnd(l, r) => {
+            Expression::BitwiseAnd(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_and(left, right, "").into()
             }
-            cfg::Expression::BitwiseXor(l, r) => {
+            Expression::BitwiseXor(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_xor(left, right, "").into()
             }
-            cfg::Expression::ShiftLeft(l, r) => {
+            Expression::ShiftLeft(l, r) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_left_shift(left, right, "").into()
             }
-            cfg::Expression::ShiftRight(l, r, signed) => {
+            Expression::ShiftRight(l, r, signed) => {
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
@@ -602,7 +603,7 @@ impl<'a> Contract<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            cfg::Expression::IndexAccess(a, i) => {
+            Expression::IndexAccess(a, i) => {
                 let array = vartab[*a].value.into_pointer_value();
                 let index = self.expression(i, vartab, runtime).into_int_value();
 
@@ -616,14 +617,14 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_load(pointer, "index_access")
             }
-            cfg::Expression::Ternary(c, l, r) => {
+            Expression::Ternary(c, l, r) => {
                 let cond = self.expression(c, vartab, runtime).into_int_value();
                 let left = self.expression(l, vartab, runtime).into_int_value();
                 let right = self.expression(r, vartab, runtime).into_int_value();
 
                 self.builder.build_select(cond, left, right, "")
             }
-            cfg::Expression::Poison => unreachable!(),
+            Expression::Poison => unreachable!(),
         }
     }
 
