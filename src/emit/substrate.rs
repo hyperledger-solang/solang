@@ -507,7 +507,7 @@ impl TargetRuntime for SubstrateTarget {
                     if ty.stack_based() {
                         let m = contract
                             .builder
-                            .build_alloca(ty.LLVMType(&contract.context), "");
+                            .build_alloca(ty.llvm_type(&contract.context), "");
 
                         contract.builder.build_store(m, val);
 
@@ -520,7 +520,7 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Bytes(n) => {
                     let m = contract
                         .builder
-                        .build_alloca(ty.LLVMType(&contract.context), "");
+                        .build_alloca(ty.llvm_type(&contract.context), "");
 
                     // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
                     contract.builder.build_call(
@@ -555,7 +555,7 @@ impl TargetRuntime for SubstrateTarget {
                 ast::PrimitiveType::Address => {
                     let address = contract
                         .builder
-                        .build_alloca(ty.LLVMType(&contract.context), "address");
+                        .build_alloca(ty.llvm_type(&contract.context), "address");
 
                     // byte order needs to be reversed
                     contract.builder.build_call(
