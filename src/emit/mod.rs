@@ -18,7 +18,7 @@ use inkwell::targets::{CodeModel, FileType, RelocMode, Target};
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::{BasicType, IntType, StringRadix};
 use inkwell::values::{
-    BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
+    ArrayValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -624,6 +624,80 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_select(cond, left, right, "")
             }
+            Expression::ConstArrayLiteral(dims, exprs) => {
+                // For const arrays (declared with "constant" keyword, we should create a global constant
+                let mut dims = dims.iter();
+
+                let exprs = exprs
+                    .iter()
+                    .map(|e| self.expression(e, vartab, runtime).into_int_value())
+                    .collect::<Vec<IntValue>>();
+                let ty = exprs[0].get_type();
+
+                let top_size = *dims.next().unwrap();
+
+                // Create a vector of ArrayValues
+                let mut arrays = exprs
+                    .chunks(top_size as usize)
+                    .map(|a| ty.const_array(a))
+                    .collect::<Vec<ArrayValue>>();
+
+                let mut ty = ty.array_type(top_size);
+
+                // for each dimension, split the array into futher arrays
+                for d in dims {
+                    ty = ty.array_type(*d);
+
+                    arrays = arrays
+                        .chunks(*d as usize)
+                        .map(|a| ty.const_array(a))
+                        .collect::<Vec<ArrayValue>>();
+                }
+
+                // We actually end up with an array with a single entry
+
+                // now we've created the type, and the const array. Put it into a global
+                let gv =
+                    self.module
+                        .add_global(ty, Some(AddressSpace::Generic), "const_array_literal");
+
+                gv.set_linkage(Linkage::Internal);
+
+                gv.set_initializer(&arrays[0]);
+                gv.set_constant(true);
+
+                gv.as_pointer_value().into()
+            }
+            Expression::ArrayLiteral(ty, dims, exprs) => {
+                // non-const array literals should alloca'ed and each element assigned
+                let array = self
+                    .builder
+                    .build_alloca(ty.llvm_type(self.ns, &self.context), "array_literal");
+
+                for (i, expr) in exprs.iter().enumerate() {
+                    let mut ind = vec![self.context.i32_type().const_zero()];
+
+                    let mut e = i as u32;
+
+                    for d in dims {
+                        ind.push(self.context.i32_type().const_int((e % *d).into(), false));
+
+                        e /= *d;
+                    }
+
+                    let elemptr = unsafe {
+                        self.builder
+                            .build_gep(array, &ind, &format!("elemptr{}", i))
+                    };
+
+                    self.builder.build_store(
+                        elemptr,
+                        self.expression(expr, vartab, runtime).into_int_value(),
+                    );
+                }
+
+                array.into()
+            }
             Expression::Poison => unreachable!(),
         }
     }
@@ -740,9 +814,20 @@ impl<'a> Contract<'a> {
 
         for v in &cfg.vars {
             match v.storage {
-                cfg::Storage::Local if !v.ty.stack_based() => {
+                cfg::Storage::Local if !v.ty.stack_based() || v.ty.is_array() => {
                     vars.push(Variable {
                         value: self.context.i32_type().const_zero().into(),
+                        stack: false,
+                    });
+                }
+                cfg::Storage::Constant(_) if v.ty.is_array() => {
+                    vars.push(Variable {
+                        value: v
+                            .ty
+                            .llvm_type(self.ns, &self.context)
+                            .ptr_type(AddressSpace::Generic)
+                            .const_zero()
+                            .into(),
                         stack: false,
                     });
                 }
@@ -1752,6 +1837,17 @@ impl resolver::Type {
         }
     }
 
+    /// Is this type an array
+    pub fn is_array(&self) -> bool {
+        match self {
+            resolver::Type::Primitive(_) => false,
+            resolver::Type::Enum(_) => false,
+            resolver::Type::FixedArray(_, _) => true,
+            resolver::Type::Noreturn => unreachable!(),
+        }
+    }
+
+    /// Should this value be stored in alloca'ed space
     pub fn stack_based(&self) -> bool {
         match self {
             resolver::Type::Primitive(e) => e.stack_based(),

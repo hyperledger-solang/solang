@@ -261,7 +261,7 @@ Precedence0: Expression = {
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
-    <a:@L> "[" <v:(<Precedence0> ",")*> <e:Precedence0> "]" <b:@R> => {
+    <a:@L> "[" <v:(<Expression> ",")*> <e:Expression> "]" <b:@R> => {
         let mut v = v;
         v.push(e);
         Expression::ArrayLiteral(Loc(a, b), v)

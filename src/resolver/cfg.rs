@@ -121,6 +121,24 @@ impl ControlFlowGraph {
             Expression::BoolLiteral(true) => "true".to_string(),
             Expression::BytesLiteral(s) => format!("hex\"{}\"", hex::encode(s)),
             Expression::NumberLiteral(bits, n) => format!("i{} {}", bits, n.to_str_radix(10)),
+            Expression::ConstArrayLiteral(dims, exprs) => format!(
+                "constant {} [ {} ]",
+                dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
+                exprs
+                    .iter()
+                    .map(|e| self.expr_to_string(ns, e))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::ArrayLiteral(_, dims, exprs) => format!(
+                "{} [ {} ]",
+                dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
+                exprs
+                    .iter()
+                    .map(|e| self.expr_to_string(ns, e))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Expression::Add(l, r) => format!(
                 "({} + {})",
                 self.expr_to_string(ns, l),
