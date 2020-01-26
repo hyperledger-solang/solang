@@ -24,6 +24,8 @@ pub enum Expression {
     BoolLiteral(bool),
     BytesLiteral(Vec<u8>),
     NumberLiteral(u16, BigInt),
+    ArrayLiteral(resolver::Type, Vec<u32>, Vec<Expression>),
+    ConstArrayLiteral(Vec<u32>, Vec<Expression>),
     Add(Box<Expression>, Box<Expression>),
     Subtract(Box<Expression>, Box<Expression>),
     Multiply(Box<Expression>, Box<Expression>),
@@ -668,6 +670,9 @@ pub fn expression(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     match expr {
+        ast::Expression::ArrayLiteral(loc, exprs) => {
+            resolve_array_literal(loc, exprs, cfg, ns, vartab, errors)
+        }
         ast::Expression::BoolLiteral(_, v) => Ok((
             Expression::BoolLiteral(*v),
             resolver::Type::Primitive(ast::PrimitiveType::Bool),
@@ -2078,4 +2083,115 @@ fn cast_shift_arg(expr: Expression, from_width: u16, ty: &resolver::Type) -> Exp
     } else {
         Expression::Trunc(ty.clone(), Box::new(expr))
     }
+}
+
+/// Given an parsed literal array, ensure that it is valid. All the elements in the array
+/// must of the same type. The array might be a multidimensional array; all the leaf nodes
+/// must match.
+fn resolve_array_literal(
+    loc: &ast::Loc,
+    exprs: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let mut dims = Box::new(Vec::new());
+    let mut flattened = Vec::new();
+
+    check_subarrays(exprs, &mut Some(&mut dims), &mut flattened, errors)?;
+
+    if flattened.is_empty() {
+        errors.push(Output::error(
+            *loc,
+            "array requires at least one element".to_string(),
+        ));
+        return Err(());
+    }
+
+    let mut flattened = flattened.iter();
+
+    // We follow the solidity scheme were everthing gets implicitly converted to the
+    // type of the first element
+    let (first, ty) = expression(flattened.next().unwrap(), cfg, ns, vartab, errors)?;
+
+    let mut exprs = vec![first];
+
+    for e in flattened {
+        let (mut other, oty) = expression(e, cfg, ns, vartab, errors)?;
+
+        if oty != ty {
+            other = cast(&e.loc(), other, &oty, &ty, true, ns, errors)?;
+        }
+
+        exprs.push(other);
+    }
+
+    let aty = resolver::Type::FixedArray(
+        Box::new(ty),
+        dims.iter()
+            .map(|n| BigInt::from_u32(*n).unwrap())
+            .collect::<Vec<BigInt>>(),
+    );
+
+    if vartab.is_none() {
+        Ok((Expression::ConstArrayLiteral(*dims, exprs), aty))
+    } else {
+        Ok((Expression::ArrayLiteral(aty.clone(), *dims, exprs), aty))
+    }
+}
+
+/// Traverse the literal looking for sub arrays. Ensure that all the sub
+/// arrays are the same length, and returned a flattened array of elements
+fn check_subarrays<'a>(
+    exprs: &'a [ast::Expression],
+    dims: &mut Option<&mut Vec<u32>>,
+    flatten: &mut Vec<&'a ast::Expression>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(), ()> {
+    if let Some(ast::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
+        // ensure all elements are array literals of the same length
+        check_subarrays(first, dims, flatten, errors)?;
+
+        for (i, e) in exprs.iter().enumerate().skip(1) {
+            if let ast::Expression::ArrayLiteral(_, other) = e {
+                if other.len() != first.len() {
+                    errors.push(Output::error(
+                        e.loc(),
+                        format!(
+                            "array elements should be identical, sub array {} has {} elements rather than {}", i + 1, other.len(), first.len()
+                        ),
+                    ));
+                    return Err(());
+                }
+                check_subarrays(other, &mut None, flatten, errors)?;
+            } else {
+                errors.push(Output::error(
+                    e.loc(),
+                    format!("array element {} should also be an array", i + 1),
+                ));
+                return Err(());
+            }
+        }
+    } else {
+        for (i, e) in exprs.iter().enumerate().skip(1) {
+            if let ast::Expression::ArrayLiteral(loc, _) = e {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "array elements should be of the type, element {} is unexpected array",
+                        i + 1
+                    ),
+                ));
+                return Err(());
+            }
+        }
+        flatten.extend(exprs);
+    }
+
+    if let Some(dims) = dims.as_deref_mut() {
+        dims.push(exprs.len() as u32);
+    }
+
+    Ok(())
 }

@@ -34,7 +34,7 @@ impl Type {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
             Type::FixedArray(ty, len) => format!(
-                "{}[{}]",
+                "{}{}",
                 ty.to_string(ns),
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
