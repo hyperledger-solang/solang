@@ -62,7 +62,7 @@ You will need the llvm libraries for this to work, see
 
 Building Solang from source
 ---------------------------
-In order to build solang from source, you will need rust 1.33.0 or higher,
+In order to build solang from source, you will need rust 1.40.0 or higher,
 and llvm version 8 or higher with the WebAssembly target enabled.
 
 So see if you have the correct version of rust, simply execute:
