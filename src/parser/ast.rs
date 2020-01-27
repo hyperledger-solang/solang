@@ -373,6 +373,7 @@ pub struct FunctionDefinition {
 pub struct BlockStatement(pub Vec<Statement>);
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum Statement {
     BlockStatement(BlockStatement),
     If(Expression, Box<Statement>, Option<Box<Statement>>),

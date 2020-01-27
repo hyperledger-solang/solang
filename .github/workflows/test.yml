@@ -19,12 +19,11 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-# FIXME: Lots of warnings to work through first
-#      - name: Run cargo clippy
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: clippy
-#          args: -- -D warnings
+      - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
 
   test:
     name: Test

@@ -23,7 +23,7 @@ use solang::{compile, Target};
 
 mod substrate_enums;
 
-#[allow(clippy::unreadable_literal)]
+#[allow(clippy::unreadable_literal, clippy::naive_bytecount)]
 mod substrate_expressions;
 
 mod substrate_first;
@@ -50,6 +50,7 @@ pub struct ContractStorage {
 }
 
 impl ContractStorage {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         ContractStorage {
             memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
