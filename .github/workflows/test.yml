@@ -19,6 +19,8 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+      - name: Install LLVM
+        run: sudo apt-get -y install llvm-8-dev clang-8 git zlib1g-dev
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
@@ -28,13 +30,17 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    container: ubuntu:18.04
     steps:
-    - name: Update packages list
-      run: apt-get update
+    - name: Checkout sources
+      uses: actions/checkout@v2
     - name: Install LLVM
-      run: apt-get -y install llvm-8-dev clang-8 git zlib1g-dev cargo
-    - uses: actions/checkout@v1
+      run: sudo apt-get -y install llvm-8-dev clang-8 git zlib1g-dev
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
     - name: Compile stdlib
       run: clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c
       working-directory:  ./stdlib
