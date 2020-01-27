@@ -10,7 +10,7 @@ FROM rust:1.40-slim-buster as builder
 MAINTAINER Sean Young <sean@mess.org>
 RUN echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
 RUN apt-get update
-RUN apt-get install -y cargo llvm-8-dev clang-8 libz-dev pkg-config libssl-dev git
+RUN apt-get install -y llvm-8-dev clang-8 libz-dev pkg-config libssl-dev git
 
 COPY .git src/.git/
 COPY src src/src/
@@ -22,7 +22,7 @@ RUN clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall 
 WORKDIR /src/
 RUN cargo build --release
 
-FROM ubuntu:18.04
+FROM debian:buster-slim
 COPY --from=builder /src/target/release/solang /usr/bin/solang
 
 ENTRYPOINT ["/usr/bin/solang"]
