@@ -603,7 +603,7 @@ impl<'a> Contract<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::IndexAccess(a, i) => {
+            Expression::ArraySubscript(a, i) => {
                 let array = vartab[*a].value.into_pointer_value();
                 let index = self.expression(i, vartab, runtime).into_int_value();
 

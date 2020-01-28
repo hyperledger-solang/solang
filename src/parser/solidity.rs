@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: cd151aa3ccb4047966050e5a88cbab9ea064ca9339f8ea628bf333f33d7dca
+// sha256: fb27257c48d5ed3a8fc451728a016a5c94879422ab7e9c71b31a24a7f2ca
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
@@ -13595,7 +13595,7 @@ fn __action104<
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::IndexAccess(Loc(a, b), Box::new(e), box_option(i))
+    Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i))
 }
 
 #[allow(unused_variables)]

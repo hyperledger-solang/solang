@@ -60,7 +60,7 @@ pub enum Expression {
     UnaryMinus(Box<Expression>),
 
     Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
-    IndexAccess(usize, Box<Expression>),
+    ArraySubscript(usize, Box<Expression>),
 
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
@@ -1696,7 +1696,7 @@ pub fn expression(
 
             Err(())
         }
-        ast::Expression::IndexAccess(loc, var, Some(index)) => {
+        ast::Expression::ArraySubscript(loc, var, Some(index)) => {
             let id = match var.as_ref() {
                 ast::Expression::Variable(id) => id,
                 _ => unreachable!(),
@@ -1843,7 +1843,7 @@ pub fn expression(
                     ))
                 }
                 resolver::Type::FixedArray(_, _) => Ok((
-                    Expression::IndexAccess(
+                    Expression::ArraySubscript(
                         var.pos,
                         Box::new(Expression::Variable(index.loc(), pos)),
                     ),
