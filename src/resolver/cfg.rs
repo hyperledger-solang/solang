@@ -257,7 +257,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::IndexAccess(a, i) => {
+            Expression::ArraySubscript(a, i) => {
                 format!("%{}[{}]", self.vars[*a].id.name, self.expr_to_string(ns, i))
             }
             Expression::Or(l, r) => format!(

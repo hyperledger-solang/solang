@@ -183,7 +183,7 @@ pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
     New(Loc, Type),
-    IndexAccess(Loc, Box<Expression>, Option<Box<Expression>>),
+    ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Identifier, Identifier),
     FunctionCall(Loc, Type, Vec<Expression>),
     Not(Loc, Box<Expression>),
@@ -239,7 +239,7 @@ impl Expression {
             Expression::PostIncrement(loc, _)
             | Expression::PostDecrement(loc, _)
             | Expression::New(loc, _)
-            | Expression::IndexAccess(loc, _, _)
+            | Expression::ArraySubscript(loc, _, _)
             | Expression::MemberAccess(loc, _, _)
             | Expression::FunctionCall(loc, _, _)
             | Expression::Not(loc, _)
@@ -413,12 +413,12 @@ pub fn expr_to_type(expr: Expression) -> Result<Type, LexicalError> {
 
     loop {
         expr = match expr {
-            Expression::IndexAccess(_, r, None) => {
+            Expression::ArraySubscript(_, r, None) => {
                 dimensions.push(None);
 
                 *r
             }
-            Expression::IndexAccess(_, r, Some(index)) => {
+            Expression::ArraySubscript(_, r, Some(index)) => {
                 let loc = index.loc();
                 dimensions.push(match *index {
                     Expression::NumberLiteral(_, n) => Some((loc, n)),
