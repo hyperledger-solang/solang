@@ -146,17 +146,17 @@ Expression: Expression = {
 }
 
 Precedence15: Expression = {
-    <l:Precedence15> <a:@L> "=" <b:@R> <r:Precedence14> => Expression::Assign(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "|=" <b:@R> <r:Precedence14> => Expression::AssignOr(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "^=" <b:@R> <r:Precedence14> => Expression::AssignXor(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "&=" <b:@R> <r:Precedence14> => Expression::AssignAnd(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "<<=" <b:@R> <r:Precedence14> => Expression::AssignShiftLeft(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> ">>=" <b:@R> <r:Precedence14> => Expression::AssignShiftRight(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "+=" <b:@R> <r:Precedence14> => Expression::AssignAdd(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "-=" <b:@R> <r:Precedence14> => Expression::AssignSubtract(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "*=" <b:@R> <r:Precedence14> => Expression::AssignMultiply(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "/=" <b:@R> <r:Precedence14> => Expression::AssignDivide(Loc(a, b), Box::new(l), Box::new(r)),
-    <l:Precedence15> <a:@L> "%=" <b:@R> <r:Precedence14> => Expression::AssignModulo(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "=" <b:@R> <r:Precedence15> => Expression::Assign(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "|=" <b:@R> <r:Precedence15> => Expression::AssignOr(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "^=" <b:@R> <r:Precedence15> => Expression::AssignXor(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "&=" <b:@R> <r:Precedence15> => Expression::AssignAnd(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "<<=" <b:@R> <r:Precedence15> => Expression::AssignShiftLeft(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> ">>=" <b:@R> <r:Precedence15> => Expression::AssignShiftRight(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "+=" <b:@R> <r:Precedence15> => Expression::AssignAdd(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "-=" <b:@R> <r:Precedence15> => Expression::AssignSubtract(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "*=" <b:@R> <r:Precedence15> => Expression::AssignMultiply(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "/=" <b:@R> <r:Precedence15> => Expression::AssignDivide(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "%=" <b:@R> <r:Precedence15> => Expression::AssignModulo(Loc(a, b), Box::new(l), Box::new(r)),
     Precedence14,
 }
 
