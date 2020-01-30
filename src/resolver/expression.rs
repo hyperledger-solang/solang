@@ -60,7 +60,7 @@ pub enum Expression {
     UnaryMinus(Box<Expression>),
 
     Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
-    ArraySubscript(usize, Box<Expression>),
+    ArraySubscript(Box<Expression>, Box<Expression>),
 
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
@@ -757,7 +757,7 @@ pub fn expression(
             } else {
                 errors.push(Output::error(
                     id.loc,
-                    format!("cannot read variable {} in constant expression", id.name),
+                    format!("cannot read variable ‘{}’ in constant expression", id.name),
                 ));
                 Err(())
             }
@@ -1697,42 +1697,43 @@ pub fn expression(
 
             Err(())
         }
-        ast::Expression::ArraySubscript(loc, var, Some(index)) => {
-            let id = match var.as_ref() {
-                ast::Expression::Variable(id) => id,
-                _ => unreachable!(),
+        ast::Expression::ArraySubscript(loc, _, None) => {
+            errors.push(Output::error(
+                *loc,
+                "expected expression before ‘]’ token".to_string(),
+            ));
+
+            Err(())
+        }
+        ast::Expression::ArraySubscript(loc, array, Some(index)) => {
+            let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
+
+            let array_length = match array_ty {
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(n),
+                resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
+                _ => {
+                    errors.push(Output::error(
+                        array.loc(),
+                        "expression is not an array".to_string(),
+                    ));
+                    return Err(());
+                }
             };
 
-            let (index_expr, index_type) = expression(index, cfg, ns, vartab, errors)?;
+            let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
 
             let tab = match vartab {
                 &mut Some(ref mut tab) => tab,
                 None => {
                     errors.push(Output::error(
                         *loc,
-                        format!("cannot read variable ‘{}’ in constant expression", id.name),
+                        "cannot read subscript in constant expression".to_string(),
                     ));
                     return Err(());
                 }
             };
 
-            let var = tab.find(id, ns, errors)?;
-
-            get_contract_storage(&var, cfg, tab);
-
-            let array_length = match var.ty {
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(n),
-                resolver::Type::FixedArray(_, _) => var.ty.array_length().clone(),
-                _ => {
-                    errors.push(Output::error(
-                        *loc,
-                        format!("variable ‘{}’ is not an array", id.name),
-                    ));
-                    return Err(());
-                }
-            };
-
-            let (index_width, _) = get_int_length(&index_type, &index.loc(), false, ns, errors)?;
+            let (index_width, _) = get_int_length(&index_ty, &index.loc(), false, ns, errors)?;
             let array_width = array_length.bits();
 
             let pos = tab.temp(
@@ -1740,7 +1741,7 @@ pub fn expression(
                     name: "index".to_owned(),
                     loc: *loc,
                 },
-                &index_type,
+                &index_ty,
             );
 
             cfg.add(
@@ -1754,7 +1755,7 @@ pub fn expression(
             let out_of_range = cfg.new_basic_block("out_of_range".to_string());
             let in_range = cfg.new_basic_block("in_range".to_string());
 
-            if index_type.signed() {
+            if index_ty.signed() {
                 // first check that our index is not negative
                 let positive = cfg.new_basic_block("positive".to_string());
 
@@ -1810,7 +1811,7 @@ pub fn expression(
 
             cfg.set_basic_block(in_range);
 
-            match var.ty {
+            match array_ty {
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
                     let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
 
@@ -1818,7 +1819,7 @@ pub fn expression(
                         Expression::Trunc(
                             res_ty.clone(),
                             Box::new(Expression::ShiftRight(
-                                Box::new(Expression::Variable(*loc, var.pos)),
+                                Box::new(array_expr),
                                 // shift by (array_length - 1 - index) * 8
                                 Box::new(Expression::ShiftLeft(
                                     Box::new(Expression::Subtract(
@@ -1829,7 +1830,7 @@ pub fn expression(
                                         Box::new(cast_shift_arg(
                                             Expression::Variable(index.loc(), pos),
                                             index_width,
-                                            &var.ty,
+                                            &array_ty,
                                         )),
                                     )),
                                     Box::new(Expression::NumberLiteral(
@@ -1845,10 +1846,10 @@ pub fn expression(
                 }
                 resolver::Type::FixedArray(_, _) => Ok((
                     Expression::ArraySubscript(
-                        var.pos,
+                        Box::new(array_expr),
                         Box::new(Expression::Variable(index.loc(), pos)),
                     ),
-                    var.ty.deref(),
+                    array_ty.deref(),
                 )),
                 _ => {
                     // should not happen as type-checking already done

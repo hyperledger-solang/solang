@@ -541,6 +541,10 @@ fn bytes() {
                 return foo[index];
             }
 
+            function entry2(uint index) public pure returns (bytes1) {
+                return hex"AABBCCDD"[index];
+            }
+
             function shiftedleft() public view returns (bytes4) {
                 return foo << 8;
             }
@@ -591,4 +595,8 @@ fn bytes() {
     let ret = runtime.function(&mut store, "entry", &val);
 
     assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0x22))]);
+
+    let ret = runtime.function(&mut store, "entry2", &val);
+
+    assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0xBB))]);
 }

@@ -65,7 +65,7 @@ impl Type {
             Type::FixedArray(ty, dim) if dim.len() > 1 => {
                 Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec())
             }
-            Type::FixedArray(ty, dim) if dim.len() == 1 => *ty.clone(),
+            Type::FixedArray(ty, dim) if dim.len() == 1 => Type::Ref(Box::new(*ty.clone())),
             _ => panic!("deref on non-array"),
         }
     }

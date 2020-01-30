@@ -604,7 +604,7 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::ArraySubscript(a, i) => {
-                let array = vartab[*a].value.into_pointer_value();
+                let array = self.expression(a, vartab, runtime).into_pointer_value();
                 let index = self.expression(i, vartab, runtime).into_int_value();
 
                 let pointer = unsafe {
