@@ -1386,37 +1386,69 @@ pub fn expression(
 
         // assignment
         ast::Expression::Assign(loc, var, e) => {
-            let id = match var.as_ref() {
-                ast::Expression::Variable(id) => id,
-                _ => unreachable!(),
-            };
-
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            let vartab = match vartab {
-                &mut Some(ref mut tab) => tab,
-                None => {
-                    errors.push(Output::error(
-                        *loc,
-                        format!("cannot access variable {} in constant expression", id.name),
-                    ));
-                    return Err(());
+            match var.as_ref() {
+                ast::Expression::Variable(id) => {
+                    let vartab = match vartab {
+                        &mut Some(ref mut tab) => tab,
+                        None => {
+                            errors.push(Output::error(
+                                *loc,
+                                format!(
+                                    "cannot access variable {} in constant expression",
+                                    id.name
+                                ),
+                            ));
+                            return Err(());
+                        }
+                    };
+                    let var = vartab.find(id, ns, errors)?;
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            res: var.pos,
+                            expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
+                        },
+                    );
+                    set_contract_storage(id, &var, cfg, vartab, errors)?;
+
+                    Ok((Expression::Variable(id.loc, var.pos), var.ty))
                 }
-            };
+                _ => {
+                    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
 
-            let var = vartab.find(id, ns, errors)?;
+                    let vartab = match vartab {
+                        &mut Some(ref mut tab) => tab,
+                        None => {
+                            errors.push(Output::error(
+                                *loc,
+                                "cannot assign in constant expression".to_string(),
+                            ));
+                            return Err(());
+                        }
+                    };
 
-            cfg.add(
-                vartab,
-                Instr::Set {
-                    res: var.pos,
-                    expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
-                },
-            );
+                    if let resolver::Type::Ref(r_ty) = var_ty {
+                        cfg.add(
+                            vartab,
+                            Instr::Store {
+                                dest: var_expr,
+                                expr: cast(&var.loc(), expr, &expr_type, &r_ty, true, ns, errors)?,
+                            },
+                        );
 
-            set_contract_storage(id, &var, cfg, vartab, errors)?;
-
-            Ok((Expression::Variable(id.loc, var.pos), var.ty))
+                        // FIXME: assignment evaluates to the value assigned
+                        Ok((Expression::Poison, resolver::Type::Undef))
+                    } else {
+                        errors.push(Output::error(
+                            var.loc(),
+                            "expression is not assignable".to_string(),
+                        ));
+                        Err(())
+                    }
+                }
+            }
         }
 
         ast::Expression::AssignAdd(loc, var, e)

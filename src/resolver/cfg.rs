@@ -47,6 +47,10 @@ pub enum Instr {
         true_: usize,
         false_: usize,
     },
+    Store {
+        dest: Expression,
+        expr: Expression,
+    },
     AssertFailure {},
 }
 
@@ -352,6 +356,11 @@ impl ControlFlowGraph {
 
                     s.join(", ")
                 }
+            ),
+            Instr::Store { dest, expr } => format!(
+                "store {}, {}",
+                self.expr_to_string(ns, dest),
+                self.expr_to_string(ns, expr),
             ),
         }
     }

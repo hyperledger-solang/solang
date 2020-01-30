@@ -609,7 +609,7 @@ fn array() {
             function f(uint i1) public returns (int) {
                 int[8] bar = [ int(10), 20, 30, 4, 5, 6, 7, 8 ];
         
-                //bar[2] = 5;
+                bar[2] = 0x7_f;
         
                 return bar[i1];
             }
@@ -623,4 +623,10 @@ fn array() {
     let ret = runtime.function(&mut store, "f", &val);
 
     assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(20))]);
+
+    let val = vec![ethabi::Token::Uint(ethereum_types::U256::from(2))];
+
+    let ret = runtime.function(&mut store, "f", &val);
+
+    assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(127))]);
 }
