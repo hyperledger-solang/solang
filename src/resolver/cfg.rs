@@ -195,7 +195,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, r)
             ),
             Expression::Variable(_, res) => format!("%{}", self.vars[*res].id.name),
-
+            Expression::Load(expr) => format!("*{}", self.expr_to_string(ns, expr)),
             Expression::ZeroExt(ty, e) => {
                 format!("(zext {} {})", ty.to_string(ns), self.expr_to_string(ns, e))
             }

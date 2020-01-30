@@ -600,3 +600,27 @@ fn bytes() {
 
     assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0xBB))]);
 }
+
+#[test]
+fn array() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f(uint i1) public returns (int) {
+                int[8] bar = [ int(10), 20, 30, 4, 5, 6, 7, 8 ];
+        
+                //bar[2] = 5;
+        
+                return bar[i1];
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let val = vec![ethabi::Token::Uint(ethereum_types::U256::from(1))];
+
+    let ret = runtime.function(&mut store, "f", &val);
+
+    assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(20))]);
+}

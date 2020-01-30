@@ -518,6 +518,11 @@ impl<'a> Contract<'a> {
                     vartab[*s].value
                 }
             }
+            Expression::Load(e) => {
+                let expr = self.expression(e, vartab, runtime).into_pointer_value();
+
+                self.builder.build_load(expr, "")
+            }
             Expression::ZeroExt(t, e) => {
                 let e = self.expression(e, vartab, runtime).into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
@@ -607,15 +612,15 @@ impl<'a> Contract<'a> {
                 let array = self.expression(a, vartab, runtime).into_pointer_value();
                 let index = self.expression(i, vartab, runtime).into_int_value();
 
-                let pointer = unsafe {
-                    self.builder.build_gep(
-                        array,
-                        &[self.context.i32_type().const_zero(), index],
-                        "index_access",
-                    )
-                };
-
-                self.builder.build_load(pointer, "index_access")
+                unsafe {
+                    self.builder
+                        .build_gep(
+                            array,
+                            &[self.context.i32_type().const_zero(), index],
+                            "index_access",
+                        )
+                        .into()
+                }
             }
             Expression::Ternary(c, l, r) => {
                 let cond = self.expression(c, vartab, runtime).into_int_value();
