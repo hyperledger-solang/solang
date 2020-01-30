@@ -1339,6 +1339,7 @@ impl resolver::Type {
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::FixedArray(_, _) => unreachable!(),
+            resolver::Type::Ref(_) => unreachable!(),
         }
     }
 }

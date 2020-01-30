@@ -1834,6 +1834,7 @@ impl resolver::Type {
                 BasicTypeEnum::ArrayType(aty)
             }
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::Ref(_) => unreachable!(),
         }
     }
 
@@ -1843,6 +1844,7 @@ impl resolver::Type {
             resolver::Type::Primitive(_) => false,
             resolver::Type::Enum(_) => false,
             resolver::Type::FixedArray(_, _) => true,
+            resolver::Type::Ref(r) => r.is_array(),
             resolver::Type::Undef => unreachable!(),
         }
     }
@@ -1854,6 +1856,7 @@ impl resolver::Type {
             resolver::Type::Enum(_) => false,
             resolver::Type::FixedArray(_, _) => true,
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::Ref(_) => false,
         }
     }
 }

@@ -25,6 +25,7 @@ pub enum Type {
     Primitive(ast::PrimitiveType),
     FixedArray(Box<Type>, Vec<BigInt>),
     Enum(usize),
+    Ref(Box<Type>),
     Undef,
 }
 
@@ -38,6 +39,7 @@ impl Type {
                 ty.to_string(ns),
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
+            Type::Ref(r) => r.to_string(ns),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -51,6 +53,7 @@ impl Type {
                 ty.to_primitive_string(ns),
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
+            Type::Ref(r) => r.to_string(ns),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -112,6 +115,7 @@ impl Type {
             Type::Enum(_) => false,
             Type::FixedArray(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
+            Type::Ref(r) => r.signed(),
         }
     }
 
@@ -121,6 +125,7 @@ impl Type {
             Type::Enum(_) => false,
             Type::FixedArray(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
+            Type::Ref(r) => r.ordered(),
         }
     }
 
@@ -213,16 +218,21 @@ impl FunctionDecl {
                     sig.push('_');
                 }
 
-                sig.push_str(&match &p.ty {
-                    Type::Primitive(e) => e.to_string(),
-                    Type::Enum(i) => ns.enums[*i].name.to_owned(),
-                    Type::FixedArray(ty, len) => format!(
-                        "{}{}",
-                        ty.to_string(ns),
-                        len.iter().map(|r| format!(":{}", r)).collect::<String>()
-                    ),
-                    Type::Undef => unreachable!(),
-                });
+                fn type_to_wasm_name(ty: &Type, ns: &Contract) -> String {
+                    match ty {
+                        Type::Primitive(e) => e.to_string(),
+                        Type::Enum(i) => ns.enums[*i].name.to_owned(),
+                        Type::FixedArray(ty, len) => format!(
+                            "{}{}",
+                            ty.to_string(ns),
+                            len.iter().map(|r| format!(":{}", r)).collect::<String>()
+                        ),
+                        Type::Undef => unreachable!(),
+                        Type::Ref(r) => type_to_wasm_name(r, ns),
+                    }
+                }
+
+                sig.push_str(&type_to_wasm_name(&p.ty, ns));
             }
         }
 
