@@ -49,7 +49,7 @@ pub enum Instr {
     },
     Store {
         dest: Expression,
-        expr: Expression,
+        pos: usize,
     },
     AssertFailure {},
 }
@@ -357,10 +357,10 @@ impl ControlFlowGraph {
                     s.join(", ")
                 }
             ),
-            Instr::Store { dest, expr } => format!(
+            Instr::Store { dest, pos } => format!(
                 "store {}, {}",
                 self.expr_to_string(ns, dest),
-                self.expr_to_string(ns, expr),
+                self.vars[*pos].id.name
             ),
         }
     }
@@ -1244,6 +1244,22 @@ impl Vartable {
         self.storage_vars.insert(id.name.to_string(), pos);
 
         Ok(self.vars[pos].clone())
+    }
+
+    pub fn temp_anonymous(&mut self, ty: &resolver::Type) -> usize {
+        let pos = self.vars.len();
+
+        self.vars.push(Variable {
+            id: ast::Identifier {
+                name: format!("temp.{}", pos),
+                loc: ast::Loc(0, 0),
+            },
+            ty: ty.clone(),
+            pos,
+            storage: Storage::Local,
+        });
+
+        pos
     }
 
     pub fn temp(&mut self, id: &ast::Identifier, ty: &resolver::Type) -> usize {

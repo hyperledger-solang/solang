@@ -922,8 +922,8 @@ impl<'a> Contract<'a> {
                         self.builder.position_at_end(&pos);
                         self.builder.build_unconditional_branch(&bb.bb);
                     }
-                    cfg::Instr::Store { dest, expr } => {
-                        let value_ref = self.expression(expr, &w.vars, runtime);
+                    cfg::Instr::Store { dest, pos } => {
+                        let value_ref = w.vars[*pos].value;
                         let dest_ref = self.expression(dest, &w.vars, runtime).into_pointer_value();
 
                         self.builder.build_store(dest_ref, value_ref);
@@ -1845,7 +1845,10 @@ impl resolver::Type {
                 BasicTypeEnum::ArrayType(aty)
             }
             resolver::Type::Undef => unreachable!(),
-            resolver::Type::Ref(_) => unreachable!(),
+            resolver::Type::Ref(r) => r
+                .llvm_type(ns, context)
+                .ptr_type(AddressSpace::Generic)
+                .as_basic_type_enum(),
         }
     }
 
