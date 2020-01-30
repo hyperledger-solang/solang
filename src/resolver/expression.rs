@@ -117,7 +117,7 @@ fn get_int_length(
             ));
             return Err(());
         }
-        resolver::Type::Noreturn => {
+        resolver::Type::Undef => {
             unreachable!();
         }
     })
@@ -1681,7 +1681,7 @@ pub fn expression(
                         },
                     );
 
-                    return Ok((Expression::Poison, resolver::Type::Noreturn));
+                    return Ok((Expression::Poison, resolver::Type::Undef));
                 }
             }
 

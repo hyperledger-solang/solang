@@ -25,7 +25,7 @@ pub enum Type {
     Primitive(ast::PrimitiveType),
     FixedArray(Box<Type>, Vec<BigInt>),
     Enum(usize),
-    Noreturn,
+    Undef,
 }
 
 impl Type {
@@ -38,7 +38,7 @@ impl Type {
                 ty.to_string(ns),
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
-            Type::Noreturn => "no return".to_owned(),
+            Type::Undef => "undefined".to_owned(),
         }
     }
 
@@ -51,7 +51,7 @@ impl Type {
                 ty.to_primitive_string(ns),
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
-            Type::Noreturn => "no return".to_owned(),
+            Type::Undef => "undefined".to_owned(),
         }
     }
 
@@ -111,7 +111,7 @@ impl Type {
             Type::Primitive(e) => e.signed(),
             Type::Enum(_) => false,
             Type::FixedArray(_, _) => unreachable!(),
-            Type::Noreturn => unreachable!(),
+            Type::Undef => unreachable!(),
         }
     }
 
@@ -120,7 +120,7 @@ impl Type {
             Type::Primitive(e) => e.ordered(),
             Type::Enum(_) => false,
             Type::FixedArray(_, _) => unreachable!(),
-            Type::Noreturn => unreachable!(),
+            Type::Undef => unreachable!(),
         }
     }
 
@@ -221,7 +221,7 @@ impl FunctionDecl {
                         ty.to_string(ns),
                         len.iter().map(|r| format!(":{}", r)).collect::<String>()
                     ),
-                    Type::Noreturn => unreachable!(),
+                    Type::Undef => unreachable!(),
                 });
             }
         }

@@ -1833,7 +1833,7 @@ impl resolver::Type {
 
                 BasicTypeEnum::ArrayType(aty)
             }
-            resolver::Type::Noreturn => unreachable!(),
+            resolver::Type::Undef => unreachable!(),
         }
     }
 
@@ -1843,7 +1843,7 @@ impl resolver::Type {
             resolver::Type::Primitive(_) => false,
             resolver::Type::Enum(_) => false,
             resolver::Type::FixedArray(_, _) => true,
-            resolver::Type::Noreturn => unreachable!(),
+            resolver::Type::Undef => unreachable!(),
         }
     }
 
@@ -1853,7 +1853,7 @@ impl resolver::Type {
             resolver::Type::Primitive(e) => e.stack_based(),
             resolver::Type::Enum(_) => false,
             resolver::Type::FixedArray(_, _) => true,
-            resolver::Type::Noreturn => unreachable!(),
+            resolver::Type::Undef => unreachable!(),
         }
     }
 }
