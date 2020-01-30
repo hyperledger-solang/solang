@@ -40,6 +40,7 @@ pub enum Expression {
     ShiftLeft(Box<Expression>, Box<Expression>),
     ShiftRight(Box<Expression>, Box<Expression>, bool),
     Variable(ast::Loc, usize),
+    Load(Box<Expression>),
     ZeroExt(resolver::Type, Box<Expression>),
     SignExt(resolver::Type, Box<Expression>),
     Trunc(resolver::Type, Box<Expression>),
@@ -196,6 +197,8 @@ fn bigint_to_expression(
     }
 }
 
+/// Cast from one type to another, which also automatically derefs any Type::Ref() type.
+/// if the cast is explicit (e.g. bytes32(bar) then implicit should be set to false.
 pub fn cast(
     loc: &ast::Loc,
     expr: Expression,
@@ -205,6 +208,19 @@ pub fn cast(
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<Expression, ()> {
+    // First of all, if we have a ref then derefence it
+    if let resolver::Type::Ref(r) = from {
+        return cast(
+            loc,
+            Expression::Load(Box::new(expr)),
+            r,
+            to,
+            implicit,
+            ns,
+            errors,
+        );
+    }
+
     if from == to {
         return Ok(expr);
     }
