@@ -41,7 +41,7 @@ fn test_variable_initializer_errors() {
 
     assert_eq!(
         first_error(errors),
-        "cannot read variable x in constant expression"
+        "cannot read variable ‘x’ in constant expression"
     );
 
     // cannot read contract storage in constant
