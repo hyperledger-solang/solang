@@ -1337,7 +1337,7 @@ impl resolver::Type {
         match self {
             resolver::Type::Primitive(e) => e.default(),
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
-            resolver::Type::Noreturn => unreachable!(),
+            resolver::Type::Undef => unreachable!(),
             resolver::Type::FixedArray(_, _) => unreachable!(),
         }
     }
