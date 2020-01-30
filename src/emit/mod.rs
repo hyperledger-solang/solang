@@ -922,6 +922,12 @@ impl<'a> Contract<'a> {
                         self.builder.position_at_end(&pos);
                         self.builder.build_unconditional_branch(&bb.bb);
                     }
+                    cfg::Instr::Store { dest, expr } => {
+                        let value_ref = self.expression(expr, &w.vars, runtime);
+                        let dest_ref = self.expression(dest, &w.vars, runtime).into_pointer_value();
+
+                        self.builder.build_store(dest_ref, value_ref);
+                    }
                     cfg::Instr::BranchCond {
                         cond,
                         true_,
