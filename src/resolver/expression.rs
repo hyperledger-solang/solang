@@ -90,37 +90,38 @@ fn get_int_length(
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<(u16, bool), ()> {
-    Ok(match l {
-        resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => (*n, false),
-        resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => (*n, true),
+    match l {
+        resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => Ok((*n, false)),
+        resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => Ok((*n, true)),
         resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) if allow_bytes => {
-            (*n as u16 * 8, false)
+            Ok((*n as u16 * 8, false))
         }
         resolver::Type::Primitive(t) => {
             errors.push(Output::error(
                 *l_loc,
                 format!("expression of type {} not allowed", t.to_string()),
             ));
-            return Err(());
+            Err(())
         }
         resolver::Type::Enum(n) => {
             errors.push(Output::error(
                 *l_loc,
                 format!("type enum {} not allowed", ns.enums[*n].name),
             ));
-            return Err(());
+            Err(())
         }
         resolver::Type::FixedArray(_, _) => {
             errors.push(Output::error(
                 *l_loc,
                 format!("type array {} not allowed", l.to_string(ns)),
             ));
-            return Err(());
+            Err(())
         }
+        resolver::Type::Ref(n) => get_int_length(n, l_loc, allow_bytes, ns, errors),
         resolver::Type::Undef => {
             unreachable!();
         }
-    })
+    }
 }
 
 fn coerce_int(

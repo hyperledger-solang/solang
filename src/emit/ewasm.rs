@@ -751,6 +751,7 @@ impl TargetRuntime for EwasmTarget {
                 resolver::Type::Enum(n) => contract.ns.enums[n].ty,
                 resolver::Type::FixedArray(_, _) => unimplemented!(),
                 resolver::Type::Undef => unreachable!(),
+                resolver::Type::Ref(_) => unreachable!(),
             };
 
             self.emit_abi_encode_single_val(contract, ty, data, args[i]);
@@ -804,6 +805,7 @@ impl TargetRuntime for EwasmTarget {
                 resolver::Type::Enum(n) => &contract.ns.enums[*n].ty,
                 resolver::Type::FixedArray(_, _) => unimplemented!(),
                 resolver::Type::Undef => unreachable!(),
+                resolver::Type::Ref(_) => unreachable!(),
             };
 
             args.push(match ty {

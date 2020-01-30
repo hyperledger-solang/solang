@@ -409,6 +409,7 @@ fn ty_to_primitive<'a>(
         resolver::Type::Enum(ref i) => &resolved_contract.enums[*i].ty,
         resolver::Type::FixedArray(_, _) => unimplemented!(),
         resolver::Type::Undef => unreachable!(),
+        resolver::Type::Ref(_) => unreachable!(),
     }
 }
 
