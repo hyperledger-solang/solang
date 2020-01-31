@@ -95,7 +95,12 @@ struct TestRuntime {
 
 impl TestRuntime {
     fn function(&self, store: &mut ContractStorage, name: &str, args: &[Token]) -> Vec<Token> {
-        let calldata = self.abi.functions[name].encode_input(args).unwrap();
+        let calldata = match self.abi.functions[name].encode_input(args) {
+            Ok(n) => n,
+            Err(x) => panic!(format!("{}", x)),
+        };
+
+        println!("CALLDATA: {}", hex::encode(&calldata));
         // need to prepend length
         store.memory.set_value(0, calldata.len() as u32).unwrap();
         store
@@ -110,10 +115,11 @@ impl TestRuntime {
 
         match ret {
             Some(RuntimeValue::I32(offset)) => {
+                let length: u32 = store.memory.get_value(offset as u32).unwrap();
                 let offset = offset as u32;
                 let returndata = store
                     .memory
-                    .get(offset + mem::size_of::<u32>() as u32, 32)
+                    .get(offset + mem::size_of::<u32>() as u32, length as usize)
                     .unwrap();
 
                 println!("RETURNDATA: {}", hex::encode(&returndata));
@@ -613,6 +619,12 @@ fn array() {
         
                 return bar[i1];
             }
+
+            function bar() public returns (uint) {
+                uint[2][3][4] array;
+
+                return array.length;
+            }
         }"##,
     );
 
@@ -629,4 +641,41 @@ fn array() {
     let ret = runtime.function(&mut store, "f", &val);
 
     assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(127))]);
+
+    let ret = runtime.function(&mut store, "bar", &[]);
+
+    assert_eq!(ret, [ethabi::Token::Uint(ethereum_types::U256::from(4))]);
 }
+
+#[test]
+fn encode_array() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f(int32[4] a, uint i) public returns (int32) {
+                return a[i];
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let val = vec![
+        ethabi::Token::FixedArray(vec![
+            ethabi::Token::Int(ethereum_types::U256::from(0x20)),
+            ethabi::Token::Int(ethereum_types::U256::from(0x40)),
+            ethabi::Token::Int(ethereum_types::U256::from(0x80)),
+            ethabi::Token::Int(ethereum_types::U256::from(0x100)),
+        ]),
+        ethabi::Token::Uint(ethereum_types::U256::from(2)),
+    ];
+
+    let ret = runtime.function(&mut store, "f", &val);
+
+    assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(0x80))]);
+}
+
+// TODO
+// array range tests (signed/unsigned)
+// array of array
+// decode tests

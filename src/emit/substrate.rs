@@ -409,6 +409,43 @@ impl TargetRuntime for SubstrateTarget {
         contract.builder.position_at_end(&done_storage);
     }
 
+    fn return_empty_abi(&self, contract: &Contract) {
+        // This will clear the scratch buffer
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_write").unwrap(),
+            &[
+                contract
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_zero()
+                    .into(),
+                contract.context.i32_type().const_zero().into(),
+            ],
+            "",
+        );
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+    }
+
+    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_write").unwrap(),
+            &[data.into(), length.into()],
+            "",
+        );
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+    }
+
+    fn assert_failure<'b>(&self, contract: &'b Contract) {
+        contract.builder.build_unreachable();
+    }
+
     fn abi_decode<'b>(
         &self,
         contract: &'b Contract,
@@ -601,6 +638,7 @@ impl TargetRuntime for SubstrateTarget {
     fn abi_encode<'b>(
         &self,
         contract: &'b Contract,
+        _function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
@@ -762,42 +800,5 @@ impl TargetRuntime for SubstrateTarget {
         }
 
         (data, length)
-    }
-
-    fn return_empty_abi(&self, contract: &Contract) {
-        // This will clear the scratch buffer
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
-            &[
-                contract
-                    .context
-                    .i8_type()
-                    .ptr_type(AddressSpace::Generic)
-                    .const_zero()
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-            ],
-            "",
-        );
-
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-    }
-
-    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
-            &[data.into(), length.into()],
-            "",
-        );
-
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
-    }
-
-    fn assert_failure<'b>(&self, contract: &'b Contract) {
-        contract.builder.build_unreachable();
     }
 }

@@ -1,4 +1,3 @@
-use parser::ast;
 use resolver;
 use std::str;
 
@@ -7,11 +6,13 @@ use inkwell::module::Linkage;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
-use inkwell::IntPredicate;
 
+use super::ethabiencoder;
 use super::{Contract, TargetRuntime};
 
-pub struct BurrowTarget {}
+pub struct BurrowTarget {
+    abi: ethabiencoder::EthAbiEncoder,
+}
 
 impl BurrowTarget {
     pub fn build<'a>(
@@ -20,7 +21,9 @@ impl BurrowTarget {
         filename: &'a str,
     ) -> Contract<'a> {
         let mut c = Contract::new(context, contract, filename, None);
-        let b = BurrowTarget {};
+        let b = BurrowTarget {
+            abi: ethabiencoder::EthAbiEncoder {},
+        };
 
         // externals
         b.declare_externals(&mut c);
@@ -170,274 +173,42 @@ impl BurrowTarget {
             }
         }
     }
-
-    fn emit_abi_encode_single_val(
-        &self,
-        contract: &Contract,
-        ty: ast::PrimitiveType,
-        dest: PointerValue,
-        val: BasicValueEnum,
-    ) {
-        match ty {
-            ast::PrimitiveType::Bool => {
-                // first clear
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid",
-                );
-
-                contract.builder.build_call(
-                    contract.module.get_function("__bzero8").unwrap(),
-                    &[
-                        dest8.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                let value = contract.builder.build_select(
-                    val.into_int_value(),
-                    contract.context.i8_type().const_int(1, false),
-                    contract.context.i8_type().const_zero(),
-                    "bool_val",
-                );
-
-                let dest = unsafe {
-                    contract.builder.build_gep(
-                        dest8,
-                        &[contract.context.i32_type().const_int(31, false)],
-                        "",
-                    )
-                };
-
-                contract.builder.build_store(dest, value);
-            }
-            ast::PrimitiveType::Int(8) | ast::PrimitiveType::Uint(8) => {
-                let signval = if let ast::PrimitiveType::Int(8) = ty {
-                    let negative = contract.builder.build_int_compare(
-                        IntPredicate::SLT,
-                        val.into_int_value(),
-                        contract.context.i8_type().const_zero(),
-                        "neg",
-                    );
-
-                    contract
-                        .builder
-                        .build_select(
-                            negative,
-                            contract.context.i64_type().const_zero(),
-                            contract.context.i64_type().const_int(std::u64::MAX, true),
-                            "val",
-                        )
-                        .into_int_value()
-                } else {
-                    contract.context.i64_type().const_zero()
-                };
-
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid",
-                );
-
-                contract.builder.build_call(
-                    contract.module.get_function("__memset8").unwrap(),
-                    &[
-                        dest8.into(),
-                        signval.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                let dest = unsafe {
-                    contract.builder.build_gep(
-                        dest8,
-                        &[contract.context.i32_type().const_int(31, false)],
-                        "",
-                    )
-                };
-
-                contract.builder.build_store(dest, val);
-            }
-            ast::PrimitiveType::Address
-            | ast::PrimitiveType::Uint(_)
-            | ast::PrimitiveType::Int(_) => {
-                let n = match ty {
-                    ast::PrimitiveType::Address => 160,
-                    ast::PrimitiveType::Uint(b) => b,
-                    ast::PrimitiveType::Int(b) => b,
-                    _ => unreachable!(),
-                };
-
-                // first clear/set the upper bits
-                if n < 256 {
-                    let signval = if let ast::PrimitiveType::Int(8) = ty {
-                        let negative = contract.builder.build_int_compare(
-                            IntPredicate::SLT,
-                            val.into_int_value(),
-                            contract.context.i8_type().const_zero(),
-                            "neg",
-                        );
-
-                        contract
-                            .builder
-                            .build_select(
-                                negative,
-                                contract.context.i64_type().const_zero(),
-                                contract.context.i64_type().const_int(std::u64::MAX, true),
-                                "val",
-                            )
-                            .into_int_value()
-                    } else {
-                        contract.context.i64_type().const_zero()
-                    };
-
-                    let dest8 = contract.builder.build_pointer_cast(
-                        dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "destvoid",
-                    );
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__memset8").unwrap(),
-                        &[
-                            dest8.into(),
-                            signval.into(),
-                            contract.context.i32_type().const_int(4, false).into(),
-                        ],
-                        "",
-                    );
-                }
-
-                // no need to allocate space for each uint64
-                // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(n as u32);
-                let type_size = int_type.size_of();
-
-                let store = if ty.stack_based() {
-                    val.into_pointer_value()
-                } else {
-                    let store = contract.builder.build_alloca(int_type, "stack");
-
-                    contract.builder.build_store(store, val);
-
-                    store
-                };
-
-                contract.builder.build_call(
-                    contract.module.get_function("__leNtobe32").unwrap(),
-                    &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                store,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "store",
-                            )
-                            .into(),
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                dest,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "dest",
-                            )
-                            .into(),
-                        contract
-                            .builder
-                            .build_int_truncate(type_size, contract.context.i32_type(), "")
-                            .into(),
-                    ],
-                    "",
-                );
-            }
-            ast::PrimitiveType::Bytes(1) => {
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid",
-                );
-
-                contract.builder.build_call(
-                    contract.module.get_function("__bzero8").unwrap(),
-                    &[
-                        dest8.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                contract.builder.build_store(dest8, val);
-            }
-            ast::PrimitiveType::Bytes(b) => {
-                // first clear/set the upper bits
-                if b < 32 {
-                    let dest8 = contract.builder.build_pointer_cast(
-                        dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "destvoid",
-                    );
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__bzero8").unwrap(),
-                        &[
-                            dest8.into(),
-                            contract.context.i32_type().const_int(4, false).into(),
-                        ],
-                        "",
-                    );
-                }
-
-                // no need to allocate space for each uint64
-                // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(b as u32 * 8);
-                let type_size = int_type.size_of();
-
-                let store = if ty.stack_based() {
-                    val.into_pointer_value()
-                } else {
-                    let store = contract.builder.build_alloca(int_type, "stack");
-
-                    contract.builder.build_store(store, val);
-
-                    store
-                };
-
-                contract.builder.build_call(
-                    contract.module.get_function("__leNtobeN").unwrap(),
-                    &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                store,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "store",
-                            )
-                            .into(),
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                dest,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "dest",
-                            )
-                            .into(),
-                        contract
-                            .builder
-                            .build_int_truncate(type_size, contract.context.i32_type(), "")
-                            .into(),
-                    ],
-                    "",
-                );
-            }
-            _ => unimplemented!(),
-        }
-    }
 }
 
 impl TargetRuntime for BurrowTarget {
+    fn return_empty_abi(&self, contract: &Contract) {
+        let dest = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[contract.context.i32_type().const_int(4, false).into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        contract.builder.build_store(
+            contract.builder.build_pointer_cast(
+                dest,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.build_return(Some(&dest));
+    }
+
+    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, _length: IntValue) {
+        contract.builder.build_return(Some(&data));
+    }
+
+    fn assert_failure<'b>(&self, contract: &'b Contract) {
+        contract.builder.build_unreachable();
+    }
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,
@@ -502,53 +273,25 @@ impl TargetRuntime for BurrowTarget {
         );
     }
 
-    fn return_empty_abi(&self, contract: &Contract) {
-        let dest = contract
-            .builder
-            .build_call(
-                contract.module.get_function("__malloc").unwrap(),
-                &[contract.context.i32_type().const_int(4, false).into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        contract.builder.build_store(
-            contract.builder.build_pointer_cast(
-                dest,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                "",
-            ),
-            contract.context.i32_type().const_zero(),
-        );
-
-        contract.builder.build_return(Some(&dest));
-    }
-
-    fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, _length: IntValue) {
-        contract.builder.build_return(Some(&data));
-    }
-
     fn abi_encode<'b>(
         &self,
         contract: &'b Contract,
+        function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let length = contract
-            .context
-            .i32_type()
-            .const_int(32 * args.len() as u64, false);
-        let data = contract
+        let length = spec
+            .returns
+            .iter()
+            .fold(0, |acc, arg| acc + self.abi.encoded_length(&arg.ty));
+        let encoded_data = contract
             .builder
             .build_call(
                 contract.module.get_function("__malloc").unwrap(),
                 &[contract
                     .context
                     .i32_type()
-                    .const_int(4 + 32 * args.len() as u64, false)
+                    .const_int(length + 4, false)
                     .into()],
                 "",
             )
@@ -556,40 +299,34 @@ impl TargetRuntime for BurrowTarget {
             .left()
             .unwrap()
             .into_pointer_value();
-
         // write length
         contract.builder.build_store(
             contract.builder.build_pointer_cast(
-                data,
+                encoded_data,
                 contract.context.i32_type().ptr_type(AddressSpace::Generic),
                 "",
             ),
-            length,
+            contract.context.i32_type().const_int(length, false),
         );
 
         // malloc returns u8*
-        let abi_ptr = unsafe {
+        let mut data = unsafe {
             contract.builder.build_gep(
-                data,
+                encoded_data,
                 &[contract.context.i32_type().const_int(4, false)],
-                "abi_ptr",
+                "encoded_data",
             )
         };
 
         for (i, arg) in spec.returns.iter().enumerate() {
-            // insert abi decode
-            let ty = match arg.ty {
-                resolver::Type::Primitive(e) => e,
-                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
-                resolver::Type::FixedArray(_, _) => unimplemented!(),
-                resolver::Type::Undef => unreachable!(),
-                resolver::Type::Ref(_) => unreachable!(),
-            };
-
-            self.emit_abi_encode_single_val(contract, ty, abi_ptr, args[i]);
+            self.abi
+                .encode_ty(contract, function, &arg.ty, args[i], &mut data);
         }
 
-        (data, length)
+        (
+            encoded_data,
+            contract.context.i32_type().const_int(length + 4, false),
+        )
     }
 
     fn abi_decode<'b>(
@@ -601,229 +338,7 @@ impl TargetRuntime for BurrowTarget {
         length: IntValue,
         spec: &resolver::FunctionDecl,
     ) {
-        let mut data = data;
-        let decode_block = contract.context.append_basic_block(function, "abi_decode");
-        let wrong_length_block = contract
-            .context
-            .append_basic_block(function, "wrong_abi_length");
-
-        let is_ok = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            length,
-            contract
-                .context
-                .i32_type()
-                .const_int(32 * spec.params.len() as u64, false),
-            "correct_length",
-        );
-
-        contract
-            .builder
-            .build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
-
-        contract.builder.position_at_end(&decode_block);
-
-        for arg in &spec.params {
-            let ty = match &arg.ty {
-                resolver::Type::Primitive(e) => e,
-                resolver::Type::Enum(n) => &contract.ns.enums[*n].ty,
-                resolver::Type::FixedArray(_, _) => unimplemented!(),
-                resolver::Type::Undef => unreachable!(),
-                resolver::Type::Ref(_) => unreachable!(),
-            };
-
-            args.push(match ty {
-                ast::PrimitiveType::Bool => {
-                    // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
-                    // which is unneeded (hopefully)
-                    // cast to 64 bit pointer
-                    let bool_ptr = contract.builder.build_pointer_cast(
-                        data,
-                        contract.context.i64_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    );
-
-                    let bool_ptr = unsafe {
-                        contract.builder.build_gep(
-                            bool_ptr,
-                            &[contract.context.i32_type().const_int(3, false)],
-                            "bool_ptr",
-                        )
-                    };
-
-                    contract
-                        .builder
-                        .build_int_compare(
-                            IntPredicate::NE,
-                            contract
-                                .builder
-                                .build_load(bool_ptr, "abi_bool")
-                                .into_int_value(),
-                            contract.context.i64_type().const_zero(),
-                            "bool",
-                        )
-                        .into()
-                }
-                ast::PrimitiveType::Uint(8) | ast::PrimitiveType::Int(8) => {
-                    let int8_ptr = contract.builder.build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    );
-
-                    let int8_ptr = unsafe {
-                        contract.builder.build_gep(
-                            int8_ptr,
-                            &[contract.context.i32_type().const_int(31, false)],
-                            "bool_ptr",
-                        )
-                    };
-
-                    contract.builder.build_load(int8_ptr, "abi_int8")
-                }
-                ast::PrimitiveType::Address => {
-                    let int_type = contract.context.custom_width_int_type(160);
-                    let type_size = int_type.size_of();
-
-                    let store = contract.builder.build_alloca(int_type, "address");
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__be32toleN").unwrap(),
-                        &[
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    data,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    store,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_int_truncate(type_size, contract.context.i32_type(), "size")
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    store.into()
-                }
-                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
-                    let int_type = contract.context.custom_width_int_type(*n as u32);
-                    let type_size = int_type.size_of();
-
-                    let store = contract.builder.build_alloca(int_type, "stack");
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__be32toleN").unwrap(),
-                        &[
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    data,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    store,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_int_truncate(type_size, contract.context.i32_type(), "size")
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    if *n <= 64 {
-                        contract
-                            .builder
-                            .build_load(store, &format!("abi_int{}", *n))
-                    } else {
-                        store.into()
-                    }
-                }
-                ast::PrimitiveType::Bytes(1) => contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    ),
-                    "bytes1",
-                ),
-                ast::PrimitiveType::Bytes(b) => {
-                    let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
-                    let type_size = int_type.size_of();
-
-                    let store = contract.builder.build_alloca(int_type, "stack");
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__beNtoleN").unwrap(),
-                        &[
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    data,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    store,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            contract
-                                .builder
-                                .build_int_truncate(type_size, contract.context.i32_type(), "size")
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    if *b <= 8 {
-                        contract.builder.build_load(store, &format!("bytes{}", *b))
-                    } else {
-                        store.into()
-                    }
-                }
-                _ => panic!(),
-            });
-
-            data = unsafe {
-                contract.builder.build_gep(
-                    data,
-                    &[contract.context.i32_type().const_int(8, false)],
-                    "data_next",
-                )
-            };
-        }
-
-        // FIXME: generate a call to revert/abort with some human readable error or error code
-        contract.builder.position_at_end(&wrong_length_block);
-        contract.builder.build_unreachable();
-
-        contract.builder.position_at_end(&decode_block);
-    }
-
-    fn assert_failure<'b>(&self, contract: &'b Contract) {
-        contract.builder.build_unreachable();
+        self.abi
+            .decode(contract, function, args, data, length, spec);
     }
 }
