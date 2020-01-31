@@ -27,6 +27,7 @@ use inkwell::OptimizationLevel;
 const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
 mod burrow;
+mod ethabiencoder;
 mod ewasm;
 mod substrate;
 
@@ -43,6 +44,23 @@ struct Variable<'a> {
 }
 
 pub trait TargetRuntime {
+    fn abi_decode<'b>(
+        &self,
+        contract: &'b Contract,
+        function: FunctionValue,
+        args: &mut Vec<BasicValueEnum<'b>>,
+        data: PointerValue<'b>,
+        length: IntValue,
+        spec: &resolver::FunctionDecl,
+    );
+    fn abi_encode<'b>(
+        &self,
+        contract: &'b Contract,
+        function: FunctionValue,
+        args: &[BasicValueEnum<'b>],
+        spec: &resolver::FunctionDecl,
+    ) -> (PointerValue<'b>, IntValue<'b>);
+
     // Access storage
     fn set_storage<'a>(
         &self,
@@ -58,22 +76,6 @@ pub trait TargetRuntime {
         slot: u32,
         dest: inkwell::values::PointerValue<'a>,
     );
-
-    fn abi_decode<'b>(
-        &self,
-        contract: &'b Contract,
-        function: FunctionValue,
-        args: &mut Vec<BasicValueEnum<'b>>,
-        data: PointerValue<'b>,
-        length: IntValue,
-        spec: &resolver::FunctionDecl,
-    );
-    fn abi_encode<'b>(
-        &self,
-        contract: &'b Contract,
-        args: &[BasicValueEnum<'b>],
-        spec: &resolver::FunctionDecl,
-    ) -> (PointerValue<'b>, IntValue<'b>);
 
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
@@ -207,6 +209,55 @@ impl<'a> Contract<'a> {
         self.globals.push(gv);
 
         last
+    }
+
+    /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
+    /// gets the loop variable passed to it as an IntValue.
+    pub fn emit_static_loop<'b, F>(
+        &'b self,
+        function: FunctionValue,
+        from: u64,
+        to: u64,
+        data_ref: &mut PointerValue<'b>,
+        mut insert_body: F,
+    ) where
+        F: FnMut(IntValue<'b>, &mut PointerValue<'b>),
+    {
+        let body = self.context.append_basic_block(function, "body");
+        let done = self.context.append_basic_block(function, "done");
+        let entry = self.builder.get_insert_block().unwrap();
+
+        self.builder.build_unconditional_branch(&body);
+        self.builder.position_at_end(&body);
+
+        let loop_ty = self.context.i64_type();
+        let loop_phi = self.builder.build_phi(loop_ty, "index");
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let mut data = data_phi.as_basic_value().into_pointer_value();
+
+        let loop_var = loop_phi.as_basic_value().into_int_value();
+
+        // add loop body
+        insert_body(loop_var, &mut data);
+
+        let next = self
+            .builder
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+
+        let comp = self.builder.build_int_compare(
+            IntPredicate::ULT,
+            next,
+            loop_ty.const_int(to, false),
+            "loop_cond",
+        );
+        self.builder.build_conditional_branch(comp, &body, &done);
+
+        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), &entry), (&next, &body)]);
+        data_phi.add_incoming(&[(&*data_ref, &entry), (&data, &body)]);
+
+        self.builder.position_at_end(&done);
+
+        *data_ref = data;
     }
 
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
@@ -1154,11 +1205,12 @@ impl<'a> Contract<'a> {
                 // return ABI of length 0
                 runtime.return_empty_abi(&self);
             } else if f.wasm_return {
-                let (data, length) = runtime.abi_encode(&self, &[ret.unwrap()], &f);
+                let (data, length) = runtime.abi_encode(&self, function, &[ret.unwrap()], &f);
 
                 runtime.return_abi(&self, data, length);
             } else {
-                let (data, length) = runtime.abi_encode(&self, &args[f.params.len()..], &f);
+                let (data, length) =
+                    runtime.abi_encode(&self, function, &args[f.params.len()..], &f);
 
                 runtime.return_abi(&self, data, length);
             }
