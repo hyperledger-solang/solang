@@ -36,7 +36,11 @@ impl EthAbiEncoder {
             resolver::Type::Enum(n) => {
                 self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
             }
-            resolver::Type::FixedArray(ty, dim) => {
+            resolver::Type::FixedArray(_, dim) => {
+                let arg = contract
+                    .builder
+                    .build_load(arg.into_pointer_value(), "fixed_array");
+
                 contract.emit_static_loop(
                     function,
                     0,

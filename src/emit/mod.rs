@@ -796,11 +796,16 @@ impl<'a> Contract<'a> {
         } else {
             // add return values
             for p in &f.returns {
-                args.push(
+                args.push(if p.ty.is_array() {
                     p.ty.llvm_type(self.ns, &self.context)
                         .ptr_type(AddressSpace::Generic)
-                        .into(),
-                );
+                        .ptr_type(AddressSpace::Generic)
+                        .into()
+                } else {
+                    p.ty.llvm_type(self.ns, &self.context)
+                        .ptr_type(AddressSpace::Generic)
+                        .into()
+                });
             }
             self.context.void_type().fn_type(&args, false)
         };
@@ -1056,7 +1061,7 @@ impl<'a> Contract<'a> {
                             let ty = &f.params[i].ty;
                             let val = self.expression(&a, &w.vars, runtime);
 
-                            parms.push(if ty.stack_based() {
+                            parms.push(if ty.stack_based() && !ty.is_array() {
                                 // copy onto stack
                                 let m = self
                                     .builder
@@ -1187,11 +1192,19 @@ impl<'a> Contract<'a> {
             // add return values as pointer arguments at the end
             if !f.returns.is_empty() && !f.wasm_return {
                 for v in f.returns.iter() {
-                    args.push(
+                    args.push(if !v.ty.is_array() {
                         self.builder
                             .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.name)
-                            .into(),
-                    );
+                            .into()
+                    } else {
+                        self.builder
+                            .build_alloca(
+                                v.ty.llvm_type(self.ns, &self.context)
+                                    .ptr_type(AddressSpace::Generic),
+                                &v.name,
+                            )
+                            .into()
+                    });
                 }
             }
 

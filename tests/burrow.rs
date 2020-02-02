@@ -786,6 +786,7 @@ fn array_array() {
 
 #[test]
 fn arrays_are_refs() {
+    // verified on remix
     let (runtime, mut store) = build_solidity(
         r##"
         pragma solidity >=0.4.22 <0.6.0;
@@ -813,16 +814,16 @@ fn arrays_are_refs() {
 
     runtime.constructor(&mut store, &[]);
 
-    let val = runtime.function(&mut store, "f", &[]);
+    let val = runtime.function(&mut store, "bar", &[]);
 
     assert_eq!(
         val,
-        &[
-            ethabi::Token::Uint(ethereum_types::U256::from(0)),
-            ethabi::Token::Uint(ethereum_types::U256::from(2)),
-            ethabi::Token::Uint(ethereum_types::U256::from(2)),
-            ethabi::Token::Uint(ethereum_types::U256::from(0)),
-        ],
+        &[ethabi::Token::FixedArray(vec!(
+            ethabi::Token::Int(ethereum_types::U256::from(0)),
+            ethabi::Token::Int(ethereum_types::U256::from(2)),
+            ethabi::Token::Int(ethereum_types::U256::from(2)),
+            ethabi::Token::Int(ethereum_types::U256::from(0))
+        ))],
     );
 }
 // TODO
