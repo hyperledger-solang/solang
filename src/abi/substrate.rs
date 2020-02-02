@@ -42,6 +42,7 @@ enum Type {
     Builtin { id: String, def: String },
     BuiltinArray { id: Array, def: String },
     Struct { id: CustomID, def: StructDef },
+    Enum { id: CustomID, def: EnumDef },
 }
 
 #[derive(Deserialize, Serialize)]
@@ -58,9 +59,15 @@ struct BuiltinType {
 }
 
 #[derive(Deserialize, Serialize)]
-struct StructType {
-    id: CustomID,
-    def: StructDef,
+struct EnumVariant {
+    name: usize,
+    discriminant: usize,
+}
+
+#[derive(Deserialize, Serialize)]
+struct EnumDef {
+    #[serde(rename = "clike_enum.variants")]
+    variants: Vec<EnumVariant>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -228,6 +235,32 @@ impl Registry {
         length + 1
     }
 
+    /// Returns index to builtin type in registry. Type is added if not already present
+    fn builtin_enum_type(&mut self, e: &resolver::EnumDecl) -> usize {
+        let length = self.types.len();
+        let name = self.string(&e.name);
+
+        let t = Type::Enum {
+            id: CustomID {
+                name,
+                namespace: Vec::new(),
+                params: Vec::new(),
+            },
+            def: EnumDef {
+                variants: e
+                    .values
+                    .iter()
+                    .map(|(key, val)| EnumVariant {
+                        name: self.string(key),
+                        discriminant: val.1,
+                    })
+                    .collect(),
+            },
+        };
+        self.types.push(t);
+
+        length + 1
+    }
     /// Adds struct type to registry. Does not check for duplication (yet)
     fn struct_type(&mut self, name: &str, fields: Vec<StructField>) -> usize {
         let length = self.types.len();
@@ -377,23 +410,24 @@ fn ty_to_abi(
     contract: &resolver::Contract,
     registry: &mut Registry,
 ) -> ParamType {
-    let primitive = ty_to_primitive(ty, contract);
-
-    match primitive {
-        ast::PrimitiveType::Bytes(n) => ParamType {
+    match ty {
+        resolver::Type::Enum(n) => ParamType {
+            ty: registry.builtin_enum_type(&contract.enums[*n]),
+            display_name: vec![registry.string(&contract.enums[*n].name)],
+        },
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => ParamType {
             ty: registry.builtin_bytes_type(*n as usize),
             display_name: vec![],
         },
-        ast::PrimitiveType::Address => ParamType {
-            ty: registry.builtin_bytes_type(160 as usize),
-            display_name: vec![],
-        },
-        _ => {
-            let scalety = primitive_to_string(*primitive);
+        resolver::Type::Undef => unreachable!(),
+        resolver::Type::FixedArray(_, _) => unreachable!(),
+        resolver::Type::Ref(ty) => ty_to_abi(ty, contract, registry),
+        resolver::Type::Primitive(p) => {
+            let scalety = primitive_to_string(p);
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
-                display_name: vec![registry.string(&scalety.to_string())],
+                display_name: vec![registry.string(&scalety)],
             }
         }
     }
@@ -415,7 +449,7 @@ fn ty_to_primitive<'a>(
 
 // For a given primitive, give the name as Substrate would like it (i.e. 64 bits
 // signed int is i64, not int64).
-fn primitive_to_string(ty: ast::PrimitiveType) -> String {
+fn primitive_to_string(ty: &ast::PrimitiveType) -> String {
     match ty {
         ast::PrimitiveType::Bool => "bool".into(),
         ast::PrimitiveType::Uint(n) => format!("u{}", n),
