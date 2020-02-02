@@ -26,6 +26,7 @@ mod substrate_enums;
 #[allow(clippy::unreadable_literal, clippy::naive_bytecount)]
 mod substrate_expressions;
 
+mod substrate_arrays;
 mod substrate_first;
 mod substrate_functions;
 mod substrate_primitives;
