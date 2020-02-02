@@ -277,6 +277,118 @@ impl SubstrateTarget {
             contract.builder.build_unreachable();
         }
     }
+
+    /// ABI encode a single primitive
+    fn encode_primitive(
+        &self,
+        contract: &Contract,
+        ty: &ast::PrimitiveType,
+        dest: PointerValue,
+        val: BasicValueEnum,
+    ) -> u64 {
+        match ty {
+            ast::PrimitiveType::Bool => {
+                let val = if val.is_pointer_value() {
+                    contract.builder.build_load(val.into_pointer_value(), "")
+                } else {
+                    val
+                };
+
+                contract.builder.build_store(
+                    dest,
+                    contract.builder.build_int_z_extend(
+                        val.into_int_value(),
+                        contract.context.i8_type(),
+                        "bool",
+                    ),
+                );
+                1
+            }
+            ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
+                let val = if val.is_pointer_value() {
+                    contract.builder.build_load(val.into_pointer_value(), "")
+                } else {
+                    val
+                };
+
+                contract.builder.build_store(
+                    contract.builder.build_pointer_cast(
+                        dest,
+                        val.into_int_value()
+                            .get_type()
+                            .ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    val.into_int_value(),
+                );
+
+                *n as u64 / 8
+            }
+            ast::PrimitiveType::Bytes(n) => {
+                let val = if val.is_pointer_value() {
+                    val.into_pointer_value()
+                } else {
+                    let temp = contract
+                        .builder
+                        .build_alloca(val.into_int_value().get_type(), &format!("bytes{}", n));
+
+                    contract.builder.build_store(temp, val.into_int_value());
+
+                    temp
+                };
+
+                // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                val,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        dest.into(),
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(*n as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                *n as u64
+            }
+            ast::PrimitiveType::Address => {
+                // byte order needs to be reversed
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                val.into_pointer_value(),
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        dest.into(),
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(ADDRESS_LENGTH, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                ADDRESS_LENGTH
+            }
+            _ => unimplemented!(),
+        }
+    }
 }
 
 impl TargetRuntime for SubstrateTarget {
@@ -687,108 +799,7 @@ impl TargetRuntime for SubstrateTarget {
                 resolver::Type::Ref(_) => unreachable!(),
             };
 
-            let arglen;
-
-            match ty {
-                ast::PrimitiveType::Bool => {
-                    contract.builder.build_store(
-                        argsdata,
-                        contract.builder.build_int_z_extend(
-                            args[i].into_int_value(),
-                            contract.context.i8_type(),
-                            "bool",
-                        ),
-                    );
-                    arglen = 1;
-                }
-                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
-                    let val = if args[i].is_pointer_value() {
-                        // Value is a pointer to e.g i256. First we have to load the value
-                        contract
-                            .builder
-                            .build_load(args[i].into_pointer_value(), "")
-                    } else {
-                        args[i]
-                    };
-
-                    contract.builder.build_store(
-                        contract.builder.build_pointer_cast(
-                            argsdata,
-                            val.into_int_value()
-                                .get_type()
-                                .ptr_type(AddressSpace::Generic),
-                            "",
-                        ),
-                        val.into_int_value(),
-                    );
-
-                    arglen = n as u64 / 8;
-                }
-                ast::PrimitiveType::Bytes(n) => {
-                    let val = if args[i].is_pointer_value() {
-                        args[i].into_pointer_value()
-                    } else {
-                        let val = contract.builder.build_alloca(
-                            args[i].into_int_value().get_type(),
-                            &format!("bytes{}", n),
-                        );
-
-                        contract.builder.build_store(val, args[i].into_int_value());
-
-                        val
-                    };
-
-                    // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-                    contract.builder.build_call(
-                        contract.module.get_function("__leNtobeN").unwrap(),
-                        &[
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    val,
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            argsdata.into(),
-                            contract
-                                .context
-                                .i32_type()
-                                .const_int(n as u64, false)
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    arglen = n as u64
-                }
-                ast::PrimitiveType::Address => {
-                    // byte order needs to be reversed
-                    contract.builder.build_call(
-                        contract.module.get_function("__leNtobeN").unwrap(),
-                        &[
-                            contract
-                                .builder
-                                .build_pointer_cast(
-                                    args[i].into_pointer_value(),
-                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "",
-                                )
-                                .into(),
-                            argsdata.into(),
-                            contract
-                                .context
-                                .i32_type()
-                                .const_int(ADDRESS_LENGTH, false)
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    arglen = ADDRESS_LENGTH
-                }
-                _ => unimplemented!(),
-            }
+            let arglen = self.encode_primitive(contract, &ty, data, args[i]);
 
             argsdata = unsafe {
                 contract.builder.build_gep(
