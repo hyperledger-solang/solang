@@ -399,6 +399,67 @@ impl SubstrateTarget {
         }
     }
 
+    /// recursively encode a single ty
+    fn decode_ty<'b>(
+        &self,
+        contract: &'b Contract,
+        function: FunctionValue,
+        ty: &resolver::Type,
+        to: Option<PointerValue<'b>>,
+        data: &mut PointerValue<'b>,
+    ) -> BasicValueEnum<'b> {
+        match &ty {
+            resolver::Type::Primitive(e) => {
+                let (arg, arglen) = self.decode_primitive(contract, &e, to, *data);
+
+                *data = unsafe {
+                    contract.builder.build_gep(
+                        *data,
+                        &[contract.context.i32_type().const_int(arglen, false)],
+                        "abi_ptr",
+                    )
+                };
+                arg
+            }
+            resolver::Type::Enum(n) => self.decode_ty(
+                contract,
+                function,
+                &resolver::Type::Primitive(contract.ns.enums[*n].ty),
+                to,
+                data,
+            ),
+            resolver::Type::FixedArray(_, dim) => {
+                let to = to.unwrap_or_else(|| {
+                    contract
+                        .builder
+                        .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
+                });
+
+                contract.emit_static_loop(
+                    function,
+                    0,
+                    dim[0].to_u64().unwrap(),
+                    data,
+                    |index: IntValue<'b>, data: &mut PointerValue<'b>| {
+                        let elem = unsafe {
+                            contract.builder.build_gep(
+                                to,
+                                &[contract.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                        };
+
+                        self.decode_ty(contract, function, &ty.deref(), Some(elem), data);
+                    },
+                );
+
+                to.into()
+            }
+            resolver::Type::Undef => unreachable!(),
+            resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, data),
+        }
+    }
+
     /// ABI encode a single primitive
     fn encode_primitive(
         &self,
@@ -798,25 +859,8 @@ impl TargetRuntime for SubstrateTarget {
             "",
         );
 
-        for arg in spec.params.iter() {
-            let ty = match arg.ty {
-                resolver::Type::Primitive(e) => e,
-                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
-                resolver::Type::FixedArray(_, _) => unimplemented!(),
-                resolver::Type::Undef => unreachable!(),
-                resolver::Type::Ref(_) => unreachable!(),
-            };
-
-            let (arg, arglen) = self.decode_primitive(contract, &ty, None, argsdata);
-
-            args.push(arg);
-            argsdata = unsafe {
-                contract.builder.build_gep(
-                    argsdata,
-                    &[contract.context.i32_type().const_int(arglen, false)],
-                    "abi_ptr",
-                )
-            };
+        for param in &spec.params {
+            args.push(self.decode_ty(contract, function, &param.ty, None, &mut argsdata));
         }
     }
 
