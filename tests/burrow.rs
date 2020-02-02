@@ -783,6 +783,48 @@ fn array_array() {
         }
     }
 }
+
+#[test]
+fn arrays_are_refs() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        pragma solidity >=0.4.22 <0.6.0;
+
+        contract refs {
+            function f2(int[4] memory foo) private {
+                foo[2] = 2;
+            }
+        
+            function f1(int[4] memory foo) private {
+                foo[1] = 2;
+            }
+        
+            function bar() public returns (int[4] memory) {
+                int[4] memory x = [ int(0), 0, 0, 0 ];
+        
+                f1(x);
+                f2(x);
+        
+                return x;
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let val = runtime.function(&mut store, "f", &[]);
+
+    assert_eq!(
+        val,
+        &[
+            ethabi::Token::Uint(ethereum_types::U256::from(0)),
+            ethabi::Token::Uint(ethereum_types::U256::from(2)),
+            ethabi::Token::Uint(ethereum_types::U256::from(2)),
+            ethabi::Token::Uint(ethereum_types::U256::from(0)),
+        ],
+    );
+}
 // TODO
 // array of array
 // decode tests
