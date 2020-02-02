@@ -391,6 +391,64 @@ impl SubstrateTarget {
         }
     }
 
+    /// recursively encode argument. The encoded data is written to the data pointer,
+    /// and the pointer is updated point after the encoded data.
+    pub fn encode_ty<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+        ty: &resolver::Type,
+        arg: BasicValueEnum,
+        data: &mut PointerValue<'a>,
+    ) {
+        match &ty {
+            resolver::Type::Primitive(e) => {
+                let arglen = self.encode_primitive(contract, e, *data, arg);
+
+                *data = unsafe {
+                    contract.builder.build_gep(
+                        *data,
+                        &[contract.context.i32_type().const_int(arglen, false)],
+                        "",
+                    )
+                };
+            }
+            resolver::Type::Enum(n) => {
+                self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
+            }
+            resolver::Type::FixedArray(_, dim) => {
+                let arg = contract
+                    .builder
+                    .build_load(arg.into_pointer_value(), "fixed_array");
+
+                contract.emit_static_loop(
+                    function,
+                    0,
+                    dim[0].to_u64().unwrap(),
+                    data,
+                    |index, data| {
+                        let elem = unsafe {
+                            contract
+                                .builder
+                                .build_gep(
+                                    arg.into_pointer_value(),
+                                    &[contract.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                                .into()
+                        };
+
+                        self.encode_ty(contract, function, &ty.deref(), elem, data);
+                    },
+                );
+            }
+            resolver::Type::Undef => unreachable!(),
+            resolver::Type::Ref(ty) => {
+                self.encode_ty(contract, function, ty, arg, data);
+            }
+        };
+    }
+
     /// Return the encoded length of the given type
     pub fn encoded_length(&self, ty: &resolver::Type, contract: &resolver::Contract) -> u64 {
         match ty {
@@ -753,10 +811,11 @@ impl TargetRuntime for SubstrateTarget {
         }
     }
 
+    ///  ABI encode the return values for the function
     fn abi_encode<'b>(
         &self,
         contract: &'b Contract,
-        _function: FunctionValue,
+        function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
@@ -781,23 +840,7 @@ impl TargetRuntime for SubstrateTarget {
         let mut argsdata = data;
 
         for (i, arg) in spec.returns.iter().enumerate() {
-            let ty = match arg.ty {
-                resolver::Type::Primitive(e) => e,
-                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
-                resolver::Type::FixedArray(_, _) => unimplemented!(),
-                resolver::Type::Undef => unreachable!(),
-                resolver::Type::Ref(_) => unreachable!(),
-            };
-
-            let arglen = self.encode_primitive(contract, &ty, data, args[i]);
-
-            argsdata = unsafe {
-                contract.builder.build_gep(
-                    argsdata,
-                    &[contract.context.i32_type().const_int(arglen, false)],
-                    "abi_ptr",
-                )
-            };
+            self.encode_ty(contract, function, &arg.ty, args[i], &mut argsdata);
         }
 
         (data, length)
