@@ -1,6 +1,7 @@
+use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::first_error;
+use super::{build_solidity, first_error};
 use solang::{parse_and_resolve, Target};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -43,7 +44,6 @@ fn missing_array_index() {
     );
 }
 
-/* needs substrate array encoder/decoder
 #[test]
 fn const_array_array() {
     let (runtime, mut store) = build_solidity(
@@ -59,6 +59,5 @@ fn const_array_array() {
 
     runtime.function(&mut store, "f", Val32(1).encode());
 
-    assert_eq!(store.scratch, Val8(1).encode());
+    assert_eq!(store.scratch, Val8(2).encode());
 }
-*/
