@@ -736,7 +736,7 @@ impl<'a> Contract<'a> {
                     let mut e = i as u32;
 
                     for d in dims {
-                        ind.push(self.context.i32_type().const_int((e % *d).into(), false));
+                        ind.insert(1, self.context.i32_type().const_int((e % *d).into(), false));
 
                         e /= *d;
                     }

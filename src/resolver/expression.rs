@@ -1848,8 +1848,8 @@ pub fn expression(
                 },
             );
 
-            let out_of_range = cfg.new_basic_block("out_of_range".to_string());
-            let in_range = cfg.new_basic_block("in_range".to_string());
+            let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+            let in_bounds = cfg.new_basic_block("in_bounds".to_string());
 
             if index_ty.signed() {
                 // first check that our index is not negative
@@ -1862,7 +1862,7 @@ pub fn expression(
                             Box::new(Expression::Variable(index.loc(), pos)),
                             Box::new(Expression::NumberLiteral(index_width, BigInt::zero())),
                         ),
-                        true_: out_of_range,
+                        true_: out_of_bounds,
                         false_: positive,
                     },
                 );
@@ -1878,14 +1878,14 @@ pub fn expression(
                                 Box::new(Expression::Variable(index.loc(), pos)),
                                 Box::new(Expression::NumberLiteral(index_width, array_length)),
                             ),
-                            true_: out_of_range,
-                            false_: in_range,
+                            true_: out_of_bounds,
+                            false_: in_bounds,
                         },
                     );
                 } else {
-                    cfg.add(tab, Instr::Branch { bb: in_range });
+                    cfg.add(tab, Instr::Branch { bb: in_bounds });
                 }
-            } else if index_width as usize <= array_width {
+            } else if index_width as usize >= array_width {
                 cfg.add(
                     tab,
                     Instr::BranchCond {
@@ -1893,19 +1893,19 @@ pub fn expression(
                             Box::new(Expression::Variable(index.loc(), pos)),
                             Box::new(Expression::NumberLiteral(index_width, array_length)),
                         ),
-                        true_: out_of_range,
-                        false_: in_range,
+                        true_: out_of_bounds,
+                        false_: in_bounds,
                     },
                 );
             } else {
-                // if the index is less bits than the array, it is always in range
-                cfg.add(tab, Instr::Branch { bb: in_range });
+                // if the index is less bits than the array, it is always in bounds
+                cfg.add(tab, Instr::Branch { bb: in_bounds });
             }
 
-            cfg.set_basic_block(out_of_range);
+            cfg.set_basic_block(out_of_bounds);
             cfg.add(tab, Instr::AssertFailure {});
 
-            cfg.set_basic_block(in_range);
+            cfg.set_basic_block(in_bounds);
 
             match array_ty {
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {

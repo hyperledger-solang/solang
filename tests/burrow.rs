@@ -660,22 +660,129 @@ fn encode_array() {
 
     runtime.constructor(&mut store, &[]);
 
-    let val = vec![
-        ethabi::Token::FixedArray(vec![
-            ethabi::Token::Int(ethereum_types::U256::from(0x20)),
-            ethabi::Token::Int(ethereum_types::U256::from(0x40)),
-            ethabi::Token::Int(ethereum_types::U256::from(0x80)),
-            ethabi::Token::Int(ethereum_types::U256::from(0x100)),
-        ]),
-        ethabi::Token::Uint(ethereum_types::U256::from(2)),
+    let array = vec![
+        ethabi::Token::Int(ethereum_types::U256::from(0x20)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x40)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x80)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x100)),
     ];
 
-    let ret = runtime.function(&mut store, "f", &val);
-
-    assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(0x80))]);
+    for i in 0..4 {
+        let ret = runtime.function(
+            &mut store,
+            "f",
+            &[
+                ethabi::Token::FixedArray(array.clone()),
+                ethabi::Token::Uint(ethereum_types::U256::from(i)),
+            ],
+        );
+        assert_eq!(ret, [array[i].clone()]);
+    }
 }
 
+#[test]
+#[should_panic]
+fn array_bounds_uint() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f(int32[4] a, uint i) public returns (int32) {
+                return a[i];
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let array = vec![
+        ethabi::Token::Int(ethereum_types::U256::from(0x20)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x40)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x80)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x100)),
+    ];
+
+    runtime.function(
+        &mut store,
+        "f",
+        &[
+            ethabi::Token::FixedArray(array),
+            ethabi::Token::Uint(ethereum_types::U256::from(4)),
+        ],
+    );
+}
+
+fn array_bounds_int(index: ethabi::Token) {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f(int32[4] a, int i) public returns (int32) {
+                return a[i];
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let array = vec![
+        ethabi::Token::Int(ethereum_types::U256::from(0x20)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x40)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x80)),
+        ethabi::Token::Int(ethereum_types::U256::from(0x100)),
+    ];
+
+    runtime.function(&mut store, "f", &[ethabi::Token::FixedArray(array), index]);
+}
+
+#[test]
+#[should_panic]
+fn array_bounds_int_neg() {
+    array_bounds_int(ethabi::Token::Int(ethereum_types::U256::from(-1)))
+}
+
+#[test]
+#[should_panic]
+fn array_bounds_int_pos() {
+    array_bounds_int(ethabi::Token::Int(ethereum_types::U256::from(4)))
+}
+
+#[test]
+fn array_array() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f(int a, uint i1, uint i2) public returns (int) {
+                    int[4][2] memory bar = [ [ int(1), 2, 3, 4 ], [ 5, 6, 7, a ] ];
+    
+                    return bar[i1][i2];
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    for i1 in 0..2 {
+        for i2 in 0..4 {
+            let val = runtime.function(
+                &mut store,
+                "f",
+                &[
+                    ethabi::Token::Int(ethereum_types::U256::from(8)),
+                    ethabi::Token::Uint(ethereum_types::U256::from(i1)),
+                    ethabi::Token::Uint(ethereum_types::U256::from(i2)),
+                ],
+            );
+
+            println!("i1:{} i2:{}: {:?}", i1, i2, val);
+
+            assert_eq!(
+                val,
+                [ethabi::Token::Int(ethereum_types::U256::from(
+                    1 + 4 * i1 + i2
+                ))]
+            );
+        }
+    }
+}
 // TODO
-// array range tests (signed/unsigned)
 // array of array
 // decode tests

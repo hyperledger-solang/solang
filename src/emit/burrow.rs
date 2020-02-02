@@ -122,7 +122,7 @@ impl BurrowTarget {
 
     fn emit_function_dispatch(&self, contract: &Contract) {
         // create start function
-        let ret = contract.context.i32_type().ptr_type(AddressSpace::Generic);
+        let ret = contract.context.i8_type().ptr_type(AddressSpace::Generic);
         let ftype = ret.fn_type(
             &[contract
                 .context
