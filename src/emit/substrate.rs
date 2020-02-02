@@ -6,6 +6,7 @@ use inkwell::module::Linkage;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
+use num_traits::ToPrimitive;
 
 use std::collections::HashMap;
 
@@ -389,6 +390,27 @@ impl SubstrateTarget {
             _ => unimplemented!(),
         }
     }
+
+    /// Return the encoded length of the given type
+    pub fn encoded_length(&self, ty: &resolver::Type, contract: &resolver::Contract) -> u64 {
+        match ty {
+            resolver::Type::Primitive(ast::PrimitiveType::Bool) => 1,
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(n))
+            | resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => *n as u64 / 8,
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => *n as u64,
+            resolver::Type::Primitive(ast::PrimitiveType::Address) => ADDRESS_LENGTH,
+            resolver::Type::Primitive(_) => unreachable!(),
+            resolver::Type::Enum(n) => {
+                self.encoded_length(&resolver::Type::Primitive(contract.enums[*n].ty), contract)
+            }
+            resolver::Type::FixedArray(ty, dims) => {
+                self.encoded_length(ty, contract)
+                    * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())
+            }
+            resolver::Type::Undef => unreachable!(),
+            resolver::Type::Ref(r) => self.encoded_length(r, contract),
+        }
+    }
 }
 
 impl TargetRuntime for SubstrateTarget {
@@ -567,25 +589,9 @@ impl TargetRuntime for SubstrateTarget {
         datalength: IntValue,
         spec: &resolver::FunctionDecl,
     ) {
-        let mut length = 0;
-
-        for arg in spec.params.iter() {
-            let ty = match arg.ty {
-                resolver::Type::Primitive(e) => e,
-                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
-                resolver::Type::FixedArray(_, _) => unimplemented!(),
-                resolver::Type::Undef => unreachable!(),
-                resolver::Type::Ref(_) => unreachable!(),
-            };
-
-            match ty {
-                ast::PrimitiveType::Bool => length += 1,
-                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => length += n as u64 / 8,
-                ast::PrimitiveType::Bytes(n) => length += n as u64,
-                ast::PrimitiveType::Address => length += ADDRESS_LENGTH,
-                _ => unimplemented!(),
-            }
-        }
+        let length = spec.params.iter().fold(0, |acc, arg| {
+            acc + self.encoded_length(&arg.ty, contract.ns)
+        });
 
         let decode_block = contract.context.append_basic_block(function, "abi_decode");
         let wrong_length_block = contract
@@ -754,25 +760,9 @@ impl TargetRuntime for SubstrateTarget {
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let mut length = 0;
-
-        for arg in spec.returns.iter() {
-            let ty = match arg.ty {
-                resolver::Type::Primitive(e) => e,
-                resolver::Type::Enum(n) => contract.ns.enums[n].ty,
-                resolver::Type::FixedArray(_, _) => unimplemented!(),
-                resolver::Type::Undef => unreachable!(),
-                resolver::Type::Ref(_) => unreachable!(),
-            };
-
-            match ty {
-                ast::PrimitiveType::Bool => length += 1,
-                ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => length += n as u64 / 8,
-                ast::PrimitiveType::Bytes(n) => length += n as u64,
-                ast::PrimitiveType::Address => length += ADDRESS_LENGTH,
-                _ => unimplemented!(),
-            }
-        }
+        let length = spec.returns.iter().fold(0, |acc, arg| {
+            acc + self.encoded_length(&arg.ty, contract.ns)
+        });
 
         let length = contract.context.i32_type().const_int(length, false);
 
