@@ -81,7 +81,7 @@ fn votes() {
                             }
                     }
     
-                    return ayes > 5;
+                    return ayes > votes.length / 2;
             }
         }"##,
     );

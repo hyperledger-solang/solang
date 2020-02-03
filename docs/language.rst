@@ -248,16 +248,17 @@ is numbered from 0, like in C and Rust.
   The Ethereum Foundation Solidity compiler supports additional data types:
   bytes and string. These will be implemented in Solang in early 2020.
 
-Fixed Length arrays
+Fixed Length Arrays
 ___________________
 
-Arrays can be declared by [length] to the type. Any type can be an array, including arrays
-themselves (also known as arrays of arrays). For example:
+Arrays can be declared by adding [length] to the type name, where length is a
+constant. Any type can be made into an array, including arrays themselves (also
+known as arrays of arrays). For example:
 
 .. code-block:: javascript
 
     contract foo {
-        /// In vote with 11 voters, do the ayes have it?
+        /// In a vote with 11 voters, do the ayes have it?
         function f(bool[11] votes) public pure returns (bool) {
             uint32 i;
             uint32 ayes = 0;
@@ -268,13 +269,14 @@ themselves (also known as arrays of arrays). For example:
                 }
             }
 
-            return ayes > 5;
+            // votes.length is odd; integer truncation means that 11 / 2 = 5
+            return ayes > votes.length / 2;
         }
     }
 
-Note how you access the length of the array with ``.length`` member. Since these are fixed
-length arrays, the length cannot change once declared. Arrays be initialized with an array
-literal. The first element of the array should be cast to the correct type. For example:
+Note the length of the array can be read with the ``.length`` member. The length is readonly.
+Arrays can be initialized with an array literal. The first element of the array should be
+cast to the correct element type. For example:
 
 .. code-block:: javascript
 
@@ -286,9 +288,9 @@ literal. The first element of the array should be cast to the correct type. For 
         }
     }
 
-Any array index which is out of bounds (either negative array index or past the last element)
-will cause a runtime exception. Here. calling primenumber(10) will fail; the first prime
-number is indexed by 0, and the last by 9.
+Any array subscript which is out of bounds (either an negative array index, or an index past the
+last element) will cause a runtime exception. In this example, calling ``primenumber(10)`` will
+fail; the first prime number is indexed by 0, and the last by 9.
 
 Arrays are passed by reference. This means that if you modify the array in another function,
 those changes will be reflected in the current function. For example:
@@ -296,19 +298,30 @@ those changes will be reflected in the current function. For example:
 .. code-block:: javascript
 
     contract reference {
-        function set_2(int8[4] a) private {
+        function set_2(int8[4] a) pure private {
             a[2] = 102;
         }
 
         function foo() private {
-            int8[4] val = [ int(1), 2, 3, 4 ];
+            int8[4] val = [ int8(1), 2, 3, 4 ];
 
             set_2(val);
 
-            // val was passed by reference, so it modified our val!
-            assert(a[2] == 102);
+            // val was passed by reference, so was modified
+            assert(val[2] == 102);
         }
     }
+
+.. note::
+
+  In Solidity, an fixed array of 32 bytes (or smaller) can be declared as ``bytes32`` or
+  ``int8[32]``. In the Ethereum ABI encoding, an ``int8[32]`` is encoded using
+  32 × 32 = 1024 bytes. This is because the Ethereum ABI encoding pads each primitive to
+  32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
+  bytes when ABI encoded.
+
+  In Substrate the `SCALE <https://substrate.dev/docs/en/overview/low-level-data-format>`_
+  encoding uses 32 bytes for both types.
 
 Expressions
 -----------
