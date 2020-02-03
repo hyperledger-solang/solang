@@ -236,6 +236,7 @@ impl Registry {
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
+    #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &resolver::EnumDecl) -> usize {
         let length = self.types.len();
         let name = self.string(&e.name);
@@ -411,9 +412,15 @@ fn ty_to_abi(
     registry: &mut Registry,
 ) -> ParamType {
     match ty {
+        /* clike_enums are broken in polkadot. Use u8 for now.
         resolver::Type::Enum(n) => ParamType {
             ty: registry.builtin_enum_type(&contract.enums[*n]),
             display_name: vec![registry.string(&contract.enums[*n].name)],
+        },
+        */
+        resolver::Type::Enum(_) => ParamType {
+            ty: registry.builtin_type("u8"),
+            display_name: vec![registry.string("u8")],
         },
         resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => ParamType {
             ty: registry.builtin_bytes_type(*n as usize),
