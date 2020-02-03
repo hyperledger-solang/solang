@@ -1,5 +1,6 @@
 // Parity Substrate style ABIs/metadata
 
+use num_traits::ToPrimitive;
 use parser::ast;
 use resolver;
 use serde::{Deserialize, Serialize};
@@ -207,9 +208,7 @@ impl Registry {
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
-    fn builtin_bytes_type(&mut self, array_len: usize) -> usize {
-        let elem = self.builtin_type("u8");
-
+    fn builtin_array_type(&mut self, elem: usize, array_len: usize) -> usize {
         for (i, s) in self.types.iter().enumerate() {
             match s {
                 Type::BuiltinArray {
@@ -422,12 +421,26 @@ fn ty_to_abi(
             ty: registry.builtin_type("u8"),
             display_name: vec![registry.string("u8")],
         },
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => ParamType {
-            ty: registry.builtin_bytes_type(*n as usize),
-            display_name: vec![],
-        },
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+            let elem = registry.builtin_type("u8");
+            ParamType {
+                ty: registry.builtin_array_type(elem, *n as usize),
+                display_name: vec![],
+            }
+        }
         resolver::Type::Undef => unreachable!(),
-        resolver::Type::FixedArray(_, _) => unreachable!(),
+        resolver::Type::FixedArray(ty, dims) => {
+            let mut param_ty = ty_to_abi(ty, contract, registry);
+
+            for d in dims {
+                param_ty = ParamType {
+                    ty: registry.builtin_array_type(param_ty.ty, d.to_usize().unwrap()),
+                    display_name: vec![],
+                }
+            }
+
+            param_ty
+        }
         resolver::Type::Ref(ty) => ty_to_abi(ty, contract, registry),
         resolver::Type::Primitive(p) => {
             let scalety = primitive_to_string(p);
@@ -461,7 +474,6 @@ fn primitive_to_string(ty: &ast::PrimitiveType) -> String {
         ast::PrimitiveType::Bool => "bool".into(),
         ast::PrimitiveType::Uint(n) => format!("u{}", n),
         ast::PrimitiveType::Int(n) => format!("i{}", n),
-        ast::PrimitiveType::Bytes(n) => format!("bytes{}", n),
         ast::PrimitiveType::Address => "address".into(),
         _ => unreachable!(),
     }
