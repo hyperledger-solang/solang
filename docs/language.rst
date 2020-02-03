@@ -248,6 +248,68 @@ is numbered from 0, like in C and Rust.
   The Ethereum Foundation Solidity compiler supports additional data types:
   bytes and string. These will be implemented in Solang in early 2020.
 
+Fixed Length arrays
+___________________
+
+Arrays can be declared by [length] to the type. Any type can be an array, including arrays
+themselves (also known as arrays of arrays). For example:
+
+.. code-block:: javascript
+
+    contract foo {
+        /// In vote with 11 voters, do the ayes have it?
+        function f(bool[11] votes) public pure returns (bool) {
+            uint32 i;
+            uint32 ayes = 0;
+
+            for (i=0; i<votes.length; i++) {
+                if (votes[i]) {
+                    ayes += 1;
+                }
+            }
+
+            return ayes > 5;
+        }
+    }
+
+Note how you access the length of the array with ``.length`` member. Since these are fixed
+length arrays, the length cannot change once declared. Arrays be initialized with an array
+literal. The first element of the array should be cast to the correct type. For example:
+
+.. code-block:: javascript
+
+    contract primes {
+        uint64[10] constant primes = [ uint64(2), 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
+        
+        function primenumber(uint32 n) public pure returns (uint64) {
+            return primes[n];
+        }
+    }
+
+Any array index which is out of bounds (either negative array index or past the last element)
+will cause a runtime exception. Here. calling primenumber(10) will fail; the first prime
+number is indexed by 0, and the last by 9.
+
+Arrays are passed by reference. This means that if you modify the array in another function,
+those changes will be reflected in the current function. For example:
+
+.. code-block:: javascript
+
+    contract reference {
+        function set_2(int8[4] a) private {
+            a[2] = 102;
+        }
+
+        function foo() private {
+            int8[4] val = [ int(1), 2, 3, 4 ];
+
+            set_2(val);
+
+            // val was passed by reference, so it modified our val!
+            assert(a[2] == 102);
+        }
+    }
+
 Expressions
 -----------
 
