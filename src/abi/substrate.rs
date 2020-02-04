@@ -306,7 +306,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         .variables
         .iter()
         .filter_map(|v| {
-            if let resolver::ContractVariableType::Storage(storage) = v.var {
+            if let resolver::ContractVariableType::Storage(storage) = &v.var {
                 let (scalety, len) = solty_to_scalety(&v.ty, resolver_contract);
 
                 Some(StorageLayout {

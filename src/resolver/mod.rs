@@ -134,8 +134,21 @@ impl Type {
         }
     }
 
-    pub fn new_bool() -> Self {
+    pub fn bool() -> Self {
         Type::Primitive(ast::PrimitiveType::Bool)
+    }
+
+    /// Calculate how many storage slots a type occupies. Note that storage arrays can
+    /// be very large
+    pub fn storage_slots(&self) -> BigInt {
+        match self {
+            Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(),
+            Type::Enum(_) | Type::Primitive(_) => BigInt::from(1),
+            Type::Undef => unreachable!(),
+            Type::FixedArray(ty, dims) => {
+                ty.storage_slots() * dims.iter().fold(BigInt::from(1), |acc, d| acc * d)
+            }
+        }
     }
 }
 
@@ -249,7 +262,7 @@ impl FunctionDecl {
 }
 
 pub enum ContractVariableType {
-    Storage(usize),
+    Storage(BigInt),
     Constant(usize),
 }
 
@@ -288,7 +301,7 @@ pub struct Contract {
     pub constants: Vec<Expression>,
     pub initializer: cfg::ControlFlowGraph,
     pub target: Target,
-    top_of_contract_storage: usize,
+    top_of_contract_storage: BigInt,
     symbols: HashMap<String, Symbol>,
 }
 
@@ -614,7 +627,7 @@ fn resolve_contract(
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
         target: target.clone(),
-        top_of_contract_storage: 0,
+        top_of_contract_storage: BigInt::zero(),
         symbols: HashMap::new(),
     };
 

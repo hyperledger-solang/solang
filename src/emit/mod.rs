@@ -66,15 +66,15 @@ pub trait TargetRuntime {
         &self,
         contract: &'a Contract,
         function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     );
     fn get_storage<'a>(
         &self,
         contract: &'a Contract,
         function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     );
 
     /// Return success without any result
@@ -1043,12 +1043,28 @@ impl<'a> Contract<'a> {
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        runtime.get_storage(&self, function, *storage as u32, dest);
+                        let ty = self.context.custom_width_int_type(256);
+                        let slot = self.builder.build_alloca(ty, "slot");
+                        self.builder.build_store(
+                            slot,
+                            ty.const_int_from_string(&storage.to_string(), StringRadix::Decimal)
+                                .unwrap(),
+                        );
+
+                        runtime.get_storage(&self, function, slot, dest);
                     }
                     cfg::Instr::SetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        runtime.set_storage(&self, function, *storage as u32, dest);
+                        let ty = self.context.custom_width_int_type(256);
+                        let slot = self.builder.build_alloca(ty, "slot");
+                        self.builder.build_store(
+                            slot,
+                            ty.const_int_from_string(&storage.to_string(), StringRadix::Decimal)
+                                .unwrap(),
+                        );
+
+                        runtime.set_storage(&self, function, slot, dest);
                     }
                     cfg::Instr::AssertFailure {} => {
                         runtime.assert_failure(self);

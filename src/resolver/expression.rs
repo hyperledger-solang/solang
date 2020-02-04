@@ -1082,7 +1082,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             } else {
                 Ok((
@@ -1090,7 +1090,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             }
         }
@@ -1114,7 +1114,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             } else {
                 Ok((
@@ -1122,7 +1122,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             }
         }
@@ -1146,7 +1146,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             } else {
                 Ok((
@@ -1154,7 +1154,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             }
         }
@@ -1178,7 +1178,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             } else {
                 Ok((
@@ -1186,7 +1186,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::new_bool(),
+                    resolver::Type::bool(),
                 ))
             }
         }
@@ -1201,7 +1201,7 @@ pub fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::Type::new_bool(),
+                resolver::Type::bool(),
             ))
         }
         ast::Expression::NotEqual(_, l, r) => {
@@ -1215,7 +1215,7 @@ pub fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::Type::new_bool(),
+                resolver::Type::bool(),
             ))
         }
 
@@ -1228,12 +1228,12 @@ pub fn expression(
                     &loc,
                     expr,
                     &expr_type,
-                    &resolver::Type::new_bool(),
+                    &resolver::Type::bool(),
                     true,
                     ns,
                     errors,
                 )?)),
-                resolver::Type::new_bool(),
+                resolver::Type::bool(),
             ))
         }
         ast::Expression::Complement(loc, e) => {
@@ -1267,7 +1267,7 @@ pub fn expression(
                 &c.loc(),
                 cond,
                 &cond_type,
-                &resolver::Type::new_bool(),
+                &resolver::Type::bool(),
                 true,
                 ns,
                 errors,
@@ -2029,7 +2029,7 @@ pub fn expression(
             Err(())
         }
         ast::Expression::Or(loc, left, right) => {
-            let boolty = resolver::Type::new_bool();
+            let boolty = resolver::Type::bool();
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
             let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
 
@@ -2046,13 +2046,13 @@ pub fn expression(
                                 &loc,
                                 r,
                                 &r_type,
-                                &resolver::Type::new_bool(),
+                                &resolver::Type::bool(),
                                 true,
                                 ns,
                                 errors,
                             )?),
                         ),
-                        resolver::Type::new_bool(),
+                        resolver::Type::bool(),
                     ));
                 }
             };
@@ -2062,7 +2062,7 @@ pub fn expression(
                     name: "or".to_owned(),
                     loc: *loc,
                 },
-                &resolver::Type::new_bool(),
+                &resolver::Type::bool(),
             );
 
             let right_side = cfg.new_basic_block("or_right_side".to_string());
@@ -2086,15 +2086,7 @@ pub fn expression(
             cfg.set_basic_block(right_side);
 
             let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
-            let r = cast(
-                &loc,
-                r,
-                &r_type,
-                &resolver::Type::new_bool(),
-                true,
-                ns,
-                errors,
-            )?;
+            let r = cast(&loc, r, &r_type, &resolver::Type::bool(), true, ns, errors)?;
 
             cfg.add(tab, Instr::Set { res: pos, expr: r });
 
@@ -2110,7 +2102,7 @@ pub fn expression(
             Ok((Expression::Variable(*loc, pos), boolty))
         }
         ast::Expression::And(loc, left, right) => {
-            let boolty = resolver::Type::new_bool();
+            let boolty = resolver::Type::bool();
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
             let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
 
@@ -2127,13 +2119,13 @@ pub fn expression(
                                 &loc,
                                 r,
                                 &r_type,
-                                &resolver::Type::new_bool(),
+                                &resolver::Type::bool(),
                                 true,
                                 ns,
                                 errors,
                             )?),
                         ),
-                        resolver::Type::new_bool(),
+                        resolver::Type::bool(),
                     ));
                 }
             };
@@ -2143,7 +2135,7 @@ pub fn expression(
                     name: "and".to_owned(),
                     loc: *loc,
                 },
-                &resolver::Type::new_bool(),
+                &resolver::Type::bool(),
             );
 
             let right_side = cfg.new_basic_block("and_right_side".to_string());
@@ -2167,15 +2159,7 @@ pub fn expression(
             cfg.set_basic_block(right_side);
 
             let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
-            let r = cast(
-                &loc,
-                r,
-                &r_type,
-                &resolver::Type::new_bool(),
-                true,
-                ns,
-                errors,
-            )?;
+            let r = cast(&loc, r, &r_type, &resolver::Type::bool(), true, ns, errors)?;
 
             cfg.add(tab, Instr::Set { res: pos, expr: r });
 

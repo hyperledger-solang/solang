@@ -17,11 +17,11 @@ pub enum Instr {
     },
     GetStorage {
         local: usize,
-        storage: usize,
+        storage: BigInt,
     },
     SetStorage {
         local: usize,
-        storage: usize,
+        storage: BigInt,
     },
     Set {
         res: usize,
@@ -531,14 +531,14 @@ fn check_return(
 }
 
 pub fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
-    match var.storage {
+    match &var.storage {
         Storage::Contract(offset) => {
             cfg.reads_contract_storage = true;
             cfg.add(
                 vartab,
                 Instr::GetStorage {
                     local: var.pos,
-                    storage: offset,
+                    storage: offset.clone(),
                 },
             );
         }
@@ -547,7 +547,7 @@ pub fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: 
                 vartab,
                 Instr::Constant {
                     res: var.pos,
-                    constant: n,
+                    constant: *n,
                 },
             );
         }
@@ -562,14 +562,14 @@ pub fn set_contract_storage(
     vartab: &mut Vartable,
     errors: &mut Vec<output::Output>,
 ) -> Result<(), ()> {
-    match var.storage {
+    match &var.storage {
         Storage::Contract(offset) => {
             cfg.writes_contract_storage = true;
             cfg.add(
                 vartab,
                 Instr::SetStorage {
                     local: var.pos,
-                    storage: offset,
+                    storage: offset.clone(),
                 },
             );
 
@@ -745,7 +745,7 @@ fn statement(
                         &cond.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::new_bool(),
+                        &resolver::Type::bool(),
                         true,
                         ns,
                         errors,
@@ -787,7 +787,7 @@ fn statement(
                         &cond.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::new_bool(),
+                        &resolver::Type::bool(),
                         true,
                         ns,
                         errors,
@@ -893,7 +893,7 @@ fn statement(
                             &cond_expr.loc(),
                             expr,
                             &expr_ty,
-                            &resolver::Type::new_bool(),
+                            &resolver::Type::bool(),
                             true,
                             ns,
                             errors,
@@ -931,7 +931,7 @@ fn statement(
                         &cond_expr.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::new_bool(),
+                        &resolver::Type::bool(),
                         true,
                         ns,
                         errors,
@@ -1050,7 +1050,7 @@ fn statement(
                         &cond_expr.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::new_bool(),
+                        &resolver::Type::bool(),
                         true,
                         ns,
                         errors,
@@ -1126,7 +1126,7 @@ fn statement(
 #[derive(Clone)]
 pub enum Storage {
     Constant(usize),
-    Contract(usize),
+    Contract(BigInt),
     Local,
 }
 
@@ -1235,9 +1235,9 @@ impl Vartable {
             id: id.clone(),
             ty: var.ty.clone(),
             pos,
-            storage: match var.var {
-                resolver::ContractVariableType::Storage(n) => Storage::Contract(n),
-                resolver::ContractVariableType::Constant(n) => Storage::Constant(n),
+            storage: match &var.var {
+                resolver::ContractVariableType::Storage(n) => Storage::Contract(n.clone()),
+                resolver::ContractVariableType::Constant(n) => Storage::Constant(*n),
             },
         });
 

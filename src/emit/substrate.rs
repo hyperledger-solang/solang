@@ -8,14 +8,9 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
 
-use std::collections::HashMap;
-
 use super::{Contract, TargetRuntime};
 
-pub struct SubstrateTarget {
-    /// This field maps a storage slot to llvm global
-    slot_mapping: HashMap<usize, usize>,
-}
+pub struct SubstrateTarget {}
 
 const ADDRESS_LENGTH: u64 = 20;
 
@@ -26,11 +21,8 @@ impl SubstrateTarget {
         filename: &'a str,
     ) -> Contract<'a> {
         let mut c = Contract::new(context, contract, filename, None);
-        let mut b = SubstrateTarget {
-            slot_mapping: HashMap::new(),
-        };
+        let b = SubstrateTarget {};
 
-        b.storage_keys(&mut c);
         b.declare_externals(&c);
 
         c.emit_functions(&b);
@@ -39,20 +31,6 @@ impl SubstrateTarget {
         b.emit_call(&c);
 
         c
-    }
-
-    fn storage_keys<'a>(&mut self, contract: &'a mut Contract) {
-        for var in &contract.ns.variables {
-            if let resolver::ContractVariableType::Storage(slot) = var.var {
-                let mut key = slot.to_le_bytes().to_vec();
-
-                key.resize(32, 0);
-
-                let v = contract.emit_global_string(&format!("sol::key::{}", var.name), &key, true);
-
-                self.slot_mapping.insert(slot, v);
-            }
-        }
     }
 
     fn public_function_prelude<'a>(
@@ -660,19 +638,17 @@ impl TargetRuntime for SubstrateTarget {
         &self,
         contract: &'a Contract,
         _function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     ) {
         // TODO: check for non-zero
-        let key = contract.globals[self.slot_mapping[&(slot as usize)]];
-
         contract.builder.build_call(
             contract.module.get_function("ext_set_storage").unwrap(),
             &[
                 contract
                     .builder
                     .build_pointer_cast(
-                        key.as_pointer_value(),
+                        slot,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
@@ -702,11 +678,9 @@ impl TargetRuntime for SubstrateTarget {
         &self,
         contract: &'a Contract,
         function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     ) {
-        let key = contract.globals[self.slot_mapping[&(slot as usize)]];
-
         let exists = contract
             .builder
             .build_call(
@@ -714,7 +688,7 @@ impl TargetRuntime for SubstrateTarget {
                 &[contract
                     .builder
                     .build_pointer_cast(
-                        key.as_pointer_value(),
+                        slot,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
