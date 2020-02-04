@@ -20,7 +20,7 @@ Solang aims for source file compatibility with the Ethereum EVM Solidity compile
 Where differences exists, this is noted in the documentation.
 
 Many language features are not implemented yet. Anything which is documented
-is supported, though.
+is supported. The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_.
 
 .. toctree::
    :maxdepth: 3
