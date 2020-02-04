@@ -456,6 +456,7 @@ impl SubstrateTarget {
                 to.into()
             }
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, data),
         }
     }
@@ -624,6 +625,7 @@ impl SubstrateTarget {
                 );
             }
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => {
                 self.encode_ty(contract, function, ty, arg, data);
             }
@@ -647,6 +649,7 @@ impl SubstrateTarget {
                     * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())
             }
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(r, contract),
         }
     }

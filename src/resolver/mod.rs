@@ -26,6 +26,7 @@ pub enum Type {
     FixedArray(Box<Type>, Vec<BigInt>),
     Enum(usize),
     Ref(Box<Type>),
+    StorageRef(Box<Type>),
     Undef,
 }
 
@@ -40,6 +41,7 @@ impl Type {
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
             Type::Ref(r) => r.to_string(ns),
+            Type::StorageRef(ty) => format!("storage {}", ty.to_string(ns)),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -54,6 +56,7 @@ impl Type {
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
             Type::Ref(r) => r.to_string(ns),
+            Type::StorageRef(r) => r.to_string(ns),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -116,6 +119,7 @@ impl Type {
             Type::FixedArray(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
             Type::Ref(r) => r.signed(),
+            Type::StorageRef(r) => r.signed(),
         }
     }
 
@@ -126,6 +130,7 @@ impl Type {
             Type::FixedArray(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
             Type::Ref(r) => r.ordered(),
+            Type::StorageRef(r) => r.ordered(),
         }
     }
 
@@ -201,12 +206,14 @@ impl FunctionDecl {
         }
     }
 
+    /// Generate selector for this function
     pub fn selector(&self) -> u32 {
         let res = keccak256(self.signature.as_bytes());
 
         u32::from_le_bytes([res[0], res[1], res[2], res[3]])
     }
 
+    /// Return a unique string for this function which is a valid wasm symbol
     pub fn wasm_symbol(&self, ns: &Contract) -> String {
         let mut sig = self.name.to_owned();
 
@@ -229,6 +236,7 @@ impl FunctionDecl {
                         ),
                         Type::Undef => unreachable!(),
                         Type::Ref(r) => type_to_wasm_name(r, ns),
+                        Type::StorageRef(r) => type_to_wasm_name(r, ns),
                     }
                 }
 

@@ -1367,6 +1367,7 @@ impl resolver::Type {
             resolver::Type::Undef => unreachable!(),
             resolver::Type::FixedArray(_, _) => unreachable!(),
             resolver::Type::Ref(_) => unreachable!(),
+            resolver::Type::StorageRef(_) => unreachable!(),
         }
     }
 }
