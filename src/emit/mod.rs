@@ -286,10 +286,16 @@ impl<'a> Contract<'a> {
             .collect();
     }
 
+    /// The expression function recursively emits code for expressions. The BasicEnumValue it
+    /// returns depends on the context; if it is simple integer, bool or bytes32 expression, the value
+    /// is an Intvalue. For references to arrays, it is a PointerValue to the array. For references
+    /// to storage, it is the storage slot. The references types are dereferenced by the Expression::Load()
+    /// and Expression::LoadStorage() expression types.
     fn expression(
         &self,
         e: &Expression,
         vartab: &[Variable<'a>],
+        function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
@@ -317,20 +323,32 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::Add(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_int_add(left, right, "").into()
             }
             Expression::Subtract(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_int_sub(left, right, "").into()
             }
             Expression::Multiply(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 let bits = left.get_type().get_bit_width();
 
@@ -380,8 +398,8 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::UDivide(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, function, runtime);
+                let right = self.expression(r, vartab, function, runtime);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
@@ -404,8 +422,8 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::SDivide(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, function, runtime);
+                let right = self.expression(r, vartab, function, runtime);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
@@ -426,8 +444,8 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::UModulo(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, function, runtime);
+                let right = self.expression(r, vartab, function, runtime);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
@@ -447,8 +465,8 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::SModulo(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, function, runtime);
+                let right = self.expression(r, vartab, function, runtime);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
@@ -468,8 +486,8 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::Power(l, r) => {
-                let left = self.expression(l, vartab, runtime);
-                let right = self.expression(r, vartab, runtime);
+                let left = self.expression(l, vartab, function, runtime);
+                let right = self.expression(r, vartab, function, runtime);
 
                 let bits = left.into_int_value().get_type().get_bit_width();
 
@@ -482,80 +500,120 @@ impl<'a> Contract<'a> {
                     .unwrap()
             }
             Expression::Equal(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::EQ, left, right, "")
                     .into()
             }
             Expression::NotEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::NE, left, right, "")
                     .into()
             }
             Expression::SMore(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SGT, left, right, "")
                     .into()
             }
             Expression::SMoreEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SGE, left, right, "")
                     .into()
             }
             Expression::SLess(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SLT, left, right, "")
                     .into()
             }
             Expression::SLessEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::SLE, left, right, "")
                     .into()
             }
             Expression::UMore(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::UGT, left, right, "")
                     .into()
             }
             Expression::UMoreEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::UGE, left, right, "")
                     .into()
             }
             Expression::ULess(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::ULT, left, right, "")
                     .into()
             }
             Expression::ULessEqual(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::ULE, left, right, "")
@@ -570,12 +628,36 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::Load(e) => {
-                let expr = self.expression(e, vartab, runtime).into_pointer_value();
+                let expr = self
+                    .expression(e, vartab, function, runtime)
+                    .into_pointer_value();
 
                 self.builder.build_load(expr, "")
             }
+            Expression::StorageLoad(ty, e) => {
+                let ty = ty.llvm_type(self.ns, &self.context);
+
+                let dest = self.builder.build_alloca(ty, "storage_load_temp");
+
+                // The storage slot is an i256 accessed through a pointer, so we need
+                // to store it
+                let slot = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
+                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                self.builder.build_store(slot_ptr, slot);
+
+                // TODO ewasm allocates 32 bytes here, even though we have just
+                // allocated test. This can be folded into one allocation, if llvm
+                // does not already fold it into one.
+                runtime.get_storage(&self, function, slot_ptr, dest);
+
+                self.builder.build_load(dest, "")
+            }
             Expression::ZeroExt(t, e) => {
-                let e = self.expression(e, vartab, runtime).into_int_value();
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
 
                 self.builder
@@ -583,12 +665,16 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::UnaryMinus(e) => {
-                let e = self.expression(e, vartab, runtime).into_int_value();
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_int_neg(e, "").into()
             }
             Expression::SignExt(t, e) => {
-                let e = self.expression(e, vartab, runtime).into_int_value();
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
 
                 self.builder
@@ -596,7 +682,9 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::Trunc(t, e) => {
-                let e = self.expression(e, vartab, runtime).into_int_value();
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
                 let ty = t.llvm_type(self.ns, &self.context);
 
                 self.builder
@@ -604,64 +692,100 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::Not(e) => {
-                let e = self.expression(e, vartab, runtime).into_int_value();
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
                     .into()
             }
             Expression::Complement(e) => {
-                let e = self.expression(e, vartab, runtime).into_int_value();
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_not(e, "").into()
             }
             Expression::Or(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_or(left, right, "").into()
             }
             Expression::And(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_and(left, right, "").into()
             }
             Expression::BitwiseOr(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_or(left, right, "").into()
             }
             Expression::BitwiseAnd(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_and(left, right, "").into()
             }
             Expression::BitwiseXor(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_xor(left, right, "").into()
             }
             Expression::ShiftLeft(l, r) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_left_shift(left, right, "").into()
             }
             Expression::ShiftRight(l, r, signed) => {
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
             Expression::ArraySubscript(a, i) => {
-                let array = self.expression(a, vartab, runtime).into_pointer_value();
-                let index = self.expression(i, vartab, runtime).into_int_value();
+                let array = self
+                    .expression(a, vartab, function, runtime)
+                    .into_pointer_value();
+                let index = self
+                    .expression(i, vartab, function, runtime)
+                    .into_int_value();
 
                 unsafe {
                     self.builder
@@ -674,9 +798,15 @@ impl<'a> Contract<'a> {
                 }
             }
             Expression::Ternary(c, l, r) => {
-                let cond = self.expression(c, vartab, runtime).into_int_value();
-                let left = self.expression(l, vartab, runtime).into_int_value();
-                let right = self.expression(r, vartab, runtime).into_int_value();
+                let cond = self
+                    .expression(c, vartab, function, runtime)
+                    .into_int_value();
+                let left = self
+                    .expression(l, vartab, function, runtime)
+                    .into_int_value();
+                let right = self
+                    .expression(r, vartab, function, runtime)
+                    .into_int_value();
 
                 self.builder.build_select(cond, left, right, "")
             }
@@ -686,7 +816,10 @@ impl<'a> Contract<'a> {
 
                 let exprs = exprs
                     .iter()
-                    .map(|e| self.expression(e, vartab, runtime).into_int_value())
+                    .map(|e| {
+                        self.expression(e, vartab, function, runtime)
+                            .into_int_value()
+                    })
                     .collect::<Vec<IntValue>>();
                 let ty = exprs[0].get_type();
 
@@ -748,7 +881,8 @@ impl<'a> Contract<'a> {
 
                     self.builder.build_store(
                         elemptr,
-                        self.expression(expr, vartab, runtime).into_int_value(),
+                        self.expression(expr, vartab, function, runtime)
+                            .into_int_value(),
                     );
                 }
 
@@ -924,21 +1058,21 @@ impl<'a> Contract<'a> {
                         self.builder.build_return(None);
                     }
                     cfg::Instr::Return { value } if resolver_function.unwrap().wasm_return => {
-                        let retval = self.expression(&value[0], &w.vars, runtime);
+                        let retval = self.expression(&value[0], &w.vars, function, runtime);
                         self.builder.build_return(Some(&retval));
                     }
                     cfg::Instr::Return { value } => {
                         let returns_offset = resolver_function.unwrap().params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
-                            let retval = self.expression(val, &w.vars, runtime);
+                            let retval = self.expression(val, &w.vars, function, runtime);
 
                             self.builder.build_store(arg.into_pointer_value(), retval);
                         }
                         self.builder.build_return(None);
                     }
                     cfg::Instr::Set { res, expr } => {
-                        let value_ref = self.expression(expr, &w.vars, runtime);
+                        let value_ref = self.expression(expr, &w.vars, function, runtime);
                         if w.vars[*res].stack {
                             self.builder
                                 .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
@@ -948,7 +1082,7 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Constant { res, constant } => {
                         let const_expr = &self.ns.constants[*constant];
-                        let value_ref = self.expression(const_expr, &w.vars, runtime);
+                        let value_ref = self.expression(const_expr, &w.vars, function, runtime);
                         if w.vars[*res].stack {
                             self.builder
                                 .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
@@ -980,7 +1114,9 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Store { dest, pos } => {
                         let value_ref = w.vars[*pos].value;
-                        let dest_ref = self.expression(dest, &w.vars, runtime).into_pointer_value();
+                        let dest_ref = self
+                            .expression(dest, &w.vars, function, runtime)
+                            .into_pointer_value();
 
                         self.builder.build_store(dest_ref, value_ref);
                     }
@@ -991,7 +1127,7 @@ impl<'a> Contract<'a> {
                     } => {
                         let pos = self.builder.get_insert_block().unwrap();
 
-                        let cond = self.expression(cond, &w.vars, runtime);
+                        let cond = self.expression(cond, &w.vars, function, runtime);
 
                         let bb_true = {
                             if !blocks.contains_key(&true_) {
@@ -1043,28 +1179,16 @@ impl<'a> Contract<'a> {
                     cfg::Instr::GetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        let ty = self.context.custom_width_int_type(256);
-                        let slot = self.builder.build_alloca(ty, "slot");
-                        self.builder.build_store(
-                            slot,
-                            ty.const_int_from_string(&storage.to_string(), StringRadix::Decimal)
-                                .unwrap(),
-                        );
+                        let slot = self.expression(storage, &w.vars, function, runtime);
 
-                        runtime.get_storage(&self, function, slot, dest);
+                        runtime.get_storage(&self, function, slot.into_pointer_value(), dest);
                     }
                     cfg::Instr::SetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
-                        let ty = self.context.custom_width_int_type(256);
-                        let slot = self.builder.build_alloca(ty, "slot");
-                        self.builder.build_store(
-                            slot,
-                            ty.const_int_from_string(&storage.to_string(), StringRadix::Decimal)
-                                .unwrap(),
-                        );
+                        let slot = self.expression(storage, &w.vars, function, runtime);
 
-                        runtime.set_storage(&self, function, slot, dest);
+                        runtime.set_storage(&self, function, slot.into_pointer_value(), dest);
                     }
                     cfg::Instr::AssertFailure {} => {
                         runtime.assert_failure(self);
@@ -1075,7 +1199,7 @@ impl<'a> Contract<'a> {
 
                         for (i, a) in args.iter().enumerate() {
                             let ty = &f.params[i].ty;
-                            let val = self.expression(&a, &w.vars, runtime);
+                            let val = self.expression(&a, &w.vars, function, runtime);
 
                             parms.push(if ty.stack_based() && !ty.is_array() {
                                 // copy onto stack
