@@ -1914,6 +1914,11 @@ impl resolver::Type {
                 .llvm_type(ns, context)
                 .ptr_type(AddressSpace::Generic)
                 .as_basic_type_enum(),
+            resolver::Type::StorageRef(_) => {
+                // a storage variable is references by its storage slot. This is u32 for now
+                // but may need to be widened to support mappings
+                BasicTypeEnum::IntType(context.i32_type())
+            }
         }
     }
 
@@ -1924,6 +1929,7 @@ impl resolver::Type {
             resolver::Type::Enum(_) => false,
             resolver::Type::FixedArray(_, _) => true,
             resolver::Type::Ref(r) => r.is_array(),
+            resolver::Type::StorageRef(r) => r.is_array(),
             resolver::Type::Undef => unreachable!(),
         }
     }
@@ -1936,6 +1942,7 @@ impl resolver::Type {
             resolver::Type::FixedArray(_, _) => true,
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(_) => false,
+            resolver::Type::StorageRef(r) => r.stack_based(),
         }
     }
 }

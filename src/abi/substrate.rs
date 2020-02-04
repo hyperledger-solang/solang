@@ -441,6 +441,7 @@ fn ty_to_abi(
 
             param_ty
         }
+        resolver::Type::StorageRef(ty) => ty_to_abi(ty, contract, registry),
         resolver::Type::Ref(ty) => ty_to_abi(ty, contract, registry),
         resolver::Type::Primitive(p) => {
             let scalety = primitive_to_string(p);
@@ -463,6 +464,7 @@ fn ty_to_primitive<'a>(
         resolver::Type::Enum(ref i) => &resolved_contract.enums[*i].ty,
         resolver::Type::FixedArray(ty, _) => ty_to_primitive(ty, resolved_contract), // FIXME: is is incorrect
         resolver::Type::Undef => unreachable!(),
+        resolver::Type::StorageRef(ty) => ty_to_primitive(ty, resolved_contract),
         resolver::Type::Ref(ty) => ty_to_primitive(ty, resolved_contract),
     }
 }

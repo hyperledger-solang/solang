@@ -63,6 +63,7 @@ impl EthAbiEncoder {
                 );
             }
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => {
                 self.encode_ty(contract, function, ty, arg, data);
             }
@@ -360,6 +361,7 @@ impl EthAbiEncoder {
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(r),
+            resolver::Type::StorageRef(r) => self.encoded_length(r),
         }
     }
 
@@ -403,6 +405,9 @@ impl EthAbiEncoder {
                 return to.into();
             }
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::StorageRef(ty) => {
+                return self.decode_ty(contract, function, ty, to, data);
+            }
             resolver::Type::Ref(ty) => {
                 return self.decode_ty(contract, function, ty, to, data);
             }

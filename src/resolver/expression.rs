@@ -69,6 +69,33 @@ pub enum Expression {
     Poison,
 }
 
+impl Expression {
+    /// Print the expression to string. This assumes the expression is a compile-time constant
+    /// without any references to e.g. variables.
+    pub fn print_constant_to_string(&self, ns: &resolver::Contract) -> String {
+        match self {
+            Expression::NumberLiteral(_, n) => n.to_string(),
+            Expression::Add(l, r) => format!(
+                "({} + {})",
+                l.print_constant_to_string(ns),
+                r.print_constant_to_string(ns)
+            ),
+            Expression::Subtract(l, r) => format!(
+                "({} - {})",
+                l.print_constant_to_string(ns),
+                r.print_constant_to_string(ns)
+            ),
+            Expression::Multiply(l, r) => format!(
+                "({} * {})",
+                l.print_constant_to_string(ns),
+                r.print_constant_to_string(ns)
+            ),
+            // FIXME: more to be implemented. Not needed for storage references
+            _ => unimplemented!(),
+        }
+    }
+}
+
 fn coerce(
     l: &resolver::Type,
     l_loc: &ast::Loc,
@@ -119,6 +146,7 @@ fn get_int_length(
             Err(())
         }
         resolver::Type::Ref(n) => get_int_length(n, l_loc, allow_bytes, ns, errors),
+        resolver::Type::StorageRef(n) => get_int_length(n, l_loc, allow_bytes, ns, errors),
         resolver::Type::Undef => {
             unreachable!();
         }
