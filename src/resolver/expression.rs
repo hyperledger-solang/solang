@@ -16,7 +16,7 @@ use parser::ast;
 use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{
-    get_contract_storage, set_contract_storage, ControlFlowGraph, Instr, Vartable,
+    get_contract_storage, set_contract_storage, ControlFlowGraph, Instr, Storage, Vartable,
 };
 
 #[derive(PartialEq, Clone, Debug)]
@@ -41,6 +41,7 @@ pub enum Expression {
     ShiftRight(Box<Expression>, Box<Expression>, bool),
     Variable(ast::Loc, usize),
     Load(Box<Expression>),
+    StorageLoad(resolver::Type, Box<Expression>),
     ZeroExt(resolver::Type, Box<Expression>),
     SignExt(resolver::Type, Box<Expression>),
     Trunc(resolver::Type, Box<Expression>),
@@ -241,6 +242,19 @@ pub fn cast(
         return cast(
             loc,
             Expression::Load(Box::new(expr)),
+            r,
+            to,
+            implicit,
+            ns,
+            errors,
+        );
+    }
+
+    // If it's a storage reference then load the value. The expr is the storage slot
+    if let resolver::Type::StorageRef(r) = from {
+        return cast(
+            loc,
+            Expression::StorageLoad(*r.clone(), Box::new(expr)),
             r,
             to,
             implicit,
@@ -796,8 +810,15 @@ pub fn expression(
         ast::Expression::Variable(id) => {
             if let Some(ref mut tab) = *vartab {
                 let v = tab.find(id, ns, errors)?;
-                get_contract_storage(&v, cfg, tab);
-                Ok((Expression::Variable(id.loc, v.pos), v.ty))
+                if let Storage::Contract(n) = &v.storage {
+                    Ok((
+                        Expression::NumberLiteral(256, n.clone()),
+                        resolver::Type::StorageRef(Box::new(v.ty)),
+                    ))
+                } else {
+                    get_contract_storage(&v, cfg, tab);
+                    Ok((Expression::Variable(id.loc, v.pos), v.ty))
+                }
             } else {
                 errors.push(Output::error(
                     id.loc,
@@ -1459,30 +1480,71 @@ pub fn expression(
 
                     let pos = vartab.temp_anonymous(&var_ty);
 
-                    if let resolver::Type::Ref(r_ty) = var_ty {
-                        cfg.add(
-                            vartab,
-                            Instr::Set {
-                                res: pos,
-                                expr: cast(&var.loc(), expr, &expr_type, &r_ty, true, ns, errors)?,
-                            },
-                        );
+                    match var_ty {
+                        resolver::Type::Ref(r_ty) => {
+                            cfg.add(
+                                vartab,
+                                Instr::Set {
+                                    res: pos,
+                                    expr: cast(
+                                        &var.loc(),
+                                        expr,
+                                        &expr_type,
+                                        &r_ty,
+                                        true,
+                                        ns,
+                                        errors,
+                                    )?,
+                                },
+                            );
 
-                        cfg.add(
-                            vartab,
-                            Instr::Store {
-                                dest: var_expr,
-                                pos,
-                            },
-                        );
+                            cfg.add(
+                                vartab,
+                                Instr::Store {
+                                    dest: var_expr,
+                                    pos,
+                                },
+                            );
 
-                        Ok((Expression::Variable(*loc, pos), *r_ty))
-                    } else {
-                        errors.push(Output::error(
-                            var.loc(),
-                            "expression is not assignable".to_string(),
-                        ));
-                        Err(())
+                            Ok((Expression::Variable(*loc, pos), *r_ty))
+                        }
+                        resolver::Type::StorageRef(r_ty) => {
+                            cfg.add(
+                                vartab,
+                                Instr::Set {
+                                    res: pos,
+                                    expr: cast(
+                                        &var.loc(),
+                                        expr,
+                                        &expr_type,
+                                        &r_ty,
+                                        true,
+                                        ns,
+                                        errors,
+                                    )?,
+                                },
+                            );
+
+                            // The value of the var_expr should be storage offset
+                            cfg.add(
+                                vartab,
+                                Instr::SetStorage {
+                                    local: pos,
+                                    storage: var_expr,
+                                },
+                            );
+
+                            cfg.writes_contract_storage = true;
+
+                            Ok((Expression::Variable(*loc, pos), *r_ty))
+                        }
+                        _ => {
+                            errors.push(Output::error(
+                                var.loc(),
+                                "expression is not assignable".to_string(),
+                            ));
+                            Err(())
+                        }
                     }
                 }
             }

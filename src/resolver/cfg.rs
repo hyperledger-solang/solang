@@ -17,11 +17,11 @@ pub enum Instr {
     },
     GetStorage {
         local: usize,
-        storage: BigInt,
+        storage: Expression,
     },
     SetStorage {
         local: usize,
-        storage: BigInt,
+        storage: Expression,
     },
     Set {
         res: usize,
@@ -200,6 +200,11 @@ impl ControlFlowGraph {
             ),
             Expression::Variable(_, res) => format!("%{}", self.vars[*res].id.name),
             Expression::Load(expr) => format!("*{}", self.expr_to_string(ns, expr)),
+            Expression::StorageLoad(ty, expr) => format!(
+                "({} storage[{}])",
+                ty.to_string(ns),
+                self.expr_to_string(ns, expr)
+            ),
             Expression::ZeroExt(ty, e) => {
                 format!("(zext {} {})", ty.to_string(ns), self.expr_to_string(ns, e))
             }
@@ -329,12 +334,16 @@ impl ControlFlowGraph {
             Instr::FuncArg { res, arg } => {
                 format!("%{} = funcarg({})", self.vars[*res].id.name, arg)
             }
-            Instr::SetStorage { local, storage } => {
-                format!("setstorage %{} = %{}", *storage, self.vars[*local].id.name)
-            }
-            Instr::GetStorage { local, storage } => {
-                format!("getstorage %{} = %{}", *storage, self.vars[*local].id.name)
-            }
+            Instr::SetStorage { local, storage } => format!(
+                "set storage slot({}) = %{}",
+                self.expr_to_string(ns, storage),
+                self.vars[*local].id.name
+            ),
+            Instr::GetStorage { local, storage } => format!(
+                "get storage slot({}) = %{}",
+                self.expr_to_string(ns, storage),
+                self.vars[*local].id.name
+            ),
             Instr::AssertFailure {} => "assert-failure".to_string(),
             Instr::Call { res, func, args } => format!(
                 "{} = call {} {} {}",
@@ -532,16 +541,7 @@ fn check_return(
 
 pub fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
     match &var.storage {
-        Storage::Contract(offset) => {
-            cfg.reads_contract_storage = true;
-            cfg.add(
-                vartab,
-                Instr::GetStorage {
-                    local: var.pos,
-                    storage: offset.clone(),
-                },
-            );
-        }
+        Storage::Contract(_) => (),
         Storage::Constant(n) => {
             cfg.add(
                 vartab,
@@ -558,23 +558,12 @@ pub fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: 
 pub fn set_contract_storage(
     id: &ast::Identifier,
     var: &Variable,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
+    _cfg: &mut ControlFlowGraph,
+    _vartab: &mut Vartable,
     errors: &mut Vec<output::Output>,
 ) -> Result<(), ()> {
     match &var.storage {
-        Storage::Contract(offset) => {
-            cfg.writes_contract_storage = true;
-            cfg.add(
-                vartab,
-                Instr::SetStorage {
-                    local: var.pos,
-                    storage: offset.clone(),
-                },
-            );
-
-            Ok(())
-        }
+        Storage::Contract(_) => Ok(()),
         Storage::Constant(_) => {
             errors.push(Output::type_error(
                 id.loc,
