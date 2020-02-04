@@ -124,6 +124,15 @@ You will need ubuntu 18.04 with backports or later. Just run:
 
 	sudo apt install curl llvm-8-dev clang-8 git zlib1g-dev cargo
 
+Installing LLVM on Debian
+_________________________
+
+You will need Debian Buster with `buster-backports` enabled, or testing.
+
+.. code-block:: bash
+
+	sudo apt-get install -y llvm-8-dev clang-8 libz-dev pkg-config libssl-dev git
+
 Installing LLVM on Fedora
 _________________________
 
