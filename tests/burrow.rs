@@ -95,7 +95,7 @@ struct TestRuntime {
 
 impl TestRuntime {
     fn function(&self, store: &mut ContractStorage, name: &str, args: &[Token]) -> Vec<Token> {
-        let calldata = match self.abi.functions[name].encode_input(args) {
+        let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
             Err(x) => panic!(format!("{}", x)),
         };
@@ -124,7 +124,9 @@ impl TestRuntime {
 
                 println!("RETURNDATA: {}", hex::encode(&returndata));
 
-                self.abi.functions[name].decode_output(&returndata).unwrap()
+                self.abi.functions[name][0]
+                    .decode_output(&returndata)
+                    .unwrap()
             }
             _ => panic!("expected return value when calling {}", name),
         }

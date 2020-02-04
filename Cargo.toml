@@ -3,27 +3,29 @@ name = "solang"
 version = "0.1.0"
 authors = ["Sean Young <sean@mess.org>"]
 homepage = "https://github.com/hyperledger-labs/solang"
+documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0 OR MIT"
 build = "build.rs"
 description = "Solidity to WASM Smart Contract Compiler"
+keywords = [ "solidity", "compiler", "ewasm",  "llvm", "smart-contract", "substrate" ]
 
 [build-dependencies]
-lalrpop = "0.17.0"
+lalrpop = "0.17"
 
 [dependencies]
-lalrpop-util = "0.17.0"
-regex = "0.2.1"
+lalrpop-util = "0.17"
+regex = "1"
 num-bigint = "0.2"
 num-traits = "0.2.6"
+num-derive = "0.3"
 parity-wasm = "0.41"
 clap = "2.32.0"
 lazy_static = "1.2.0"
-hex = "0.3.2"
+hex = "0.4"
 unescape = "0.1.0"
-tiny-keccak = "1.4"
+tiny-keccak = "1.5"
 serde_json = "1.0"
-serde = "1.0.90"
-num-derive = "0.3.0"
+serde = "1.0"
 serde_derive = { version = "1.0" }
 
 [dependencies.inkwell]
@@ -34,10 +36,10 @@ features = ["target-webassembly", "llvm8-0"]
 [dev-dependencies]
 parity-scale-codec-derive = "1.1.0"
 parity-scale-codec = "1.1.0"
-ethabi = "7.0.0"
-ethereum-types = "0.5.2"
-wasmi = "0.4.3"
-rand = "0.7.2"
+ethabi = "11.0.0"
+ethereum-types = "0.8.0"
+wasmi = "0.6"
+rand = "0.7"
 
 [profile.release]
 lto = true
