@@ -213,17 +213,22 @@ impl TargetRuntime for BurrowTarget {
         &self,
         contract: &'a Contract,
         _function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     ) {
+        let slot = contract.builder.build_load(
+            contract.builder.build_pointer_cast(
+                slot,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            "slot",
+        );
+
         contract.builder.build_call(
             contract.module.get_function("set_storage32").unwrap(),
             &[
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(slot as u64, false)
-                    .into(),
+                slot,
                 contract
                     .builder
                     .build_pointer_cast(
@@ -245,17 +250,22 @@ impl TargetRuntime for BurrowTarget {
         &self,
         contract: &'a Contract,
         _function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     ) {
+        let slot = contract.builder.build_load(
+            contract.builder.build_pointer_cast(
+                slot,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            "slot",
+        );
+
         contract.builder.build_call(
             contract.module.get_function("get_storage32").unwrap(),
             &[
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(slot as u64, false)
-                    .into(),
+                slot,
                 contract
                     .builder
                     .build_pointer_cast(

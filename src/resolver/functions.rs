@@ -259,7 +259,7 @@ fn signatures() {
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
         target: crate::Target::Burrow,
-        top_of_contract_storage: 0,
+        top_of_contract_storage: BigInt::zero(),
         symbols: HashMap::new(),
     };
 

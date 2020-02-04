@@ -8,14 +8,10 @@ use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 
-use std::collections::HashMap;
-
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime};
 
 pub struct EwasmTarget {
-    /// This field maps a storage slot to llvm global
-    slot_mapping: HashMap<usize, usize>,
     abi: ethabiencoder::EthAbiEncoder,
 }
 
@@ -28,13 +24,11 @@ impl EwasmTarget {
     ) -> Contract<'a> {
         // first emit runtime code
         let mut runtime_code = Contract::new(context, contract, filename, None);
-        let mut b = EwasmTarget {
-            slot_mapping: HashMap::new(),
+        let b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
 
         // externals
-        b.storage_keys(&mut runtime_code);
         b.declare_externals(&mut runtime_code);
 
         // FIXME: this also emits the constructors. We can either rely on lto linking
@@ -48,13 +42,11 @@ impl EwasmTarget {
         // Now we have the runtime code, create the deployer
         let mut deploy_code =
             Contract::new(context, contract, filename, Some(Box::new(runtime_code)));
-        let mut b = EwasmTarget {
-            slot_mapping: HashMap::new(),
+        let b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
 
         // externals
-        b.storage_keys(&mut deploy_code);
         b.declare_externals(&mut deploy_code);
 
         // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
@@ -65,25 +57,6 @@ impl EwasmTarget {
         b.emit_constructor_dispatch(&mut deploy_code, &runtime_bs);
 
         deploy_code
-    }
-
-    fn storage_keys<'a>(&mut self, contract: &'a mut Contract) {
-        for var in &contract.ns.variables {
-            if let resolver::ContractVariableType::Storage(slot) = var.var {
-                let mut key = slot.to_be_bytes().to_vec();
-
-                // pad to the left
-                let mut padding = Vec::new();
-
-                padding.resize(32 - key.len(), 0u8);
-
-                key = padding.into_iter().chain(key.into_iter()).collect();
-
-                let v = contract.emit_global_string(&format!("sol::key::{}", var.name), &key, true);
-
-                self.slot_mapping.insert(slot, v);
-            }
-        }
     }
 
     fn main_prelude<'a>(
@@ -331,14 +304,12 @@ impl TargetRuntime for EwasmTarget {
         &self,
         contract: &'a Contract,
         _function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     ) {
-        let key = contract.globals[self.slot_mapping[&(slot as usize)]];
-        // FIXME: no need to alloca for 256 bit value
         let value = contract
             .builder
-            .build_alloca(contract.context.custom_width_int_type(160), "value");
+            .build_alloca(contract.context.custom_width_int_type(256), "value");
 
         let value8 = contract.builder.build_pointer_cast(
             value,
@@ -370,7 +341,7 @@ impl TargetRuntime for EwasmTarget {
                 contract
                     .builder
                     .build_pointer_cast(
-                        key.as_pointer_value(),
+                        slot,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
@@ -385,10 +356,9 @@ impl TargetRuntime for EwasmTarget {
         &self,
         contract: &'a Contract,
         _function: FunctionValue,
-        slot: u32,
-        dest: inkwell::values::PointerValue<'a>,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
     ) {
-        let key = contract.globals[self.slot_mapping[&(slot as usize)]];
         // FIXME: no need to alloca for 256 bit value
         let value = contract
             .builder
@@ -400,7 +370,7 @@ impl TargetRuntime for EwasmTarget {
                 contract
                     .builder
                     .build_pointer_cast(
-                        key.as_pointer_value(),
+                        slot,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
