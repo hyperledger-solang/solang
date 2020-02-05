@@ -809,7 +809,7 @@ fn ternary() {
 }
 
 #[test]
-fn short_circuit() {
+fn short_circuit_or() {
     // parse
     let (runtime, mut store) = build_solidity(
         "
@@ -821,6 +821,11 @@ fn short_circuit() {
                 return true;
             }
 
+            function increase_counter2() private returns (bool) {
+                counter++;
+                return true;
+            }
+
             function do_test() public {
                 assert(counter == 0);
 
@@ -828,7 +833,7 @@ fn short_circuit() {
                 assert(true || increase_counter());
                 assert(counter == 0);
 
-                assert(false || increase_counter());
+                assert(false || increase_counter2());
                 assert(counter == 1);
 
                 false && increase_counter();
@@ -836,6 +841,55 @@ fn short_circuit() {
 
                 true && increase_counter();
                 assert(counter == 2);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "do_test", Vec::new());
+}
+
+#[test]
+fn short_circuit_and() {
+    // parse
+    let (runtime, mut store) = build_solidity(
+        "
+        contract test {
+            uint32 counter;
+
+            function increase_counter() private returns (bool) {
+                counter |= 1;
+                return false;
+            }
+
+            function increase_counter2() private returns (bool) {
+                ++counter;
+                return false;
+            }
+
+            function do_test() public {
+                assert(counter == 0);
+
+                increase_counter2();
+                increase_counter2();
+
+                assert(counter == 2);
+
+                increase_counter();
+
+                assert(counter == 3);
+
+                counter = 0;
+
+                // if left hand side is false, right hand side is not evaluated
+                assert(!(false && increase_counter()));
+                assert(counter == 0);
+                assert(!(true && increase_counter2()));
+                assert(counter == 1);
+                false && increase_counter2();
+                assert(counter == 1);
+                counter = 0;
+                true && increase_counter();
+                assert(counter == 1);
             }
         }",
     );

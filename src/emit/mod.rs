@@ -1125,9 +1125,9 @@ impl<'a> Contract<'a> {
                         true_,
                         false_,
                     } => {
-                        let pos = self.builder.get_insert_block().unwrap();
-
                         let cond = self.expression(cond, &w.vars, function, runtime);
+
+                        let pos = self.builder.get_insert_block().unwrap();
 
                         let bb_true = {
                             if !blocks.contains_key(&true_) {
@@ -1176,19 +1176,13 @@ impl<'a> Contract<'a> {
                             &bb_false,
                         );
                     }
-                    cfg::Instr::GetStorage { local, storage } => {
-                        let dest = w.vars[*local].value.into_pointer_value();
-
-                        let slot = self.expression(storage, &w.vars, function, runtime);
-
-                        runtime.get_storage(&self, function, slot.into_pointer_value(), dest);
-                    }
                     cfg::Instr::SetStorage { local, storage } => {
                         let dest = w.vars[*local].value.into_pointer_value();
 
                         let slot = self.expression(storage, &w.vars, function, runtime);
-
-                        runtime.set_storage(&self, function, slot.into_pointer_value(), dest);
+                        let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                        self.builder.build_store(slot_ptr, slot);
+                        runtime.set_storage(&self, function, slot_ptr, dest);
                     }
                     cfg::Instr::AssertFailure {} => {
                         runtime.assert_failure(self);

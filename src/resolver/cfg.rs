@@ -15,10 +15,6 @@ pub enum Instr {
         res: usize,
         arg: usize,
     },
-    GetStorage {
-        local: usize,
-        storage: Expression,
-    },
     SetStorage {
         local: usize,
         storage: Expression,
@@ -72,7 +68,6 @@ pub struct ControlFlowGraph {
     pub bb: Vec<BasicBlock>,
     current: usize,
     pub writes_contract_storage: bool,
-    pub reads_contract_storage: bool,
 }
 
 impl ControlFlowGraph {
@@ -81,13 +76,25 @@ impl ControlFlowGraph {
             vars: Vec::new(),
             bb: Vec::new(),
             current: 0,
-            reads_contract_storage: false,
             writes_contract_storage: false,
         };
 
         cfg.new_basic_block("entry".to_string());
 
         cfg
+    }
+
+    /// Does this function read from contract storage anywhere in its body
+    pub fn reads_contract_storage(&self) -> bool {
+        self.bb.iter().any(|bb| {
+            bb.instr.iter().any(|instr| match instr {
+                Instr::Set { expr, .. } => expr.reads_contract_storage(),
+                Instr::Return { value } => value.iter().any(|e| e.reads_contract_storage()),
+                Instr::BranchCond { cond, .. } => cond.reads_contract_storage(),
+                Instr::Call { args, .. } => args.iter().any(|e| e.reads_contract_storage()),
+                _ => false,
+            })
+        })
     }
 
     pub fn new_basic_block(&mut self, name: String) -> usize {
@@ -257,7 +264,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, r)
             ),
             Expression::Equal(l, r) => format!(
-                "({} = {})",
+                "({} == {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
@@ -336,11 +343,6 @@ impl ControlFlowGraph {
             }
             Instr::SetStorage { local, storage } => format!(
                 "set storage slot({}) = %{}",
-                self.expr_to_string(ns, storage),
-                self.vars[*local].id.name
-            ),
-            Instr::GetStorage { local, storage } => format!(
-                "get storage slot({}) = %{}",
                 self.expr_to_string(ns, storage),
                 self.vars[*local].id.name
             ),
@@ -536,45 +538,6 @@ fn check_return(
             "missing return statement".to_string(),
         ));
         Err(())
-    }
-}
-
-pub fn get_contract_storage(var: &Variable, cfg: &mut ControlFlowGraph, vartab: &mut Vartable) {
-    match &var.storage {
-        Storage::Contract(_) => (),
-        Storage::Constant(n) => {
-            cfg.add(
-                vartab,
-                Instr::Constant {
-                    res: var.pos,
-                    constant: *n,
-                },
-            );
-        }
-        Storage::Local => (),
-    }
-}
-
-pub fn set_contract_storage(
-    id: &ast::Identifier,
-    var: &Variable,
-    _cfg: &mut ControlFlowGraph,
-    _vartab: &mut Vartable,
-    errors: &mut Vec<output::Output>,
-) -> Result<(), ()> {
-    match &var.storage {
-        Storage::Contract(_) => Ok(()),
-        Storage::Constant(_) => {
-            errors.push(Output::type_error(
-                id.loc,
-                format!("cannot assign to constant {}", id.name),
-            ));
-            Err(())
-        }
-        Storage::Local => {
-            // nothing to do
-            Ok(())
-        }
     }
 }
 

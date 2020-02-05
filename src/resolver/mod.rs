@@ -722,7 +722,7 @@ fn resolve_contract(
                                             .to_string(),
                                     ));
                                     broken = true;
-                                } else if c.reads_contract_storage {
+                                } else if c.reads_contract_storage() {
                                     errors.push(Output::error(
                                         *loc,
                                         "function declared pure but reads contract storage"
@@ -739,7 +739,7 @@ fn resolve_contract(
                                             .to_string(),
                                     ));
                                     broken = true;
-                                } else if !c.reads_contract_storage {
+                                } else if !c.reads_contract_storage() {
                                     errors.push(Output::warning(
                                         *loc,
                                         "function can be declared pure".to_string(),
@@ -752,7 +752,7 @@ fn resolve_contract(
                             None => {
                                 let loc = &ns.functions[f].loc;
 
-                                if !c.writes_contract_storage && !c.reads_contract_storage {
+                                if !c.writes_contract_storage && !c.reads_contract_storage() {
                                     errors.push(Output::warning(
                                         *loc,
                                         "function can be declare pure".to_string(),
