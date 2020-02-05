@@ -1,8 +1,8 @@
 use super::{Contract, ContractVariable, Symbol};
 use output::Output;
 use parser::ast;
-use resolver::cfg::{set_contract_storage, ControlFlowGraph, Instr, Vartable};
-use resolver::expression::{cast, expression};
+use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
+use resolver::expression::{cast, expression, Expression};
 use resolver::ContractVariableType;
 
 pub fn contract_variables(
@@ -156,7 +156,15 @@ fn var_decl(
                 },
             );
 
-            set_contract_storage(&s.name, &var, cfg, vartab, errors).unwrap();
+            if let Storage::Contract(offset) = &var.storage {
+                cfg.add(
+                    vartab,
+                    Instr::SetStorage {
+                        local: var.pos,
+                        storage: Expression::NumberLiteral(256, offset.clone()),
+                    },
+                );
+            }
         }
     }
 
