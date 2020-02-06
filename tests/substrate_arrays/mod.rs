@@ -1,5 +1,6 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
+use rand::Rng;
 
 use super::{build_solidity, first_error};
 use solang::{parse_and_resolve, Target};
@@ -126,4 +127,48 @@ fn return_array() {
     runtime.function(&mut store, "array", Vec::new());
 
     assert_eq!(store.scratch, Res([4, 84564, 31213, 1312]).encode());
+}
+
+#[test]
+fn storage_arrays() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(i32);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct SetArg(u64, i32);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct GetArg(u64);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            int32[8589934592] bigarray;
+
+            function set(uint64 index, int32 val) public {
+                bigarray[index] = val;
+            }
+
+            function get(uint64 index) public returns (int32) {
+                return bigarray[index];
+            }
+        }"##,
+    );
+
+    let mut rng = rand::thread_rng();
+
+    let mut vals = Vec::new();
+
+    for _ in 0..100 {
+        let index = rng.gen::<u64>() % 0x2_000_000;
+        let val = rng.gen::<i32>();
+
+        runtime.function(&mut store, "set", SetArg(index, val).encode());
+
+        vals.push((index, val));
+    }
+
+    for val in vals {
+        runtime.function(&mut store, "get", GetArg(val.0).encode());
+
+        assert_eq!(store.scratch, Val(val.1).encode());
+    }
 }

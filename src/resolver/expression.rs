@@ -2162,8 +2162,12 @@ pub fn expression(
         ast::Expression::ArraySubscript(loc, array, Some(index)) => {
             let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
-            let array_length = match array_ty {
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(n),
+            let array_length = match if let resolver::Type::StorageRef(ty) = &array_ty {
+                &*ty
+            } else {
+                &array_ty
+            } {
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
                 resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
                 _ => {
                     errors.push(Output::error(
@@ -2266,6 +2270,30 @@ pub fn expression(
             cfg.set_basic_block(in_bounds);
 
             match array_ty {
+                resolver::Type::StorageRef(ty) => {
+                    let elem_ty = ty.storage_deref();
+
+                    // the index needs to be cast to i256 and multiplied by the number
+                    // of slots for each element
+                    Ok((
+                        Expression::Add(
+                            Box::new(array_expr),
+                            Box::new(Expression::Multiply(
+                                Box::new(cast(
+                                    &index.loc(),
+                                    Expression::Variable(index.loc(), pos),
+                                    &index_ty,
+                                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                                    false,
+                                    ns,
+                                    errors,
+                                )?),
+                                Box::new(Expression::NumberLiteral(256, elem_ty.storage_slots())),
+                            )),
+                        ),
+                        elem_ty,
+                    ))
+                }
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
                     let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
 

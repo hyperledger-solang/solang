@@ -73,10 +73,23 @@ impl Type {
         }
     }
 
+    /// Give the type of an storage array after dereference. This can only be used on
+    /// array types and will cause a panic otherwise.
+    pub fn storage_deref(&self) -> Self {
+        match self {
+            Type::FixedArray(ty, dim) if dim.len() > 1 => Type::StorageRef(Box::new(
+                Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec()),
+            )),
+            Type::FixedArray(ty, dim) if dim.len() == 1 => Type::StorageRef(Box::new(*ty.clone())),
+            _ => panic!("deref on non-array"),
+        }
+    }
+
     /// Give the length of the outer array. This can only be called on array types
     /// and will panic otherwise.
     pub fn array_length(&self) -> &BigInt {
         match self {
+            Type::StorageRef(ty) => ty.array_length(),
             Type::FixedArray(_, dim) => dim.last().unwrap(),
             _ => panic!("array_length on non-array"),
         }

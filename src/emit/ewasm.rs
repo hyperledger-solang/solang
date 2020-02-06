@@ -336,7 +336,7 @@ impl TargetRuntime for EwasmTarget {
         );
 
         contract.builder.build_call(
-            contract.module.get_function("storageLoad").unwrap(),
+            contract.module.get_function("storageStore").unwrap(),
             &[
                 contract
                     .builder

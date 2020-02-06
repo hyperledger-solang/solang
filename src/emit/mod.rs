@@ -1015,14 +1015,10 @@ impl<'a> Contract<'a> {
                         stack: false,
                     });
                 }
-                cfg::Storage::Constant(_) if v.ty.is_array() => {
+                cfg::Storage::Constant(_) | cfg::Storage::Contract(_) if v.ty.is_array() => {
+                    // This needs a placeholder
                     vars.push(Variable {
-                        value: v
-                            .ty
-                            .llvm_type(self.ns, &self.context)
-                            .ptr_type(AddressSpace::Generic)
-                            .const_zero()
-                            .into(),
+                        value: self.context.bool_type().get_undef().into(),
                         stack: false,
                     });
                 }
@@ -1177,7 +1173,16 @@ impl<'a> Contract<'a> {
                         );
                     }
                     cfg::Instr::SetStorage { local, storage } => {
-                        let dest = w.vars[*local].value.into_pointer_value();
+                        let value = w.vars[*local].value;
+
+                        let dest = if value.is_int_value() {
+                            let m = self.builder.build_alloca(value.get_type(), "");
+                            self.builder.build_store(m, value);
+
+                            m
+                        } else {
+                            value.into_pointer_value()
+                        };
 
                         let slot = self.expression(storage, &w.vars, function, runtime);
                         let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
