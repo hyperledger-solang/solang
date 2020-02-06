@@ -30,3 +30,4 @@ is supported. The repository can be found on `github <https://github.com/hyperle
    running
    language
    examples
+   contributing
