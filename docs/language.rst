@@ -323,6 +323,53 @@ those changes will be reflected in the current function. For example:
   In Substrate the `SCALE <https://substrate.dev/docs/en/overview/low-level-data-format>`_
   encoding uses 32 bytes for both types.
 
+Storage References
+__________________
+
+Parameters, return types, and variables can be declared storage references by adding 
+``storage`` after the type name. This means that the variable holds a references to a
+particular contract storage variable.
+
+.. code-block:: javascript
+
+    contract felix {
+        enum Felines { None, Lynx, Felis, Puma, Catopuma };
+        Felines[100] group_a;
+        Felines[100] group_b;
+
+
+        function count_pumas(Felines[100] storage cats) private returns (uint32)
+    {
+            uint32 count = 0;
+            uint32 i = 0;
+
+            for (i = 0; i < cats.length; i++) {
+                if (cats[i] == Felines.Puma) {
+                    ++count;
+                }
+            }
+
+            return count;
+        }
+
+        function all_pumas() public returns (uint32) {
+            Felines[100] storage ref = group_a;
+
+            uint32 total = count_pumas(ref);
+
+            ref = group_b;
+
+            total += count_pumas(ref);
+
+            return total;
+        }
+    }
+
+Functions which have either storage parameter or return types cannot be public; when a function
+is called via the ABI encoder/decoder, it is not possible to pass references, just values. 
+However it is possible to use storage reference variables in public functions, as
+demonstrated in function all_pumas().
+
 Expressions
 -----------
 

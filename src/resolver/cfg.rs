@@ -552,9 +552,29 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let var_ty = ns.resolve_type(&decl.typ, Some(errors))?;
+            let mut var_ty = ns.resolve_type(&decl.typ, Some(errors))?;
 
-            if var_ty.size_hint() > BigInt::from(1024 * 1024) {
+            if let Some(storage) = &decl.storage {
+                if !var_ty.can_have_data_location() {
+                    errors.push(Output::error(
+                        *storage.loc(),
+                        format!(
+                            "data location ‘{}’ only allowed for array, struct or mapping type",
+                            storage
+                        ),
+                    ));
+                    return Err(());
+                }
+
+                if let ast::StorageLocation::Storage(_) = storage {
+                    var_ty = resolver::Type::StorageRef(Box::new(var_ty));
+                }
+
+                // Note we are completely ignoring memory or calldata data locations. Everything
+                // will be stored in memory.
+            }
+
+            if !var_ty.is_contract_storage() && var_ty.size_hint() > BigInt::from(1024 * 1024) {
                 errors.push(Output::error(
                     stmt.loc(),
                     "type to large to fit into memory".to_string(),
