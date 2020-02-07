@@ -320,13 +320,13 @@ those changes will be reflected in the current function. For example:
   32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
   bytes when ABI encoded.
 
-  In Substrate the `SCALE <https://substrate.dev/docs/en/overview/low-level-data-format>`_
+  In Substrate, the `SCALE <https://substrate.dev/docs/en/overview/low-level-data-format>`_
   encoding uses 32 bytes for both types.
 
 Storage References
 __________________
 
-Parameters, return types, and variables can be declared storage references by adding 
+Parameters, return types, and variables can be declared storage references by adding
 ``storage`` after the type name. This means that the variable holds a references to a
 particular contract storage variable.
 
@@ -366,7 +366,7 @@ particular contract storage variable.
     }
 
 Functions which have either storage parameter or return types cannot be public; when a function
-is called via the ABI encoder/decoder, it is not possible to pass references, just values. 
+is called via the ABI encoder/decoder, it is not possible to pass references, just values.
 However it is possible to use storage reference variables in public functions, as
 demonstrated in function all_pumas().
 
