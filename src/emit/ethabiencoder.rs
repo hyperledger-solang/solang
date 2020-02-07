@@ -62,6 +62,7 @@ impl EthAbiEncoder {
                     },
                 );
             }
+            resolver::Type::Struct(_) => unimplemented!(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => {
@@ -352,16 +353,22 @@ impl EthAbiEncoder {
     }
 
     /// Return the encoded length of the given type
-    pub fn encoded_length(&self, ty: &resolver::Type) -> u64 {
+    pub fn encoded_length(&self, ty: &resolver::Type, contract: &resolver::Contract) -> u64 {
         match ty {
             resolver::Type::Primitive(_) => 32,
             resolver::Type::Enum(_) => 32,
+            resolver::Type::Struct(n) => contract.structs[*n]
+                .fields
+                .iter()
+                .map(|f| self.encoded_length(&f.ty, contract))
+                .sum(),
             resolver::Type::FixedArray(ty, dims) => {
-                self.encoded_length(ty) * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())
+                self.encoded_length(ty, contract)
+                    * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())
             }
             resolver::Type::Undef => unreachable!(),
-            resolver::Type::Ref(r) => self.encoded_length(r),
-            resolver::Type::StorageRef(r) => self.encoded_length(r),
+            resolver::Type::Ref(r) => self.encoded_length(r, contract),
+            resolver::Type::StorageRef(r) => self.encoded_length(r, contract),
         }
     }
 
@@ -401,6 +408,19 @@ impl EthAbiEncoder {
                         self.decode_ty(contract, function, &ty.deref(), Some(elem), data);
                     },
                 );
+
+                return to.into();
+            }
+            resolver::Type::Struct(n) => {
+                let to = to.unwrap_or_else(|| {
+                    contract
+                        .builder
+                        .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
+                });
+
+                for field in &contract.ns.structs[*n].fields {
+                    self.decode_ty(contract, function, &field.ty, Some(to), data);
+                }
 
                 return to.into();
             }
@@ -624,10 +644,9 @@ impl EthAbiEncoder {
         length: IntValue,
         spec: &resolver::FunctionDecl,
     ) {
-        let expected_length = spec
-            .params
-            .iter()
-            .fold(0, |acc, arg| acc + self.encoded_length(&arg.ty));
+        let expected_length = spec.params.iter().fold(0, |acc, arg| {
+            acc + self.encoded_length(&arg.ty, contract.ns)
+        });
         let mut data = data;
         let decode_block = contract.context.append_basic_block(function, "abi_decode");
         let wrong_length_block = contract

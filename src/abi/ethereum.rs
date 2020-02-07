@@ -31,7 +31,7 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
     fn parameter_to_abi(param: &Parameter, contract: &Contract) -> ABIParam {
         ABIParam {
             name: param.name.to_string(),
-            ty: param.ty.to_primitive_string(contract),
+            ty: param.ty.to_signature_string(contract),
             internal_ty: param.ty.to_string(contract),
         }
     }

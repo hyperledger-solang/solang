@@ -574,7 +574,7 @@ fn statement(
                 // will be stored in memory.
             }
 
-            if !var_ty.is_contract_storage() && var_ty.size_hint() > BigInt::from(1024 * 1024) {
+            if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
                 errors.push(Output::error(
                     stmt.loc(),
                     "type to large to fit into memory".to_string(),
@@ -1338,6 +1338,7 @@ impl resolver::Type {
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::FixedArray(_, _) => unreachable!(),
+            resolver::Type::Struct(_) => unreachable!(),
             resolver::Type::Ref(_) => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
         }

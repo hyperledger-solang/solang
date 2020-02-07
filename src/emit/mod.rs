@@ -2049,6 +2049,16 @@ impl resolver::Type {
 
                 BasicTypeEnum::ArrayType(aty)
             }
+            resolver::Type::Struct(n) => context
+                .struct_type(
+                    &ns.structs[*n]
+                        .fields
+                        .iter()
+                        .map(|f| f.ty.llvm_type(ns, context))
+                        .collect::<Vec<BasicTypeEnum>>(),
+                    false,
+                )
+                .as_basic_type_enum(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(r) => r
                 .llvm_type(ns, context)
@@ -2065,6 +2075,7 @@ impl resolver::Type {
         match self {
             resolver::Type::Primitive(_) => false,
             resolver::Type::Enum(_) => false,
+            resolver::Type::Struct(_) => false,
             resolver::Type::FixedArray(_, _) => true,
             resolver::Type::Ref(r) => r.is_array(),
             resolver::Type::StorageRef(r) => r.is_array(),
@@ -2077,6 +2088,7 @@ impl resolver::Type {
         match self {
             resolver::Type::Primitive(e) => e.stack_based(),
             resolver::Type::Enum(_) => false,
+            resolver::Type::Struct(_) => true,
             resolver::Type::FixedArray(_, _) => true,
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(_) => false,
