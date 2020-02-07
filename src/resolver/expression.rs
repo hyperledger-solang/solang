@@ -331,6 +331,10 @@ pub fn cast(
     ns: &resolver::Contract,
     errors: &mut Vec<output::Output>,
 ) -> Result<Expression, ()> {
+    if from == to {
+        return Ok(expr);
+    }
+
     // First of all, if we have a ref then derefence it
     if let resolver::Type::Ref(r) = from {
         return cast(

@@ -914,7 +914,8 @@ impl<'a> Contract<'a> {
 
         for p in &f.params {
             let ty = p.ty.llvm_type(self.ns, self.context);
-            args.push(if p.ty.stack_based() {
+
+            args.push(if p.ty.stack_based() && !p.ty.is_contract_storage() {
                 ty.ptr_type(AddressSpace::Generic).into()
             } else {
                 ty
@@ -930,7 +931,7 @@ impl<'a> Contract<'a> {
         } else {
             // add return values
             for p in &f.returns {
-                args.push(if p.ty.is_array() {
+                args.push(if p.ty.is_array() && !p.ty.is_contract_storage() {
                     p.ty.llvm_type(self.ns, &self.context)
                         .ptr_type(AddressSpace::Generic)
                         .ptr_type(AddressSpace::Generic)
@@ -2054,9 +2055,7 @@ impl resolver::Type {
                 .ptr_type(AddressSpace::Generic)
                 .as_basic_type_enum(),
             resolver::Type::StorageRef(_) => {
-                // a storage variable is references by its storage slot. This is u32 for now
-                // but may need to be widened to support mappings
-                BasicTypeEnum::IntType(context.i32_type())
+                BasicTypeEnum::IntType(context.custom_width_int_type(256))
             }
         }
     }

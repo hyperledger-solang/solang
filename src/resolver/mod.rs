@@ -163,6 +163,24 @@ impl Type {
             }
         }
     }
+
+    /// Can this type have a calldata, memory, or storage location. This is to be
+    /// compatible with ethereum solidity. Opinions on whether other types should be
+    /// allowed be storage are welcome.
+    pub fn can_have_data_location(&self) -> bool {
+        match self {
+            Type::FixedArray(_, _) => true,
+            _ => false,
+        }
+    }
+
+    /// Is this a reference to contract storage?
+    pub fn is_contract_storage(&self) -> bool {
+        match self {
+            Type::StorageRef(_) => true,
+            _ => false,
+        }
+    }
 }
 
 pub struct EnumDecl {
@@ -377,49 +395,51 @@ impl Contract {
         id: &ast::Type,
         errors: Option<&mut Vec<Output>>,
     ) -> Result<Type, ()> {
-        match id {
-            ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::Primitive(*p)),
-            ast::Type::Primitive(p, dimensions) => {
-                // resolve
+        fn resolve_dimensions(
+            dimensions: &[Option<(ast::Loc, BigInt)>],
+            errors: Option<&mut Vec<Output>>,
+        ) -> Result<Vec<BigInt>, ()> {
+            let mut fixed = true;
+            let mut fixed_dimensions = Vec::new();
 
-                let mut fixed = true;
-                let mut fixed_dimensions = Vec::new();
-
-                for d in dimensions.iter() {
-                    if let Some((loc, n)) = d {
-                        if n.is_zero() {
-                            if let Some(errors) = errors {
-                                errors.push(Output::decl_error(
-                                    *loc,
-                                    "zero size of array declared".to_string(),
-                                ));
-                            }
-                            return Err(());
-                        } else if n.is_negative() {
-                            if let Some(errors) = errors {
-                                errors.push(Output::decl_error(
-                                    *loc,
-                                    "negative size of array declared".to_string(),
-                                ));
-                            }
-                            return Err(());
+            for d in dimensions.iter() {
+                if let Some((loc, n)) = d {
+                    if n.is_zero() {
+                        if let Some(errors) = errors {
+                            errors.push(Output::decl_error(
+                                *loc,
+                                "zero size of array declared".to_string(),
+                            ));
                         }
-                        fixed_dimensions.push(n.clone());
-                    } else {
-                        fixed = false;
+                        return Err(());
+                    } else if n.is_negative() {
+                        if let Some(errors) = errors {
+                            errors.push(Output::decl_error(
+                                *loc,
+                                "negative size of array declared".to_string(),
+                            ));
+                        }
+                        return Err(());
                     }
-                }
-
-                if fixed {
-                    Ok(Type::FixedArray(
-                        Box::new(Type::Primitive(*p)),
-                        fixed_dimensions,
-                    ))
+                    fixed_dimensions.push(n.clone());
                 } else {
-                    unimplemented!();
+                    fixed = false;
                 }
             }
-            ast::Type::Unresolved(id, _) => match self.symbols.get(&id.name) {
+            if fixed {
+                Ok(fixed_dimensions)
+            } else {
+                unimplemented!();
+            }
+        }
+
+        match id {
+            ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::Primitive(*p)),
+            ast::Type::Primitive(p, dimensions) => Ok(Type::FixedArray(
+                Box::new(Type::Primitive(*p)),
+                resolve_dimensions(dimensions, errors)?,
+            )),
+            ast::Type::Unresolved(id, dimensions) => match self.symbols.get(&id.name) {
                 None => {
                     if let Some(errors) = errors {
                         errors.push(Output::decl_error(
@@ -429,7 +449,11 @@ impl Contract {
                     }
                     Err(())
                 }
-                Some(Symbol::Enum(_, n)) => Ok(Type::Enum(*n)),
+                Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
+                Some(Symbol::Enum(_, n)) => Ok(Type::FixedArray(
+                    Box::new(Type::Enum(*n)),
+                    resolve_dimensions(dimensions, errors)?,
+                )),
                 Some(Symbol::Function(_)) => {
                     if let Some(errors) = errors {
                         errors.push(Output::decl_error(

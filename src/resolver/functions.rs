@@ -1,4 +1,4 @@
-use super::{Contract, FunctionDecl, Parameter, Symbol};
+use super::{Contract, FunctionDecl, Parameter, Symbol, Type};
 use output::Output;
 use parser::ast;
 use Target;
@@ -39,32 +39,6 @@ pub fn function_decl(
         }
     }
 
-    for p in &f.params {
-        match ns.resolve_type(&p.typ, Some(errors)) {
-            Ok(s) => params.push(Parameter {
-                name: p
-                    .name
-                    .as_ref()
-                    .map_or("".to_string(), |id| id.name.to_string()),
-                ty: s,
-            }),
-            Err(()) => success = false,
-        }
-    }
-
-    for r in &f.returns {
-        match ns.resolve_type(&r.typ, Some(errors)) {
-            Ok(s) => returns.push(Parameter {
-                name: r
-                    .name
-                    .as_ref()
-                    .map_or("".to_string(), |id| id.name.to_string()),
-                ty: s,
-            }),
-            Err(()) => success = false,
-        }
-    }
-
     let mut mutability: Option<ast::StateMutability> = None;
     let mut visibility: Option<ast::Visibility> = None;
 
@@ -101,9 +75,117 @@ pub fn function_decl(
         }
     }
 
-    if visibility == None {
-        errors.push(Output::error(f.loc, "no visibility specified".to_string()));
-        success = false;
+    let visibility = match visibility {
+        Some(v) => v,
+        None => {
+            errors.push(Output::error(f.loc, "no visibility specified".to_string()));
+            success = false;
+            // continue processing while assuming it's a public
+            ast::Visibility::Public(ast::Loc(0, 0))
+        }
+    };
+
+    // Reference types can't be passed through the ABI encoder/decoder, so
+    // storage parameters/returns are only allowed in internal/private functions
+    let storage_allowed = match visibility {
+        ast::Visibility::Internal(_) | ast::Visibility::Private(_) => true,
+        ast::Visibility::Public(_) | ast::Visibility::External(_) => false,
+    };
+
+    for p in &f.params {
+        match ns.resolve_type(&p.typ, Some(errors)) {
+            Ok(ty) => {
+                let ty = if !ty.can_have_data_location() {
+                    if let Some(storage) = &p.storage {
+                        errors.push(Output::error(
+                                *storage.loc(),
+                                format!("data location ‘{}’ can only be specified for array, struct or mapping",
+                                storage)
+                            ));
+                        success = false;
+                    }
+
+                    ty
+                } else if let Some(ast::StorageLocation::Storage(loc)) = p.storage {
+                    if storage_allowed {
+                        Type::StorageRef(Box::new(ty))
+                    } else {
+                        errors.push(Output::error(
+                            loc,
+                            "parameter of type ‘storage’ not allowed public or external functions"
+                                .to_string(),
+                        ));
+                        success = false;
+                        ty
+                    }
+                } else {
+                    ty
+                };
+
+                params.push(Parameter {
+                    name: p
+                        .name
+                        .as_ref()
+                        .map_or("".to_string(), |id| id.name.to_string()),
+                    ty,
+                });
+            }
+            Err(()) => success = false,
+        }
+    }
+
+    for r in &f.returns {
+        match ns.resolve_type(&r.typ, Some(errors)) {
+            Ok(ty) => {
+                let ty = if !ty.can_have_data_location() {
+                    if let Some(storage) = &r.storage {
+                        errors.push(Output::error(
+                                *storage.loc(),
+                                format!("data location ‘{}’ can only be specified for array, struct or mapping",
+                                storage)
+                            ));
+                        success = false;
+                    }
+
+                    ty
+                } else {
+                    match r.storage {
+                        Some(ast::StorageLocation::Calldata(loc)) => {
+                            errors.push(Output::error(
+                                loc,
+                                "data location ‘calldata’ can not be used for return types"
+                                    .to_string(),
+                            ));
+                            success = false;
+                            ty
+                        }
+                        Some(ast::StorageLocation::Storage(loc)) => {
+                            if storage_allowed {
+                                Type::StorageRef(Box::new(ty))
+                            } else {
+                                errors.push(Output::error(
+                                    loc,
+                                    "return type of type ‘storage’ not allowed public or external functions"
+                                        .to_string(),
+                                ));
+                                success = false;
+                                ty
+                            }
+                        }
+                        _ => ty,
+                    }
+                };
+
+                returns.push(Parameter {
+                    name: r
+                        .name
+                        .as_ref()
+                        .map_or("".to_string(), |id| id.name.to_string()),
+                    ty,
+                });
+            }
+            Err(()) => success = false,
+        }
     }
 
     if !success {
@@ -122,7 +204,7 @@ pub fn function_decl(
         fallback,
         Some(i),
         mutability,
-        visibility.unwrap(),
+        visibility,
         params,
         returns,
         &ns,

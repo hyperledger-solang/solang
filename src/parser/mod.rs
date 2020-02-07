@@ -98,7 +98,7 @@ mod test {
                         fields: vec![
                             VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Bool, Vec::new()),
-                                storage: StorageLocation::Default,
+                                storage: None,
                                 name: Identifier {
                                     loc: Loc(86, 92),
                                     name: "exists".to_string(),
@@ -106,7 +106,7 @@ mod test {
                             },
                             VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Uint(256), Vec::new()),
-                                storage: StorageLocation::Default,
+                                storage: None,
                                 name: Identifier {
                                     loc: Loc(123, 129),
                                     name: "keyIdx".to_string(),
@@ -114,7 +114,7 @@ mod test {
                             },
                             VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Bytes(2), Vec::new()),
-                                storage: StorageLocation::Default,
+                                storage: None,
                                 name: Identifier {
                                     loc: Loc(162, 169),
                                     name: "country".to_string(),
@@ -122,7 +122,7 @@ mod test {
                             },
                             VariableDeclaration {
                                 typ: Type::Primitive(PrimitiveType::Bytes(32), Vec::new()),
-                                storage: StorageLocation::Default,
+                                storage: None,
                                 name: Identifier {
                                     loc: Loc(203, 209),
                                     name: "region".to_string(),

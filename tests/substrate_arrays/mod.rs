@@ -172,3 +172,276 @@ fn storage_arrays() {
         assert_eq!(store.scratch, Val(val.1).encode());
     }
 }
+
+#[test]
+fn enum_arrays() {
+    #[derive(Encode, Decode)]
+    struct Arg([u8; 100]);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(u32);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract enum_array {
+            enum Foo { Bar1, Bar2, Bar3, Bar4 }
+            
+            function count_bar2(Foo[100] calldata foos) public returns (uint32) {
+                uint32 count = 0;
+                uint32 i;
+        
+                for (i = 0; i < foos.length; i++) {
+                    if (foos[i] == Foo.Bar2) {
+                        count++;
+                    }
+                }
+        
+                return count;
+            }
+        }"##,
+    );
+
+    let mut rng = rand::thread_rng();
+
+    let mut a = [0u8; 100];
+    let mut count = 0;
+
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..a.len() {
+        a[i] = rng.gen::<u8>() % 4;
+        if a[i] == 1 {
+            count += 1;
+        }
+    }
+
+    runtime.function(&mut store, "count_bar2", Arg(a).encode());
+    assert_eq!(store.scratch, Ret(count).encode());
+}
+
+#[test]
+fn data_locations() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function bar(uint storage) public returns () {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "data location ‘storage’ can only be specified for array, struct or mapping"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function bar(uint calldata x) public returns () {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "data location ‘calldata’ can only be specified for array, struct or mapping"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar(foo2 memory x) public returns () {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "data location ‘memory’ can only be specified for array, struct or mapping"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar(foo2 x) public returns (uint calldata) {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "data location ‘calldata’ can only be specified for array, struct or mapping"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar(foo2 x) public returns (bool calldata) {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "data location ‘calldata’ can only be specified for array, struct or mapping"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar(foo2 x) public returns (int storage) {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "data location ‘storage’ can only be specified for array, struct or mapping"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar(int[10] storage x) public returns (int) {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "parameter of type ‘storage’ not allowed public or external functions"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar() public returns (int[10] storage x) {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "return type of type ‘storage’ not allowed public or external functions"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum foo2 { bar1, bar2 }
+            function bar() public returns (foo2[10] storage x) {
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "return type of type ‘storage’ not allowed public or external functions"
+    );
+}
+
+#[test]
+fn storage_ref_arg() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract storage_refs {
+            int32[10] a;
+            int32[10] b;
+        
+            function set(int32[10] storage array, uint8 index, int32 val) private {
+                array[index] = val;
+            }
+        
+            function test() public {
+                set(a, 2, 5);
+                set(b, 2, 102);
+        
+                assert(a[2] == 5);
+                assert(b[2] == 102);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn storage_ref_var() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract storage_refs {
+            int32[10] a;
+            int32[10] b;
+        
+            function set(int32[10] storage array, uint8 index, int32 val) private {
+                array[index] = val;
+            }
+        
+            function test() public {
+                int32[10] storage ref = a;
+        
+                set(ref, 2, 5);
+        
+                ref = b;
+        
+                set(ref, 2, 102);
+        
+                assert(a[2] == 5);
+                assert(b[2] == 102);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn storage_ref_returns() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract storage_refs {
+            int32[10] a;
+            int32[10] b;
+        
+            function a_or_b(bool want_a) private returns (int32[10] storage) {
+                if (want_a) {
+                    return a;
+                }
+        
+                return b;
+            }
+        
+            function set(int32[10] storage array, uint8 index, int32 val) private {
+                array[index] = val;
+            }
+        
+            function test() public {
+                int32[10] storage ref = a_or_b(true);
+        
+                set(ref, 2, 5);
+        
+                ref = a_or_b(false);
+        
+                set(ref, 2, 102);
+        
+                assert(a[2] == 5);
+                assert(b[2] == 102);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

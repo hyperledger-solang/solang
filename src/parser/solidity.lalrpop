@@ -53,9 +53,9 @@ Type: Type = {
 }
 
 StorageLocation: StorageLocation = {
-    "memory" => StorageLocation::Memory,
-    "storage" => StorageLocation::Storage,
-    "calldata" => StorageLocation::Calldata,
+    <l:@L> "memory" <r:@R> => StorageLocation::Memory(Loc(l, r)),
+    <l:@L> "storage" <r:@R> => StorageLocation::Storage(Loc(l, r)),
+    <l:@L> "calldata" <r:@R> => StorageLocation::Calldata(Loc(l, r)),
 }
 
 Identifier: Identifier = {
@@ -64,10 +64,10 @@ Identifier: Identifier = {
 
 VariableDeclaration: VariableDeclaration = {
     <t:Type> <s:StorageLocation> <i:Identifier> => VariableDeclaration {
-        typ: t, storage: s, name: i
+        typ: t, storage: Some(s), name: i
     },
     <t:Type> <i:Identifier> => VariableDeclaration {
-        typ: t, storage: StorageLocation::Default, name: i
+        typ: t, storage: None, name: i
     }
 }
 

@@ -18,3 +18,15 @@ How to report issues
 
 Please report issues to
 `github issues <https://github.com/hyperledger-labs/solang/issues>`_.
+
+Style guide
+-----------
+
+Solang follows default rustfmt, and clippy. Any clippy warnings need to be fixed.
+Outside of the tests, code should ideally be written in a such a way that no
+``#[allow(clippy::foo)]`` are needed.
+
+For test code, this is much less strict. It is much more important that test are
+written and that they have good coverage rather than worrying about clippy warnings.
+Feel free to sprinkle some ``#[allow(clippy::foo)]`` around your test code to make
+your merge request pass.

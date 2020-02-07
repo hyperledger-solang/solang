@@ -82,16 +82,35 @@ pub enum Type {
 
 #[derive(Debug, PartialEq)]
 pub enum StorageLocation {
-    Default,
-    Memory,
-    Storage,
-    Calldata,
+    Memory(Loc),
+    Storage(Loc),
+    Calldata(Loc),
+}
+
+impl StorageLocation {
+    pub fn loc(&self) -> &Loc {
+        match self {
+            StorageLocation::Memory(l) => l,
+            StorageLocation::Storage(l) => l,
+            StorageLocation::Calldata(l) => l,
+        }
+    }
+}
+
+impl fmt::Display for StorageLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StorageLocation::Memory(_) => write!(f, "memory"),
+            StorageLocation::Storage(_) => write!(f, "storage"),
+            StorageLocation::Calldata(_) => write!(f, "calldata"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct VariableDeclaration {
     pub typ: Type,
-    pub storage: StorageLocation,
+    pub storage: Option<StorageLocation>,
     pub name: Identifier,
 }
 
