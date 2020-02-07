@@ -218,7 +218,17 @@ fn get_int_length(
         resolver::Type::Enum(n) => {
             errors.push(Output::error(
                 *l_loc,
-                format!("type enum {} not allowed", ns.enums[*n].name),
+                format!("type enum {}.{} not allowed", ns.name, ns.enums[*n].name),
+            ));
+            Err(())
+        }
+        resolver::Type::Struct(n) => {
+            errors.push(Output::error(
+                *l_loc,
+                format!(
+                    "type struct {}.{} not allowed",
+                    ns.name, ns.structs[*n].name
+                ),
             ));
             Err(())
         }
@@ -2292,7 +2302,7 @@ pub fn expression(
                                     ns,
                                     errors,
                                 )?),
-                                Box::new(Expression::NumberLiteral(256, elem_ty.storage_slots())),
+                                Box::new(Expression::NumberLiteral(256, elem_ty.storage_slots(ns))),
                             )),
                         ),
                         elem_ty,

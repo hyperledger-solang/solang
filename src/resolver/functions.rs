@@ -335,6 +335,7 @@ fn signatures() {
         doc: vec![],
         name: String::from("foo"),
         enums: Vec::new(),
+        structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),

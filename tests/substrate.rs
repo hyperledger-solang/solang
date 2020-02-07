@@ -30,6 +30,7 @@ mod substrate_arrays;
 mod substrate_first;
 mod substrate_functions;
 mod substrate_primitives;
+mod substrate_structs;
 
 type StorageKey = [u8; 32];
 

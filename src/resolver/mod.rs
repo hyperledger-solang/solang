@@ -2,7 +2,7 @@ use abi;
 use emit;
 use num_bigint::BigInt;
 use num_traits::Signed;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 use output::{Note, Output};
 use parser::ast;
 use std::collections::HashMap;
@@ -15,6 +15,7 @@ mod builtin;
 pub mod cfg;
 pub mod expression;
 mod functions;
+mod structs;
 mod variables;
 
 use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
@@ -25,6 +26,7 @@ pub enum Type {
     Primitive(ast::PrimitiveType),
     FixedArray(Box<Type>, Vec<BigInt>),
     Enum(usize),
+    Struct(usize),
     Ref(Box<Type>),
     StorageRef(Box<Type>),
     Undef,
@@ -35,6 +37,7 @@ impl Type {
         match self {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
+            Type::Struct(n) => format!("struct {}.{}", ns.name, ns.structs[*n].name),
             Type::FixedArray(ty, len) => format!(
                 "{}{}",
                 ty.to_string(ns),
@@ -46,17 +49,18 @@ impl Type {
         }
     }
 
-    pub fn to_primitive_string(&self, ns: &Contract) -> String {
+    pub fn to_signature_string(&self, ns: &Contract) -> String {
         match self {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => ns.enums[*n].ty.to_string(),
             Type::FixedArray(ty, len) => format!(
                 "{}{}",
-                ty.to_primitive_string(ns),
+                ty.to_signature_string(ns),
                 len.iter().map(|l| format!("[{}]", l)).collect::<String>()
             ),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
+            Type::Struct(_) => "typle".to_owned(),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -98,22 +102,26 @@ impl Type {
     /// Calculate how much memory we expect this type to use when allocated on the
     /// stack or on the heap. Depending on the llvm implementation there might be
     /// padding between elements which is not accounted for.
-    pub fn size_hint(&self) -> BigInt {
+    pub fn size_hint(&self, ns: &Contract) -> BigInt {
         match self {
-            Type::Enum(_) => BigInt::from(1),
-            Type::Primitive(ast::PrimitiveType::Bool) => BigInt::from(1),
+            Type::Enum(_) => BigInt::one(),
+            Type::Primitive(ast::PrimitiveType::Bool) => BigInt::one(),
             Type::Primitive(ast::PrimitiveType::Address) => BigInt::from(20),
             Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
             Type::Primitive(ast::PrimitiveType::Uint(n))
             | Type::Primitive(ast::PrimitiveType::Int(n)) => BigInt::from(n / 8),
             Type::FixedArray(ty, dims) => {
-                let mut size = ty.size_hint();
+                let mut size = ty.size_hint(ns);
 
                 for dim in dims {
                     size *= dim;
                 }
                 size
             }
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .fold(BigInt::zero(), |acc, f| acc + f.ty.size_hint(ns)),
             _ => unimplemented!(),
         }
     }
@@ -129,10 +137,9 @@ impl Type {
         match self {
             Type::Primitive(e) => e.signed(),
             Type::Enum(_) => false,
-            Type::FixedArray(_, _) => unreachable!(),
-            Type::Undef => unreachable!(),
             Type::Ref(r) => r.signed(),
             Type::StorageRef(r) => r.signed(),
+            _ => unreachable!(),
         }
     }
 
@@ -140,6 +147,7 @@ impl Type {
         match self {
             Type::Primitive(e) => e.ordered(),
             Type::Enum(_) => false,
+            Type::Struct(_) => unreachable!(),
             Type::FixedArray(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
             Type::Ref(r) => r.ordered(),
@@ -153,13 +161,17 @@ impl Type {
 
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
     /// be very large
-    pub fn storage_slots(&self) -> BigInt {
+    pub fn storage_slots(&self, ns: &Contract) -> BigInt {
         match self {
-            Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(),
-            Type::Enum(_) | Type::Primitive(_) => BigInt::from(1),
+            Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
+            Type::Enum(_) | Type::Primitive(_) => BigInt::one(),
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .fold(BigInt::zero(), |acc, f| acc + f.ty.storage_slots(ns)),
             Type::Undef => unreachable!(),
             Type::FixedArray(ty, dims) => {
-                ty.storage_slots() * dims.iter().fold(BigInt::from(1), |acc, d| acc * d)
+                ty.storage_slots(ns) * dims.iter().fold(BigInt::one(), |acc, d| acc * d)
             }
         }
     }
@@ -181,6 +193,17 @@ impl Type {
             _ => false,
         }
     }
+}
+
+pub struct StructField {
+    pub name: String,
+    pub loc: ast::Loc,
+    pub ty: Type,
+}
+
+pub struct StructDecl {
+    pub name: String,
+    pub fields: Vec<StructField>,
 }
 
 pub struct EnumDecl {
@@ -227,7 +250,7 @@ impl FunctionDecl {
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_primitive_string(ns))
+                .map(|p| p.ty.to_signature_string(ns))
                 .collect::<Vec<String>>()
                 .join(",")
         );
@@ -273,6 +296,7 @@ impl FunctionDecl {
                     match ty {
                         Type::Primitive(e) => e.to_string(),
                         Type::Enum(i) => ns.enums[*i].name.to_owned(),
+                        Type::Struct(i) => ns.structs[*i].name.to_owned(),
                         Type::FixedArray(ty, len) => format!(
                             "{}{}",
                             ty.to_string(ns),
@@ -319,13 +343,15 @@ pub enum Symbol {
     Enum(ast::Loc, usize),
     Function(Vec<(ast::Loc, usize)>),
     Variable(ast::Loc, usize),
+    Struct(ast::Loc, usize),
 }
 
 pub struct Contract {
     pub doc: Vec<String>,
     pub name: String,
     pub enums: Vec<EnumDecl>,
-    // structs/events
+    // events
+    pub structs: Vec<StructDecl>,
     pub constructors: Vec<FunctionDecl>,
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<ContractVariable>,
@@ -374,6 +400,17 @@ impl Contract {
                         id.loc,
                         format!(
                             "{} is already defined as state variable",
+                            id.name.to_string()
+                        ),
+                        *e,
+                        "location of previous definition".to_string(),
+                    ));
+                }
+                Symbol::Struct(e, _) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!(
+                            "{} is already defined as struct definition",
                             id.name.to_string()
                         ),
                         *e,
@@ -444,7 +481,7 @@ impl Contract {
                     if let Some(errors) = errors {
                         errors.push(Output::decl_error(
                             id.loc,
-                            format!("`{}' is not declared", id.name),
+                            format!("type ‘{}’ not found", id.name),
                         ));
                     }
                     Err(())
@@ -454,11 +491,16 @@ impl Contract {
                     Box::new(Type::Enum(*n)),
                     resolve_dimensions(dimensions, errors)?,
                 )),
+                Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
+                Some(Symbol::Struct(_, n)) => Ok(Type::FixedArray(
+                    Box::new(Type::Struct(*n)),
+                    resolve_dimensions(dimensions, errors)?,
+                )),
                 Some(Symbol::Function(_)) => {
                     if let Some(errors) = errors {
                         errors.push(Output::decl_error(
                             id.loc,
-                            format!("`{}' is a function", id.name),
+                            format!("‘{}’ is a function", id.name),
                         ));
                     }
                     Err(())
@@ -467,7 +509,7 @@ impl Contract {
                     if let Some(errors) = errors {
                         errors.push(Output::decl_error(
                             id.loc,
-                            format!("`{}' is a contract variable", id.name),
+                            format!("‘{}’ is a contract variable", id.name),
                         ));
                     }
                     Err(())
@@ -517,6 +559,13 @@ impl Contract {
                 ));
                 Err(())
             }
+            Some(Symbol::Struct(_, _)) => {
+                errors.push(Output::decl_error(
+                    id.loc,
+                    format!("`{}' is a struct", id.name),
+                ));
+                Err(())
+            }
             Some(Symbol::Function(_)) => {
                 errors.push(Output::decl_error(
                     id.loc,
@@ -533,9 +582,17 @@ impl Contract {
             Some(Symbol::Enum(loc, _)) => {
                 errors.push(Output::warning_with_note(
                     id.loc,
-                    format!("declaration of `{}' shadows enum", id.name),
+                    format!("declaration of `{}' shadows enum definition", id.name),
                     *loc,
-                    "previous declaration of enum".to_string(),
+                    "previous definition of enum".to_string(),
+                ));
+            }
+            Some(Symbol::Struct(loc, _)) => {
+                errors.push(Output::warning_with_note(
+                    id.loc,
+                    format!("declaration of `{}' shadows struct definition", id.name),
+                    *loc,
+                    "previous definition of struct".to_string(),
                 ));
             }
             Some(Symbol::Function(v)) => {
@@ -629,11 +686,16 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
                     contracts.push(c)
                 }
             }
-            ast::SourceUnitPart::PragmaDirective(name, _) => {
+            ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
                         name.loc,
                         "pragma solidity is ignored".to_string(),
+                    ));
+                } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
+                    errors.push(Output::info(
+                        value.loc,
+                        "pragma experimental ABIEncoderV2 is ignored".to_string(),
                     ));
                 } else {
                     errors.push(Output::warning(
@@ -658,6 +720,7 @@ fn resolve_contract(
         name: def.name.name.to_string(),
         doc: def.doc.clone(),
         enums: Vec::new(),
+        structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
@@ -690,7 +753,16 @@ fn resolve_contract(
         }
     }
 
-    // FIXME: next resolve structs/event
+    // FIXME: next resolve event
+
+    // resolve struct definitions
+    for parts in &def.parts {
+        if let ast::ContractPart::StructDefinition(ref s) = parts {
+            if !structs::struct_decl(s, &mut ns, errors) {
+                broken = true;
+            }
+        }
+    }
 
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {

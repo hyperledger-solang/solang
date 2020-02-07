@@ -72,7 +72,7 @@ VariableDeclaration: VariableDeclaration = {
 }
 
 StructDefinition: Box<StructDefinition> = {
-    <d:DocComments> "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")+> "}" => {
+    <d:DocComments> "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")*> "}" => {
         Box::new(StructDefinition{doc: d, name: n, fields: v})
     }
 }

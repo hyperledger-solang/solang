@@ -406,6 +406,19 @@ impl SubstrateTarget {
                 to,
                 data,
             ),
+            resolver::Type::Struct(n) => {
+                let to = to.unwrap_or_else(|| {
+                    contract
+                        .builder
+                        .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
+                });
+
+                for field in &contract.ns.structs[*n].fields {
+                    self.decode_ty(contract, function, &field.ty, Some(to), data);
+                }
+
+                to.into()
+            }
             resolver::Type::FixedArray(_, dim) => {
                 let to = to.unwrap_or_else(|| {
                     contract
@@ -602,6 +615,10 @@ impl SubstrateTarget {
                     },
                 );
             }
+            resolver::Type::Struct(_) => {
+                // FIXME
+                unimplemented!();
+            }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => {
@@ -622,6 +639,11 @@ impl SubstrateTarget {
             resolver::Type::Enum(n) => {
                 self.encoded_length(&resolver::Type::Primitive(contract.enums[*n].ty), contract)
             }
+            resolver::Type::Struct(n) => contract.structs[*n]
+                .fields
+                .iter()
+                .map(|f| self.encoded_length(&f.ty, contract))
+                .sum(),
             resolver::Type::FixedArray(ty, dims) => {
                 self.encoded_length(ty, contract)
                     * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())

@@ -89,7 +89,7 @@ fn var_decl(
 
     let var = if !is_constant {
         let storage = ns.top_of_contract_storage.clone();
-        ns.top_of_contract_storage += ty.storage_slots();
+        ns.top_of_contract_storage += ty.storage_slots(ns);
         ContractVariableType::Storage(storage)
     } else {
         ContractVariableType::Constant(ns.constants.len())
