@@ -61,6 +61,7 @@ pub enum Expression {
 
     Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
     ArraySubscript(Box<Expression>, Box<Expression>),
+    StructMember(Box<Expression>, usize),
 
     Or(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
@@ -137,6 +138,7 @@ impl Expression {
             Expression::ArraySubscript(l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
+            Expression::StructMember(s, _) => s.reads_contract_storage(),
             Expression::And(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Poison => false,
@@ -2353,50 +2355,105 @@ pub fn expression(
                 }
             }
         }
-        ast::Expression::MemberAccess(loc, namespace, id) => {
-            // Is it an enum
-            if let Some(e) = ns.resolve_enum(namespace) {
-                return match ns.enums[e].values.get(&id.name) {
-                    Some((_, val)) => Ok((
-                        Expression::NumberLiteral(
-                            ns.enums[e].ty.bits(),
-                            BigInt::from_usize(*val).unwrap(),
-                        ),
-                        resolver::Type::Enum(e),
-                    )),
-                    None => {
-                        errors.push(Output::error(
-                            id.loc,
-                            format!("enum {} does not have value {}", ns.enums[e].name, id.name),
-                        ));
-                        Err(())
-                    }
-                };
-            }
-
-            // is it an bytesN.length / array.length
-            if let Some(ref mut tab) = *vartab {
-                let var = tab.find(namespace, ns, errors)?;
-
-                match var.ty {
-                    resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
-                        if id.name == "length" {
-                            return Ok((
-                                Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
-                                resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
+        ast::Expression::MemberAccess(loc, e, id) => {
+            if let ast::Expression::Variable(namespace) = e.as_ref() {
+                if let Some(e) = ns.resolve_enum(namespace) {
+                    return match ns.enums[e].values.get(&id.name) {
+                        Some((_, val)) => Ok((
+                            Expression::NumberLiteral(
+                                ns.enums[e].ty.bits(),
+                                BigInt::from_usize(*val).unwrap(),
+                            ),
+                            resolver::Type::Enum(e),
+                        )),
+                        None => {
+                            errors.push(Output::error(
+                                id.loc,
+                                format!(
+                                    "enum {} does not have value {}",
+                                    ns.enums[e].name, id.name
+                                ),
                             ));
+                            Err(())
                         }
-                    }
-                    resolver::Type::FixedArray(_, dim) => {
-                        if id.name == "length" {
-                            return bigint_to_expression(loc, dim.last().unwrap(), errors);
-                        }
-                    }
-                    _ => (),
+                    };
                 }
             }
 
-            errors.push(Output::error(*loc, "not found".to_string()));
+            let (expr, expr_ty) = expression(e, cfg, ns, vartab, errors)?;
+
+            match if let resolver::Type::Ref(ty) = expr_ty {
+                *ty
+            } else {
+                expr_ty
+            } {
+                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+                    if id.name == "length" {
+                        return Ok((
+                            Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
+                            resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
+                        ));
+                    }
+                }
+                resolver::Type::FixedArray(_, dim) => {
+                    if id.name == "length" {
+                        return bigint_to_expression(loc, dim.last().unwrap(), errors);
+                    }
+                }
+                resolver::Type::StorageRef(r) => {
+                    if let resolver::Type::Struct(n) = *r {
+                        let mut slot = BigInt::zero();
+
+                        for field in &ns.structs[n].fields {
+                            if id.name == field.name {
+                                return Ok((
+                                    Expression::Add(
+                                        Box::new(expr),
+                                        Box::new(Expression::NumberLiteral(256, slot)),
+                                    ),
+                                    resolver::Type::StorageRef(Box::new(field.ty.clone())),
+                                ));
+                            }
+
+                            slot += field.ty.storage_slots(ns);
+                        }
+
+                        errors.push(Output::error(
+                            id.loc,
+                            format!(
+                                "struct ‘{}’ does not have a field called ‘{}’",
+                                ns.structs[n].name, id.name
+                            ),
+                        ));
+                        return Err(());
+                    }
+                }
+                resolver::Type::Struct(n) => {
+                    if let Some((i, f)) = ns.structs[n]
+                        .fields
+                        .iter()
+                        .enumerate()
+                        .find(|f| id.name == f.1.name)
+                    {
+                        return Ok((
+                            Expression::StructMember(Box::new(expr), i),
+                            resolver::Type::Ref(Box::new(f.ty.clone())),
+                        ));
+                    } else {
+                        errors.push(Output::error(
+                            id.loc,
+                            format!(
+                                "struct ‘{}’ does not have a field called ‘{}’",
+                                ns.structs[n].name, id.name
+                            ),
+                        ));
+                        return Err(());
+                    }
+                }
+                _ => (),
+            }
+
+            errors.push(Output::error(*loc, format!("‘{}’ not found", id.name)));
 
             Err(())
         }

@@ -418,8 +418,19 @@ impl EthAbiEncoder {
                         .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
                 });
 
-                for field in &contract.ns.structs[*n].fields {
-                    self.decode_ty(contract, function, &field.ty, Some(to), data);
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            to,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    self.decode_ty(contract, function, &field.ty, Some(elem), data);
                 }
 
                 return to.into();
