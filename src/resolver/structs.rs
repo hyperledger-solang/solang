@@ -2,6 +2,10 @@ use super::{Contract, StructDecl, StructField, Symbol};
 use output::Output;
 use parser::ast;
 
+/// Resolve a parsed struct definition. The return value will be true if the entire
+/// definition is valid; however, whatever could be parsed will be added the resolved
+/// contract, so that we can continue producing compiler messages for the remainder
+/// if the contract.
 pub fn struct_decl(
     def: &ast::StructDefinition,
     ns: &mut Contract,

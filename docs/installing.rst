@@ -2,7 +2,7 @@ Installing Solang
 =================
 
 The Solang compiler is a single binary. It can be installed in many different
-ways, so please pick whichever method suits your needs.
+ways, so please use whichever method suits your needs.
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
@@ -106,11 +106,12 @@ If there is no output, there are no static llvm libraries and building will fail
 
 Installing the LLVM Libraries
 -----------------------------
-If you do not have the llvm libraries installed then you can either install
-your distribution llvm packages or compile your own. Compiling your own is helpful
-if you want to do solang development.
 
-Any release from llvm 8.0 onwards, with the WebAssembly target enabled should work.
+If you do not have the llvm libraries installed then you can either install
+your distribution llvm packages, or compile your own. Compiling your own is helpful
+if you want to do Solang development.
+
+Any release from llvm 8.0 onwards, with the WebAssembly target enabled, should work.
 Note that you will also need clang; the Solidity standard library is written in C,
 and is compiled to wasm by clang. The version of clang *must* be the same as the version of llvm.
 
@@ -142,21 +143,19 @@ You will need Fedora 30 or later. Running the following:
 
 	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang libffi-devel
 
+.. _llvm-from-source:
+
 Installing LLVM from source
 ___________________________
 
-If your system does not come with llvm, then you have to build your own.
-Building your own llvm libraries does not interfere with any llvm libraries
+If your distribution does not have the correct llvm library versions, then you have
+to build your own. Building your own llvm libraries does not interfere with any llvm libraries
 installed by your distribution.
 
 The llvm project is a large code base so it will take some time to build.
 
-If you are planning to do development on Solang itself, then having your
-own built llvm is helpful. The distributions build llvm without
-assertions enabled. These assertions check that the LLVM IR that Solang builds
-is correct. If the LLVM IR is not correct, then faults might happen when llvm
-runs compiler passes on the LLVM IR and the stack trace will not be useful
-to debug it.
+If you are planning to do development on Solang itself, then building
+llvm libraries can be helpful, see `Debugging issues with LLVM`.
 
 The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult.
 First if all clone the llvm repository:
