@@ -859,3 +859,64 @@ fn storage_structs() {
 
     runtime.function(&mut store, "test", &[]);
 }
+
+#[test]
+fn struct_encode() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract structs {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+        
+            function test(foo memory f) public {
+                assert(f.x == true);
+                assert(f.y == 64);
+            }
+        }
+        "##,
+    );
+
+    runtime.function(
+        &mut store,
+        "test",
+        &[ethabi::Token::Tuple(vec![
+            ethabi::Token::Bool(true),
+            ethabi::Token::Uint(ethereum_types::U256::from(64)),
+        ])],
+    );
+}
+
+#[test]
+fn struct_decode() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract structs {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+        
+            function test() public returns (foo) {
+                foo f;
+                
+                f.x = true;
+                f.y = 64;
+
+                return f;
+            }
+        }
+        "##,
+    );
+
+    let val = runtime.function(&mut store, "test", &[]);
+
+    assert_eq!(
+        val,
+        &[ethabi::Token::Tuple(vec![
+            ethabi::Token::Bool(true),
+            ethabi::Token::Uint(ethereum_types::U256::from(64)),
+        ])],
+    );
+}

@@ -60,7 +60,7 @@ impl Type {
             ),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
-            Type::Struct(_) => "typle".to_owned(),
+            Type::Struct(_) => "tuple".to_owned(),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -182,6 +182,7 @@ impl Type {
     pub fn can_have_data_location(&self) -> bool {
         match self {
             Type::FixedArray(_, _) => true,
+            Type::Struct(_) => true,
             _ => false,
         }
     }
