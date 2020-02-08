@@ -130,3 +130,32 @@ fn struct_members() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn structs_as_ref_args() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+        
+            function func(foo f) private {
+                f.x = true;
+                f.y = 64;
+            }
+        
+            function test() public {
+                foo f;
+        
+                func(f);
+        
+                assert(f.x == true);
+                assert(f.y == 64);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

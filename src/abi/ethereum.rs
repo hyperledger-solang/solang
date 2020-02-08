@@ -2,7 +2,7 @@
 // This is used by Hyperledger Burrow and ewasm
 
 use parser::ast;
-use resolver::{Contract, Parameter};
+use resolver::{Contract, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -12,6 +12,8 @@ pub struct ABIParam {
     pub ty: String,
     #[serde(rename = "internalType")]
     pub internal_ty: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub components: Vec<ABIParam>,
 }
 
 #[derive(Serialize)]
@@ -28,11 +30,22 @@ pub struct ABI {
 }
 
 pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
-    fn parameter_to_abi(param: &Parameter, contract: &Contract) -> ABIParam {
+    fn parameter_to_abi(name: &str, ty: &Type, contract: &Contract) -> ABIParam {
+        let components = if let Type::Struct(n) = ty {
+            contract.structs[*n]
+                .fields
+                .iter()
+                .map(|f| parameter_to_abi(&f.name, &f.ty, contract))
+                .collect::<Vec<ABIParam>>()
+        } else {
+            Vec::new()
+        };
+
         ABIParam {
-            name: param.name.to_string(),
-            ty: param.ty.to_signature_string(contract),
-            internal_ty: param.ty.to_string(contract),
+            name: name.to_string(),
+            ty: ty.to_signature_string(contract),
+            internal_ty: ty.to_string(contract),
+            components,
         }
     }
 
@@ -57,12 +70,12 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
             inputs: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(p, contract))
+                .map(|p| parameter_to_abi(&p.name, &p.ty, contract))
                 .collect(),
             outputs: f
                 .returns
                 .iter()
-                .map(|p| parameter_to_abi(p, contract))
+                .map(|p| parameter_to_abi(&p.name, &p.ty, contract))
                 .collect(),
         })
         .chain(
@@ -98,12 +111,12 @@ pub fn gen_abi(contract: &Contract) -> Vec<ABI> {
                     inputs: f
                         .params
                         .iter()
-                        .map(|p| parameter_to_abi(p, contract))
+                        .map(|p| parameter_to_abi(&p.name, &p.ty, contract))
                         .collect(),
                     outputs: f
                         .returns
                         .iter()
-                        .map(|p| parameter_to_abi(p, contract))
+                        .map(|p| parameter_to_abi(&p.name, &p.ty, contract))
                         .collect(),
                 }),
         )
