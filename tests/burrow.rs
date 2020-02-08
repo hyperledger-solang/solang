@@ -828,6 +828,34 @@ fn arrays_are_refs() {
         ))],
     );
 }
-// TODO
-// array of array
-// decode tests
+
+#[test]
+fn storage_structs() {
+    // verified on remix
+    let (runtime, mut store) = build_solidity(
+        r##"
+        pragma solidity 0;
+        pragma experimental ABIEncoderV2;
+        
+        contract test_struct_parsing {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+        
+            foo f;
+        
+            function test() public {
+                f.x = true;
+                f.y = 64;
+        
+                assert(f.x == true);
+                assert(f.y == 64);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    runtime.function(&mut store, "test", &[]);
+}

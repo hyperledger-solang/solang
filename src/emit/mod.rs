@@ -797,6 +797,24 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
+            Expression::StructMember(a, i) => {
+                let array = self
+                    .expression(a, vartab, function, runtime)
+                    .into_pointer_value();
+
+                unsafe {
+                    self.builder
+                        .build_gep(
+                            array,
+                            &[
+                                self.context.i32_type().const_zero(),
+                                self.context.i32_type().const_int(*i as u64, false),
+                            ],
+                            "struct member",
+                        )
+                        .into()
+                }
+            }
             Expression::Ternary(c, l, r) => {
                 let cond = self
                     .expression(c, vartab, function, runtime)
@@ -931,7 +949,7 @@ impl<'a> Contract<'a> {
         } else {
             // add return values
             for p in &f.returns {
-                args.push(if p.ty.is_array() && !p.ty.is_contract_storage() {
+                args.push(if p.ty.is_reference_type() && !p.ty.is_contract_storage() {
                     p.ty.llvm_type(self.ns, &self.context)
                         .ptr_type(AddressSpace::Generic)
                         .ptr_type(AddressSpace::Generic)
@@ -1010,13 +1028,24 @@ impl<'a> Contract<'a> {
 
         for v in &cfg.vars {
             match v.storage {
-                cfg::Storage::Local if !v.ty.stack_based() || v.ty.is_array() => {
+                cfg::Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
+                    vars.push(Variable {
+                        value: self
+                            .builder
+                            .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.id.name)
+                            .into(),
+                        stack: false,
+                    });
+                }
+                cfg::Storage::Local if !v.ty.stack_based() || v.ty.is_reference_type() => {
                     vars.push(Variable {
                         value: self.context.i32_type().const_zero().into(),
                         stack: false,
                     });
                 }
-                cfg::Storage::Constant(_) | cfg::Storage::Contract(_) if v.ty.is_array() => {
+                cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
+                    if v.ty.is_reference_type() =>
+                {
                     // This needs a placeholder
                     vars.push(Variable {
                         value: self.context.bool_type().get_undef().into(),
@@ -1201,7 +1230,7 @@ impl<'a> Contract<'a> {
                             let ty = &f.params[i].ty;
                             let val = self.expression(&a, &w.vars, function, runtime);
 
-                            parms.push(if ty.stack_based() && !ty.is_array() {
+                            parms.push(if ty.stack_based() && !ty.is_reference_type() {
                                 // copy onto stack
                                 let m = self
                                     .builder
@@ -1332,7 +1361,7 @@ impl<'a> Contract<'a> {
             // add return values as pointer arguments at the end
             if !f.returns.is_empty() && !f.wasm_return {
                 for v in f.returns.iter() {
-                    args.push(if !v.ty.is_array() {
+                    args.push(if !v.ty.is_reference_type() {
                         self.builder
                             .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.name)
                             .into()
@@ -2070,15 +2099,15 @@ impl resolver::Type {
         }
     }
 
-    /// Is this type an array
-    pub fn is_array(&self) -> bool {
+    /// Is this type an reference type in the solidity language? (struct, array, mapping)
+    pub fn is_reference_type(&self) -> bool {
         match self {
             resolver::Type::Primitive(_) => false,
             resolver::Type::Enum(_) => false,
-            resolver::Type::Struct(_) => false,
+            resolver::Type::Struct(_) => true,
             resolver::Type::FixedArray(_, _) => true,
-            resolver::Type::Ref(r) => r.is_array(),
-            resolver::Type::StorageRef(r) => r.is_array(),
+            resolver::Type::Ref(r) => r.is_reference_type(),
+            resolver::Type::StorageRef(r) => r.is_reference_type(),
             resolver::Type::Undef => unreachable!(),
         }
     }

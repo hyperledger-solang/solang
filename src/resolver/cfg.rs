@@ -278,6 +278,9 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, a),
                 self.expr_to_string(ns, i)
             ),
+            Expression::StructMember(a, f) => {
+                format!("%{} field {}", self.expr_to_string(ns, a), f)
+            }
             Expression::Or(l, r) => format!(
                 "({} || {})",
                 self.expr_to_string(ns, l),

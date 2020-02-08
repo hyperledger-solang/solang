@@ -203,7 +203,7 @@ pub enum Expression {
     PostDecrement(Loc, Box<Expression>),
     New(Loc, Type),
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
-    MemberAccess(Loc, Identifier, Identifier),
+    MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, Type, Vec<Expression>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),

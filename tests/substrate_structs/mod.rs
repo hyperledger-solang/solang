@@ -1,6 +1,6 @@
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::first_error;
+use super::{build_solidity, first_error};
 use solang::{parse_and_resolve, Target};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -100,4 +100,33 @@ fn parse_structs() {
     );
 
     assert_eq!(first_error(errors), "type ‘boolean’ not found");
+}
+
+#[test]
+fn struct_members() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        pragma solidity 0;
+        pragma experimental ABIEncoderV2;
+
+        contract test_struct_parsing {
+                struct foo {
+                        bool x;
+                        uint32 y;
+                        bytes31 d;
+                }
+
+                function test() public {
+                        foo f;
+                        f.x = true;
+                        f.y = 64;
+
+                        assert(f.x == true);
+                        assert(f.y == 64);
+                        assert(f.d.length == 31);
+                }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
 }
