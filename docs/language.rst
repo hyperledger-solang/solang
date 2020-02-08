@@ -604,7 +604,7 @@ A constructor must be declared ``public``.
 
 .. note::
 
-  Parity Substrate allows multiple constructors to be defined, which is not true for Hyperledge Burrow
+  Parity Substrate allows multiple constructors to be defined, which is not true for Hyperledger Burrow
   or ewasm. So, when building for Substrate, multiple constructors can be
   defined as long as their argument list is different (i.e. overloaded).
 
