@@ -3,10 +3,12 @@ use num_bigint::Sign;
 use num_traits::FromPrimitive;
 use num_traits::Num;
 use num_traits::One;
+use num_traits::ToPrimitive;
 use num_traits::Zero;
 use std::cmp;
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::ops::Mul;
 use unescape::unescape;
 
 use hex;
@@ -2254,7 +2256,10 @@ pub fn expression(
                         Instr::BranchCond {
                             cond: Expression::SMoreEqual(
                                 Box::new(Expression::Variable(index.loc(), pos)),
-                                Box::new(Expression::NumberLiteral(index_width, array_length)),
+                                Box::new(Expression::NumberLiteral(
+                                    index_width,
+                                    array_length.clone(),
+                                )),
                             ),
                             true_: out_of_bounds,
                             false_: in_bounds,
@@ -2269,7 +2274,7 @@ pub fn expression(
                     Instr::BranchCond {
                         cond: Expression::UMoreEqual(
                             Box::new(Expression::Variable(index.loc(), pos)),
-                            Box::new(Expression::NumberLiteral(index_width, array_length)),
+                            Box::new(Expression::NumberLiteral(index_width, array_length.clone())),
                         ),
                         true_: out_of_bounds,
                         false_: in_bounds,
@@ -2288,27 +2293,62 @@ pub fn expression(
             match array_ty {
                 resolver::Type::StorageRef(ty) => {
                     let elem_ty = ty.storage_deref();
-
-                    // the index needs to be cast to i256 and multiplied by the number
-                    // of slots for each element
-                    Ok((
-                        Expression::Add(
-                            Box::new(array_expr),
-                            Box::new(Expression::Multiply(
-                                Box::new(cast(
-                                    &index.loc(),
-                                    Expression::Variable(index.loc(), pos),
-                                    &index_ty,
-                                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                                    false,
-                                    ns,
-                                    errors,
-                                )?),
-                                Box::new(Expression::NumberLiteral(256, elem_ty.storage_slots(ns))),
-                            )),
-                        ),
-                        elem_ty,
-                    ))
+                    let elem_size = elem_ty.storage_slots(ns);
+                    if array_length.mul(elem_size).to_u64().is_some() {
+                        // we need to calculate the storage offset. If this can be done with 64 bit
+                        // arithmetic it will be much more efficient on wasm
+                        Ok((
+                            Expression::Add(
+                                Box::new(array_expr),
+                                Box::new(Expression::ZeroExt(
+                                    resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                                    Box::new(Expression::Multiply(
+                                        Box::new(cast(
+                                            &index.loc(),
+                                            Expression::Variable(index.loc(), pos),
+                                            &index_ty,
+                                            &resolver::Type::Primitive(ast::PrimitiveType::Uint(
+                                                64,
+                                            )),
+                                            false,
+                                            ns,
+                                            errors,
+                                        )?),
+                                        Box::new(Expression::NumberLiteral(
+                                            64,
+                                            elem_ty.storage_slots(ns),
+                                        )),
+                                    )),
+                                )),
+                            ),
+                            elem_ty,
+                        ))
+                    } else {
+                        // the index needs to be cast to i256 and multiplied by the number
+                        // of slots for each element
+                        // FIXME: if elem_size is power-of-2 then shift.
+                        Ok((
+                            Expression::Add(
+                                Box::new(array_expr),
+                                Box::new(Expression::Multiply(
+                                    Box::new(cast(
+                                        &index.loc(),
+                                        Expression::Variable(index.loc(), pos),
+                                        &index_ty,
+                                        &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                                        false,
+                                        ns,
+                                        errors,
+                                    )?),
+                                    Box::new(Expression::NumberLiteral(
+                                        256,
+                                        elem_ty.storage_slots(ns),
+                                    )),
+                                )),
+                            ),
+                            elem_ty,
+                        ))
+                    }
                 }
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
                     let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
