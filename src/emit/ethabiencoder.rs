@@ -378,7 +378,7 @@ impl EthAbiEncoder {
                 .sum(),
             resolver::Type::FixedArray(ty, dims) => {
                 self.encoded_length(ty, contract)
-                    * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())
+                    * dims.iter().map(|d| d.to_u64().unwrap()).product::<u64>()
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(r, contract),
@@ -669,9 +669,11 @@ impl EthAbiEncoder {
         length: IntValue,
         spec: &resolver::FunctionDecl,
     ) {
-        let expected_length = spec.params.iter().fold(0, |acc, arg| {
-            acc + self.encoded_length(&arg.ty, contract.ns)
-        });
+        let expected_length = spec
+            .params
+            .iter()
+            .map(|arg| self.encoded_length(&arg.ty, contract.ns))
+            .sum();
         let mut data = data;
         let decode_block = contract.context.append_basic_block(function, "abi_decode");
         let wrong_length_block = contract

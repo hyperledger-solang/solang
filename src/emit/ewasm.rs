@@ -453,9 +453,10 @@ impl TargetRuntime for EwasmTarget {
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let length = contract.context.i32_type().const_int(
-            spec.returns.iter().fold(0, |acc, arg| {
-                acc + self.abi.encoded_length(&arg.ty, contract.ns)
-            }),
+            spec.returns
+                .iter()
+                .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
+                .sum(),
             false,
         );
         let encoded_data = contract
