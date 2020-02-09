@@ -451,9 +451,20 @@ fn ty_to_abi(
                 display_name: vec![registry.string(&scalety)],
             }
         }
-        resolver::Type::Struct(_) => {
-            // FIXME
-            unimplemented!();
+        resolver::Type::Struct(n) => {
+            let def = &contract.structs[*n];
+            let fields = def
+                .fields
+                .iter()
+                .map(|f| StructField {
+                    name: registry.string(&f.name),
+                    ty: ty_to_abi(&f.ty, contract, registry).ty,
+                })
+                .collect();
+            ParamType {
+                ty: registry.struct_type(&def.name, fields),
+                display_name: vec![],
+            }
         }
     }
 }
