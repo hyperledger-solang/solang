@@ -101,6 +101,20 @@ fn parse_structs() {
     );
 
     assert_eq!(first_error(errors), "type ‘boolean’ not found");
+
+    // is it impossible to define recursive structs
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract test_struct_parsing {
+            struct Foo {
+                bool x;
+                Foo y;
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "type ‘Foo’ not found");
 }
 
 #[test]
