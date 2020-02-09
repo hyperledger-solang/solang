@@ -2021,6 +2021,72 @@ pub fn expression(
                 }
             }
         }
+        ast::Expression::NamedFunctionCall(loc, ty, args) => {
+            match ns.resolve_type(ty, None) {
+                Ok(resolver::Type::Struct(n)) => {
+                    let struct_def = &ns.structs[n];
+
+                    return if args.len() != struct_def.fields.len() {
+                        errors.push(Output::error(
+                            *loc,
+                            format!(
+                                "struct ‘{}’ has {} fields, not {}",
+                                struct_def.name,
+                                struct_def.fields.len(),
+                                args.len()
+                            ),
+                        ));
+                        Err(())
+                    } else {
+                        let mut fields = Vec::new();
+
+                        fields.resize(args.len(), Expression::Poison);
+
+                        for a in args {
+                            match struct_def
+                                .fields
+                                .iter()
+                                .enumerate()
+                                .find(|(_, f)| f.name == a.name.name)
+                            {
+                                Some((i, f)) => {
+                                    let (expr, expr_type) =
+                                        expression(&a.expr, cfg, ns, vartab, errors)?;
+
+                                    fields[i] =
+                                        cast(loc, expr, &expr_type, &f.ty, true, ns, errors)?;
+                                }
+                                None => {
+                                    errors.push(Output::error(
+                                        a.name.loc,
+                                        format!(
+                                            "struct ‘{}’ has no field ‘{}’",
+                                            struct_def.name, a.name.name,
+                                        ),
+                                    ));
+                                    return Err(());
+                                }
+                            }
+                        }
+
+                        let ty = resolver::Type::Struct(n);
+
+                        Ok((Expression::StructLiteral(ty.clone(), fields), ty))
+                    };
+                }
+                Ok(_) => {
+                    errors.push(Output::error(
+                        *loc,
+                        "struct or function expected".to_string(),
+                    ));
+                    return Err(());
+                }
+                _ => {}
+            }
+
+            // FIXME: function call
+            unimplemented!();
+        }
         ast::Expression::FunctionCall(loc, ty, args) => {
             match ns.resolve_type(ty, None) {
                 Ok(resolver::Type::Struct(n)) => {

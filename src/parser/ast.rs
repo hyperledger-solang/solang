@@ -198,6 +198,12 @@ pub struct HexLiteral {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct NamedArgument {
+    pub name: Identifier,
+    pub expr: Expression,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -205,6 +211,7 @@ pub enum Expression {
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, Type, Vec<Expression>),
+    NamedFunctionCall(Loc, Type, Vec<NamedArgument>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),
     Delete(Loc, Box<Expression>),
@@ -261,6 +268,7 @@ impl Expression {
             | Expression::ArraySubscript(loc, _, _)
             | Expression::MemberAccess(loc, _, _)
             | Expression::FunctionCall(loc, _, _)
+            | Expression::NamedFunctionCall(loc, _, _)
             | Expression::Not(loc, _)
             | Expression::Complement(loc, _)
             | Expression::Delete(loc, _)
