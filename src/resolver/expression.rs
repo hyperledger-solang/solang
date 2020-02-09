@@ -24,6 +24,7 @@ pub enum Expression {
     BoolLiteral(bool),
     BytesLiteral(Vec<u8>),
     NumberLiteral(u16, BigInt),
+    StructLiteral(resolver::Type, Vec<Expression>),
     ArrayLiteral(resolver::Type, Vec<u32>, Vec<Expression>),
     ConstArrayLiteral(Vec<u32>, Vec<Expression>),
     Add(Box<Expression>, Box<Expression>),
@@ -79,6 +80,7 @@ impl Expression {
             Expression::BoolLiteral(_)
             | Expression::BytesLiteral(_)
             | Expression::NumberLiteral(_, _) => false,
+            Expression::StructLiteral(_, exprs) => exprs.iter().any(|e| e.reads_contract_storage()),
             Expression::ArrayLiteral(_, _, exprs) => {
                 exprs.iter().any(|e| e.reads_contract_storage())
             }
@@ -2020,27 +2022,61 @@ pub fn expression(
             }
         }
         ast::Expression::FunctionCall(loc, ty, args) => {
-            let to = match ns.resolve_type(ty, None) {
-                Ok(ty) => Some(ty),
-                Err(_) => None,
-            };
+            match ns.resolve_type(ty, None) {
+                Ok(resolver::Type::Struct(n)) => {
+                    let struct_def = &ns.structs[n];
 
-            // Cast
-            if let Some(to) = to {
-                return if args.is_empty() {
-                    errors.push(Output::error(*loc, "missing argument to cast".to_string()));
-                    Err(())
-                } else if args.len() > 1 {
-                    errors.push(Output::error(
-                        *loc,
-                        "too many arguments to cast".to_string(),
-                    ));
-                    Err(())
-                } else {
-                    let (expr, expr_type) = expression(&args[0], cfg, ns, vartab, errors)?;
+                    return if args.len() != struct_def.fields.len() {
+                        errors.push(Output::error(
+                            *loc,
+                            format!(
+                                "struct ‘{}’ has {} fields, not {}",
+                                struct_def.name,
+                                struct_def.fields.len(),
+                                args.len()
+                            ),
+                        ));
+                        Err(())
+                    } else {
+                        let mut fields = Vec::new();
 
-                    Ok((cast(loc, expr, &expr_type, &to, false, ns, errors)?, to))
-                };
+                        for (i, a) in args.iter().enumerate() {
+                            let (expr, expr_type) = expression(&a, cfg, ns, vartab, errors)?;
+
+                            fields.push(cast(
+                                loc,
+                                expr,
+                                &expr_type,
+                                &struct_def.fields[i].ty,
+                                true,
+                                ns,
+                                errors,
+                            )?);
+                        }
+
+                        let ty = resolver::Type::Struct(n);
+
+                        Ok((Expression::StructLiteral(ty.clone(), fields), ty))
+                    };
+                }
+                Ok(to) => {
+                    // Cast
+                    return if args.is_empty() {
+                        errors.push(Output::error(*loc, "missing argument to cast".to_string()));
+                        Err(())
+                    } else if args.len() > 1 {
+                        errors.push(Output::error(
+                            *loc,
+                            "too many arguments to cast".to_string(),
+                        ));
+                        Err(())
+                    } else {
+                        let (expr, expr_type) = expression(&args[0], cfg, ns, vartab, errors)?;
+
+                        Ok((cast(loc, expr, &expr_type, &to, false, ns, errors)?, to))
+                    };
+                }
+                Err(_) => {}
             }
 
             let funcs = if let ast::Type::Unresolved(s, _) = ty {
