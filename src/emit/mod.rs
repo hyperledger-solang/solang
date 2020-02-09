@@ -312,6 +312,29 @@ impl<'a> Contract<'a> {
                     .unwrap()
                     .into()
             }
+            Expression::StructLiteral(ty, exprs) => {
+                let s = self
+                    .builder
+                    .build_alloca(ty.llvm_type(self.ns, self.context), "struct");
+
+                for (i, f) in exprs.iter().enumerate() {
+                    let elem = unsafe {
+                        self.builder.build_gep(
+                            s,
+                            &[
+                                self.context.i32_type().const_zero(),
+                                self.context.i32_type().const_int(i as u64, false),
+                            ],
+                            "struct member",
+                        )
+                    };
+
+                    self.builder
+                        .build_store(elem, self.expression(f, vartab, function, runtime));
+                }
+
+                s.into()
+            }
             Expression::BytesLiteral(bs) => {
                 let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
 

@@ -115,6 +115,42 @@ fn parse_structs() {
     );
 
     assert_eq!(first_error(errors), "type ‘Foo’ not found");
+
+    // literal initializers
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract test_struct_parsing {
+            struct Foo {
+                bool x;
+                int32 y;
+            }
+
+            function f() private {
+                Foo a = Foo();
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 0");
+
+    // literal initializers
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract test_struct_parsing {
+            struct Foo {
+                bool x;
+                int32 y;
+            }
+
+            function f() private {
+                Foo a = Foo(true, true, true);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 3");
 }
 
 #[test]
@@ -139,6 +175,12 @@ fn struct_members() {
                         assert(f.x == true);
                         assert(f.y == 64);
                         assert(f.d.length == 31);
+
+                        foo f2 = foo(false, 32168, hex"DEAD");
+
+                        assert(f2.x == false);
+                        assert(f2.y == 32168);
+                        assert(f2.d == hex"dead");
                 }
         }"##,
     );
