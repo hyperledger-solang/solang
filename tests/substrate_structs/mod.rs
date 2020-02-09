@@ -1,3 +1,4 @@
+use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
 use super::{build_solidity, first_error};
@@ -158,4 +159,77 @@ fn structs_as_ref_args() {
     );
 
     runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn structs_encode() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Foo {
+        f1: [u8; 3],
+        f2: bool,
+    };
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                bool f2;
+            }
+                
+            function test(foo f) public {
+                assert(f.f1 == "ABC");
+                assert(f.f2 == true);
+            }
+        }"##,
+    );
+
+    runtime.function(
+        &mut store,
+        "test",
+        Foo {
+            f1: [0x41, 0x42, 0x43],
+            f2: true,
+        }
+        .encode(),
+    );
+}
+
+#[test]
+fn structs_decode() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Foo {
+        f1: [u8; 3],
+        f2: i32,
+    };
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                int32 f2;
+            }
+                
+            function test() public returns (foo) {
+                foo f;
+
+                f.f1 = hex"f33ec3";
+                f.f2 = 0xfd7f;
+
+                return f;
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Foo {
+            f1: [0xf3, 0x3e, 0xc3],
+            f2: 0xfd7f,
+        }
+        .encode(),
+    );
 }
