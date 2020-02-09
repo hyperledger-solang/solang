@@ -7,6 +7,7 @@ use output::{Note, Output};
 use parser::ast;
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::Mul;
 use tiny_keccak::keccak256;
 use Target;
 
@@ -110,18 +111,12 @@ impl Type {
             Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
             Type::Primitive(ast::PrimitiveType::Uint(n))
             | Type::Primitive(ast::PrimitiveType::Int(n)) => BigInt::from(n / 8),
-            Type::FixedArray(ty, dims) => {
-                let mut size = ty.size_hint(ns);
-
-                for dim in dims {
-                    size *= dim;
-                }
-                size
-            }
+            Type::FixedArray(ty, dims) => ty.size_hint(ns).mul(dims.iter().product::<BigInt>()),
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .fold(BigInt::zero(), |acc, f| acc + f.ty.size_hint(ns)),
+                .map(|f| f.ty.size_hint(ns))
+                .sum(),
             _ => unimplemented!(),
         }
     }
@@ -168,11 +163,10 @@ impl Type {
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .fold(BigInt::zero(), |acc, f| acc + f.ty.storage_slots(ns)),
+                .map(|f| f.ty.storage_slots(ns))
+                .sum(),
             Type::Undef => unreachable!(),
-            Type::FixedArray(ty, dims) => {
-                ty.storage_slots(ns) * dims.iter().fold(BigInt::one(), |acc, d| acc * d)
-            }
+            Type::FixedArray(ty, dims) => ty.storage_slots(ns) * dims.iter().product::<BigInt>(),
         }
     }
 

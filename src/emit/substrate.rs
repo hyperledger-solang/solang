@@ -646,7 +646,7 @@ impl SubstrateTarget {
                 .sum(),
             resolver::Type::FixedArray(ty, dims) => {
                 self.encoded_length(ty, contract)
-                    * dims.iter().fold(1, |acc, d| acc * d.to_u64().unwrap())
+                    * dims.iter().map(|d| d.to_u64().unwrap()).product::<u64>()
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
@@ -827,9 +827,11 @@ impl TargetRuntime for SubstrateTarget {
         datalength: IntValue,
         spec: &resolver::FunctionDecl,
     ) {
-        let length = spec.params.iter().fold(0, |acc, arg| {
-            acc + self.encoded_length(&arg.ty, contract.ns)
-        });
+        let length = spec
+            .params
+            .iter()
+            .map(|arg| self.encoded_length(&arg.ty, contract.ns))
+            .sum();
 
         let decode_block = contract.context.append_basic_block(function, "abi_decode");
         let wrong_length_block = contract
@@ -871,9 +873,11 @@ impl TargetRuntime for SubstrateTarget {
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let length = spec.returns.iter().fold(0, |acc, arg| {
-            acc + self.encoded_length(&arg.ty, contract.ns)
-        });
+        let length = spec
+            .returns
+            .iter()
+            .map(|arg| self.encoded_length(&arg.ty, contract.ns))
+            .sum();
 
         let length = contract.context.i32_type().const_int(length, false);
 

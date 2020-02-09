@@ -290,9 +290,11 @@ impl TargetRuntime for BurrowTarget {
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let length = spec.returns.iter().fold(0, |acc, arg| {
-            acc + self.abi.encoded_length(&arg.ty, contract.ns)
-        });
+        let length = spec
+            .returns
+            .iter()
+            .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
+            .sum();
         let encoded_data = contract
             .builder
             .build_call(
