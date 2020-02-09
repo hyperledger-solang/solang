@@ -413,8 +413,19 @@ impl SubstrateTarget {
                         .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
                 });
 
-                for field in &contract.ns.structs[*n].fields {
-                    self.decode_ty(contract, function, &field.ty, Some(to), data);
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            to,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    self.decode_ty(contract, function, &field.ty, Some(elem), data);
                 }
 
                 to.into()
@@ -590,10 +601,6 @@ impl SubstrateTarget {
                 self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
             }
             resolver::Type::FixedArray(_, dim) => {
-                let arg = contract
-                    .builder
-                    .build_load(arg.into_pointer_value(), "fixed_array");
-
                 contract.emit_static_loop(
                     function,
                     0,
@@ -615,9 +622,24 @@ impl SubstrateTarget {
                     },
                 );
             }
-            resolver::Type::Struct(_) => {
-                // FIXME
-                unimplemented!();
+            resolver::Type::Struct(n) => {
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        contract
+                            .builder
+                            .build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(i as u64, false),
+                                ],
+                                &field.name,
+                            )
+                            .into()
+                    };
+
+                    self.encode_ty(contract, function, &field.ty, elem, data);
+                }
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
@@ -896,7 +918,15 @@ impl TargetRuntime for SubstrateTarget {
         let mut argsdata = data;
 
         for (i, arg) in spec.returns.iter().enumerate() {
-            self.encode_ty(contract, function, &arg.ty, args[i], &mut argsdata);
+            let val = if arg.ty.is_reference_type() {
+                contract
+                    .builder
+                    .build_load(args[i].into_pointer_value(), "")
+            } else {
+                args[i]
+            };
+
+            self.encode_ty(contract, function, &arg.ty, val, &mut argsdata);
         }
 
         (data, length)
