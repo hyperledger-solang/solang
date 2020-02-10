@@ -920,3 +920,128 @@ fn struct_decode() {
         ])],
     );
 }
+
+/*
+#[test]
+fn struct_in_struct_decode() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract structs {
+            enum suit { club, diamonds, hearts, spades }
+            enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+            struct card {
+                value v;
+                suit s;
+            }
+            struct hand {
+                card card1;
+                card card2;
+                card card3;
+                card card4;
+                card card5;
+            }
+            function test() public returns (hand) {
+                hand h = hand({
+                    card1: card({ s: suit.hearts, v: value.two }),
+                    card2: card({ s: suit.diamonds, v: value.three }),
+                    card3: card({ s: suit.club, v: value.four }),
+                    card4: card({ s: suit.diamonds, v: value.ten }),
+                    card5: card({ s: suit.hearts, v: value.jack })
+                });
+                return h;
+            }
+        }
+        "##,
+    );
+
+    let val = runtime.function(&mut store, "test", &[]);
+
+    assert_eq!(
+        val,
+        &[ethabi::Token::Tuple(vec![
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(0)),
+                ethabi::Token::Uint(ethereum_types::U256::from(2)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(1)),
+                ethabi::Token::Uint(ethereum_types::U256::from(1)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(2)),
+                ethabi::Token::Uint(ethereum_types::U256::from(0)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(8)),
+                ethabi::Token::Uint(ethereum_types::U256::from(1)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(9)),
+                ethabi::Token::Uint(ethereum_types::U256::from(2)),
+            ]),
+        ])],
+    );
+}*/
+
+#[test]
+fn struct_in_struct_encode() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract structs {
+            enum suit { club, diamonds, hearts, spades }
+            enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+            struct card {
+                value v;
+                suit s;
+            }
+            struct hand {
+                card card1;
+                card card2;
+                card card3;
+                card card4;
+                card card5;
+            }
+        
+            function test(hand h) public {
+                assert(h.card1.s == suit.hearts);
+                assert(h.card1.v == value.two);
+                assert(h.card2.s == suit.diamonds);
+                assert(h.card2.v == value.three);
+                assert(h.card3.s == suit.club);
+                assert(h.card3.v == value.four);
+                assert(h.card4.s == suit.diamonds);
+                assert(h.card4.v == value.ten);
+                assert(h.card5.s == suit.hearts);
+                assert(h.card5.v == value.jack);
+            }
+        }
+        "##,
+    );
+
+    runtime.function(
+        &mut store,
+        "test",
+        &[ethabi::Token::Tuple(vec![
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(0)),
+                ethabi::Token::Uint(ethereum_types::U256::from(2)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(1)),
+                ethabi::Token::Uint(ethereum_types::U256::from(1)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(2)),
+                ethabi::Token::Uint(ethereum_types::U256::from(0)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(8)),
+                ethabi::Token::Uint(ethereum_types::U256::from(1)),
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Uint(ethereum_types::U256::from(9)),
+                ethabi::Token::Uint(ethereum_types::U256::from(2)),
+            ]),
+        ])],
+    );
+}
