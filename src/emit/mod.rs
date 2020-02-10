@@ -2083,6 +2083,17 @@ impl ast::PrimitiveType {
 }
 
 impl resolver::Type {
+    /// Return the llvm type for a variable holding the type, not the type itself
+    fn llvm_var<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
+        let ty = self.llvm_type(ns, context);
+        match self {
+            resolver::Type::Struct(_) | resolver::Type::FixedArray(_, _) => {
+                ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+            }
+            _ => ty,
+        }
+    }
+
     /// Return the llvm type for the resolved type.
     fn llvm_type<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
         match self {
@@ -2106,7 +2117,7 @@ impl resolver::Type {
                     &ns.structs[*n]
                         .fields
                         .iter()
-                        .map(|f| f.ty.llvm_type(ns, context))
+                        .map(|f| f.ty.llvm_var(ns, context))
                         .collect::<Vec<BasicTypeEnum>>(),
                     false,
                 )
