@@ -2524,6 +2524,8 @@ pub fn expression(
 
             let (expr, expr_ty) = expression(e, cfg, ns, vartab, errors)?;
 
+            // Dereference if need to. This could be struct-in-struct for
+            // example.
             let (expr, expr_ty) = if let resolver::Type::Ref(ty) = expr_ty {
                 (Expression::Load(Box::new(expr)), *ty)
             } else {
