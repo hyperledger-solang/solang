@@ -260,8 +260,16 @@ fn structs_as_ref_args() {
             }
         
             function func(foo f) private {
+                // assigning to f members dereferences f
                 f.x = true;
                 f.y = 64;
+
+                // assigning to f changes the reference
+                f = foo({ x: false, y: 256 });
+
+                // f no longer point to f in caller function
+                f.x = false;
+                f.y = 98123;
             }
         
             function test() public {
@@ -349,4 +357,38 @@ fn structs_decode() {
         }
         .encode(),
     );
+}
+
+#[test]
+fn struct_in_struct() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        pragma solidity 0;
+
+        contract struct_in_struct {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+            struct bar {
+                address a;
+                bytes7 b;
+                foo c;
+            }
+        
+            function test() public pure {
+                bar memory f = bar({ a: address(0), b: hex"fe", c: foo({ x: true, y: 102 }) });
+        
+                foo memory m = foo(false, 50);
+        
+                f.c = m;
+        
+                f.c.y = 300;
+        
+                assert(m.y == 300);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
 }

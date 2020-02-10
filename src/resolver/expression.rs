@@ -2524,11 +2524,13 @@ pub fn expression(
 
             let (expr, expr_ty) = expression(e, cfg, ns, vartab, errors)?;
 
-            match if let resolver::Type::Ref(ty) = expr_ty {
-                *ty
+            let (expr, expr_ty) = if let resolver::Type::Ref(ty) = expr_ty {
+                (Expression::Load(Box::new(expr)), *ty)
             } else {
-                expr_ty
-            } {
+                (expr, expr_ty)
+            };
+
+            match expr_ty {
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
                     if id.name == "length" {
                         return Ok((
