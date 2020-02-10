@@ -392,3 +392,111 @@ fn struct_in_struct() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn structs_in_structs_decode() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Foo {
+        f1: [u8; 3],
+        f2: i32,
+    };
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Bar {
+        a: bool,
+        b: Foo,
+        c: Foo,
+    };
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                int32 f2;
+            }
+
+            struct bar {
+                bool a;
+                foo b;
+                foo c;
+            }
+                
+            function test() public returns (bar) {
+                bar f = bar({ a: true, b: foo({ f1: hex"c30000", f2: 0xff7f}), c: foo({ f1: hex"f7f6f5", f2: 0x4002 })});
+
+                return f;
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Bar {
+            a: true,
+            b: Foo {
+                f1: [0xc3, 0x00, 0x00],
+                f2: 0xff7f,
+            },
+            c: Foo {
+                f1: [0xf7, 0xf6, 0xf5],
+                f2: 0x4002,
+            }
+        }
+        .encode(),
+    );
+}
+
+#[test]
+fn structs_in_structs_encode() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Foo {
+        f1: [u8; 3],
+        f2: i32,
+    };
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Bar {
+        a: bool,
+        b: Foo,
+        c: Foo,
+    };
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                int32 f2;
+            }
+
+            struct bar {
+                bool a;
+                foo b;
+                foo c;
+            }
+                
+            function test(bar f) public {
+                assert(f.c.f2 == 0x4002);
+                assert(f.b.f1 == hex"c30000");
+            }
+        }"##,
+    );
+
+    runtime.function(
+        &mut store,
+        "test",
+        Bar {
+            a: true,
+            b: Foo {
+                f1: [0xc3, 0x00, 0x00],
+                f2: 0xff7f,
+            },
+            c: Foo {
+                f1: [0xf7, 0xf6, 0xf5],
+                f2: 0x4002,
+            },
+        }
+        .encode(),
+    );
+}

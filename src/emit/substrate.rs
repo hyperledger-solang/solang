@@ -425,7 +425,17 @@ impl SubstrateTarget {
                         )
                     };
 
-                    self.decode_ty(contract, function, &field.ty, Some(elem), data);
+                    if field.ty.is_reference_type() {
+                        let val = contract
+                            .builder
+                            .build_alloca(field.ty.llvm_type(contract.ns, contract.context), "");
+
+                        self.decode_ty(contract, function, &field.ty, Some(val), data);
+
+                        contract.builder.build_store(elem, val);
+                    } else {
+                        self.decode_ty(contract, function, &field.ty, Some(elem), data);
+                    }
                 }
 
                 to.into()
@@ -624,21 +634,22 @@ impl SubstrateTarget {
             }
             resolver::Type::Struct(n) => {
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    let elem = unsafe {
-                        contract
-                            .builder
-                            .build_gep(
-                                arg.into_pointer_value(),
-                                &[
-                                    contract.context.i32_type().const_zero(),
-                                    contract.context.i32_type().const_int(i as u64, false),
-                                ],
-                                &field.name,
-                            )
-                            .into()
+                    let mut elem = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
                     };
 
-                    self.encode_ty(contract, function, &field.ty, elem, data);
+                    if field.ty.is_reference_type() {
+                        elem = contract.builder.build_load(elem, "").into_pointer_value();
+                    }
+
+                    self.encode_ty(contract, function, &field.ty, elem.into(), data);
                 }
             }
             resolver::Type::Undef => unreachable!(),
