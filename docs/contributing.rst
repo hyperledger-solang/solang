@@ -9,8 +9,7 @@ Target Specific Tests
 
 Solang supports Substrate and ewasm. These targets need testing
 via integration tests. New targets like
-`Fabric <https://github.com/hyperledger-labs/fabric-chaincode-wasm>`_ and
-`Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_ need to be
+`Fabric <https://github.com/hyperledger-labs/fabric-chaincode-wasm>`_ need to be
 added, and tests added.
 
 How to report issues

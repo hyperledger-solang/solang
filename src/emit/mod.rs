@@ -29,6 +29,7 @@ const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
 mod ethabiencoder;
 mod ewasm;
+mod sabre;
 mod substrate;
 
 lazy_static::lazy_static! {
@@ -112,6 +113,7 @@ impl<'a> Contract<'a> {
                 substrate::SubstrateTarget::build(context, contract, filename)
             }
             super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, filename, opt),
+            super::Target::Sabre => sabre::SabreTarget::build(context, contract, filename),
         }
     }
 
