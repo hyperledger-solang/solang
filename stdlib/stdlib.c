@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-
 /*
  * The external interface
  */
@@ -16,30 +15,44 @@
 extern void get_storage32(uint32_t key, void *dest, int32_t length);
 extern void set_storage32(uint32_t key, void *src, int32_t length);
 
-
 /*
  */
-__attribute__((visibility("hidden")))
-void __memset8(void *_dest, uint64_t val, size_t length)
+__attribute__((visibility("hidden"))) void __memset8(void *_dest, uint64_t val, size_t length)
 {
 	uint64_t *dest = _dest;
 
-	do {
+	do
+	{
 		*dest++ = val;
 	} while (--length);
 }
 
+__attribute__((visibility("hidden"))) void __memset(uint8_t *dest, uint8_t val, size_t length)
+{
+	do
+	{
+		*dest++ = val;
+	} while (--length);
+}
 /*
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.
  */
-__attribute__((visibility("hidden")))
-void __memcpy8(void *_dest, void *_src, size_t length)
+__attribute__((visibility("hidden"))) void __memcpy8(void *_dest, void *_src, size_t length)
 {
 	uint64_t *dest = _dest;
 	uint64_t *src = _src;
 
-	do {
+	do
+	{
+		*dest++ = *src++;
+	} while (--length);
+}
+
+__attribute__((visibility("hidden"))) void __memcpy(uint8_t *dest, uint8_t *src, size_t length)
+{
+	do
+	{
 		*dest++ = *src++;
 	} while (--length);
 }
@@ -47,8 +60,7 @@ void __memcpy8(void *_dest, void *_src, size_t length)
 /*
  * Fast-ish clear, 8 bytes at a time.
  */
-__attribute__((visibility("hidden")))
-void __bzero8(void *_dest, size_t length)
+__attribute__((visibility("hidden"))) void __bzero8(void *_dest, size_t length)
 {
 	uint64_t *dest = _dest;
 
@@ -60,8 +72,7 @@ void __bzero8(void *_dest, size_t length)
 /*
  * Fast-ish set, 8 bytes at a time.
  */
-__attribute__((visibility("hidden")))
-void __bset8(void *_dest, size_t length)
+__attribute__((visibility("hidden"))) void __bset8(void *_dest, size_t length)
 {
 	int64_t *dest = _dest;
 
@@ -79,32 +90,32 @@ void __bset8(void *_dest, size_t length)
   So I think we should avoid fragmentation by neighbour merging. The most
   costly is walking the doubly linked list looking for free space.
 */
-struct chunk {
+struct chunk
+{
 	struct chunk *next, *prev;
 	size_t length;
 	bool allocated;
 };
 
-__attribute__((visibility("hidden")))
-void __init_heap()
+__attribute__((visibility("hidden"))) void __init_heap()
 {
-	struct chunk *first = (struct chunk*)0x10000;
+	struct chunk *first = (struct chunk *)0x10000;
 	first->next = first->prev = NULL;
 	first->allocated = false;
-	first->length = (size_t)
-		(__builtin_wasm_memory_size(0) -
-	         (size_t)first - sizeof(struct chunk));
+	first->length = (size_t)(__builtin_wasm_memory_size(0) -
+							 (size_t)first - sizeof(struct chunk));
 }
 
-__attribute__((visibility("hidden")))
-void __attribute__((noinline)) __free(void *m)
+__attribute__((visibility("hidden"))) void __attribute__((noinline)) __free(void *m)
 {
 	struct chunk *cur = m;
 	cur--;
-	if (m) {
+	if (m)
+	{
 		cur->allocated = false;
 		struct chunk *next = cur->next;
-		if (next && !next->allocated) {
+		if (next && !next->allocated)
+		{
 			// merge with next
 			if ((cur->next = next->next) != NULL)
 				cur->next->prev = cur;
@@ -113,7 +124,8 @@ void __attribute__((noinline)) __free(void *m)
 		}
 
 		struct chunk *prev = cur->prev;
-		if (prev && !prev->allocated) {
+		if (prev && !prev->allocated)
+		{
 			// merge with previous
 			prev->next = next;
 			next->prev = prev;
@@ -122,13 +134,13 @@ void __attribute__((noinline)) __free(void *m)
 	}
 }
 
-__attribute__((visibility("hidden")))
-static void shrink_chunk(struct chunk *cur, size_t size)
+__attribute__((visibility("hidden"))) static void shrink_chunk(struct chunk *cur, size_t size)
 {
 	// round up to nearest 8 bytes
 	size = (size + 7) & ~7;
 
-	if (cur->length - size >= (8 + sizeof(struct chunk))) {
+	if (cur->length - size >= (8 + sizeof(struct chunk)))
+	{
 		// split and return
 		void *data = (cur + 1);
 		struct chunk *new = data + size;
@@ -142,26 +154,27 @@ static void shrink_chunk(struct chunk *cur, size_t size)
 	}
 }
 
-__attribute__((visibility("hidden")))
-void* __attribute__((noinline)) __malloc(size_t size)
+__attribute__((visibility("hidden"))) void *__attribute__((noinline)) __malloc(size_t size)
 {
-	struct chunk *cur = (struct chunk*)0x10000;
+	struct chunk *cur = (struct chunk *)0x10000;
 
 	while (cur && (cur->allocated || size > cur->length))
 		cur = cur->next;
 
-	if (cur) {
+	if (cur)
+	{
 		shrink_chunk(cur, size);
 		cur->allocated = true;
 		return ++cur;
-	} else {
+	}
+	else
+	{
 		// go bang
 		__builtin_unreachable();
 	}
 }
 
-__attribute__((visibility("hidden")))
-void* __realloc(void *m, size_t size)
+__attribute__((visibility("hidden"))) void *__realloc(void *m, size_t size)
 {
 	struct chunk *cur = m;
 
@@ -169,8 +182,8 @@ void* __realloc(void *m, size_t size)
 
 	struct chunk *next = cur->next;
 
-	if (next && !next->allocated && size <=
-		(cur->length + next->length + sizeof(struct chunk))) {
+	if (next && !next->allocated && size <= (cur->length + next->length + sizeof(struct chunk)))
+	{
 		// merge with next
 		cur->next = next->next;
 		cur->next->prev = cur;
@@ -178,7 +191,9 @@ void* __realloc(void *m, size_t size)
 		// resplit ..
 		shrink_chunk(cur, size);
 		return m;
-	} else {
+	}
+	else
+	{
 		void *n = __malloc(size);
 		__memcpy8(n, m, size / 8);
 		__free(m);
@@ -190,44 +205,44 @@ void* __realloc(void *m, size_t size)
 // ABI encoding is big endian, and can have integers of 8 to 256 bits
 // (1 to 32 bytes). This function copies length bytes and reverses the
 // order since wasm is little endian.
-__attribute__((visibility("hidden")))
-void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
+__attribute__((visibility("hidden"))) void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	from += 31;
 
-	do {
+	do
+	{
 		*to++ = *from--;
 	} while (--length);
 }
 
-__attribute__((visibility("hidden")))
-void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
+__attribute__((visibility("hidden"))) void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	from += length;
 
-	do {
+	do
+	{
 		*to++ = *--from;
 	} while (--length);
 }
 
 // This function is for used for abi encoding integers
 // ABI encoding is big endian.
-__attribute__((visibility("hidden")))
-void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
+__attribute__((visibility("hidden"))) void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	to += 31;
 
-	do {
+	do
+	{
 		*to-- = *from++;
 	} while (--length);
 }
 
-__attribute__((visibility("hidden")))
-void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
+__attribute__((visibility("hidden"))) void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	to += length;
 
-	do {
+	do
+	{
 		*--to = *from++;
 	} while (--length);
 }
@@ -249,8 +264,7 @@ void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
 	r5*l4	r4*l4	r3*l4	r2*l4 	r1*l4	0		0 		0  +
     ------------------------------------------------------------
 */
-__attribute__((visibility("hidden")))
-void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
+__attribute__((visibility("hidden"))) void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 {
 	uint64_t val1 = 0, carry = 0;
 
@@ -265,7 +279,8 @@ void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 	int right_start = 0, right_end = 0;
 	int left_start = 0;
 
-	for (int l = 0; l < len; l++) {
+	for (int l = 0; l < len; l++)
+	{
 		int i = 0;
 
 		if (l >= left_len)
@@ -277,7 +292,8 @@ void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 		if (right_end < right_len)
 			right_end++;
 
-		for (int r = right_end - 1; r >= right_start; r--) {
+		for (int r = right_end - 1; r >= right_start; r--)
+		{
 			uint64_t m = (uint64_t)left[left_start + i] * (uint64_t)right[r];
 			i++;
 			if (__builtin_add_overflow(val1, m, &val1))
@@ -293,10 +309,11 @@ void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 
 // Some compiler runtime builtins we need.
 
-// 128 bit shift left. 
+// 128 bit shift left.
 typedef union {
 	__uint128_t all;
-	struct {
+	struct
+	{
 		uint64_t low;
 		uint64_t high;
 	};
@@ -310,15 +327,20 @@ __uint128_t __ashlti3(__uint128_t val, int r)
 
 	in.all = val;
 
-	if (r == 0) {
+	if (r == 0)
+	{
 		// nothing to do
 		result.all = in.all;
-	} else if (r & 64) {
+	}
+	else if (r & 64)
+	{
 		// Shift more than or equal 64
 		result.low = 0;
 		result.high = in.low << (r & 63);
-	} else {
-		// Shift less than 64 
+	}
+	else
+	{
+		// Shift less than 64
 		result.low = in.low << r;
 		result.high = (in.high << r) | (in.low >> (64 - r));
 	}
@@ -334,15 +356,20 @@ __uint128_t __lshrti3(__uint128_t val, int r)
 
 	in.all = val;
 
-	if (r == 0) {
+	if (r == 0)
+	{
 		// nothing to do
 		result.all = in.all;
-	} else if (r & 64) {
+	}
+	else if (r & 64)
+	{
 		// Shift more than or equal 64
 		result.low = in.high >> (r & 63);
 		result.high = 0;
-	} else {
-		// Shift less than 64 
+	}
+	else
+	{
+		// Shift less than 64
 		result.low = (in.low >> r) | (in.high << (64 - r));
 		result.high = in.high >> r;
 	}
@@ -350,3 +377,20 @@ __uint128_t __lshrti3(__uint128_t val, int r)
 	return result.all;
 }
 
+// sabre wants the storage keys as a hex string. Convert the uint256 pointed
+// to be by v into a hex string
+char *__u256ptohex(uint8_t *v, char *str)
+{
+	// the uint256 will be stored little endian so fill it in reverse
+	str += 63;
+
+	for (int i = 0; i < 32; i++)
+	{
+		uint8_t l = (v[i] & 0x0f);
+		*str-- = l > 9 ? l + 'a' : '0' + l;
+		uint8_t h = (v[i] >> 4);
+		*str-- = h > 9 ? h + 'a' : '0' + h;
+	}
+
+	return str;
+}

@@ -30,6 +30,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
     let allowed_externs = |name: &str| match target {
         Target::Ewasm => name == "main",
         Target::Substrate => name == "deploy" || name == "call",
+        Target::Sabre => name == "entrypoint",
     };
 
     for c in module.custom_sections() {
@@ -80,22 +81,28 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
             }
         }
 
-        let module = if let Target::Ewasm = target {
-            "ethereum"
-        } else {
-            "env"
-        };
-
-        imports.push(ImportEntry::new(
-            module.into(),
-            "memory".into(),
-            elements::External::Memory(elements::MemoryType::new(2, Some(2))),
-        ));
+        match target {
+            Target::Ewasm => imports.push(ImportEntry::new(
+                "ethereum".into(),
+                "memory".into(),
+                elements::External::Memory(elements::MemoryType::new(2, Some(2))),
+            )),
+            Target::Substrate => imports.push(ImportEntry::new(
+                "env".into(),
+                "memory".into(),
+                elements::External::Memory(elements::MemoryType::new(2, Some(2))),
+            )),
+            Target::Sabre => exports.push(ExportEntry::new("memory".into(), Internal::Memory(0))),
+        }
     }
 
     module.clear_custom_section("linking");
 
     let mut linked = builder::module().with_module(module);
+
+    if &Target::Sabre == target {
+        linked.push_memory(Default::default());
+    }
 
     for e in exports {
         linked.push_export(e);

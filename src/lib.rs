@@ -29,6 +29,8 @@ pub enum Target {
     Substrate,
     /// Ethereum ewasm, see https://github.com/ewasm/design
     Ewasm,
+    /// Sawtooth Sabre, see https://github.com/hyperledger/sawtooth-sabre
+    Sabre,
 }
 
 impl fmt::Display for Target {
@@ -36,6 +38,7 @@ impl fmt::Display for Target {
         match self {
             Target::Substrate => write!(f, "Substrate"),
             Target::Ewasm => write!(f, "ewasm"),
+            Target::Sabre => write!(f, "Sawtooth Sabre"),
         }
     }
 }
