@@ -957,13 +957,25 @@ impl<'a> Contract<'a> {
                     )
                 };
 
-                self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
+                if field.ty.is_reference_type() {
+                    let val = self
+                        .builder
+                        .build_alloca(field.ty.llvm_type(self.ns, self.context), &field.name);
 
-                *slot = self.builder.build_int_add(
-                    *slot,
-                    self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                    &field.name,
-                );
+                    self.storage_load(&field.ty, slot, slot_ptr, val, function, runtime);
+
+                    self.builder.build_store(elem, val);
+                } else {
+                    self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
+                }
+
+                if !field.ty.is_reference_type() {
+                    *slot = self.builder.build_int_add(
+                        *slot,
+                        self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                        &field.name,
+                    );
+                }
             }
         } else {
             self.builder.build_store(slot_ptr, *slot);
@@ -988,7 +1000,7 @@ impl<'a> Contract<'a> {
         // FIXME: store arrays to storage
         if let resolver::Type::Struct(n) = ty {
             for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
-                let elem = unsafe {
+                let mut elem = unsafe {
                     self.builder.build_gep(
                         dest.into_pointer_value(),
                         &[
@@ -999,13 +1011,22 @@ impl<'a> Contract<'a> {
                     )
                 };
 
+                if field.ty.is_reference_type() {
+                    elem = self
+                        .builder
+                        .build_load(elem, &field.name)
+                        .into_pointer_value();
+                }
+
                 self.storage_store(&field.ty, slot, slot_ptr, elem.into(), function, runtime);
 
-                *slot = self.builder.build_int_add(
-                    *slot,
-                    self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                    &field.name,
-                );
+                if !field.ty.is_reference_type() {
+                    *slot = self.builder.build_int_add(
+                        *slot,
+                        self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                        &field.name,
+                    );
+                }
             }
         } else {
             self.builder.build_store(slot_ptr, *slot);
@@ -1358,7 +1379,7 @@ impl<'a> Contract<'a> {
                                 parms.push(
                                     self.builder
                                         .build_alloca(
-                                            v.ty.llvm_type(self.ns, &self.context),
+                                            v.ty.llvm_var(self.ns, &self.context),
                                             &v.name,
                                         )
                                         .into(),
@@ -1384,7 +1405,7 @@ impl<'a> Contract<'a> {
 
                                     let dest = w.vars[res[i]].value;
 
-                                    if dest.is_pointer_value() {
+                                    if dest.is_pointer_value() && !v.ty.is_reference_type() {
                                         self.builder.build_store(dest.into_pointer_value(), val);
                                     } else {
                                         w.vars[res[i]].value = val;
