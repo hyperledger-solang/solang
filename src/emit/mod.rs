@@ -6,6 +6,7 @@ use resolver::expression::Expression;
 use std::path::Path;
 use std::str;
 
+use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -290,7 +291,7 @@ impl<'a> Contract<'a> {
     /// returns depends on the context; if it is simple integer, bool or bytes32 expression, the value
     /// is an Intvalue. For references to arrays, it is a PointerValue to the array. For references
     /// to storage, it is the storage slot. The references types are dereferenced by the Expression::Load()
-    /// and Expression::LoadStorage() expression types.
+    /// and Expression::StorageLoad() expression types.
     fn expression(
         &self,
         e: &Expression,
@@ -304,14 +305,7 @@ impl<'a> Contract<'a> {
                 .bool_type()
                 .const_int(*val as u64, false)
                 .into(),
-            Expression::NumberLiteral(bits, n) => {
-                let ty = self.context.custom_width_int_type(*bits as _);
-                let s = n.to_string();
-
-                ty.const_int_from_string(&s, StringRadix::Decimal)
-                    .unwrap()
-                    .into()
-            }
+            Expression::NumberLiteral(bits, n) => self.number_literal(*bits as u32, n).into(),
             Expression::StructLiteral(ty, exprs) => {
                 let s = self
                     .builder
@@ -658,24 +652,22 @@ impl<'a> Contract<'a> {
                 self.builder.build_load(expr, "")
             }
             Expression::StorageLoad(ty, e) => {
-                let ty = ty.llvm_type(self.ns, &self.context);
-
-                let dest = self.builder.build_alloca(ty, "storage_load_temp");
-
+                let dest = self
+                    .builder
+                    .build_alloca(ty.llvm_type(self.ns, &self.context), "storage_load_temp");
                 // The storage slot is an i256 accessed through a pointer, so we need
                 // to store it
                 let slot = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
                 let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.builder.build_store(slot_ptr, slot);
+                self.storage_load(ty, slot, slot_ptr, dest, function, runtime);
 
-                // TODO ewasm allocates 32 bytes here, even though we have just
-                // allocated test. This can be folded into one allocation, if llvm
-                // does not already fold it into one.
-                runtime.get_storage(&self, function, slot_ptr, dest);
-
-                self.builder.build_load(dest, "")
+                if ty.is_reference_type() {
+                    dest.into()
+                } else {
+                    self.builder.build_load(dest, "")
+                }
             }
             Expression::ZeroExt(t, e) => {
                 let e = self
@@ -930,6 +922,57 @@ impl<'a> Contract<'a> {
                 array.into()
             }
             Expression::Poison => unreachable!(),
+        }
+    }
+
+    /// Convert a BigInt number to llvm const value
+    fn number_literal(&self, bits: u32, n: &BigInt) -> IntValue<'a> {
+        let ty = self.context.custom_width_int_type(bits);
+        let s = n.to_string();
+
+        ty.const_int_from_string(&s, StringRadix::Decimal).unwrap()
+    }
+
+    /// Recursively load a type from contract storage
+    fn storage_load(
+        &self,
+        ty: &resolver::Type,
+        slot: IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        dest: PointerValue<'a>,
+        function: FunctionValue<'a>,
+        runtime: &dyn TargetRuntime,
+    ) {
+        // FIXME: load arrays from storage
+        if let resolver::Type::Struct(n) = ty {
+            let mut slot = slot;
+            for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
+                let elem = unsafe {
+                    self.builder.build_gep(
+                        dest,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(i as u64, false),
+                        ],
+                        &field.name,
+                    )
+                };
+
+                self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
+
+                slot = self.builder.build_int_add(
+                    slot,
+                    self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                    &field.name,
+                );
+            }
+        } else {
+            self.builder.build_store(slot_ptr, slot);
+
+            // TODO ewasm allocates 32 bytes here, even though we have just
+            // allocated test. This can be folded into one allocation, if llvm
+            // does not already fold it into one.
+            runtime.get_storage(&self, function, slot_ptr, dest);
         }
     }
 

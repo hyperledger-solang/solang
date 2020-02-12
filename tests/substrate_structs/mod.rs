@@ -500,3 +500,75 @@ fn structs_in_structs_encode() {
         .encode(),
     );
 }
+
+#[test]
+fn struct_storage_to_memory() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                int64 f2;
+            }
+            foo bar;
+
+            constructor() public {
+                bar.f1 = hex"123456";
+                bar.f2 = 0x0123456789abcdef;
+            }
+
+            function test() public {
+                foo f = bar;
+
+                assert(f.f1 == hex"123456");
+                assert(f.f2 == 81985529216486895);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn return_from_struct_storage() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Foo {
+        f1: [u8; 3],
+        f2: u32,
+    };
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract test_struct_parsing {
+            struct foo {
+                bytes3 f1;
+                uint32 f2;
+            }
+            foo bar;
+
+            constructor() public {
+                bar.f1 = "png";
+                bar.f2 = 0x89abcdef;
+            }
+
+            function test() public returns (foo) {
+                return bar;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Foo {
+            f1: [0x70, 0x6e, 0x67],
+            f2: 0x89ab_cdef,
+        }
+        .encode(),
+    );
+}

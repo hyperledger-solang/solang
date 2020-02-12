@@ -138,7 +138,7 @@ struct LayoutField {
     #[serde(rename = "range.offset")]
     offset: String,
     #[serde(rename = "range.len")]
-    len: usize,
+    len: String,
     #[serde(rename = "range.elem_type")]
     ty: usize,
 }
@@ -290,13 +290,9 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         .variables
         .iter()
         .filter(|v| !v.is_storage())
-        .map(|v| {
-            let (scalety, _) = solty_to_scalety(&v.ty, resolver_contract);
-
-            StructField {
-                name: registry.string(&v.name),
-                ty: registry.builtin_type(&scalety),
-            }
+        .map(|v| StructField {
+            name: registry.string(&v.name),
+            ty: ty_to_abi(&v.ty, resolver_contract, &mut registry).ty,
         })
         .collect();
 
@@ -307,14 +303,12 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         .iter()
         .filter_map(|v| {
             if let resolver::ContractVariableType::Storage(storage) = &v.var {
-                let (scalety, len) = solty_to_scalety(&v.ty, resolver_contract);
-
                 Some(StorageLayout {
                     name: registry.string(&v.name),
                     layout: StorageFieldLayout::Field(LayoutField {
                         offset: format!("0x{:064X}", storage),
-                        len,
-                        ty: registry.builtin_type(&scalety),
+                        len: v.ty.storage_slots(resolver_contract).to_string(),
+                        ty: ty_to_abi(&v.ty, resolver_contract, &mut registry).ty,
                     }),
                 })
             } else {
@@ -394,17 +388,6 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
     }
 }
 
-fn solty_to_scalety(ty: &resolver::Type, contract: &resolver::Contract) -> (String, usize) {
-    match ty_to_primitive(ty, contract) {
-        ast::PrimitiveType::Bool => ("bool".into(), 1),
-        ast::PrimitiveType::Uint(n) => (format!("u{}", n), (n / 8).into()),
-        ast::PrimitiveType::Int(n) => (format!("i{}", n), (n / 8).into()),
-        ast::PrimitiveType::Bytes(n) => (format!("bytes{}", n), *n as usize),
-        ast::PrimitiveType::Address => ("address".into(), 20),
-        _ => unreachable!(),
-    }
-}
-
 fn ty_to_abi(
     ty: &resolver::Type,
     contract: &resolver::Contract,
@@ -466,22 +449,6 @@ fn ty_to_abi(
                 display_name: vec![],
             }
         }
-    }
-}
-
-// For a given resolved type, return the underlying primitive
-fn ty_to_primitive<'a>(
-    ty: &'a resolver::Type,
-    resolved_contract: &'a resolver::Contract,
-) -> &'a ast::PrimitiveType {
-    match ty {
-        resolver::Type::Primitive(e) => e,
-        resolver::Type::Enum(ref i) => &resolved_contract.enums[*i].ty,
-        resolver::Type::FixedArray(ty, _) => ty_to_primitive(ty, resolved_contract), // FIXME: is is incorrect
-        resolver::Type::Struct(_) => unimplemented!(),
-        resolver::Type::Undef => unreachable!(),
-        resolver::Type::StorageRef(ty) => ty_to_primitive(ty, resolved_contract),
-        resolver::Type::Ref(ty) => ty_to_primitive(ty, resolved_contract),
     }
 }
 
