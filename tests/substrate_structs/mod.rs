@@ -572,3 +572,55 @@ fn return_from_struct_storage() {
         .encode(),
     );
 }
+
+#[test]
+fn struct_in_struct_init_return() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Card {
+        value: u8,
+        suit: u8,
+    };
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Hand {
+        card1: Card,
+        card2: Card,
+        card3: Card,
+        card4: Card,
+        card5: Card,
+    };
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+    contract structs {
+        enum suit { club, diamonds, hearts, spades }
+        enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+        struct card {
+            value v;
+            suit s;
+        }
+        card card1 = card({ s: suit.hearts, v: value.two });
+        card card2 = card({ s: suit.diamonds, v: value.three });
+        card card3 = card({ s: suit.club, v: value.four });
+        card card4 = card({ s: suit.diamonds, v: value.ten });
+        card card5 = card({ s: suit.hearts, v: value.jack });
+
+        function test() public {
+            assert(card1.s == suit.hearts);
+            assert(card1.v == value.two);
+            assert(card2.s == suit.diamonds);
+            assert(card2.v == value.three);
+            assert(card3.s == suit.club);
+            assert(card3.v == value.four);
+            assert(card4.s == suit.diamonds);
+            assert(card4.v == value.ten);
+            assert(card5.s == suit.hearts);
+            assert(card5.v == value.jack);
+        }
+    }"#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "test", Vec::new());
+}

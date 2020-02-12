@@ -657,11 +657,11 @@ impl<'a> Contract<'a> {
                     .build_alloca(ty.llvm_type(self.ns, &self.context), "storage_load_temp");
                 // The storage slot is an i256 accessed through a pointer, so we need
                 // to store it
-                let slot = self
+                let mut slot = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
                 let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.storage_load(ty, slot, slot_ptr, dest, function, runtime);
+                self.storage_load(ty, &mut slot, slot_ptr, dest, function, runtime);
 
                 if ty.is_reference_type() {
                     dest.into()
@@ -937,7 +937,7 @@ impl<'a> Contract<'a> {
     fn storage_load(
         &self,
         ty: &resolver::Type,
-        slot: IntValue<'a>,
+        slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         dest: PointerValue<'a>,
         function: FunctionValue<'a>,
@@ -945,7 +945,6 @@ impl<'a> Contract<'a> {
     ) {
         // FIXME: load arrays from storage
         if let resolver::Type::Struct(n) = ty {
-            let mut slot = slot;
             for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
                 let elem = unsafe {
                     self.builder.build_gep(
@@ -960,19 +959,70 @@ impl<'a> Contract<'a> {
 
                 self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
 
-                slot = self.builder.build_int_add(
-                    slot,
+                *slot = self.builder.build_int_add(
+                    *slot,
                     self.number_literal(256, &field.ty.storage_slots(self.ns)),
                     &field.name,
                 );
             }
         } else {
-            self.builder.build_store(slot_ptr, slot);
+            self.builder.build_store(slot_ptr, *slot);
 
             // TODO ewasm allocates 32 bytes here, even though we have just
             // allocated test. This can be folded into one allocation, if llvm
             // does not already fold it into one.
             runtime.get_storage(&self, function, slot_ptr, dest);
+        }
+    }
+
+    /// Recursively store a type to contract storage
+    fn storage_store(
+        &self,
+        ty: &resolver::Type,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
+        function: FunctionValue<'a>,
+        runtime: &dyn TargetRuntime,
+    ) {
+        // FIXME: store arrays to storage
+        if let resolver::Type::Struct(n) = ty {
+            for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
+                let elem = unsafe {
+                    self.builder.build_gep(
+                        dest.into_pointer_value(),
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(i as u64, false),
+                        ],
+                        &field.name,
+                    )
+                };
+
+                self.storage_store(&field.ty, slot, slot_ptr, elem.into(), function, runtime);
+
+                *slot = self.builder.build_int_add(
+                    *slot,
+                    self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                    &field.name,
+                );
+            }
+        } else {
+            self.builder.build_store(slot_ptr, *slot);
+
+            let dest = if dest.is_int_value() {
+                let m = self.builder.build_alloca(dest.get_type(), "");
+                self.builder.build_store(m, dest);
+
+                m
+            } else {
+                dest.into_pointer_value()
+            };
+
+            // TODO ewasm allocates 32 bytes here, even though we have just
+            // allocated test. This can be folded into one allocation, if llvm
+            // does not already fold it into one.
+            runtime.set_storage(&self, function, slot_ptr, dest);
         }
     }
 
@@ -1268,22 +1318,15 @@ impl<'a> Contract<'a> {
                             &bb_false,
                         );
                     }
-                    cfg::Instr::SetStorage { local, storage } => {
+                    cfg::Instr::SetStorage { ty, local, storage } => {
                         let value = w.vars[*local].value;
 
-                        let dest = if value.is_int_value() {
-                            let m = self.builder.build_alloca(value.get_type(), "");
-                            self.builder.build_store(m, value);
-
-                            m
-                        } else {
-                            value.into_pointer_value()
-                        };
-
-                        let slot = self.expression(storage, &w.vars, function, runtime);
+                        let mut slot = self
+                            .expression(storage, &w.vars, function, runtime)
+                            .into_int_value();
                         let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                        self.builder.build_store(slot_ptr, slot);
-                        runtime.set_storage(&self, function, slot_ptr, dest);
+
+                        self.storage_store(ty, &mut slot, slot_ptr, value, function, runtime);
                     }
                     cfg::Instr::AssertFailure {} => {
                         runtime.assert_failure(self);
