@@ -1509,6 +1509,7 @@ pub fn expression(
                         cfg.add(
                             vartab,
                             Instr::SetStorage {
+                                ty: v.ty.clone(),
                                 local: v.pos,
                                 storage: Expression::NumberLiteral(256, n.clone()),
                             },
@@ -1544,6 +1545,7 @@ pub fn expression(
                         cfg.add(
                             vartab,
                             Instr::SetStorage {
+                                ty: v.ty.clone(),
                                 local: v.pos,
                                 storage: Expression::NumberLiteral(256, n.clone()),
                             },
@@ -1577,6 +1579,7 @@ pub fn expression(
                         cfg.add(
                             vartab,
                             Instr::SetStorage {
+                                ty: v.ty.clone(),
                                 local: v.pos,
                                 storage: Expression::NumberLiteral(256, n.clone()),
                             },
@@ -1610,6 +1613,7 @@ pub fn expression(
                         cfg.add(
                             vartab,
                             Instr::SetStorage {
+                                ty: v.ty.clone(),
                                 local: v.pos,
                                 storage: Expression::NumberLiteral(256, n.clone()),
                             },
@@ -1657,6 +1661,7 @@ pub fn expression(
                             cfg.add(
                                 vartab,
                                 Instr::SetStorage {
+                                    ty: var.ty.clone(),
                                     local: var.pos,
                                     storage: Expression::NumberLiteral(256, n.clone()),
                                 },
@@ -1744,6 +1749,7 @@ pub fn expression(
                             cfg.add(
                                 vartab,
                                 Instr::SetStorage {
+                                    ty: *r_ty.clone(),
                                     local: pos,
                                     storage: var_expr,
                                 },
@@ -1908,6 +1914,7 @@ pub fn expression(
                             cfg.add(
                                 tab,
                                 Instr::SetStorage {
+                                    ty: v.ty.clone(),
                                     local: v.pos,
                                     storage: Expression::NumberLiteral(256, n.clone()),
                                 },
@@ -1996,6 +2003,7 @@ pub fn expression(
                                 cfg.add(
                                     tab,
                                     Instr::SetStorage {
+                                        ty: *r_ty.clone(),
                                         storage: var_expr,
                                         local: pos,
                                     },

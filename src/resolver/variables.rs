@@ -130,7 +130,7 @@ fn var_decl(
         name: s.name.name.to_string(),
         doc: s.doc.clone(),
         visibility,
-        ty,
+        ty: ty.clone(),
         var,
     };
 
@@ -160,6 +160,7 @@ fn var_decl(
                 cfg.add(
                     vartab,
                     Instr::SetStorage {
+                        ty,
                         local: var.pos,
                         storage: Expression::NumberLiteral(256, offset.clone()),
                     },
