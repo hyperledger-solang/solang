@@ -46,40 +46,41 @@ contract full_example {
 		return uint32(first_pid);
 	}
 
-	// Some fahrenheit/celcius conversions
+	/// Convert celcius to fahrenheit
 	function celcius2fahrenheit(int32 celcius) pure public returns (int32) {
 		int32 fahrenheit = celcius * 9 / 5 + 32;
 
 		return fahrenheit;
 	}
 
+	/// Convert fahrenheit to celcius
 	function fahrenheit2celcius(int32 fahrenheit) pure public returns (int32) {
 		return (fahrenheit - 32) * 5 / 9;
 	}
 
-	// is this number a power-of-two
+	/// is this number a power-of-two
 	function is_power_of_2(uint n) pure public returns (bool) {
 		return n != 0 && (n & (n - 1)) == 0;
 	}
 
-	// calculate the population count (number of set bits) using Brian Kerningham's way
+	/// calculate the population count (number of set bits) using Brian Kerningham's way
 	function population_count(uint n) pure public returns (uint count) {
 		for (count = 0; n != 0; count++) {
 			n &= (n - 1);
 		}
 	}
 
-	// calculate the power of base to exp
+	/// calculate the power of base to exp
 	function power(uint base, uint exp) pure public returns (uint) {
 		return base ** exp;
 	}
 
-	// returns true if the address is 0
+	/// returns true if the address is 0
 	function is_address_zero(address a) pure public returns (bool) {
 		return a == address(0);
 	}
 
-	// reverse the bytes in an array of 8 (endian swap)
+	/// reverse the bytes in an array of 8 (endian swap)
 	function byte8reverse(bytes8 input) public pure returns (bytes8 out) {
 		out = ((input << 56) & hex"ff00_0000_0000_0000") |
 			  ((input << 40) & hex"00ff_0000_0000_0000") |
@@ -91,7 +92,7 @@ contract full_example {
 			  ((input >> 56) & hex"0000_0000_0000_00ff");
 	}
 
-	// This mocks a pid state
+	/// This mocks a pid state
 	function get_pid_state(int64 _pid) pure private returns (State) {
 		int64 n = 8;
 		for (int16 i = 1; i < 10; ++i) {
@@ -105,7 +106,7 @@ contract full_example {
 		return State(n % int64(State.StateCount));
 	}
 
-	// Overloaded function with different return value!
+	/// Overloaded function with different return value!
 	function get_pid_state() view private returns (uint32) {
 		return reaped;
 	}
@@ -136,4 +137,44 @@ contract full_example {
 
 		return count;
 	}
-}
+
+	// cards
+	enum suit { club, diamonds, hearts, spades }
+    enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+    struct card {
+        value v;
+        suit s;
+    }
+
+    card card1 = card(value.two, suit.club);
+    card card2 = card({s: suit.club, v: value.two});
+
+    // This function does a lot of copying
+    function set_card1(card c) public returns (card previous) {
+        previous = card1;
+        card1 = c;
+    }
+
+	/// return the ace of spades
+	function ace_of_spaces() public pure returns (card) {
+		return card({s: suit.spades, v: value.ace });
+	}
+
+	/// score card
+    function score_card(card c) public pure returns (uint32 score) {
+        if (c.s == suit.hearts) {
+            if (c.v == value.ace) {
+                score = 14;
+            }
+            if (c.v == value.king) {
+                score = 13;
+            }
+            if (c.v == value.queen) {
+                score = 12;
+            }
+            if (c.v == value.jack) {
+                score = 11;
+            }
+        }
+        // all others score 0
+    }}
