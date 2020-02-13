@@ -7,6 +7,7 @@ use num_traits::ToPrimitive;
 use num_traits::Zero;
 use std::cmp;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Mul;
 use unescape::unescape;
@@ -2092,8 +2093,7 @@ pub fn expression(
                 _ => {}
             }
 
-            // FIXME: function call
-            unimplemented!();
+            function_call_with_named_arguments(loc, ty, args, cfg, ns, vartab, errors)
         }
         ast::Expression::FunctionCall(loc, ty, args) => {
             match ns.resolve_type(ty, None) {
@@ -2761,6 +2761,157 @@ pub fn expression(
     }
 }
 
+/// Resolve a function call with named arguments
+fn function_call_with_named_arguments(
+    loc: &ast::Loc,
+    ty: &ast::Type,
+    args: &[ast::NamedArgument],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // Try to resolve as a function call
+    let funcs = match ty {
+        ast::Type::Unresolved(_, dim) if !dim.is_empty() => {
+            errors.push(Output::error(*loc, "unexpected array type".to_string()));
+            return Err(());
+        }
+        ast::Type::Unresolved(s, _) => ns.resolve_func(s, errors)?,
+        _ => unreachable!(),
+    };
+
+    let mut arguments = HashMap::new();
+
+    for arg in args {
+        arguments.insert(
+            arg.name.name.to_string(),
+            expression(&arg.expr, cfg, ns, vartab, errors)?,
+        );
+    }
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot call function in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let mut temp_errors = Vec::new();
+
+    // function call
+    for f in funcs {
+        let func = &ns.functions[f.1];
+
+        if func.params.len() != args.len() {
+            temp_errors.push(Output::error(
+                *loc,
+                format!(
+                    "function expects {} arguments, {} provided",
+                    func.params.len(),
+                    args.len()
+                ),
+            ));
+            continue;
+        }
+
+        let mut matches = true;
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for param in func.params.iter() {
+            let arg = match arguments.get(&param.name) {
+                Some(a) => a,
+                None => {
+                    matches = false;
+                    temp_errors.push(Output::error(
+                        *loc,
+                        format!(
+                            "missing argument ‘{}’ to function ‘{}’",
+                            param.name, func.name,
+                        ),
+                    ));
+                    break;
+                }
+            };
+
+            match cast(
+                &ast::Loc(0, 0),
+                arg.0.clone(),
+                &arg.1,
+                &param.ty,
+                true,
+                ns,
+                &mut temp_errors,
+            ) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    break;
+                }
+            }
+        }
+
+        if !matches {
+            continue;
+        }
+
+        // .. what about return value?
+        if func.returns.len() > 1 {
+            errors.push(Output::error(
+                *loc,
+                "in expression context a function cannot return more than one value".to_string(),
+            ));
+            return Err(());
+        }
+
+        if !func.returns.is_empty() {
+            let ty = &func.returns[0].ty;
+            let id = ast::Identifier {
+                loc: ast::Loc(0, 0),
+                name: "".to_owned(),
+            };
+            let temp_pos = tab.temp(&id, ty);
+
+            cfg.add(
+                tab,
+                Instr::Call {
+                    res: vec![temp_pos],
+                    func: f.1,
+                    args: cast_args,
+                },
+            );
+
+            return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+        } else {
+            cfg.add(
+                tab,
+                Instr::Call {
+                    res: Vec::new(),
+                    func: f.1,
+                    args: cast_args,
+                },
+            );
+
+            return Ok((Expression::Poison, resolver::Type::Undef));
+        }
+    }
+
+    if funcs.len() == 1 {
+        errors.append(&mut temp_errors);
+    } else {
+        errors.push(Output::error(
+            *loc,
+            "cannot find overloaded function which matches signature".to_string(),
+        ));
+    }
+
+    Err(())
+}
 // When generating shifts, llvm wants both arguments to have the same width. We want the
 // result of the shift to be left argument, so this function coercies the right argument
 // into the right length.
