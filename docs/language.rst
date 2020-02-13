@@ -248,6 +248,119 @@ is numbered from 0, like in C and Rust.
   The Ethereum Foundation Solidity compiler supports additional data types:
   bytes and string. These will be implemented in Solang in early 2020.
 
+Struct Type
+___________
+
+A struct is composite type of several other types. This is used to group related items together. before
+a struct can be used, the struct must be defined. Then the name of the struct can then be used as a
+type itself. For example:
+
+.. code-block:: javascript
+
+  contract deck {
+      enum suit { club, diamonds, hearts, spades }
+      enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+      struct card {
+          value v;
+          suit s;
+      }
+
+      function score(card s) public returns (uint32 score) {
+          if (s.suit == suit.hearts) {
+              if (s.value == value.ace) {
+                  score = 14;
+              }
+              if (s.value == value.king) {
+                  score = 13;
+              }
+              if (s.value == value.queen) {
+                  score = 12;
+              }
+              if (s.value == value.jack) {
+                  score = 11;
+              }
+          }
+          // all others score 0
+      }
+  }
+
+A struct has one or more fields, each with a unique name. Structs can be function arguments and return
+values. Structs can contain other structs. There is a struct literal syntax to create a struct with
+all the fields set.
+
+.. code-block:: javascript
+
+  contract deck {
+      enum suit { club, diamonds, hearts, spades }
+      enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+      struct card {
+          value v;
+          suit s;
+      }
+
+      card card1 = card(value.two, suit.club);
+      card card2 = card({s: suit.club, v: value.two});
+
+      // This function does a lot of copying
+      function set_card1(card c) public returns (card previous) {
+          previous = card1;
+          card1 = c;
+      }
+  }
+
+The two contract storage variables ``card1`` and ``card2`` have initializers using struct literals. Struct
+literals can either set fields by their position, or field name. In either syntax, all the fields must
+be specified. When specifying structs fields by position, it is more likely that the wrong field gets
+set to the wrong value. In the example of the card, if the order is wrong then the compiler will give
+an errors because the field type does no match; setting a ``suit`` enum field with ``value`` enum
+is not permitted. However, if both fields were the of the same type, then the compiler would have no
+way of knowing if the fields are in the intended order.
+
+Structs can be contract storage variables. Structs in contract storage can be assigned to structs
+in memory and vice versa, like in the *set_card1()* function. Copying structs is expensive; code has
+to be generated for each field and executed.
+
+- The function argument ``c`` has to ABI decoded (1 copy + decoding overhead)
+- The ``card1`` has to load from contract storage (1 copy + contract storage overhead)
+- The ``c`` has to be stored into contract storage (1 copy + contract storage overhead)
+- The ``pervious`` struct has to ABI encoded (1 copy + encoding overhead)
+
+Note that struct variables are references. When contract struct variables or normal struct variables
+are passed around, just the memory address or storage slot is passed around internally. This makes
+it very cheap, but it does mean that if the called function modifies the struct, then this is
+visible in the callee as well.
+
+.. code-block:: javascript
+
+  context foo {
+      struct bar {
+          bytes32 f1;
+          bytes32 f2;
+          bytes32 f3;
+          bytes32 f4;
+      }
+
+      function f(struct bar b) public {
+          b.f4 = hex"foobar";
+      }
+
+      function example() public {
+          bar bar1;
+
+          // bar1 is passed by reference; just its address is passed
+          f(bar1);
+
+          assert(bar.f4 == hex"foobar");
+      }
+  }
+
+.. note::
+  
+  In the Ethereum Foundation Solidity compiler, you need to add ``pragma experimental ABIEncoderV2;``
+  to use structs as return values or function arguments in public functions. The default ABI encoder
+  of Solang can handle structs, so there is no need for this pragma. The Solang compiler ignores
+  this pragma if present.
+
 Fixed Length Arrays
 ___________________
 
