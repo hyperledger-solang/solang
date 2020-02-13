@@ -441,3 +441,91 @@ fn args_and_returns() {
 
     assert_eq!(store.scratch, Val32(553).encode());
 }
+
+#[test]
+fn named_argument_call() {
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo({ arg1: false });
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "function expects 2 arguments, 1 provided"
+    );
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo[1]({ arg1: false });
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "unexpected array type");
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo({ arg1: false, arg3: 1 });
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "missing argument ‘arg2’ to function ‘foo’"
+    );
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo({ arg1: false, arg2: true });
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "conversion from bool to uint256 not possible"
+    );
+
+    let (runtime, mut store) = build_solidity(
+        "
+        contract foobar {
+            function foo1(bool x) public returns (int32 a) {
+                return 2;
+            }
+
+            function foo1(uint32 x) public returns (int32 a) {
+                return 1;
+            }
+
+            function test() public {
+                assert(foo1(true) == 2);
+                assert(foo1(102) == 1);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

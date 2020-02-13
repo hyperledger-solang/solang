@@ -777,6 +777,26 @@ but it can be called from within the contract.
 Any DocComment before a function will be include in the ABI. Currently only Substrate
 supports documentation in the ABI.
 
+Calling Functions
+_________________
+
+Function arguments can be passed either by position or by name. When they are called
+by name, arguments can be in any order. However, functions with anonymous arguments
+(arguments without name) cannot be called this way.
+
+.. code-block:: javascript
+
+  contract foo {
+      function bar(uint32 x, bool y) {
+          // ...
+      }
+
+      function test() {
+          bar(102, false);
+          bar({ y: true, x: 302 });
+      }
+  }
+
 Function overloading
 ____________________
 
