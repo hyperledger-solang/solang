@@ -1350,7 +1350,7 @@ impl resolver::Type {
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::FixedArray(_, _) => unreachable!(),
-            resolver::Type::Struct(_) => unreachable!(),
+            resolver::Type::Struct(_) => Expression::StructLiteral(self.clone(), Vec::new()),
             resolver::Type::Ref(_) => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
         }
