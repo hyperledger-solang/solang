@@ -23,7 +23,7 @@ impl EthAbiEncoder {
     ) {
         match &ty {
             resolver::Type::Primitive(e) => {
-                self.encode_primitive(contract, e, *data, arg);
+                self.encode_primitive(contract, *e, *data, arg);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -34,7 +34,7 @@ impl EthAbiEncoder {
                 };
             }
             resolver::Type::Enum(n) => {
-                self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
+                self.encode_primitive(contract, contract.ns.enums[*n].ty, *data, arg);
             }
             resolver::Type::FixedArray(_, dim) => {
                 contract.emit_static_loop(
@@ -90,7 +90,7 @@ impl EthAbiEncoder {
     fn encode_primitive(
         &self,
         contract: &Contract,
-        ty: &ast::PrimitiveType,
+        ty: ast::PrimitiveType,
         dest: PointerValue,
         val: BasicValueEnum,
     ) {
@@ -192,8 +192,8 @@ impl EthAbiEncoder {
             | ast::PrimitiveType::Int(_) => {
                 let n = match ty {
                     ast::PrimitiveType::Address => 160,
-                    ast::PrimitiveType::Uint(b) => *b,
-                    ast::PrimitiveType::Int(b) => *b,
+                    ast::PrimitiveType::Uint(b) => b,
+                    ast::PrimitiveType::Int(b) => b,
                     _ => unreachable!(),
                 };
 
@@ -304,7 +304,7 @@ impl EthAbiEncoder {
             }
             ast::PrimitiveType::Bytes(b) => {
                 // first clear/set the upper bits
-                if *b < 32 {
+                if b < 32 {
                     let dest8 = contract.builder.build_pointer_cast(
                         dest,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -323,7 +323,7 @@ impl EthAbiEncoder {
 
                 // no need to allocate space for each uint64
                 // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
+                let int_type = contract.context.custom_width_int_type(b as u32 * 8);
                 let type_size = int_type.size_of();
 
                 let store = if val.is_pointer_value() {

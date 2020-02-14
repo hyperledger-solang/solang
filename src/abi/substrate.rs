@@ -427,7 +427,7 @@ fn ty_to_abi(
         resolver::Type::StorageRef(ty) => ty_to_abi(ty, contract, registry),
         resolver::Type::Ref(ty) => ty_to_abi(ty, contract, registry),
         resolver::Type::Primitive(p) => {
-            let scalety = primitive_to_string(p);
+            let scalety = primitive_to_string(*p);
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
@@ -454,7 +454,7 @@ fn ty_to_abi(
 
 // For a given primitive, give the name as Substrate would like it (i.e. 64 bits
 // signed int is i64, not int64).
-fn primitive_to_string(ty: &ast::PrimitiveType) -> String {
+fn primitive_to_string(ty: ast::PrimitiveType) -> String {
     match ty {
         ast::PrimitiveType::Bool => "bool".into(),
         ast::PrimitiveType::Uint(n) => format!("u{}", n),
