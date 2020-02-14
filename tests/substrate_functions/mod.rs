@@ -521,6 +521,77 @@ fn named_argument_call() {
             }
 
             function test() public {
+                assert(foo1({ x: true }) == 2);
+                assert(foo1({ x: 102 }) == 1);
+            }
+        }",
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn positional_argument_call() {
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo(false);
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "function expects 2 arguments, 1 provided"
+    );
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo[1](false, 1);
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(first_error(errors), "unexpected array type");
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
+            foo(1, false);
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "conversion from uint8 to bool not possible"
+    );
+
+    let (runtime, mut store) = build_solidity(
+        "
+        contract foobar {
+            function foo1(bool x) public returns (int32 a) {
+                return 2;
+            }
+
+            function foo1(uint32 x) public returns (int32 a) {
+                return 1;
+            }
+
+            function test() public {
                 assert(foo1(true) == 2);
                 assert(foo1(102) == 1);
             }
