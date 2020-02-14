@@ -1,3 +1,4 @@
+use link::link;
 use resolver;
 use std::str;
 
@@ -10,6 +11,7 @@ use inkwell::AddressSpace;
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime};
+use crate::Target;
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiEncoder,
@@ -37,7 +39,8 @@ impl EwasmTarget {
 
         b.emit_function_dispatch(&runtime_code);
 
-        let runtime_bs = runtime_code.wasm(opt).unwrap();
+        let runtime_obj = runtime_code.wasm(opt).unwrap();
+        let runtime_bs = link(&runtime_obj, &Target::Ewasm);
 
         // Now we have the runtime code, create the deployer
         let mut deploy_code =
