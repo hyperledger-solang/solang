@@ -2153,131 +2153,7 @@ pub fn expression(
                 Err(_) => {}
             }
 
-            let funcs = if let ast::Type::Unresolved(s, _) = ty {
-                ns.resolve_func(s, errors)?
-            } else {
-                unreachable!();
-            };
-
-            let mut resolved_args = Vec::new();
-            let mut resolved_types = Vec::new();
-
-            for arg in args {
-                let (expr, expr_type) = expression(arg, cfg, ns, vartab, errors)?;
-
-                resolved_args.push(Box::new(expr));
-                resolved_types.push(expr_type);
-            }
-
-            let tab = match vartab {
-                &mut Some(ref mut tab) => tab,
-                None => {
-                    errors.push(Output::error(
-                        *loc,
-                        "cannot call function in constant expression".to_string(),
-                    ));
-                    return Err(());
-                }
-            };
-
-            let mut temp_errors = Vec::new();
-
-            // function call
-            for f in funcs {
-                let func = &ns.functions[f.1];
-
-                if func.params.len() != args.len() {
-                    temp_errors.push(Output::error(
-                        *loc,
-                        format!(
-                            "function expects {} arguments, {} provided",
-                            func.params.len(),
-                            args.len()
-                        ),
-                    ));
-                    continue;
-                }
-
-                let mut matches = true;
-                let mut cast_args = Vec::new();
-
-                // check if arguments can be implicitly casted
-                for (i, param) in func.params.iter().enumerate() {
-                    let arg = &resolved_args[i];
-
-                    match cast(
-                        &ast::Loc(0, 0),
-                        *arg.clone(),
-                        &resolved_types[i],
-                        &param.ty,
-                        true,
-                        ns,
-                        &mut temp_errors,
-                    ) {
-                        Ok(expr) => cast_args.push(expr),
-                        Err(()) => {
-                            matches = false;
-                            break;
-                        }
-                    }
-                }
-
-                if !matches {
-                    continue;
-                }
-
-                // .. what about return value?
-                if func.returns.len() > 1 {
-                    errors.push(Output::error(
-                        *loc,
-                        "in expression context a function cannot return more than one value"
-                            .to_string(),
-                    ));
-                    return Err(());
-                }
-
-                if !func.returns.is_empty() {
-                    let ty = &func.returns[0].ty;
-                    let id = ast::Identifier {
-                        loc: ast::Loc(0, 0),
-                        name: "".to_owned(),
-                    };
-                    let temp_pos = tab.temp(&id, ty);
-
-                    cfg.add(
-                        tab,
-                        Instr::Call {
-                            res: vec![temp_pos],
-                            func: f.1,
-                            args: cast_args,
-                        },
-                    );
-
-                    return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
-                } else {
-                    cfg.add(
-                        tab,
-                        Instr::Call {
-                            res: Vec::new(),
-                            func: f.1,
-                            args: cast_args,
-                        },
-                    );
-
-                    return Ok((Expression::Poison, resolver::Type::Undef));
-                }
-            }
-
-            if funcs.len() == 1 {
-                errors.append(&mut temp_errors);
-            } else {
-                errors.push(Output::error(
-                    *loc,
-                    "cannot find overloaded function which matches signature".to_string(),
-                ));
-            }
-
-            Err(())
+            function_call_with_positional_arguments(loc, ty, args, cfg, ns, vartab, errors)
         }
         ast::Expression::ArraySubscript(loc, _, None) => {
             errors.push(Output::error(
@@ -2759,6 +2635,146 @@ pub fn expression(
         }
         _ => panic!("unimplemented: {:?}", expr),
     }
+}
+
+/// Resolve a function call with positional arguments
+fn function_call_with_positional_arguments(
+    loc: &ast::Loc,
+    ty: &ast::Type,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // Try to resolve as a function call
+    let funcs = match ty {
+        ast::Type::Unresolved(_, dim) if !dim.is_empty() => {
+            errors.push(Output::error(*loc, "unexpected array type".to_string()));
+            return Err(());
+        }
+        ast::Type::Unresolved(s, _) => ns.resolve_func(s, errors)?,
+        _ => unreachable!(),
+    };
+
+    let mut resolved_args = Vec::new();
+    let mut resolved_types = Vec::new();
+
+    for arg in args {
+        let (expr, expr_type) = expression(arg, cfg, ns, vartab, errors)?;
+
+        resolved_args.push(Box::new(expr));
+        resolved_types.push(expr_type);
+    }
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot call function in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let mut temp_errors = Vec::new();
+
+    // function call
+    for f in funcs {
+        let func = &ns.functions[f.1];
+
+        if func.params.len() != args.len() {
+            temp_errors.push(Output::error(
+                *loc,
+                format!(
+                    "function expects {} arguments, {} provided",
+                    func.params.len(),
+                    args.len()
+                ),
+            ));
+            continue;
+        }
+
+        let mut matches = true;
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for (i, param) in func.params.iter().enumerate() {
+            let arg = &resolved_args[i];
+
+            match cast(
+                &ast::Loc(0, 0),
+                *arg.clone(),
+                &resolved_types[i],
+                &param.ty,
+                true,
+                ns,
+                &mut temp_errors,
+            ) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    break;
+                }
+            }
+        }
+
+        if !matches {
+            continue;
+        }
+
+        // .. what about return value?
+        if func.returns.len() > 1 {
+            errors.push(Output::error(
+                *loc,
+                "in expression context a function cannot return more than one value".to_string(),
+            ));
+            return Err(());
+        }
+
+        if !func.returns.is_empty() {
+            let ty = &func.returns[0].ty;
+            let id = ast::Identifier {
+                loc: ast::Loc(0, 0),
+                name: "".to_owned(),
+            };
+            let temp_pos = tab.temp(&id, ty);
+
+            cfg.add(
+                tab,
+                Instr::Call {
+                    res: vec![temp_pos],
+                    func: f.1,
+                    args: cast_args,
+                },
+            );
+
+            return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+        } else {
+            cfg.add(
+                tab,
+                Instr::Call {
+                    res: Vec::new(),
+                    func: f.1,
+                    args: cast_args,
+                },
+            );
+
+            return Ok((Expression::Poison, resolver::Type::Undef));
+        }
+    }
+
+    if funcs.len() == 1 {
+        errors.append(&mut temp_errors);
+    } else {
+        errors.push(Output::error(
+            *loc,
+            "cannot find overloaded function which matches signature".to_string(),
+        ));
+    }
+
+    Err(())
 }
 
 /// Resolve a function call with named arguments
