@@ -261,8 +261,6 @@ pub enum LexicalError {
     InvalidCharacterInHexLiteral(usize, char),
     UnrecognisedToken(usize, usize, String),
     PragmaMissingSemiColon(usize, usize),
-    UnexpectedExpressionArrayDimension(usize, usize),
-    NonIdentifierInTypeName(usize, usize),
 }
 
 impl fmt::Display for LexicalError {
@@ -283,10 +281,6 @@ impl fmt::Display for LexicalError {
             LexicalError::PragmaMissingSemiColon(_, _) => {
                 write!(f, "pragma is missing terminating ‘;’")
             }
-            LexicalError::UnexpectedExpressionArrayDimension(_, _) => {
-                write!(f, "array size should be a constant number")
-            }
-            LexicalError::NonIdentifierInTypeName(_, _) => write!(f, "expecting type name"),
         }
     }
 }
@@ -301,8 +295,6 @@ impl LexicalError {
             LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(*pos, *pos),
             LexicalError::UnrecognisedToken(start, end, _) => Loc(*start, *end),
             LexicalError::PragmaMissingSemiColon(start, end) => Loc(*start, *end),
-            LexicalError::UnexpectedExpressionArrayDimension(start, end) => Loc(*start, *end),
-            LexicalError::NonIdentifierInTypeName(start, end) => Loc(*start, *end),
         }
     }
 }

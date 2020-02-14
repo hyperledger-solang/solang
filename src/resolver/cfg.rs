@@ -129,18 +129,18 @@ impl ControlFlowGraph {
 
     pub fn expr_to_string(&self, ns: &resolver::Contract, expr: &Expression) -> String {
         match expr {
-            Expression::BoolLiteral(false) => "false".to_string(),
-            Expression::BoolLiteral(true) => "true".to_string(),
-            Expression::BytesLiteral(s) => format!("hex\"{}\"", hex::encode(s)),
-            Expression::NumberLiteral(bits, n) => format!("i{} {}", bits, n.to_str_radix(10)),
-            Expression::StructLiteral(_, expr) => format!(
+            Expression::BoolLiteral(_, false) => "false".to_string(),
+            Expression::BoolLiteral(_, true) => "true".to_string(),
+            Expression::BytesLiteral(_, s) => format!("hex\"{}\"", hex::encode(s)),
+            Expression::NumberLiteral(_, bits, n) => format!("i{} {}", bits, n.to_str_radix(10)),
+            Expression::StructLiteral(_, _, expr) => format!(
                 "struct {{ {} }}",
                 expr.iter()
                     .map(|e| self.expr_to_string(ns, e))
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::ConstArrayLiteral(dims, exprs) => format!(
+            Expression::ConstArrayLiteral(_, dims, exprs) => format!(
                 "constant {} [ {} ]",
                 dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
                 exprs
@@ -149,7 +149,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::ArrayLiteral(_, dims, exprs) => format!(
+            Expression::ArrayLiteral(_, _, dims, exprs) => format!(
                 "{} [ {} ]",
                 dims.iter().map(|d| format!("[{}]", d)).collect::<String>(),
                 exprs
@@ -158,156 +158,156 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Add(l, r) => format!(
+            Expression::Add(_, l, r) => format!(
                 "({} + {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Subtract(l, r) => format!(
+            Expression::Subtract(_, l, r) => format!(
                 "({} - {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::BitwiseOr(l, r) => format!(
+            Expression::BitwiseOr(_, l, r) => format!(
                 "({} | {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::BitwiseAnd(l, r) => format!(
+            Expression::BitwiseAnd(_, l, r) => format!(
                 "({} & {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::BitwiseXor(l, r) => format!(
+            Expression::BitwiseXor(_, l, r) => format!(
                 "({} ^ {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::ShiftLeft(l, r) => format!(
+            Expression::ShiftLeft(_, l, r) => format!(
                 "({} << {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::ShiftRight(l, r, _) => format!(
+            Expression::ShiftRight(_, l, r, _) => format!(
                 "({} >> {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Multiply(l, r) => format!(
+            Expression::Multiply(_, l, r) => format!(
                 "({} * {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::UDivide(l, r) | Expression::SDivide(l, r) => format!(
+            Expression::UDivide(_, l, r) | Expression::SDivide(_, l, r) => format!(
                 "({} / {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::UModulo(l, r) | Expression::SModulo(l, r) => format!(
+            Expression::UModulo(_, l, r) | Expression::SModulo(_, l, r) => format!(
                 "({} % {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Power(l, r) => format!(
+            Expression::Power(_, l, r) => format!(
                 "({} ** {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
             Expression::Variable(_, res) => format!("%{}", self.vars[*res].id.name),
-            Expression::Load(expr) => format!("*{}", self.expr_to_string(ns, expr)),
-            Expression::StorageLoad(ty, expr) => format!(
+            Expression::Load(_, expr) => format!("*{}", self.expr_to_string(ns, expr)),
+            Expression::StorageLoad(_, ty, expr) => format!(
                 "({} storage[{}])",
                 ty.to_string(ns),
                 self.expr_to_string(ns, expr)
             ),
-            Expression::ZeroExt(ty, e) => {
+            Expression::ZeroExt(_, ty, e) => {
                 format!("(zext {} {})", ty.to_string(ns), self.expr_to_string(ns, e))
             }
-            Expression::SignExt(ty, e) => {
+            Expression::SignExt(_, ty, e) => {
                 format!("(sext {} {})", ty.to_string(ns), self.expr_to_string(ns, e))
             }
-            Expression::Trunc(ty, e) => format!(
+            Expression::Trunc(_, ty, e) => format!(
                 "(trunc {} {})",
                 ty.to_string(ns),
                 self.expr_to_string(ns, e)
             ),
-            Expression::SMore(l, r) => format!(
+            Expression::SMore(_, l, r) => format!(
                 "({} >(s) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::SLess(l, r) => format!(
+            Expression::SLess(_, l, r) => format!(
                 "({} <(s) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::SMoreEqual(l, r) => format!(
+            Expression::SMoreEqual(_, l, r) => format!(
                 "({} >=(s) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::SLessEqual(l, r) => format!(
+            Expression::SLessEqual(_, l, r) => format!(
                 "({} <=(s) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::UMore(l, r) => format!(
+            Expression::UMore(_, l, r) => format!(
                 "({} >(u) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::ULess(l, r) => format!(
+            Expression::ULess(_, l, r) => format!(
                 "({} <(u) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::UMoreEqual(l, r) => format!(
+            Expression::UMoreEqual(_, l, r) => format!(
                 "({} >=(u) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::ULessEqual(l, r) => format!(
+            Expression::ULessEqual(_, l, r) => format!(
                 "({} <=(u) {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Equal(l, r) => format!(
+            Expression::Equal(_, l, r) => format!(
                 "({} == {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::NotEqual(l, r) => format!(
+            Expression::NotEqual(_, l, r) => format!(
                 "({} != {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::ArraySubscript(a, i) => format!(
+            Expression::ArraySubscript(_, a, i) => format!(
                 "%{}[{}]",
                 self.expr_to_string(ns, a),
                 self.expr_to_string(ns, i)
             ),
-            Expression::StructMember(a, f) => {
+            Expression::StructMember(_, a, f) => {
                 format!("%{} field {}", self.expr_to_string(ns, a), f)
             }
-            Expression::Or(l, r) => format!(
+            Expression::Or(_, l, r) => format!(
                 "({} || {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::And(l, r) => format!(
+            Expression::And(_, l, r) => format!(
                 "({} && {})",
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Ternary(c, l, r) => format!(
+            Expression::Ternary(_, c, l, r) => format!(
                 "({} ? {} : {})",
                 self.expr_to_string(ns, c),
                 self.expr_to_string(ns, l),
                 self.expr_to_string(ns, r)
             ),
-            Expression::Not(e) => format!("!{}", self.expr_to_string(ns, e)),
-            Expression::Complement(e) => format!("~{}", self.expr_to_string(ns, e)),
-            Expression::UnaryMinus(e) => format!("-{}", self.expr_to_string(ns, e)),
+            Expression::Not(_, e) => format!("!{}", self.expr_to_string(ns, e)),
+            Expression::Complement(_, e) => format!("~{}", self.expr_to_string(ns, e)),
+            Expression::UnaryMinus(_, e) => format!("-{}", self.expr_to_string(ns, e)),
             Expression::Poison => "☠".to_string(),
         }
     }
@@ -564,7 +564,7 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let mut var_ty = ns.resolve_type(&decl.typ, Some(errors))?;
+            let mut var_ty = ns.resolve_type(&decl.typ, errors)?;
 
             if let Some(storage) = &decl.storage {
                 if !var_ty.can_have_data_location() {
@@ -1350,7 +1350,9 @@ impl resolver::Type {
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::FixedArray(_, _) => unreachable!(),
-            resolver::Type::Struct(_) => Expression::StructLiteral(self.clone(), Vec::new()),
+            resolver::Type::Struct(_) => {
+                Expression::StructLiteral(ast::Loc(0, 0), self.clone(), Vec::new())
+            }
             resolver::Type::Ref(_) => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
         }
@@ -1361,14 +1363,16 @@ impl ast::PrimitiveType {
     fn default(self) -> Expression {
         match self {
             ast::PrimitiveType::Uint(b) | ast::PrimitiveType::Int(b) => {
-                Expression::NumberLiteral(b, BigInt::from(0))
+                Expression::NumberLiteral(ast::Loc(0, 0), b, BigInt::from(0))
             }
-            ast::PrimitiveType::Bool => Expression::BoolLiteral(false),
-            ast::PrimitiveType::Address => Expression::NumberLiteral(160, BigInt::from(0)),
+            ast::PrimitiveType::Bool => Expression::BoolLiteral(ast::Loc(0, 0), false),
+            ast::PrimitiveType::Address => {
+                Expression::NumberLiteral(ast::Loc(0, 0), 160, BigInt::from(0))
+            }
             ast::PrimitiveType::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(n as usize, 0);
-                Expression::BytesLiteral(l)
+                Expression::BytesLiteral(ast::Loc(0, 0), l)
             }
             ast::PrimitiveType::DynamicBytes => unimplemented!(),
             ast::PrimitiveType::String => unimplemented!(),

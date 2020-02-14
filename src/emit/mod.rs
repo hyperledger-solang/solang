@@ -300,13 +300,13 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
-            Expression::BoolLiteral(val) => self
+            Expression::BoolLiteral(_, val) => self
                 .context
                 .bool_type()
                 .const_int(*val as u64, false)
                 .into(),
-            Expression::NumberLiteral(bits, n) => self.number_literal(*bits as u32, n).into(),
-            Expression::StructLiteral(ty, exprs) => {
+            Expression::NumberLiteral(_, bits, n) => self.number_literal(*bits as u32, n).into(),
+            Expression::StructLiteral(_, ty, exprs) => {
                 let s = self
                     .builder
                     .build_alloca(ty.llvm_type(self.ns, self.context), "struct");
@@ -329,7 +329,7 @@ impl<'a> Contract<'a> {
 
                 s.into()
             }
-            Expression::BytesLiteral(bs) => {
+            Expression::BytesLiteral(_, bs) => {
                 let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
 
                 // hex"11223344" should become i32 0x11223344
@@ -339,7 +339,7 @@ impl<'a> Contract<'a> {
                     .unwrap()
                     .into()
             }
-            Expression::Add(l, r) => {
+            Expression::Add(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -349,7 +349,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_add(left, right, "").into()
             }
-            Expression::Subtract(l, r) => {
+            Expression::Subtract(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -359,7 +359,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_sub(left, right, "").into()
             }
-            Expression::Multiply(l, r) => {
+            Expression::Multiply(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -414,7 +414,7 @@ impl<'a> Contract<'a> {
                     self.builder.build_int_mul(left, right, "").into()
                 }
             }
-            Expression::UDivide(l, r) => {
+            Expression::UDivide(_, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -438,7 +438,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::SDivide(l, r) => {
+            Expression::SDivide(_, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -460,7 +460,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::UModulo(l, r) => {
+            Expression::UModulo(_, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -481,7 +481,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::SModulo(l, r) => {
+            Expression::SModulo(_, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -502,7 +502,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::Power(l, r) => {
+            Expression::Power(_, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -516,7 +516,7 @@ impl<'a> Contract<'a> {
                     .left()
                     .unwrap()
             }
-            Expression::Equal(l, r) => {
+            Expression::Equal(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -528,7 +528,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::EQ, left, right, "")
                     .into()
             }
-            Expression::NotEqual(l, r) => {
+            Expression::NotEqual(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -540,7 +540,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::NE, left, right, "")
                     .into()
             }
-            Expression::SMore(l, r) => {
+            Expression::SMore(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -552,7 +552,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SGT, left, right, "")
                     .into()
             }
-            Expression::SMoreEqual(l, r) => {
+            Expression::SMoreEqual(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -564,7 +564,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SGE, left, right, "")
                     .into()
             }
-            Expression::SLess(l, r) => {
+            Expression::SLess(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -576,7 +576,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SLT, left, right, "")
                     .into()
             }
-            Expression::SLessEqual(l, r) => {
+            Expression::SLessEqual(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -588,7 +588,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::SLE, left, right, "")
                     .into()
             }
-            Expression::UMore(l, r) => {
+            Expression::UMore(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -600,7 +600,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::UGT, left, right, "")
                     .into()
             }
-            Expression::UMoreEqual(l, r) => {
+            Expression::UMoreEqual(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -612,7 +612,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::UGE, left, right, "")
                     .into()
             }
-            Expression::ULess(l, r) => {
+            Expression::ULess(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -624,7 +624,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::ULT, left, right, "")
                     .into()
             }
-            Expression::ULessEqual(l, r) => {
+            Expression::ULessEqual(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -644,14 +644,14 @@ impl<'a> Contract<'a> {
                     vartab[*s].value
                 }
             }
-            Expression::Load(e) => {
+            Expression::Load(_, e) => {
                 let expr = self
                     .expression(e, vartab, function, runtime)
                     .into_pointer_value();
 
                 self.builder.build_load(expr, "")
             }
-            Expression::StorageLoad(ty, e) => {
+            Expression::StorageLoad(_, ty, e) => {
                 let dest = self
                     .builder
                     .build_alloca(ty.llvm_type(self.ns, &self.context), "storage_load_temp");
@@ -669,7 +669,7 @@ impl<'a> Contract<'a> {
                     self.builder.build_load(dest, "")
                 }
             }
-            Expression::ZeroExt(t, e) => {
+            Expression::ZeroExt(_, t, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
@@ -679,14 +679,14 @@ impl<'a> Contract<'a> {
                     .build_int_z_extend(e, ty.into_int_type(), "")
                     .into()
             }
-            Expression::UnaryMinus(e) => {
+            Expression::UnaryMinus(_, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
 
                 self.builder.build_int_neg(e, "").into()
             }
-            Expression::SignExt(t, e) => {
+            Expression::SignExt(_, t, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
@@ -696,7 +696,7 @@ impl<'a> Contract<'a> {
                     .build_int_s_extend(e, ty.into_int_type(), "")
                     .into()
             }
-            Expression::Trunc(t, e) => {
+            Expression::Trunc(_, t, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
@@ -706,7 +706,7 @@ impl<'a> Contract<'a> {
                     .build_int_truncate(e, ty.into_int_type(), "")
                     .into()
             }
-            Expression::Not(e) => {
+            Expression::Not(_, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
@@ -715,14 +715,14 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
                     .into()
             }
-            Expression::Complement(e) => {
+            Expression::Complement(_, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
 
                 self.builder.build_not(e, "").into()
             }
-            Expression::Or(l, r) => {
+            Expression::Or(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -732,7 +732,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_or(left, right, "").into()
             }
-            Expression::And(l, r) => {
+            Expression::And(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -742,7 +742,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_and(left, right, "").into()
             }
-            Expression::BitwiseOr(l, r) => {
+            Expression::BitwiseOr(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -752,7 +752,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_or(left, right, "").into()
             }
-            Expression::BitwiseAnd(l, r) => {
+            Expression::BitwiseAnd(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -762,7 +762,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_and(left, right, "").into()
             }
-            Expression::BitwiseXor(l, r) => {
+            Expression::BitwiseXor(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -772,7 +772,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_xor(left, right, "").into()
             }
-            Expression::ShiftLeft(l, r) => {
+            Expression::ShiftLeft(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -782,7 +782,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_left_shift(left, right, "").into()
             }
-            Expression::ShiftRight(l, r, signed) => {
+            Expression::ShiftRight(_, l, r, signed) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -794,7 +794,7 @@ impl<'a> Contract<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::ArraySubscript(a, i) => {
+            Expression::ArraySubscript(_, a, i) => {
                 let array = self
                     .expression(a, vartab, function, runtime)
                     .into_pointer_value();
@@ -812,7 +812,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::StructMember(a, i) => {
+            Expression::StructMember(_, a, i) => {
                 let array = self
                     .expression(a, vartab, function, runtime)
                     .into_pointer_value();
@@ -830,7 +830,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::Ternary(c, l, r) => {
+            Expression::Ternary(_, c, l, r) => {
                 let cond = self
                     .expression(c, vartab, function, runtime)
                     .into_int_value();
@@ -843,7 +843,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_select(cond, left, right, "")
             }
-            Expression::ConstArrayLiteral(dims, exprs) => {
+            Expression::ConstArrayLiteral(_, dims, exprs) => {
                 // For const arrays (declared with "constant" keyword, we should create a global constant
                 let mut dims = dims.iter();
 
@@ -890,7 +890,7 @@ impl<'a> Contract<'a> {
 
                 gv.as_pointer_value().into()
             }
-            Expression::ArrayLiteral(ty, dims, exprs) => {
+            Expression::ArrayLiteral(_, ty, dims, exprs) => {
                 // non-const array literals should alloca'ed and each element assigned
                 let array = self
                     .builder

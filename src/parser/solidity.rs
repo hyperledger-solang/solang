@@ -1,12 +1,11 @@
 // auto-generated: "lalrpop 0.17.2"
-// sha256: 979a7b404bc4fa48ee3948797852d6b1b9221545ef5c8ddfa85bb9ccf83dbbfb
+// sha256: 6db352e8f48594e8d5a1a1d91f27957ab42f5bed40b6fd2c626569ecb99a21
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
 use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
-use lalrpop_util::ParseError;
 #[allow(unused_extern_crates)]
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
@@ -22,7 +21,6 @@ mod __parse__SourceUnit {
     use parser::ast::*;
     use parser::box_option;
     use super::super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
-    use lalrpop_util::ParseError;
     #[allow(unused_extern_crates)]
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
@@ -55,8 +53,8 @@ mod __parse__SourceUnit {
         Variant21(VariableDeclaration),
         Variant22(::std::vec::Vec<VariableDeclaration>),
         Variant23(usize),
-        Variant24(Option<(Loc, BigInt)>),
-        Variant25(::std::vec::Vec<Option<(Loc, BigInt)>>),
+        Variant24(Option<Expression>),
+        Variant25(::std::vec::Vec<Option<Expression>>),
         Variant26(BlockStatement),
         Variant27(Statement),
         Variant28(Box<ContractDefinition>),
@@ -232,7 +230,7 @@ mod __parse__SourceUnit {
         // State 69
         0, 0, 0, 0, 0, 0, 0, -272, -272, 0, 0, 0, 0, 0, 0, -272, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 71, 0, 0, 0, 0, 0, 0, 0, 0, -272, -272, 0, 0, 0, 0, 0, 0, 0, 0, 0, -272, 0, 0, 0, 0, 0, -272, 0, -272, 0, -272, 0, 0, 0, -272, -272, 0, 0, 0, -272, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -272, 0, 0, 0,
         // State 70
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 122, 0, 0,
+        100, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 0, 101, 102, 0, 0, 103, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 122, 0, 0, 0, 47, 0, 48, 0, 0, 0, 0, 0, 0, 105, 0, 0, 0, 0, 0, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0, 0, 0, 0, 0, 0, 55, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 106, 58, 0, 59, 60, 61, 22, 62, 20, 63,
         // State 71
         0, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, -268, 0, 0, 0, 0, 0, -268, -268, 0, 0, 0, 0, 0, 0, 0, 0, 0, -268, 0, 0, 0, 0, 0, -268, 0, -268, 0, -268, 0, 0, 0, -268, -268, 0, 0, 0, -268, 0, 0, 0, 0, 0, 0, 0, -268, -268, -268, -268, 0, 0, 0, 0, 0, 0, -268, 0, -268, 0,
         // State 72
@@ -332,9 +330,9 @@ mod __parse__SourceUnit {
         // State 119
         0, 0, 0, 0, 0, 0, 0, -49, -49, 0, 0, 0, 0, 0, 0, -49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -49, 0, 0, 0, 0, 0, 0, 0, 0, -49, -49, 0, 0, 0, 0, 0, 0, 0, 0, 0, -49, 0, 0, 0, 0, 0, -49, 0, -49, 0, -49, 0, 0, 0, -49, -49, 0, 0, 0, -49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -49, 0, 0, 0,
         // State 120
-        0, 0, 0, 0, 0, 0, 0, -46, -46, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0, 0, 0, 0, 0, 0, -46, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0, 0, 0, -46, 0, -46, 0, -46, 0, 0, 0, -46, -46, 0, 0, 0, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0,
-        // State 121
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        // State 121
+        0, 0, 0, 0, 0, 0, 0, -46, -46, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0, 0, 0, 0, 0, 0, -46, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0, 0, 0, -46, 0, -46, 0, -46, 0, 0, 0, -46, -46, 0, 0, 0, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -46, 0, 0, 0,
         // State 122
         0, 0, 0, 0, 0, 0, 0, -82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -82, 0, 0, 0, 0, -82, 0, -82, 0, 0, 0, -82, 0, 0, 0, 0, 0, 0, -82, -82, 0, -82, 0, -82, 0, 0, 0, 0, 0, 0, 0, -82, 0, 0, 0, 0, 0, 0, 0, 0, -82, -82, 0, -82, 0, 0, 0, 0, 0, 0, -82, 0, -82, -82, -82, -82, -82, -82, -82, -82, -82,
         // State 123
@@ -2024,7 +2022,7 @@ mod __parse__SourceUnit {
         // State 69
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         // State 70
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 121, 0, 0, 0, 0, 0, 37, 38, 39, 0, 0, 0, 0, 0, 0, 0, 0, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 43, 0, 99, 0, 0, 0, 0, 0, 0,
         // State 71
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         // State 72
@@ -6070,16 +6068,7 @@ mod __parse__SourceUnit {
                 __reduce271(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             272 => {
-                // Type = Precedence0 => ActionFn(18);
-                let __sym0 = __pop_Variant6(__symbols);
-                let __start = __sym0.0.clone();
-                let __end = __sym0.2.clone();
-                let __nt = match super::__action18::<>(input, __sym0) {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                __symbols.push((__start, __Symbol::Variant54(__nt), __end));
-                (1, 90)
+                __reduce272(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             273 => {
                 __reduce273(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
@@ -6325,7 +6314,7 @@ mod __parse__SourceUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, Option<(Loc, BigInt)>, usize)
+    ) -> (usize, Option<Expression>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant24(__v), __r) => (__l, __v, __r),
@@ -6688,7 +6677,7 @@ mod __parse__SourceUnit {
       'input,
     >(
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Option<(Loc, BigInt)>>, usize)
+    ) -> (usize, ::std::vec::Vec<Option<Expression>>, usize)
      {
         match __symbols.pop().unwrap() {
             (__l, __Symbol::Variant25(__v), __r) => (__l, __v, __r),
@@ -7619,10 +7608,10 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // @L =  => ActionFn(210);
+        // @L =  => ActionFn(208);
         let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
         let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
-        let __nt = super::__action210::<>(input, &__start, &__end);
+        let __nt = super::__action208::<>(input, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant23(__nt), __end));
         (0, 26)
     }
@@ -7637,10 +7626,10 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // @R =  => ActionFn(209);
+        // @R =  => ActionFn(207);
         let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
         let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
-        let __nt = super::__action209::<>(input, &__start, &__end);
+        let __nt = super::__action207::<>(input, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant23(__nt), __end));
         (0, 27)
     }
@@ -7675,13 +7664,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ArrayDimension = "[", LexNumber, "]" => ActionFn(361);
+        // ArrayDimension = "[", Expression, "]" => ActionFn(15);
         let __sym2 = __pop_Variant0(__symbols);
-        let __sym1 = __pop_Variant4(__symbols);
+        let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action361::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action15::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant24(__nt), __end));
         (3, 28)
     }
@@ -7696,11 +7685,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ArrayDimension+ = ArrayDimension => ActionFn(207);
+        // ArrayDimension+ = ArrayDimension => ActionFn(209);
         let __sym0 = __pop_Variant24(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action207::<>(input, __sym0);
+        let __nt = super::__action209::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant25(__nt), __end));
         (1, 29)
     }
@@ -7715,12 +7704,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ArrayDimension+ = ArrayDimension+, ArrayDimension => ActionFn(208);
+        // ArrayDimension+ = ArrayDimension+, ArrayDimension => ActionFn(210);
         let __sym1 = __pop_Variant24(__symbols);
         let __sym0 = __pop_Variant25(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action208::<>(input, __sym0, __sym1);
+        let __nt = super::__action210::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant25(__nt), __end));
         (2, 29)
     }
@@ -7735,12 +7724,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // BlockStatement = "{", "}" => ActionFn(501);
+        // BlockStatement = "{", "}" => ActionFn(499);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action501::<>(input, __sym0, __sym1);
+        let __nt = super::__action499::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant26(__nt), __end));
         (2, 30)
     }
@@ -7755,13 +7744,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // BlockStatement = "{", Statement+, "}" => ActionFn(502);
+        // BlockStatement = "{", Statement+, "}" => ActionFn(500);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant49(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action502::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action500::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant26(__nt), __end));
         (3, 30)
     }
@@ -7843,7 +7832,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(485);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(483);
         let __sym8 = __pop_Variant27(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant27(__symbols);
@@ -7855,7 +7844,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym8.2.clone();
-        let __nt = super::__action485::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
+        let __nt = super::__action483::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (9, 31)
     }
@@ -7870,7 +7859,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ClosedStatement => ActionFn(486);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ClosedStatement => ActionFn(484);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -7881,7 +7870,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action486::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action484::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 31)
     }
@@ -7896,7 +7885,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(487);
+        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(485);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -7907,7 +7896,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action487::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action485::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 31)
     }
@@ -7922,7 +7911,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ClosedStatement => ActionFn(488);
+        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ClosedStatement => ActionFn(486);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -7932,7 +7921,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action488::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action486::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 31)
     }
@@ -7947,7 +7936,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(489);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(487);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -7958,7 +7947,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action489::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action487::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 31)
     }
@@ -7973,7 +7962,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ClosedStatement => ActionFn(490);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ClosedStatement => ActionFn(488);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -7983,7 +7972,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action490::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action488::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 31)
     }
@@ -7998,7 +7987,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(491);
+        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(489);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant27(__symbols);
@@ -8008,7 +7997,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action491::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action489::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 31)
     }
@@ -8023,7 +8012,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", ")", ClosedStatement => ActionFn(492);
+        // ClosedStatement = "for", "(", ";", ";", ")", ClosedStatement => ActionFn(490);
         let __sym5 = __pop_Variant27(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8032,7 +8021,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action492::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action490::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (6, 31)
     }
@@ -8047,7 +8036,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(493);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(491);
         let __sym8 = __pop_Variant0(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant27(__symbols);
@@ -8059,7 +8048,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym8.2.clone();
-        let __nt = super::__action493::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
+        let __nt = super::__action491::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (9, 31)
     }
@@ -8074,7 +8063,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ";" => ActionFn(494);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ";" => ActionFn(492);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -8085,7 +8074,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action494::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action492::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 31)
     }
@@ -8100,7 +8089,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(495);
+        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(493);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -8111,7 +8100,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action495::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action493::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 31)
     }
@@ -8126,7 +8115,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ";" => ActionFn(496);
+        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ";" => ActionFn(494);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -8136,7 +8125,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action496::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action494::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 31)
     }
@@ -8151,7 +8140,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ";" => ActionFn(497);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ";" => ActionFn(495);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -8162,7 +8151,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action497::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action495::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 31)
     }
@@ -8177,7 +8166,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ";" => ActionFn(498);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ";" => ActionFn(496);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -8187,7 +8176,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action498::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action496::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 31)
     }
@@ -8202,7 +8191,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ";" => ActionFn(499);
+        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ";" => ActionFn(497);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant27(__symbols);
@@ -8212,7 +8201,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action499::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action497::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 31)
     }
@@ -8227,7 +8216,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", ")", ";" => ActionFn(500);
+        // ClosedStatement = "for", "(", ";", ";", ")", ";" => ActionFn(498);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8236,7 +8225,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action500::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action498::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (6, 31)
     }
@@ -8251,7 +8240,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractDefinition = DocComments, ContractType, Identifier, "{", (<ContractPart>)+, "}" => ActionFn(362);
+        // ContractDefinition = DocComments, ContractType, Identifier, "{", (<ContractPart>)+, "}" => ActionFn(360);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant11(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8260,7 +8249,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action362::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action360::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant28(__nt), __end));
         (6, 32)
     }
@@ -8427,7 +8416,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Type, Identifier, "=", Expression, ";" => ActionFn(507);
+        // ContractVariableDefinition = DocComments, Type, Identifier, "=", Expression, ";" => ActionFn(505);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant6(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8436,7 +8425,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action507::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action505::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (6, 35)
     }
@@ -8451,7 +8440,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Type, VariableAttribute+, Identifier, "=", Expression, ";" => ActionFn(508);
+        // ContractVariableDefinition = DocComments, Type, VariableAttribute+, Identifier, "=", Expression, ";" => ActionFn(506);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant6(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -8461,7 +8450,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action508::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action506::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (7, 35)
     }
@@ -8476,14 +8465,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Type, Identifier, ";" => ActionFn(509);
+        // ContractVariableDefinition = DocComments, Type, Identifier, ";" => ActionFn(507);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant54(__symbols);
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action509::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action507::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (4, 35)
     }
@@ -8498,7 +8487,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Type, VariableAttribute+, Identifier, ";" => ActionFn(510);
+        // ContractVariableDefinition = DocComments, Type, VariableAttribute+, Identifier, ";" => ActionFn(508);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant15(__symbols);
         let __sym2 = __pop_Variant56(__symbols);
@@ -8506,7 +8495,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action510::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action508::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (5, 35)
     }
@@ -8597,10 +8586,10 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // DocComments =  => ActionFn(443);
+        // DocComments =  => ActionFn(441);
         let __start = __symbols.last().map(|s| s.2.clone()).unwrap_or_default();
         let __end = __lookahead_start.cloned().unwrap_or_else(|| __start.clone());
-        let __nt = super::__action443::<>(input, &__start, &__end);
+        let __nt = super::__action441::<>(input, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant32(__nt), __end));
         (0, 38)
     }
@@ -8615,11 +8604,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // DocComments = DocComment+ => ActionFn(444);
+        // DocComments = DocComment+ => ActionFn(442);
         let __sym0 = __pop_Variant31(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action444::<>(input, __sym0);
+        let __nt = super::__action442::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant32(__nt), __end));
         (1, 38)
     }
@@ -8787,13 +8776,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Type, "indexed", Identifier => ActionFn(463);
+        // EventParameter = Type, "indexed", Identifier => ActionFn(461);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action463::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action461::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (3, 41)
     }
@@ -8808,12 +8797,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Type, "indexed" => ActionFn(464);
+        // EventParameter = Type, "indexed" => ActionFn(462);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action464::<>(input, __sym0, __sym1);
+        let __nt = super::__action462::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (2, 41)
     }
@@ -8828,12 +8817,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Type, Identifier => ActionFn(465);
+        // EventParameter = Type, Identifier => ActionFn(463);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action465::<>(input, __sym0, __sym1);
+        let __nt = super::__action463::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (2, 41)
     }
@@ -8848,11 +8837,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Type => ActionFn(466);
+        // EventParameter = Type => ActionFn(464);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action466::<>(input, __sym0);
+        let __nt = super::__action464::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (1, 41)
     }
@@ -9037,7 +9026,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "constructor", ParameterList, "returns", ParameterList, BlockStatement => ActionFn(451);
+        // FunctionDefinition = DocComments, "constructor", ParameterList, "returns", ParameterList, BlockStatement => ActionFn(449);
         let __sym5 = __pop_Variant26(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -9046,7 +9035,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action451::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action449::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (6, 47)
     }
@@ -9061,7 +9050,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "constructor", ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(452);
+        // FunctionDefinition = DocComments, "constructor", ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(450);
         let __sym6 = __pop_Variant26(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9071,7 +9060,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action452::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action450::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (7, 47)
     }
@@ -9086,14 +9075,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "constructor", ParameterList, BlockStatement => ActionFn(453);
+        // FunctionDefinition = DocComments, "constructor", ParameterList, BlockStatement => ActionFn(451);
         let __sym3 = __pop_Variant26(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action453::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action451::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (4, 47)
     }
@@ -9108,7 +9097,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "constructor", ParameterList, FunctionAttribute+, BlockStatement => ActionFn(454);
+        // FunctionDefinition = DocComments, "constructor", ParameterList, FunctionAttribute+, BlockStatement => ActionFn(452);
         let __sym4 = __pop_Variant26(__symbols);
         let __sym3 = __pop_Variant36(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -9116,7 +9105,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action454::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action452::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (5, 47)
     }
@@ -9131,7 +9120,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, "returns", ParameterList, ";" => ActionFn(467);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, "returns", ParameterList, ";" => ActionFn(465);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9141,7 +9130,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action467::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action465::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (7, 47)
     }
@@ -9156,7 +9145,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, "returns", ParameterList, ";" => ActionFn(468);
+        // FunctionDefinition = DocComments, "function", ParameterList, "returns", ParameterList, ";" => ActionFn(466);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -9165,7 +9154,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action468::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action466::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (6, 47)
     }
@@ -9180,7 +9169,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, ";" => ActionFn(469);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, ";" => ActionFn(467);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant8(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -9191,7 +9180,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action469::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action467::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (8, 47)
     }
@@ -9206,7 +9195,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, "returns", ParameterList, ";" => ActionFn(470);
+        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, "returns", ParameterList, ";" => ActionFn(468);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9216,7 +9205,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action470::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action468::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (7, 47)
     }
@@ -9231,7 +9220,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, ";" => ActionFn(471);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, ";" => ActionFn(469);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
@@ -9239,7 +9228,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action471::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action469::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (5, 47)
     }
@@ -9254,14 +9243,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, ";" => ActionFn(472);
+        // FunctionDefinition = DocComments, "function", ParameterList, ";" => ActionFn(470);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action472::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action470::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (4, 47)
     }
@@ -9276,7 +9265,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, ";" => ActionFn(473);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, ";" => ActionFn(471);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant36(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
@@ -9285,7 +9274,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action473::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action471::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (6, 47)
     }
@@ -9300,7 +9289,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, ";" => ActionFn(474);
+        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, ";" => ActionFn(472);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant36(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -9308,7 +9297,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action474::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action472::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (5, 47)
     }
@@ -9323,7 +9312,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, "returns", ParameterList, BlockStatement => ActionFn(475);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, "returns", ParameterList, BlockStatement => ActionFn(473);
         let __sym6 = __pop_Variant26(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9333,7 +9322,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action475::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action473::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (7, 47)
     }
@@ -9348,7 +9337,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, "returns", ParameterList, BlockStatement => ActionFn(476);
+        // FunctionDefinition = DocComments, "function", ParameterList, "returns", ParameterList, BlockStatement => ActionFn(474);
         let __sym5 = __pop_Variant26(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -9357,7 +9346,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action476::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action474::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (6, 47)
     }
@@ -9372,7 +9361,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(477);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(475);
         let __sym7 = __pop_Variant26(__symbols);
         let __sym6 = __pop_Variant8(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -9383,7 +9372,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action477::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action475::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (8, 47)
     }
@@ -9398,7 +9387,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(478);
+        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(476);
         let __sym6 = __pop_Variant26(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9408,7 +9397,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action478::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action476::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (7, 47)
     }
@@ -9423,7 +9412,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, BlockStatement => ActionFn(479);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, BlockStatement => ActionFn(477);
         let __sym4 = __pop_Variant26(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
@@ -9431,7 +9420,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action479::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action477::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (5, 47)
     }
@@ -9446,14 +9435,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, BlockStatement => ActionFn(480);
+        // FunctionDefinition = DocComments, "function", ParameterList, BlockStatement => ActionFn(478);
         let __sym3 = __pop_Variant26(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action480::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action478::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (4, 47)
     }
@@ -9468,7 +9457,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, BlockStatement => ActionFn(481);
+        // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, BlockStatement => ActionFn(479);
         let __sym5 = __pop_Variant26(__symbols);
         let __sym4 = __pop_Variant36(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
@@ -9477,7 +9466,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action481::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action479::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (6, 47)
     }
@@ -9492,7 +9481,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, BlockStatement => ActionFn(482);
+        // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, BlockStatement => ActionFn(480);
         let __sym4 = __pop_Variant26(__symbols);
         let __sym3 = __pop_Variant36(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -9500,7 +9489,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action482::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action480::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (5, 47)
     }
@@ -9515,11 +9504,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // HexLiteral = LexHexLiteral => ActionFn(371);
+        // HexLiteral = LexHexLiteral => ActionFn(369);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action371::<>(input, __sym0);
+        let __nt = super::__action369::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant38(__nt), __end));
         (1, 48)
     }
@@ -9573,11 +9562,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Identifier = LexIdentifier => ActionFn(372);
+        // Identifier = LexIdentifier => ActionFn(370);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action372::<>(input, __sym0);
+        let __nt = super::__action370::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant15(__nt), __end));
         (1, 50)
     }
@@ -9795,12 +9784,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "return", ";" => ActionFn(373);
+        // NonIfStatement = "return", ";" => ActionFn(371);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action373::<>(input, __sym0, __sym1);
+        let __nt = super::__action371::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 54)
     }
@@ -9815,13 +9804,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "return", Expression, ";" => ActionFn(374);
+        // NonIfStatement = "return", Expression, ";" => ActionFn(372);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action374::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action372::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (3, 54)
     }
@@ -9836,7 +9825,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "return", "(", (<Expression> ",")+, Expression, ")", ";" => ActionFn(375);
+        // NonIfStatement = "return", "(", (<Expression> ",")+, Expression, ")", ";" => ActionFn(373);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant6(__symbols);
@@ -9845,7 +9834,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action375::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action373::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (6, 54)
     }
@@ -9999,13 +9988,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Type, StorageLocation, Identifier => ActionFn(503);
+        // Parameter = Type, StorageLocation, Identifier => ActionFn(501);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant50(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action503::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action501::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (3, 56)
     }
@@ -10020,12 +10009,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Type, Identifier => ActionFn(504);
+        // Parameter = Type, Identifier => ActionFn(502);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action504::<>(input, __sym0, __sym1);
+        let __nt = super::__action502::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (2, 56)
     }
@@ -10040,12 +10029,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Type, StorageLocation => ActionFn(505);
+        // Parameter = Type, StorageLocation => ActionFn(503);
         let __sym1 = __pop_Variant50(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action505::<>(input, __sym0, __sym1);
+        let __nt = super::__action503::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (2, 56)
     }
@@ -10060,11 +10049,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Type => ActionFn(506);
+        // Parameter = Type => ActionFn(504);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action506::<>(input, __sym0);
+        let __nt = super::__action504::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (1, 56)
     }
@@ -10163,12 +10152,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "++" => ActionFn(376);
+        // Precedence0 = Precedence0, "++" => ActionFn(374);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action376::<>(input, __sym0, __sym1);
+        let __nt = super::__action374::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 59)
     }
@@ -10183,12 +10172,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "--" => ActionFn(377);
+        // Precedence0 = Precedence0, "--" => ActionFn(375);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action377::<>(input, __sym0, __sym1);
+        let __nt = super::__action375::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 59)
     }
@@ -10203,14 +10192,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "new", Type, "(", ")" => ActionFn(378);
+        // Precedence0 = "new", Type, "(", ")" => ActionFn(376);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant54(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action378::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action376::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (4, 59)
     }
@@ -10225,14 +10214,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "[", Expression, "]" => ActionFn(449);
+        // Precedence0 = Precedence0, "[", Expression, "]" => ActionFn(447);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action449::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action447::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (4, 59)
     }
@@ -10247,13 +10236,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "[", "]" => ActionFn(450);
+        // Precedence0 = Precedence0, "[", "]" => ActionFn(448);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action450::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action448::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 59)
     }
@@ -10268,13 +10257,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, ".", Identifier => ActionFn(380);
+        // Precedence0 = Precedence0, ".", Identifier => ActionFn(378);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action380::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action378::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 59)
     }
@@ -10289,11 +10278,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "true" => ActionFn(381);
+        // Precedence0 = "true" => ActionFn(379);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action381::<>(input, __sym0);
+        let __nt = super::__action379::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (1, 59)
     }
@@ -10308,11 +10297,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "false" => ActionFn(382);
+        // Precedence0 = "false" => ActionFn(380);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action382::<>(input, __sym0);
+        let __nt = super::__action380::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (1, 59)
     }
@@ -10365,13 +10354,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "[", Expression, "]" => ActionFn(383);
+        // Precedence0 = "[", Expression, "]" => ActionFn(381);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action383::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action381::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 59)
     }
@@ -10386,14 +10375,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "[", (<Expression> ",")+, Expression, "]" => ActionFn(384);
+        // Precedence0 = "[", (<Expression> ",")+, Expression, "]" => ActionFn(382);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant14(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action384::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action382::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (4, 59)
     }
@@ -10448,11 +10437,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = LexNumber => ActionFn(385);
+        // Precedence0 = LexNumber => ActionFn(383);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action385::<>(input, __sym0);
+        let __nt = super::__action383::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (1, 59)
     }
@@ -10467,11 +10456,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = LexHexNumber => ActionFn(386);
+        // Precedence0 = LexHexNumber => ActionFn(384);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action386::<>(input, __sym0);
+        let __nt = super::__action384::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (1, 59)
     }
@@ -10486,13 +10475,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = Type, "(", ")" => ActionFn(387);
+        // Precedence1 = Type, "(", ")" => ActionFn(385);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action387::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action385::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 60)
     }
@@ -10507,7 +10496,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = Type, "(", "{", "}", ")" => ActionFn(388);
+        // Precedence1 = Type, "(", "{", "}", ")" => ActionFn(386);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant0(__symbols);
@@ -10515,7 +10504,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action388::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action386::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (5, 60)
     }
@@ -10530,14 +10519,14 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = Type, "(", Expression, ")" => ActionFn(389);
+        // Precedence1 = Type, "(", Expression, ")" => ActionFn(387);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action389::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action387::<>(input, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (4, 60)
     }
@@ -10552,7 +10541,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = Type, "(", (<Expression> ",")+, Expression, ")" => ActionFn(390);
+        // Precedence1 = Type, "(", (<Expression> ",")+, Expression, ")" => ActionFn(388);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant6(__symbols);
         let __sym2 = __pop_Variant14(__symbols);
@@ -10560,7 +10549,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action390::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action388::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (5, 60)
     }
@@ -10575,7 +10564,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = Type, "(", "{", NamedArgument, "}", ")" => ActionFn(391);
+        // Precedence1 = Type, "(", "{", NamedArgument, "}", ")" => ActionFn(389);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant17(__symbols);
@@ -10584,7 +10573,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action391::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action389::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (6, 60)
     }
@@ -10599,7 +10588,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence1 = Type, "(", "{", (<NamedArgument> ",")+, NamedArgument, "}", ")" => ActionFn(392);
+        // Precedence1 = Type, "(", "{", (<NamedArgument> ",")+, NamedArgument, "}", ")" => ActionFn(390);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant17(__symbols);
@@ -10609,7 +10598,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action392::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action390::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (7, 60)
     }
@@ -10624,13 +10613,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, "<", Precedence9 => ActionFn(393);
+        // Precedence10 = Precedence10, "<", Precedence9 => ActionFn(391);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action393::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action391::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 61)
     }
@@ -10645,13 +10634,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, ">", Precedence9 => ActionFn(394);
+        // Precedence10 = Precedence10, ">", Precedence9 => ActionFn(392);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action394::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action392::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 61)
     }
@@ -10666,13 +10655,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, "<=", Precedence9 => ActionFn(395);
+        // Precedence10 = Precedence10, "<=", Precedence9 => ActionFn(393);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action395::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action393::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 61)
     }
@@ -10687,13 +10676,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, ">=", Precedence9 => ActionFn(396);
+        // Precedence10 = Precedence10, ">=", Precedence9 => ActionFn(394);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action396::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action394::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 61)
     }
@@ -10727,13 +10716,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence11 = Precedence11, "==", Precedence10 => ActionFn(397);
+        // Precedence11 = Precedence11, "==", Precedence10 => ActionFn(395);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action397::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action395::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 62)
     }
@@ -10748,13 +10737,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence11 = Precedence11, "!=", Precedence10 => ActionFn(398);
+        // Precedence11 = Precedence11, "!=", Precedence10 => ActionFn(396);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action398::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action396::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 62)
     }
@@ -10788,13 +10777,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence12 = Precedence12, "&&", Precedence11 => ActionFn(399);
+        // Precedence12 = Precedence12, "&&", Precedence11 => ActionFn(397);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action399::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action397::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 63)
     }
@@ -10828,13 +10817,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence13 = Precedence13, "||", Precedence12 => ActionFn(400);
+        // Precedence13 = Precedence13, "||", Precedence12 => ActionFn(398);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action400::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action398::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 64)
     }
@@ -10868,7 +10857,7 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence14 = Precedence14, "?", Precedence13, ":", Precedence13 => ActionFn(401);
+        // Precedence14 = Precedence14, "?", Precedence13, ":", Precedence13 => ActionFn(399);
         let __sym4 = __pop_Variant6(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
@@ -10876,7 +10865,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action401::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action399::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (5, 65)
     }
@@ -10910,13 +10899,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "=", Precedence15 => ActionFn(402);
+        // Precedence15 = Precedence14, "=", Precedence15 => ActionFn(400);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action402::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action400::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -10931,13 +10920,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "|=", Precedence15 => ActionFn(403);
+        // Precedence15 = Precedence14, "|=", Precedence15 => ActionFn(401);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action403::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action401::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -10952,13 +10941,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "^=", Precedence15 => ActionFn(404);
+        // Precedence15 = Precedence14, "^=", Precedence15 => ActionFn(402);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action404::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action402::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -10973,13 +10962,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "&=", Precedence15 => ActionFn(405);
+        // Precedence15 = Precedence14, "&=", Precedence15 => ActionFn(403);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action405::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action403::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -10994,13 +10983,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "<<=", Precedence15 => ActionFn(406);
+        // Precedence15 = Precedence14, "<<=", Precedence15 => ActionFn(404);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action406::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action404::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11015,13 +11004,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, ">>=", Precedence15 => ActionFn(407);
+        // Precedence15 = Precedence14, ">>=", Precedence15 => ActionFn(405);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action407::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action405::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11036,13 +11025,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "+=", Precedence15 => ActionFn(408);
+        // Precedence15 = Precedence14, "+=", Precedence15 => ActionFn(406);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action408::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action406::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11057,13 +11046,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "-=", Precedence15 => ActionFn(409);
+        // Precedence15 = Precedence14, "-=", Precedence15 => ActionFn(407);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action409::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action407::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11078,13 +11067,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "*=", Precedence15 => ActionFn(410);
+        // Precedence15 = Precedence14, "*=", Precedence15 => ActionFn(408);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action410::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action408::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11099,13 +11088,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "/=", Precedence15 => ActionFn(411);
+        // Precedence15 = Precedence14, "/=", Precedence15 => ActionFn(409);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action411::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action409::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11120,13 +11109,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "%=", Precedence15 => ActionFn(412);
+        // Precedence15 = Precedence14, "%=", Precedence15 => ActionFn(410);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action412::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action410::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 66)
     }
@@ -11160,12 +11149,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "!", Precedence2 => ActionFn(413);
+        // Precedence2 = "!", Precedence2 => ActionFn(411);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action413::<>(input, __sym0, __sym1);
+        let __nt = super::__action411::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11180,12 +11169,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "~", Precedence2 => ActionFn(414);
+        // Precedence2 = "~", Precedence2 => ActionFn(412);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action414::<>(input, __sym0, __sym1);
+        let __nt = super::__action412::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11200,12 +11189,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "delete", Precedence2 => ActionFn(415);
+        // Precedence2 = "delete", Precedence2 => ActionFn(413);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action415::<>(input, __sym0, __sym1);
+        let __nt = super::__action413::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11220,12 +11209,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "++", Precedence2 => ActionFn(416);
+        // Precedence2 = "++", Precedence2 => ActionFn(414);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action416::<>(input, __sym0, __sym1);
+        let __nt = super::__action414::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11240,12 +11229,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "--", Precedence2 => ActionFn(417);
+        // Precedence2 = "--", Precedence2 => ActionFn(415);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action417::<>(input, __sym0, __sym1);
+        let __nt = super::__action415::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11260,12 +11249,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "+", Precedence2 => ActionFn(418);
+        // Precedence2 = "+", Precedence2 => ActionFn(416);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action418::<>(input, __sym0, __sym1);
+        let __nt = super::__action416::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11280,12 +11269,12 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "-", Precedence2 => ActionFn(419);
+        // Precedence2 = "-", Precedence2 => ActionFn(417);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action419::<>(input, __sym0, __sym1);
+        let __nt = super::__action417::<>(input, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 67)
     }
@@ -11338,13 +11327,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence3 = Precedence3, "**", Precedence2 => ActionFn(420);
+        // Precedence3 = Precedence3, "**", Precedence2 => ActionFn(418);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action420::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action418::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 68)
     }
@@ -11378,13 +11367,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence4 = Precedence4, "*", Precedence3 => ActionFn(421);
+        // Precedence4 = Precedence4, "*", Precedence3 => ActionFn(419);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action421::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action419::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 69)
     }
@@ -11399,13 +11388,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence4 = Precedence4, "/", Precedence3 => ActionFn(422);
+        // Precedence4 = Precedence4, "/", Precedence3 => ActionFn(420);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action422::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action420::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 69)
     }
@@ -11420,13 +11409,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence4 = Precedence4, "%", Precedence3 => ActionFn(423);
+        // Precedence4 = Precedence4, "%", Precedence3 => ActionFn(421);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action423::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action421::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 69)
     }
@@ -11460,13 +11449,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence5 = Precedence5, "+", Precedence4 => ActionFn(424);
+        // Precedence5 = Precedence5, "+", Precedence4 => ActionFn(422);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action424::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action422::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 70)
     }
@@ -11481,13 +11470,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence5 = Precedence5, "-", Precedence4 => ActionFn(425);
+        // Precedence5 = Precedence5, "-", Precedence4 => ActionFn(423);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action425::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action423::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 70)
     }
@@ -11521,13 +11510,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence6 = Precedence6, "<<", Precedence5 => ActionFn(426);
+        // Precedence6 = Precedence6, "<<", Precedence5 => ActionFn(424);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action426::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action424::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 71)
     }
@@ -11542,13 +11531,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence6 = Precedence6, ">>", Precedence5 => ActionFn(427);
+        // Precedence6 = Precedence6, ">>", Precedence5 => ActionFn(425);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action427::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action425::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 71)
     }
@@ -11582,13 +11571,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence7 = Precedence7, "&", Precedence6 => ActionFn(428);
+        // Precedence7 = Precedence7, "&", Precedence6 => ActionFn(426);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action428::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action426::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 72)
     }
@@ -11622,13 +11611,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence8 = Precedence8, "^", Precedence7 => ActionFn(429);
+        // Precedence8 = Precedence8, "^", Precedence7 => ActionFn(427);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action429::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action427::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 73)
     }
@@ -11662,13 +11651,13 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence9 = Precedence9, "|", Precedence8 => ActionFn(430);
+        // Precedence9 = Precedence9, "|", Precedence8 => ActionFn(428);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action430::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action428::<>(input, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 74)
     }
@@ -12027,11 +12016,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StateMutability = "pure" => ActionFn(431);
+        // StateMutability = "pure" => ActionFn(429);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action431::<>(input, __sym0);
+        let __nt = super::__action429::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant48(__nt), __end));
         (1, 81)
     }
@@ -12046,11 +12035,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StateMutability = "view" => ActionFn(432);
+        // StateMutability = "view" => ActionFn(430);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action432::<>(input, __sym0);
+        let __nt = super::__action430::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant48(__nt), __end));
         (1, 81)
     }
@@ -12065,11 +12054,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StateMutability = "payable" => ActionFn(433);
+        // StateMutability = "payable" => ActionFn(431);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action433::<>(input, __sym0);
+        let __nt = super::__action431::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant48(__nt), __end));
         (1, 81)
     }
@@ -12198,11 +12187,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StorageLocation = "memory" => ActionFn(434);
+        // StorageLocation = "memory" => ActionFn(432);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action434::<>(input, __sym0);
+        let __nt = super::__action432::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (1, 85)
     }
@@ -12217,11 +12206,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StorageLocation = "storage" => ActionFn(435);
+        // StorageLocation = "storage" => ActionFn(433);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action435::<>(input, __sym0);
+        let __nt = super::__action433::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (1, 85)
     }
@@ -12236,11 +12225,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StorageLocation = "calldata" => ActionFn(436);
+        // StorageLocation = "calldata" => ActionFn(434);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action436::<>(input, __sym0);
+        let __nt = super::__action434::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (1, 85)
     }
@@ -12292,11 +12281,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StringLiteral = LexStringLiteral => ActionFn(437);
+        // StringLiteral = LexStringLiteral => ActionFn(435);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action437::<>(input, __sym0);
+        let __nt = super::__action435::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant41(__nt), __end));
         (1, 87)
     }
@@ -12425,6 +12414,25 @@ mod __parse__SourceUnit {
         __symbols.push((__start, __Symbol::Variant54(__nt), __end));
         (2, 90)
     }
+    pub(crate) fn __reduce272<
+        'input,
+    >(
+        input: &'input str,
+        __action: i16,
+        __lookahead_start: Option<&usize>,
+        __states: &mut ::std::vec::Vec<i16>,
+        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: ::std::marker::PhantomData<(&'input ())>,
+    ) -> (usize, usize)
+    {
+        // Type = Precedence0 => ActionFn(18);
+        let __sym0 = __pop_Variant6(__symbols);
+        let __start = __sym0.0.clone();
+        let __end = __sym0.2.clone();
+        let __nt = super::__action18::<>(input, __sym0);
+        __symbols.push((__start, __Symbol::Variant54(__nt), __end));
+        (1, 90)
+    }
     pub(crate) fn __reduce273<
         'input,
     >(
@@ -12455,11 +12463,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // VariableAttribute = "constant" => ActionFn(438);
+        // VariableAttribute = "constant" => ActionFn(436);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action438::<>(input, __sym0);
+        let __nt = super::__action436::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant55(__nt), __end));
         (1, 91)
     }
@@ -12591,11 +12599,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "public" => ActionFn(439);
+        // Visibility = "public" => ActionFn(437);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action439::<>(input, __sym0);
+        let __nt = super::__action437::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 95)
     }
@@ -12610,11 +12618,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "external" => ActionFn(440);
+        // Visibility = "external" => ActionFn(438);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action440::<>(input, __sym0);
+        let __nt = super::__action438::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 95)
     }
@@ -12629,11 +12637,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "internal" => ActionFn(441);
+        // Visibility = "internal" => ActionFn(439);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action441::<>(input, __sym0);
+        let __nt = super::__action439::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 95)
     }
@@ -12648,11 +12656,11 @@ mod __parse__SourceUnit {
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "private" => ActionFn(442);
+        // Visibility = "private" => ActionFn(440);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action442::<>(input, __sym0);
+        let __nt = super::__action440::<>(input, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 95)
     }
@@ -12824,7 +12832,7 @@ fn __action14<
     input: &'input str,
     (_, __0, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, Token<'input>, usize),
-) -> Option<(Loc, BigInt)>
+) -> Option<Expression>
 {
     None
 }
@@ -12835,13 +12843,11 @@ fn __action15<
 >(
     input: &'input str,
     (_, _, _): (usize, Token<'input>, usize),
-    (_, l, _): (usize, usize, usize),
-    (_, n, _): (usize, &'input str, usize),
-    (_, r, _): (usize, usize, usize),
+    (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
-) -> Option<(Loc, BigInt)>
+) -> Option<Expression>
 {
-    Some((Loc(l, r), BigInt::from_str(n).unwrap()))
+    Some(e)
 }
 
 #[allow(unused_variables)]
@@ -12861,7 +12867,7 @@ fn __action17<
 >(
     input: &'input str,
     (_, p, _): (usize, PrimitiveType, usize),
-    (_, d, _): (usize, ::std::vec::Vec<Option<(Loc, BigInt)>>, usize),
+    (_, d, _): (usize, ::std::vec::Vec<Option<Expression>>, usize),
 ) -> Type
 {
     Type::Primitive(p, d)
@@ -12873,9 +12879,9 @@ fn __action18<
 >(
     input: &'input str,
     (_, __0, _): (usize, Expression, usize),
-) -> Result<Type,__lalrpop_util::ParseError<usize,Token<'input>,LexicalError>>
+) -> Type
 {
-    expr_to_type(__0).map_err(|e| ParseError::User { error: e })
+    Type::Unresolved(Box::new(__0))
 }
 
 #[allow(unused_variables)]
@@ -15523,29 +15529,6 @@ fn __action207<
     'input,
 >(
     input: &'input str,
-    (_, __0, _): (usize, Option<(Loc, BigInt)>, usize),
-) -> ::std::vec::Vec<Option<(Loc, BigInt)>>
-{
-    vec![__0]
-}
-
-#[allow(unused_variables)]
-fn __action208<
-    'input,
->(
-    input: &'input str,
-    (_, v, _): (usize, ::std::vec::Vec<Option<(Loc, BigInt)>>, usize),
-    (_, e, _): (usize, Option<(Loc, BigInt)>, usize),
-) -> ::std::vec::Vec<Option<(Loc, BigInt)>>
-{
-    { let mut v = v; v.push(e); v }
-}
-
-#[allow(unused_variables)]
-fn __action209<
-    'input,
->(
-    input: &'input str,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> usize
@@ -15554,7 +15537,7 @@ fn __action209<
 }
 
 #[allow(unused_variables)]
-fn __action210<
+fn __action208<
     'input,
 >(
     input: &'input str,
@@ -15563,6 +15546,29 @@ fn __action210<
 ) -> usize
 {
     __lookahead.clone()
+}
+
+#[allow(unused_variables)]
+fn __action209<
+    'input,
+>(
+    input: &'input str,
+    (_, __0, _): (usize, Option<Expression>, usize),
+) -> ::std::vec::Vec<Option<Expression>>
+{
+    vec![__0]
+}
+
+#[allow(unused_variables)]
+fn __action210<
+    'input,
+>(
+    input: &'input str,
+    (_, v, _): (usize, ::std::vec::Vec<Option<Expression>>, usize),
+    (_, e, _): (usize, Option<Expression>, usize),
+) -> ::std::vec::Vec<Option<Expression>>
+{
+    { let mut v = v; v.push(e); v }
 }
 
 #[allow(unused_variables)]
@@ -17197,35 +17203,6 @@ fn __action279<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, &'input str, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Token<'input>, usize),
-) -> Option<(Loc, BigInt)>
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action210(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action15(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action280<
-    'input,
->(
-    input: &'input str,
     __0: (usize, Vec<String>, usize),
     __1: (usize, ContractType, usize),
     __2: (usize, Identifier, usize),
@@ -17237,7 +17214,7 @@ fn __action280<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17257,7 +17234,7 @@ fn __action280<
 }
 
 #[allow(unused_variables)]
-fn __action281<
+fn __action280<
     'input,
 >(
     input: &'input str,
@@ -17273,7 +17250,7 @@ fn __action281<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17294,7 +17271,7 @@ fn __action281<
 }
 
 #[allow(unused_variables)]
-fn __action282<
+fn __action281<
     'input,
 >(
     input: &'input str,
@@ -17308,7 +17285,7 @@ fn __action282<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17327,7 +17304,7 @@ fn __action282<
 }
 
 #[allow(unused_variables)]
-fn __action283<
+fn __action282<
     'input,
 >(
     input: &'input str,
@@ -17343,7 +17320,7 @@ fn __action283<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17364,7 +17341,7 @@ fn __action283<
 }
 
 #[allow(unused_variables)]
-fn __action284<
+fn __action283<
     'input,
 >(
     input: &'input str,
@@ -17378,7 +17355,7 @@ fn __action284<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17397,7 +17374,7 @@ fn __action284<
 }
 
 #[allow(unused_variables)]
-fn __action285<
+fn __action284<
     'input,
 >(
     input: &'input str,
@@ -17414,7 +17391,7 @@ fn __action285<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17436,7 +17413,7 @@ fn __action285<
 }
 
 #[allow(unused_variables)]
-fn __action286<
+fn __action285<
     'input,
 >(
     input: &'input str,
@@ -17451,7 +17428,7 @@ fn __action286<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17471,7 +17448,7 @@ fn __action286<
 }
 
 #[allow(unused_variables)]
-fn __action287<
+fn __action286<
     'input,
 >(
     input: &'input str,
@@ -17488,7 +17465,7 @@ fn __action287<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17510,7 +17487,7 @@ fn __action287<
 }
 
 #[allow(unused_variables)]
-fn __action288<
+fn __action287<
     'input,
 >(
     input: &'input str,
@@ -17525,7 +17502,7 @@ fn __action288<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17545,7 +17522,7 @@ fn __action288<
 }
 
 #[allow(unused_variables)]
-fn __action289<
+fn __action288<
     'input,
 >(
     input: &'input str,
@@ -17555,7 +17532,7 @@ fn __action289<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17570,7 +17547,7 @@ fn __action289<
 }
 
 #[allow(unused_variables)]
-fn __action290<
+fn __action289<
     'input,
 >(
     input: &'input str,
@@ -17580,7 +17557,7 @@ fn __action290<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17595,7 +17572,7 @@ fn __action290<
 }
 
 #[allow(unused_variables)]
-fn __action291<
+fn __action290<
     'input,
 >(
     input: &'input str,
@@ -17606,7 +17583,7 @@ fn __action291<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17622,7 +17599,7 @@ fn __action291<
 }
 
 #[allow(unused_variables)]
-fn __action292<
+fn __action291<
     'input,
 >(
     input: &'input str,
@@ -17634,7 +17611,7 @@ fn __action292<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17651,7 +17628,7 @@ fn __action292<
 }
 
 #[allow(unused_variables)]
-fn __action293<
+fn __action292<
     'input,
 >(
     input: &'input str,
@@ -17666,7 +17643,7 @@ fn __action293<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17686,7 +17663,7 @@ fn __action293<
 }
 
 #[allow(unused_variables)]
-fn __action294<
+fn __action293<
     'input,
 >(
     input: &'input str,
@@ -17697,7 +17674,7 @@ fn __action294<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17713,7 +17690,7 @@ fn __action294<
 }
 
 #[allow(unused_variables)]
-fn __action295<
+fn __action294<
     'input,
 >(
     input: &'input str,
@@ -17724,7 +17701,7 @@ fn __action295<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17740,7 +17717,7 @@ fn __action295<
 }
 
 #[allow(unused_variables)]
-fn __action296<
+fn __action295<
     'input,
 >(
     input: &'input str,
@@ -17753,7 +17730,7 @@ fn __action296<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17771,7 +17748,7 @@ fn __action296<
 }
 
 #[allow(unused_variables)]
-fn __action297<
+fn __action296<
     'input,
 >(
     input: &'input str,
@@ -17784,7 +17761,7 @@ fn __action297<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17802,7 +17779,7 @@ fn __action297<
 }
 
 #[allow(unused_variables)]
-fn __action298<
+fn __action297<
     'input,
 >(
     input: &'input str,
@@ -17814,7 +17791,7 @@ fn __action298<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17831,7 +17808,7 @@ fn __action298<
 }
 
 #[allow(unused_variables)]
-fn __action299<
+fn __action298<
     'input,
 >(
     input: &'input str,
@@ -17841,7 +17818,7 @@ fn __action299<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17856,7 +17833,7 @@ fn __action299<
 }
 
 #[allow(unused_variables)]
-fn __action300<
+fn __action299<
     'input,
 >(
     input: &'input str,
@@ -17866,7 +17843,7 @@ fn __action300<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17881,7 +17858,7 @@ fn __action300<
 }
 
 #[allow(unused_variables)]
-fn __action301<
+fn __action300<
     'input,
 >(
     input: &'input str,
@@ -17893,7 +17870,7 @@ fn __action301<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17910,7 +17887,7 @@ fn __action301<
 }
 
 #[allow(unused_variables)]
-fn __action302<
+fn __action301<
     'input,
 >(
     input: &'input str,
@@ -17923,7 +17900,7 @@ fn __action302<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17941,7 +17918,7 @@ fn __action302<
 }
 
 #[allow(unused_variables)]
-fn __action303<
+fn __action302<
     'input,
 >(
     input: &'input str,
@@ -17951,7 +17928,7 @@ fn __action303<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17966,7 +17943,7 @@ fn __action303<
 }
 
 #[allow(unused_variables)]
-fn __action304<
+fn __action303<
     'input,
 >(
     input: &'input str,
@@ -17976,7 +17953,7 @@ fn __action304<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -17991,7 +17968,7 @@ fn __action304<
 }
 
 #[allow(unused_variables)]
-fn __action305<
+fn __action304<
     'input,
 >(
     input: &'input str,
@@ -18003,7 +17980,7 @@ fn __action305<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18020,7 +17997,7 @@ fn __action305<
 }
 
 #[allow(unused_variables)]
-fn __action306<
+fn __action305<
     'input,
 >(
     input: &'input str,
@@ -18034,7 +18011,7 @@ fn __action306<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18053,7 +18030,7 @@ fn __action306<
 }
 
 #[allow(unused_variables)]
-fn __action307<
+fn __action306<
     'input,
 >(
     input: &'input str,
@@ -18066,7 +18043,7 @@ fn __action307<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18084,7 +18061,7 @@ fn __action307<
 }
 
 #[allow(unused_variables)]
-fn __action308<
+fn __action307<
     'input,
 >(
     input: &'input str,
@@ -18098,7 +18075,7 @@ fn __action308<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18117,7 +18094,7 @@ fn __action308<
 }
 
 #[allow(unused_variables)]
-fn __action309<
+fn __action308<
     'input,
 >(
     input: &'input str,
@@ -18132,7 +18109,7 @@ fn __action309<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18152,7 +18129,7 @@ fn __action309<
 }
 
 #[allow(unused_variables)]
-fn __action310<
+fn __action309<
     'input,
 >(
     input: &'input str,
@@ -18168,7 +18145,7 @@ fn __action310<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18189,6 +18166,35 @@ fn __action310<
 }
 
 #[allow(unused_variables)]
+fn __action310<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, usize, usize),
+    __3: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action208(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action67(
+        input,
+        __0,
+        __temp0,
+        __1,
+        __2,
+        __3,
+    )
+}
+
+#[allow(unused_variables)]
 fn __action311<
     'input,
 >(
@@ -18201,13 +18207,13 @@ fn __action311<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action67(
+    __action68(
         input,
         __0,
         __temp0,
@@ -18230,13 +18236,13 @@ fn __action312<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action68(
+    __action69(
         input,
         __0,
         __temp0,
@@ -18259,13 +18265,13 @@ fn __action313<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action69(
+    __action70(
         input,
         __0,
         __temp0,
@@ -18288,13 +18294,13 @@ fn __action314<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action70(
+    __action64(
         input,
         __0,
         __temp0,
@@ -18317,13 +18323,13 @@ fn __action315<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action64(
+    __action65(
         input,
         __0,
         __temp0,
@@ -18346,13 +18352,13 @@ fn __action316<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action65(
+    __action62(
         input,
         __0,
         __temp0,
@@ -18375,36 +18381,7 @@ fn __action317<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action62(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action318<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18421,7 +18398,7 @@ fn __action318<
 }
 
 #[allow(unused_variables)]
-fn __action319<
+fn __action318<
     'input,
 >(
     input: &'input str,
@@ -18435,7 +18412,7 @@ fn __action319<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18454,6 +18431,35 @@ fn __action319<
 }
 
 #[allow(unused_variables)]
+fn __action319<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, usize, usize),
+    __3: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action208(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action46(
+        input,
+        __0,
+        __temp0,
+        __1,
+        __2,
+        __3,
+    )
+}
+
+#[allow(unused_variables)]
 fn __action320<
     'input,
 >(
@@ -18466,13 +18472,13 @@ fn __action320<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action46(
+    __action47(
         input,
         __0,
         __temp0,
@@ -18495,13 +18501,13 @@ fn __action321<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action47(
+    __action48(
         input,
         __0,
         __temp0,
@@ -18524,13 +18530,13 @@ fn __action322<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action48(
+    __action49(
         input,
         __0,
         __temp0,
@@ -18553,13 +18559,13 @@ fn __action323<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action49(
+    __action50(
         input,
         __0,
         __temp0,
@@ -18582,13 +18588,13 @@ fn __action324<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action50(
+    __action51(
         input,
         __0,
         __temp0,
@@ -18611,13 +18617,13 @@ fn __action325<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action51(
+    __action52(
         input,
         __0,
         __temp0,
@@ -18640,13 +18646,13 @@ fn __action326<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action52(
+    __action53(
         input,
         __0,
         __temp0,
@@ -18669,13 +18675,13 @@ fn __action327<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action53(
+    __action54(
         input,
         __0,
         __temp0,
@@ -18698,13 +18704,13 @@ fn __action328<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action54(
+    __action55(
         input,
         __0,
         __temp0,
@@ -18727,36 +18733,7 @@ fn __action329<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action55(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action330<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -18773,6 +18750,33 @@ fn __action330<
 }
 
 #[allow(unused_variables)]
+fn __action330<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action208(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action90(
+        input,
+        __temp0,
+        __0,
+        __1,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
 fn __action331<
     'input,
 >(
@@ -18784,13 +18788,13 @@ fn __action331<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action90(
+    __action91(
         input,
         __temp0,
         __0,
@@ -18811,13 +18815,13 @@ fn __action332<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action91(
+    __action92(
         input,
         __temp0,
         __0,
@@ -18838,13 +18842,13 @@ fn __action333<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action92(
+    __action93(
         input,
         __temp0,
         __0,
@@ -18865,13 +18869,13 @@ fn __action334<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action93(
+    __action94(
         input,
         __temp0,
         __0,
@@ -18892,13 +18896,13 @@ fn __action335<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action94(
+    __action95(
         input,
         __temp0,
         __0,
@@ -18919,13 +18923,13 @@ fn __action336<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action95(
+    __action96(
         input,
         __temp0,
         __0,
@@ -18939,25 +18943,27 @@ fn __action337<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-    __2: (usize, Expression, usize),
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, usize, usize),
+    __3: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action96(
+    __action88(
         input,
-        __temp0,
         __0,
+        __temp0,
         __1,
         __2,
+        __3,
     )
 }
 
@@ -18974,13 +18980,13 @@ fn __action338<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action88(
+    __action84(
         input,
         __0,
         __temp0,
@@ -19003,13 +19009,13 @@ fn __action339<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action84(
+    __action85(
         input,
         __0,
         __temp0,
@@ -19032,13 +19038,13 @@ fn __action340<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action85(
+    __action86(
         input,
         __0,
         __temp0,
@@ -19061,13 +19067,13 @@ fn __action341<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action86(
+    __action81(
         input,
         __0,
         __temp0,
@@ -19090,13 +19096,13 @@ fn __action342<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action81(
+    __action82(
         input,
         __0,
         __temp0,
@@ -19119,13 +19125,13 @@ fn __action343<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action82(
+    __action78(
         input,
         __0,
         __temp0,
@@ -19148,13 +19154,13 @@ fn __action344<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action78(
+    __action79(
         input,
         __0,
         __temp0,
@@ -19177,13 +19183,13 @@ fn __action345<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action79(
+    __action76(
         input,
         __0,
         __temp0,
@@ -19206,13 +19212,13 @@ fn __action346<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action76(
+    __action74(
         input,
         __0,
         __temp0,
@@ -19235,36 +19241,7 @@ fn __action347<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action210(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action74(
-        input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action348<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -19281,6 +19258,31 @@ fn __action348<
 }
 
 #[allow(unused_variables)]
+fn __action348<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+) -> StateMutability
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action208(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action123(
+        input,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
 fn __action349<
     'input,
 >(
@@ -19291,13 +19293,13 @@ fn __action349<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action123(
+    __action124(
         input,
         __temp0,
         __0,
@@ -19316,13 +19318,13 @@ fn __action350<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action124(
+    __action125(
         input,
         __temp0,
         __0,
@@ -19337,17 +19339,17 @@ fn __action351<
     input: &'input str,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
-) -> StateMutability
+) -> StorageLocation
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action125(
+    __action19(
         input,
         __temp0,
         __0,
@@ -19366,13 +19368,13 @@ fn __action352<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action19(
+    __action20(
         input,
         __temp0,
         __0,
@@ -19391,32 +19393,7 @@ fn __action353<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action20(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action354<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> StorageLocation
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -19431,7 +19408,7 @@ fn __action354<
 }
 
 #[allow(unused_variables)]
-fn __action355<
+fn __action354<
     'input,
 >(
     input: &'input str,
@@ -19441,7 +19418,7 @@ fn __action355<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -19456,7 +19433,7 @@ fn __action355<
 }
 
 #[allow(unused_variables)]
-fn __action356<
+fn __action355<
     'input,
 >(
     input: &'input str,
@@ -19466,13 +19443,38 @@ fn __action356<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action44(
+        input,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action356<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+) -> Visibility
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action208(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action39(
         input,
         __temp0,
         __0,
@@ -19491,13 +19493,13 @@ fn __action357<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action39(
+    __action40(
         input,
         __temp0,
         __0,
@@ -19516,13 +19518,13 @@ fn __action358<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action40(
+    __action41(
         input,
         __temp0,
         __0,
@@ -19541,32 +19543,7 @@ fn __action359<
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
-    let __temp0 = __action210(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action41(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action360<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> Visibility
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action210(
+    let __temp0 = __action208(
         input,
         &__start0,
         &__end0,
@@ -19581,34 +19558,7 @@ fn __action360<
 }
 
 #[allow(unused_variables)]
-fn __action361<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, &'input str, usize),
-    __2: (usize, Token<'input>, usize),
-) -> Option<(Loc, BigInt)>
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action279(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action362<
+fn __action360<
     'input,
 >(
     input: &'input str,
@@ -19622,13 +19572,13 @@ fn __action362<
 {
     let __start0 = __5.2.clone();
     let __end0 = __5.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action280(
+    __action279(
         input,
         __0,
         __1,
@@ -19641,7 +19591,7 @@ fn __action362<
 }
 
 #[allow(unused_variables)]
-fn __action363<
+fn __action361<
     'input,
 >(
     input: &'input str,
@@ -19656,13 +19606,13 @@ fn __action363<
 {
     let __start0 = __5.2.clone();
     let __end0 = __6.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action281(
+    __action280(
         input,
         __0,
         __1,
@@ -19676,7 +19626,7 @@ fn __action363<
 }
 
 #[allow(unused_variables)]
-fn __action364<
+fn __action362<
     'input,
 >(
     input: &'input str,
@@ -19689,13 +19639,13 @@ fn __action364<
 {
     let __start0 = __3.2.clone();
     let __end0 = __4.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action282(
+    __action281(
         input,
         __0,
         __1,
@@ -19707,7 +19657,7 @@ fn __action364<
 }
 
 #[allow(unused_variables)]
-fn __action365<
+fn __action363<
     'input,
 >(
     input: &'input str,
@@ -19722,13 +19672,13 @@ fn __action365<
 {
     let __start0 = __6.2.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action283(
+    __action282(
         input,
         __0,
         __1,
@@ -19742,7 +19692,7 @@ fn __action365<
 }
 
 #[allow(unused_variables)]
-fn __action366<
+fn __action364<
     'input,
 >(
     input: &'input str,
@@ -19755,7 +19705,41 @@ fn __action366<
 {
     let __start0 = __4.2.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action283(
+        input,
+        __0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action365<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __3: (usize, Vec<Parameter>, usize),
+    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Vec<Parameter>, usize),
+    __7: (usize, Token<'input>, usize),
+) -> Box<FunctionDefinition>
+{
+    let __start0 = __7.2.clone();
+    let __end0 = __7.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -19768,6 +19752,42 @@ fn __action366<
         __2,
         __3,
         __4,
+        __5,
+        __6,
+        __7,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action366<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __3: (usize, Vec<Parameter>, usize),
+    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, Token<'input>, usize),
+) -> Box<FunctionDefinition>
+{
+    let __start0 = __5.2.clone();
+    let __end0 = __5.2.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action285(
+        input,
+        __0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __5,
         __temp0,
     )
 }
@@ -19784,18 +19804,18 @@ fn __action367<
     __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Vec<Parameter>, usize),
-    __7: (usize, Token<'input>, usize),
+    __7: (usize, BlockStatement, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __7.2.clone();
     let __end0 = __7.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action285(
+    __action286(
         input,
         __0,
         __1,
@@ -19819,18 +19839,18 @@ fn __action368<
     __2: (usize, ::std::option::Option<Identifier>, usize),
     __3: (usize, Vec<Parameter>, usize),
     __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __5: (usize, Token<'input>, usize),
+    __5: (usize, BlockStatement, usize),
 ) -> Box<FunctionDefinition>
 {
     let __start0 = __5.2.clone();
     let __end0 = __5.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action286(
+    __action287(
         input,
         __0,
         __1,
@@ -19847,34 +19867,20 @@ fn __action369<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Vec<String>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
-    __3: (usize, Vec<Parameter>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Vec<Parameter>, usize),
-    __7: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
+    __0: (usize, &'input str, usize),
+) -> HexLiteral
 {
-    let __start0 = __7.2.clone();
-    let __end0 = __7.2.clone();
-    let __temp0 = __action209(
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action287(
+    __action288(
         input,
         __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __6,
-        __7,
         __temp0,
     )
 }
@@ -19884,45 +19890,12 @@ fn __action370<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Vec<String>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
-    __3: (usize, Vec<Parameter>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __5: (usize, BlockStatement, usize),
-) -> Box<FunctionDefinition>
-{
-    let __start0 = __5.2.clone();
-    let __end0 = __5.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action288(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
-        __5,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action371<
-    'input,
->(
-    input: &'input str,
     __0: (usize, &'input str, usize),
-) -> HexLiteral
+) -> Identifier
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -19936,30 +19909,7 @@ fn __action371<
 }
 
 #[allow(unused_variables)]
-fn __action372<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Identifier
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action290(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action373<
+fn __action371<
     'input,
 >(
     input: &'input str,
@@ -19969,13 +19919,13 @@ fn __action373<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action291(
+    __action290(
         input,
         __0,
         __temp0,
@@ -19984,7 +19934,7 @@ fn __action373<
 }
 
 #[allow(unused_variables)]
-fn __action374<
+fn __action372<
     'input,
 >(
     input: &'input str,
@@ -19995,13 +19945,13 @@ fn __action374<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action292(
+    __action291(
         input,
         __0,
         __1,
@@ -20011,7 +19961,7 @@ fn __action374<
 }
 
 #[allow(unused_variables)]
-fn __action375<
+fn __action373<
     'input,
 >(
     input: &'input str,
@@ -20025,13 +19975,13 @@ fn __action375<
 {
     let __start0 = __4.2.clone();
     let __end0 = __5.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action293(
+    __action292(
         input,
         __0,
         __1,
@@ -20044,7 +19994,7 @@ fn __action375<
 }
 
 #[allow(unused_variables)]
-fn __action376<
+fn __action374<
     'input,
 >(
     input: &'input str,
@@ -20054,7 +20004,32 @@ fn __action376<
 {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action293(
+        input,
+        __0,
+        __1,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action375<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __1.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -20069,32 +20044,7 @@ fn __action376<
 }
 
 #[allow(unused_variables)]
-fn __action377<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __1.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action295(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action378<
+fn __action376<
     'input,
 >(
     input: &'input str,
@@ -20106,13 +20056,13 @@ fn __action378<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action296(
+    __action295(
         input,
         __0,
         __1,
@@ -20123,7 +20073,7 @@ fn __action378<
 }
 
 #[allow(unused_variables)]
-fn __action379<
+fn __action377<
     'input,
 >(
     input: &'input str,
@@ -20135,13 +20085,13 @@ fn __action379<
 {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action297(
+    __action296(
         input,
         __0,
         __1,
@@ -20152,7 +20102,7 @@ fn __action379<
 }
 
 #[allow(unused_variables)]
-fn __action380<
+fn __action378<
     'input,
 >(
     input: &'input str,
@@ -20163,13 +20113,13 @@ fn __action380<
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action298(
+    __action297(
         input,
         __0,
         __1,
@@ -20179,7 +20129,7 @@ fn __action380<
 }
 
 #[allow(unused_variables)]
-fn __action381<
+fn __action379<
     'input,
 >(
     input: &'input str,
@@ -20188,7 +20138,30 @@ fn __action381<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action298(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action380<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+) -> Expression
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -20202,30 +20175,7 @@ fn __action381<
 }
 
 #[allow(unused_variables)]
-fn __action382<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action300(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action383<
+fn __action381<
     'input,
 >(
     input: &'input str,
@@ -20236,13 +20186,13 @@ fn __action383<
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action301(
+    __action300(
         input,
         __0,
         __1,
@@ -20252,7 +20202,7 @@ fn __action383<
 }
 
 #[allow(unused_variables)]
-fn __action384<
+fn __action382<
     'input,
 >(
     input: &'input str,
@@ -20264,13 +20214,13 @@ fn __action384<
 {
     let __start0 = __3.2.clone();
     let __end0 = __3.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action302(
+    __action301(
         input,
         __0,
         __1,
@@ -20281,7 +20231,7 @@ fn __action384<
 }
 
 #[allow(unused_variables)]
-fn __action385<
+fn __action383<
     'input,
 >(
     input: &'input str,
@@ -20290,7 +20240,30 @@ fn __action385<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action302(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action384<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, &'input str, usize),
+) -> Expression
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -20304,30 +20277,7 @@ fn __action385<
 }
 
 #[allow(unused_variables)]
-fn __action386<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action304(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action387<
+fn __action385<
     'input,
 >(
     input: &'input str,
@@ -20338,13 +20288,13 @@ fn __action387<
 {
     let __start0 = __2.2.clone();
     let __end0 = __2.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action305(
+    __action304(
         input,
         __0,
         __1,
@@ -20354,7 +20304,7 @@ fn __action387<
 }
 
 #[allow(unused_variables)]
-fn __action388<
+fn __action386<
     'input,
 >(
     input: &'input str,
@@ -20367,13 +20317,73 @@ fn __action388<
 {
     let __start0 = __4.2.clone();
     let __end0 = __4.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action305(
+        input,
+        __0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action387<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Type, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+    __3: (usize, Token<'input>, usize),
+) -> Expression
+{
+    let __start0 = __3.2.clone();
+    let __end0 = __3.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action306(
+        input,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action388<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Type, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::vec::Vec<Expression>, usize),
+    __3: (usize, Expression, usize),
+    __4: (usize, Token<'input>, usize),
+) -> Expression
+{
+    let __start0 = __4.2.clone();
+    let __end0 = __4.2.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action307(
         input,
         __0,
         __1,
@@ -20391,43 +20401,15 @@ fn __action389<
     input: &'input str,
     __0: (usize, Type, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
-    __3: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __3.2.clone();
-    let __end0 = __3.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action307(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action390<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Type, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::vec::Vec<Expression>, usize),
-    __3: (usize, Expression, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, NamedArgument, usize),
     __4: (usize, Token<'input>, usize),
+    __5: (usize, Token<'input>, usize),
 ) -> Expression
 {
-    let __start0 = __4.2.clone();
-    let __end0 = __4.2.clone();
-    let __temp0 = __action209(
+    let __start0 = __5.2.clone();
+    let __end0 = __5.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -20440,45 +20422,13 @@ fn __action390<
         __2,
         __3,
         __4,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action391<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Type, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, NamedArgument, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __5.2.clone();
-    let __end0 = __5.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action309(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __4,
         __5,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action392<
+fn __action390<
     'input,
 >(
     input: &'input str,
@@ -20493,13 +20443,13 @@ fn __action392<
 {
     let __start0 = __6.2.clone();
     let __end0 = __6.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action310(
+    __action309(
         input,
         __0,
         __1,
@@ -20509,6 +20459,60 @@ fn __action392<
         __5,
         __6,
         __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action391<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action310(
+        input,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action392<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action311(
+        input,
+        __0,
+        __1,
+        __temp0,
+        __2,
     )
 }
 
@@ -20524,13 +20528,13 @@ fn __action393<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action311(
+    __action312(
         input,
         __0,
         __1,
@@ -20551,13 +20555,13 @@ fn __action394<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action312(
+    __action313(
         input,
         __0,
         __1,
@@ -20578,13 +20582,13 @@ fn __action395<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action313(
+    __action314(
         input,
         __0,
         __1,
@@ -20605,13 +20609,13 @@ fn __action396<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action314(
+    __action315(
         input,
         __0,
         __1,
@@ -20632,13 +20636,13 @@ fn __action397<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action315(
+    __action316(
         input,
         __0,
         __1,
@@ -20659,13 +20663,13 @@ fn __action398<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action316(
+    __action317(
         input,
         __0,
         __1,
@@ -20682,22 +20686,26 @@ fn __action399<
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action317(
+    __action318(
         input,
         __0,
         __1,
-        __temp0,
         __2,
+        __3,
+        __temp0,
+        __4,
     )
 }
 
@@ -20713,13 +20721,13 @@ fn __action400<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action318(
+    __action319(
         input,
         __0,
         __1,
@@ -20736,26 +20744,22 @@ fn __action401<
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __3.2.clone();
-    let __end0 = __4.0.clone();
-    let __temp0 = __action209(
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action319(
+    __action320(
         input,
         __0,
         __1,
-        __2,
-        __3,
         __temp0,
-        __4,
+        __2,
     )
 }
 
@@ -20771,13 +20775,13 @@ fn __action402<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action320(
+    __action321(
         input,
         __0,
         __1,
@@ -20798,13 +20802,13 @@ fn __action403<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action321(
+    __action322(
         input,
         __0,
         __1,
@@ -20825,13 +20829,13 @@ fn __action404<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action322(
+    __action323(
         input,
         __0,
         __1,
@@ -20852,13 +20856,13 @@ fn __action405<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action323(
+    __action324(
         input,
         __0,
         __1,
@@ -20879,13 +20883,13 @@ fn __action406<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action324(
+    __action325(
         input,
         __0,
         __1,
@@ -20906,13 +20910,13 @@ fn __action407<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action325(
+    __action326(
         input,
         __0,
         __1,
@@ -20933,13 +20937,13 @@ fn __action408<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action326(
+    __action327(
         input,
         __0,
         __1,
@@ -20960,13 +20964,13 @@ fn __action409<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action327(
+    __action328(
         input,
         __0,
         __1,
@@ -20987,34 +20991,7 @@ fn __action410<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action328(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action411<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21030,18 +21007,17 @@ fn __action411<
 }
 
 #[allow(unused_variables)]
-fn __action412<
+fn __action411<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21050,9 +21026,33 @@ fn __action412<
     __action330(
         input,
         __0,
-        __1,
         __temp0,
-        __2,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action412<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action331(
+        input,
+        __0,
+        __temp0,
+        __1,
     )
 }
 
@@ -21067,13 +21067,13 @@ fn __action413<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action331(
+    __action332(
         input,
         __0,
         __temp0,
@@ -21092,13 +21092,13 @@ fn __action414<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action332(
+    __action333(
         input,
         __0,
         __temp0,
@@ -21117,13 +21117,13 @@ fn __action415<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action333(
+    __action334(
         input,
         __0,
         __temp0,
@@ -21142,13 +21142,13 @@ fn __action416<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action334(
+    __action335(
         input,
         __0,
         __temp0,
@@ -21167,32 +21167,7 @@ fn __action417<
 {
     let __start0 = __0.2.clone();
     let __end0 = __1.0.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action335(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action418<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21207,17 +21182,18 @@ fn __action418<
 }
 
 #[allow(unused_variables)]
-fn __action419<
+fn __action418<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action209(
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21226,8 +21202,36 @@ fn __action419<
     __action337(
         input,
         __0,
-        __temp0,
         __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action419<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action338(
+        input,
+        __0,
+        __1,
+        __temp0,
+        __2,
     )
 }
 
@@ -21243,13 +21247,13 @@ fn __action420<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action338(
+    __action339(
         input,
         __0,
         __1,
@@ -21270,13 +21274,13 @@ fn __action421<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action339(
+    __action340(
         input,
         __0,
         __1,
@@ -21297,13 +21301,13 @@ fn __action422<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action340(
+    __action341(
         input,
         __0,
         __1,
@@ -21324,13 +21328,13 @@ fn __action423<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action341(
+    __action342(
         input,
         __0,
         __1,
@@ -21351,13 +21355,13 @@ fn __action424<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action342(
+    __action343(
         input,
         __0,
         __1,
@@ -21378,13 +21382,13 @@ fn __action425<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action343(
+    __action344(
         input,
         __0,
         __1,
@@ -21405,13 +21409,13 @@ fn __action426<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action344(
+    __action345(
         input,
         __0,
         __1,
@@ -21432,13 +21436,13 @@ fn __action427<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action345(
+    __action346(
         input,
         __0,
         __1,
@@ -21459,34 +21463,7 @@ fn __action428<
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action346(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action429<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21502,34 +21479,7 @@ fn __action429<
 }
 
 #[allow(unused_variables)]
-fn __action430<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action348(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action431<
+fn __action429<
     'input,
 >(
     input: &'input str,
@@ -21538,7 +21488,30 @@ fn __action431<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action348(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action430<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+) -> StateMutability
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21552,7 +21525,7 @@ fn __action431<
 }
 
 #[allow(unused_variables)]
-fn __action432<
+fn __action431<
     'input,
 >(
     input: &'input str,
@@ -21561,7 +21534,7 @@ fn __action432<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21575,22 +21548,45 @@ fn __action432<
 }
 
 #[allow(unused_variables)]
-fn __action433<
+fn __action432<
     'input,
 >(
     input: &'input str,
     __0: (usize, Token<'input>, usize),
-) -> StateMutability
+) -> StorageLocation
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action351(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action433<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+) -> StorageLocation
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action352(
         input,
         __0,
         __temp0,
@@ -21607,30 +21603,7 @@ fn __action434<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action352(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action435<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> StorageLocation
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21644,16 +21617,16 @@ fn __action435<
 }
 
 #[allow(unused_variables)]
-fn __action436<
+fn __action435<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> StorageLocation
+    __0: (usize, &'input str, usize),
+) -> StringLiteral
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21667,16 +21640,16 @@ fn __action436<
 }
 
 #[allow(unused_variables)]
-fn __action437<
+fn __action436<
     'input,
 >(
     input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> StringLiteral
+    __0: (usize, Token<'input>, usize),
+) -> VariableAttribute
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21690,22 +21663,45 @@ fn __action437<
 }
 
 #[allow(unused_variables)]
-fn __action438<
+fn __action437<
     'input,
 >(
     input: &'input str,
     __0: (usize, Token<'input>, usize),
-) -> VariableAttribute
+) -> Visibility
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action356(
+        input,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action438<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+) -> Visibility
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action207(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action357(
         input,
         __0,
         __temp0,
@@ -21722,13 +21718,13 @@ fn __action439<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action357(
+    __action358(
         input,
         __0,
         __temp0,
@@ -21745,30 +21741,7 @@ fn __action440<
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action358(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action441<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Visibility
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action209(
+    let __temp0 = __action207(
         input,
         &__start0,
         &__end0,
@@ -21782,30 +21755,7 @@ fn __action441<
 }
 
 #[allow(unused_variables)]
-fn __action442<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Visibility
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action209(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action360(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action443<
+fn __action441<
     'input,
 >(
     input: &'input str,
@@ -21828,7 +21778,7 @@ fn __action443<
 }
 
 #[allow(unused_variables)]
-fn __action444<
+fn __action442<
     'input,
 >(
     input: &'input str,
@@ -21849,7 +21799,7 @@ fn __action444<
 }
 
 #[allow(unused_variables)]
-fn __action445<
+fn __action443<
     'input,
 >(
     input: &'input str,
@@ -21872,6 +21822,80 @@ fn __action445<
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action138(
+        input,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+        __5,
+        __6,
+        __7,
+        __8,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action444<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Statement>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
+    let __temp0 = __action177(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action138(
+        input,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+        __4,
+        __5,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action445<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Statement>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, ::std::option::Option<Statement>, usize),
+    __7: (usize, Token<'input>, usize),
+    __8: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __4.0.clone();
+    let __end0 = __4.2.clone();
+    let __temp0 = __action176(
+        input,
+        __4,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action139(
         input,
         __0,
         __1,
@@ -21897,7 +21921,7 @@ fn __action446<
     __4: (usize, Token<'input>, usize),
     __5: (usize, ::std::option::Option<Statement>, usize),
     __6: (usize, Token<'input>, usize),
-    __7: (usize, Statement, usize),
+    __7: (usize, Token<'input>, usize),
 ) -> Statement
 {
     let __start0 = __3.2.clone();
@@ -21908,7 +21932,7 @@ fn __action446<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action138(
+    __action139(
         input,
         __0,
         __1,
@@ -21927,80 +21951,6 @@ fn __action447<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
-    __7: (usize, Token<'input>, usize),
-    __8: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __4.0.clone();
-    let __end0 = __4.2.clone();
-    let __temp0 = __action176(
-        input,
-        __4,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action139(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __5,
-        __6,
-        __7,
-        __8,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action448<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::option::Option<Statement>, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __3.2.clone();
-    let __end0 = __4.0.clone();
-    let __temp0 = __action177(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action139(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action449<
-    'input,
->(
-    input: &'input str,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -22014,7 +21964,7 @@ fn __action449<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action379(
+    __action377(
         input,
         __0,
         __1,
@@ -22024,7 +21974,7 @@ fn __action449<
 }
 
 #[allow(unused_variables)]
-fn __action450<
+fn __action448<
     'input,
 >(
     input: &'input str,
@@ -22041,7 +21991,7 @@ fn __action450<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action379(
+    __action377(
         input,
         __0,
         __1,
@@ -22051,7 +22001,7 @@ fn __action450<
 }
 
 #[allow(unused_variables)]
-fn __action451<
+fn __action449<
     'input,
 >(
     input: &'input str,
@@ -22071,7 +22021,7 @@ fn __action451<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action365(
+    __action363(
         input,
         __0,
         __1,
@@ -22084,7 +22034,7 @@ fn __action451<
 }
 
 #[allow(unused_variables)]
-fn __action452<
+fn __action450<
     'input,
 >(
     input: &'input str,
@@ -22104,7 +22054,7 @@ fn __action452<
         __3,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action365(
+    __action363(
         input,
         __0,
         __1,
@@ -22117,7 +22067,7 @@ fn __action452<
 }
 
 #[allow(unused_variables)]
-fn __action453<
+fn __action451<
     'input,
 >(
     input: &'input str,
@@ -22135,7 +22085,7 @@ fn __action453<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action366(
+    __action364(
         input,
         __0,
         __1,
@@ -22146,7 +22096,7 @@ fn __action453<
 }
 
 #[allow(unused_variables)]
-fn __action454<
+fn __action452<
     'input,
 >(
     input: &'input str,
@@ -22164,7 +22114,7 @@ fn __action454<
         __3,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action366(
+    __action364(
         input,
         __0,
         __1,
@@ -22175,7 +22125,7 @@ fn __action454<
 }
 
 #[allow(unused_variables)]
-fn __action455<
+fn __action453<
     'input,
 >(
     input: &'input str,
@@ -22196,7 +22146,7 @@ fn __action455<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action367(
+    __action365(
         input,
         __0,
         __1,
@@ -22210,7 +22160,7 @@ fn __action455<
 }
 
 #[allow(unused_variables)]
-fn __action456<
+fn __action454<
     'input,
 >(
     input: &'input str,
@@ -22231,7 +22181,7 @@ fn __action456<
         __4,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action367(
+    __action365(
         input,
         __0,
         __1,
@@ -22245,7 +22195,7 @@ fn __action456<
 }
 
 #[allow(unused_variables)]
-fn __action457<
+fn __action455<
     'input,
 >(
     input: &'input str,
@@ -22264,7 +22214,7 @@ fn __action457<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action368(
+    __action366(
         input,
         __0,
         __1,
@@ -22276,7 +22226,7 @@ fn __action457<
 }
 
 #[allow(unused_variables)]
-fn __action458<
+fn __action456<
     'input,
 >(
     input: &'input str,
@@ -22295,7 +22245,7 @@ fn __action458<
         __4,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action368(
+    __action366(
         input,
         __0,
         __1,
@@ -22307,7 +22257,7 @@ fn __action458<
 }
 
 #[allow(unused_variables)]
-fn __action459<
+fn __action457<
     'input,
 >(
     input: &'input str,
@@ -22328,7 +22278,7 @@ fn __action459<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action369(
+    __action367(
         input,
         __0,
         __1,
@@ -22342,7 +22292,7 @@ fn __action459<
 }
 
 #[allow(unused_variables)]
-fn __action460<
+fn __action458<
     'input,
 >(
     input: &'input str,
@@ -22363,7 +22313,7 @@ fn __action460<
         __4,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action369(
+    __action367(
         input,
         __0,
         __1,
@@ -22377,7 +22327,7 @@ fn __action460<
 }
 
 #[allow(unused_variables)]
-fn __action461<
+fn __action459<
     'input,
 >(
     input: &'input str,
@@ -22396,7 +22346,7 @@ fn __action461<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action370(
+    __action368(
         input,
         __0,
         __1,
@@ -22408,7 +22358,7 @@ fn __action461<
 }
 
 #[allow(unused_variables)]
-fn __action462<
+fn __action460<
     'input,
 >(
     input: &'input str,
@@ -22427,7 +22377,7 @@ fn __action462<
         __4,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action370(
+    __action368(
         input,
         __0,
         __1,
@@ -22439,7 +22389,7 @@ fn __action462<
 }
 
 #[allow(unused_variables)]
-fn __action463<
+fn __action461<
     'input,
 >(
     input: &'input str,
@@ -22464,7 +22414,7 @@ fn __action463<
 }
 
 #[allow(unused_variables)]
-fn __action464<
+fn __action462<
     'input,
 >(
     input: &'input str,
@@ -22489,7 +22439,7 @@ fn __action464<
 }
 
 #[allow(unused_variables)]
-fn __action465<
+fn __action463<
     'input,
 >(
     input: &'input str,
@@ -22512,7 +22462,7 @@ fn __action465<
 }
 
 #[allow(unused_variables)]
-fn __action466<
+fn __action464<
     'input,
 >(
     input: &'input str,
@@ -22535,7 +22485,7 @@ fn __action466<
 }
 
 #[allow(unused_variables)]
-fn __action467<
+fn __action465<
     'input,
 >(
     input: &'input str,
@@ -22555,7 +22505,7 @@ fn __action467<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action455(
+    __action453(
         input,
         __0,
         __1,
@@ -22568,7 +22518,7 @@ fn __action467<
 }
 
 #[allow(unused_variables)]
-fn __action468<
+fn __action466<
     'input,
 >(
     input: &'input str,
@@ -22588,7 +22538,7 @@ fn __action468<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action455(
+    __action453(
         input,
         __0,
         __1,
@@ -22601,7 +22551,7 @@ fn __action468<
 }
 
 #[allow(unused_variables)]
-fn __action469<
+fn __action467<
     'input,
 >(
     input: &'input str,
@@ -22622,7 +22572,7 @@ fn __action469<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action456(
+    __action454(
         input,
         __0,
         __1,
@@ -22636,7 +22586,7 @@ fn __action469<
 }
 
 #[allow(unused_variables)]
-fn __action470<
+fn __action468<
     'input,
 >(
     input: &'input str,
@@ -22657,7 +22607,7 @@ fn __action470<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action456(
+    __action454(
         input,
         __0,
         __1,
@@ -22671,7 +22621,7 @@ fn __action470<
 }
 
 #[allow(unused_variables)]
-fn __action471<
+fn __action469<
     'input,
 >(
     input: &'input str,
@@ -22689,7 +22639,7 @@ fn __action471<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action457(
+    __action455(
         input,
         __0,
         __1,
@@ -22700,7 +22650,7 @@ fn __action471<
 }
 
 #[allow(unused_variables)]
-fn __action472<
+fn __action470<
     'input,
 >(
     input: &'input str,
@@ -22718,7 +22668,7 @@ fn __action472<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action457(
+    __action455(
         input,
         __0,
         __1,
@@ -22729,7 +22679,7 @@ fn __action472<
 }
 
 #[allow(unused_variables)]
-fn __action473<
+fn __action471<
     'input,
 >(
     input: &'input str,
@@ -22748,7 +22698,7 @@ fn __action473<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action458(
+    __action456(
         input,
         __0,
         __1,
@@ -22760,7 +22710,7 @@ fn __action473<
 }
 
 #[allow(unused_variables)]
-fn __action474<
+fn __action472<
     'input,
 >(
     input: &'input str,
@@ -22779,7 +22729,7 @@ fn __action474<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action458(
+    __action456(
         input,
         __0,
         __1,
@@ -22791,7 +22741,7 @@ fn __action474<
 }
 
 #[allow(unused_variables)]
-fn __action475<
+fn __action473<
     'input,
 >(
     input: &'input str,
@@ -22811,7 +22761,7 @@ fn __action475<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action459(
+    __action457(
         input,
         __0,
         __1,
@@ -22824,7 +22774,7 @@ fn __action475<
 }
 
 #[allow(unused_variables)]
-fn __action476<
+fn __action474<
     'input,
 >(
     input: &'input str,
@@ -22844,7 +22794,7 @@ fn __action476<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action459(
+    __action457(
         input,
         __0,
         __1,
@@ -22857,7 +22807,7 @@ fn __action476<
 }
 
 #[allow(unused_variables)]
-fn __action477<
+fn __action475<
     'input,
 >(
     input: &'input str,
@@ -22878,7 +22828,7 @@ fn __action477<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action460(
+    __action458(
         input,
         __0,
         __1,
@@ -22892,7 +22842,7 @@ fn __action477<
 }
 
 #[allow(unused_variables)]
-fn __action478<
+fn __action476<
     'input,
 >(
     input: &'input str,
@@ -22913,7 +22863,7 @@ fn __action478<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action460(
+    __action458(
         input,
         __0,
         __1,
@@ -22927,7 +22877,7 @@ fn __action478<
 }
 
 #[allow(unused_variables)]
-fn __action479<
+fn __action477<
     'input,
 >(
     input: &'input str,
@@ -22945,7 +22895,7 @@ fn __action479<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action461(
+    __action459(
         input,
         __0,
         __1,
@@ -22956,7 +22906,7 @@ fn __action479<
 }
 
 #[allow(unused_variables)]
-fn __action480<
+fn __action478<
     'input,
 >(
     input: &'input str,
@@ -22974,7 +22924,7 @@ fn __action480<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action461(
+    __action459(
         input,
         __0,
         __1,
@@ -22985,7 +22935,7 @@ fn __action480<
 }
 
 #[allow(unused_variables)]
-fn __action481<
+fn __action479<
     'input,
 >(
     input: &'input str,
@@ -23004,7 +22954,7 @@ fn __action481<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action462(
+    __action460(
         input,
         __0,
         __1,
@@ -23016,7 +22966,7 @@ fn __action481<
 }
 
 #[allow(unused_variables)]
-fn __action482<
+fn __action480<
     'input,
 >(
     input: &'input str,
@@ -23035,7 +22985,7 @@ fn __action482<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action462(
+    __action460(
         input,
         __0,
         __1,
@@ -23047,7 +22997,7 @@ fn __action482<
 }
 
 #[allow(unused_variables)]
-fn __action483<
+fn __action481<
     'input,
 >(
     input: &'input str,
@@ -23072,7 +23022,7 @@ fn __action483<
 }
 
 #[allow(unused_variables)]
-fn __action484<
+fn __action482<
     'input,
 >(
     input: &'input str,
@@ -23097,7 +23047,7 @@ fn __action484<
 }
 
 #[allow(unused_variables)]
-fn __action485<
+fn __action483<
     'input,
 >(
     input: &'input str,
@@ -23126,7 +23076,7 @@ fn __action485<
         __6,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action445(
+    __action443(
         input,
         __0,
         __1,
@@ -23141,7 +23091,7 @@ fn __action485<
 }
 
 #[allow(unused_variables)]
-fn __action486<
+fn __action484<
     'input,
 >(
     input: &'input str,
@@ -23170,7 +23120,7 @@ fn __action486<
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action445(
+    __action443(
         input,
         __0,
         __1,
@@ -23185,7 +23135,7 @@ fn __action486<
 }
 
 #[allow(unused_variables)]
-fn __action487<
+fn __action485<
     'input,
 >(
     input: &'input str,
@@ -23214,12 +23164,98 @@ fn __action487<
         __5,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action445(
+    __action443(
         input,
         __0,
         __1,
         __temp0,
         __2,
+        __3,
+        __4,
+        __temp1,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action486<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Expression, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
+    let __temp0 = __action159(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action159(
+        input,
+        &__start1,
+        &__end1,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action443(
+        input,
+        __0,
+        __1,
+        __temp0,
+        __2,
+        __3,
+        __4,
+        __temp1,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action487<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Statement, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
+    let __start1 = __5.0.clone();
+    let __end1 = __5.2.clone();
+    let __temp0 = __action158(
+        input,
+        __2,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action158(
+        input,
+        __5,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action444(
+        input,
+        __0,
+        __1,
+        __temp0,
         __3,
         __4,
         __temp1,
@@ -23235,21 +23271,20 @@ fn __action488<
     input: &'input str,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, Expression, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Statement, usize),
 ) -> Statement
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
     let __start1 = __4.2.clone();
     let __end1 = __5.0.clone();
-    let __temp0 = __action159(
+    let __temp0 = __action158(
         input,
-        &__start0,
-        &__end0,
+        __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action159(
@@ -23258,12 +23293,11 @@ fn __action488<
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action445(
+    __action444(
         input,
         __0,
         __1,
         __temp0,
-        __2,
         __3,
         __4,
         __temp1,
@@ -23274,90 +23308,6 @@ fn __action488<
 
 #[allow(unused_variables)]
 fn __action489<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Statement, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __5.0.clone();
-    let __end1 = __5.2.clone();
-    let __temp0 = __action158(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action158(
-        input,
-        __5,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action446(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action490<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __4.2.clone();
-    let __end1 = __5.0.clone();
-    let __temp0 = __action158(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action159(
-        input,
-        &__start1,
-        &__end1,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action446(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action491<
     'input,
 >(
     input: &'input str,
@@ -23385,7 +23335,7 @@ fn __action491<
         __4,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action446(
+    __action444(
         input,
         __0,
         __1,
@@ -23399,7 +23349,7 @@ fn __action491<
 }
 
 #[allow(unused_variables)]
-fn __action492<
+fn __action490<
     'input,
 >(
     input: &'input str,
@@ -23427,7 +23377,7 @@ fn __action492<
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action446(
+    __action444(
         input,
         __0,
         __1,
@@ -23441,7 +23391,7 @@ fn __action492<
 }
 
 #[allow(unused_variables)]
-fn __action493<
+fn __action491<
     'input,
 >(
     input: &'input str,
@@ -23470,7 +23420,7 @@ fn __action493<
         __6,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action447(
+    __action445(
         input,
         __0,
         __1,
@@ -23485,7 +23435,7 @@ fn __action493<
 }
 
 #[allow(unused_variables)]
-fn __action494<
+fn __action492<
     'input,
 >(
     input: &'input str,
@@ -23514,7 +23464,7 @@ fn __action494<
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action447(
+    __action445(
         input,
         __0,
         __1,
@@ -23529,7 +23479,7 @@ fn __action494<
 }
 
 #[allow(unused_variables)]
-fn __action495<
+fn __action493<
     'input,
 >(
     input: &'input str,
@@ -23558,12 +23508,98 @@ fn __action495<
         __5,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action447(
+    __action445(
         input,
         __0,
         __1,
         __temp0,
         __2,
+        __3,
+        __4,
+        __temp1,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action494<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Expression, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
+    let __temp0 = __action159(
+        input,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action159(
+        input,
+        &__start1,
+        &__end1,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action445(
+        input,
+        __0,
+        __1,
+        __temp0,
+        __2,
+        __3,
+        __4,
+        __temp1,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action495<
+    'input,
+>(
+    input: &'input str,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Statement, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
+    let __start1 = __5.0.clone();
+    let __end1 = __5.2.clone();
+    let __temp0 = __action158(
+        input,
+        __2,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action158(
+        input,
+        __5,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action446(
+        input,
+        __0,
+        __1,
+        __temp0,
         __3,
         __4,
         __temp1,
@@ -23579,21 +23615,20 @@ fn __action496<
     input: &'input str,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, Expression, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Token<'input>, usize),
 ) -> Statement
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
     let __start1 = __4.2.clone();
     let __end1 = __5.0.clone();
-    let __temp0 = __action159(
+    let __temp0 = __action158(
         input,
-        &__start0,
-        &__end0,
+        __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action159(
@@ -23602,12 +23637,11 @@ fn __action496<
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action447(
+    __action446(
         input,
         __0,
         __1,
         __temp0,
-        __2,
         __3,
         __4,
         __temp1,
@@ -23618,90 +23652,6 @@ fn __action496<
 
 #[allow(unused_variables)]
 fn __action497<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Statement, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __5.0.clone();
-    let __end1 = __5.2.clone();
-    let __temp0 = __action158(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action158(
-        input,
-        __5,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action448(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action498<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __4.2.clone();
-    let __end1 = __5.0.clone();
-    let __temp0 = __action158(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action159(
-        input,
-        &__start1,
-        &__end1,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action448(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action499<
     'input,
 >(
     input: &'input str,
@@ -23729,7 +23679,7 @@ fn __action499<
         __4,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action448(
+    __action446(
         input,
         __0,
         __1,
@@ -23743,7 +23693,7 @@ fn __action499<
 }
 
 #[allow(unused_variables)]
-fn __action500<
+fn __action498<
     'input,
 >(
     input: &'input str,
@@ -23771,7 +23721,7 @@ fn __action500<
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action448(
+    __action446(
         input,
         __0,
         __1,
@@ -23785,7 +23735,7 @@ fn __action500<
 }
 
 #[allow(unused_variables)]
-fn __action501<
+fn __action499<
     'input,
 >(
     input: &'input str,
@@ -23810,7 +23760,7 @@ fn __action501<
 }
 
 #[allow(unused_variables)]
-fn __action502<
+fn __action500<
     'input,
 >(
     input: &'input str,
@@ -23835,7 +23785,7 @@ fn __action502<
 }
 
 #[allow(unused_variables)]
-fn __action503<
+fn __action501<
     'input,
 >(
     input: &'input str,
@@ -23851,7 +23801,7 @@ fn __action503<
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action483(
+    __action481(
         input,
         __0,
         __temp0,
@@ -23860,7 +23810,7 @@ fn __action503<
 }
 
 #[allow(unused_variables)]
-fn __action504<
+fn __action502<
     'input,
 >(
     input: &'input str,
@@ -23876,7 +23826,7 @@ fn __action504<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action483(
+    __action481(
         input,
         __0,
         __temp0,
@@ -23885,7 +23835,7 @@ fn __action504<
 }
 
 #[allow(unused_variables)]
-fn __action505<
+fn __action503<
     'input,
 >(
     input: &'input str,
@@ -23900,7 +23850,7 @@ fn __action505<
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action484(
+    __action482(
         input,
         __0,
         __temp0,
@@ -23908,7 +23858,7 @@ fn __action505<
 }
 
 #[allow(unused_variables)]
-fn __action506<
+fn __action504<
     'input,
 >(
     input: &'input str,
@@ -23923,7 +23873,7 @@ fn __action506<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action484(
+    __action482(
         input,
         __0,
         __temp0,
@@ -23931,7 +23881,7 @@ fn __action506<
 }
 
 #[allow(unused_variables)]
-fn __action507<
+fn __action505<
     'input,
 >(
     input: &'input str,
@@ -23951,7 +23901,7 @@ fn __action507<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action363(
+    __action361(
         input,
         __0,
         __1,
@@ -23964,7 +23914,7 @@ fn __action507<
 }
 
 #[allow(unused_variables)]
-fn __action508<
+fn __action506<
     'input,
 >(
     input: &'input str,
@@ -23984,7 +23934,7 @@ fn __action508<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action363(
+    __action361(
         input,
         __0,
         __1,
@@ -23997,7 +23947,7 @@ fn __action508<
 }
 
 #[allow(unused_variables)]
-fn __action509<
+fn __action507<
     'input,
 >(
     input: &'input str,
@@ -24015,7 +23965,7 @@ fn __action509<
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action364(
+    __action362(
         input,
         __0,
         __1,
@@ -24026,7 +23976,7 @@ fn __action509<
 }
 
 #[allow(unused_variables)]
-fn __action510<
+fn __action508<
     'input,
 >(
     input: &'input str,
@@ -24044,7 +23994,7 @@ fn __action510<
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action364(
+    __action362(
         input,
         __0,
         __1,

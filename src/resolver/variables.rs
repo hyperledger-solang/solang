@@ -38,7 +38,7 @@ fn var_decl(
     vartab: &mut Vartable,
     errors: &mut Vec<Output>,
 ) -> bool {
-    let ty = match ns.resolve_type(&s.ty, Some(errors)) {
+    let ty = match ns.resolve_type(&s.ty, errors) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -147,6 +147,7 @@ fn var_decl(
             ns.constants.push(res);
         } else {
             let var = vartab.find(&s.name, ns, errors).unwrap();
+            let loc = res.loc();
 
             cfg.add(
                 vartab,
@@ -162,7 +163,7 @@ fn var_decl(
                     Instr::SetStorage {
                         ty,
                         local: var.pos,
-                        storage: Expression::NumberLiteral(256, offset.clone()),
+                        storage: Expression::NumberLiteral(loc, 256, offset.clone()),
                     },
                 );
             }

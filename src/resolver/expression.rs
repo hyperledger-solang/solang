@@ -16,162 +16,207 @@ use hex;
 use output;
 use output::Output;
 use parser::ast;
+use parser::ast::Loc;
 use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
-    BoolLiteral(bool),
-    BytesLiteral(Vec<u8>),
-    NumberLiteral(u16, BigInt),
-    StructLiteral(resolver::Type, Vec<Expression>),
-    ArrayLiteral(resolver::Type, Vec<u32>, Vec<Expression>),
-    ConstArrayLiteral(Vec<u32>, Vec<Expression>),
-    Add(Box<Expression>, Box<Expression>),
-    Subtract(Box<Expression>, Box<Expression>),
-    Multiply(Box<Expression>, Box<Expression>),
-    UDivide(Box<Expression>, Box<Expression>),
-    SDivide(Box<Expression>, Box<Expression>),
-    UModulo(Box<Expression>, Box<Expression>),
-    SModulo(Box<Expression>, Box<Expression>),
-    Power(Box<Expression>, Box<Expression>),
-    BitwiseOr(Box<Expression>, Box<Expression>),
-    BitwiseAnd(Box<Expression>, Box<Expression>),
-    BitwiseXor(Box<Expression>, Box<Expression>),
-    ShiftLeft(Box<Expression>, Box<Expression>),
-    ShiftRight(Box<Expression>, Box<Expression>, bool),
-    Variable(ast::Loc, usize),
-    Load(Box<Expression>),
-    StorageLoad(resolver::Type, Box<Expression>),
-    ZeroExt(resolver::Type, Box<Expression>),
-    SignExt(resolver::Type, Box<Expression>),
-    Trunc(resolver::Type, Box<Expression>),
+    BoolLiteral(Loc, bool),
+    BytesLiteral(Loc, Vec<u8>),
+    NumberLiteral(Loc, u16, BigInt),
+    StructLiteral(Loc, resolver::Type, Vec<Expression>),
+    ArrayLiteral(Loc, resolver::Type, Vec<u32>, Vec<Expression>),
+    ConstArrayLiteral(Loc, Vec<u32>, Vec<Expression>),
+    Add(Loc, Box<Expression>, Box<Expression>),
+    Subtract(Loc, Box<Expression>, Box<Expression>),
+    Multiply(Loc, Box<Expression>, Box<Expression>),
+    UDivide(Loc, Box<Expression>, Box<Expression>),
+    SDivide(Loc, Box<Expression>, Box<Expression>),
+    UModulo(Loc, Box<Expression>, Box<Expression>),
+    SModulo(Loc, Box<Expression>, Box<Expression>),
+    Power(Loc, Box<Expression>, Box<Expression>),
+    BitwiseOr(Loc, Box<Expression>, Box<Expression>),
+    BitwiseAnd(Loc, Box<Expression>, Box<Expression>),
+    BitwiseXor(Loc, Box<Expression>, Box<Expression>),
+    ShiftLeft(Loc, Box<Expression>, Box<Expression>),
+    ShiftRight(Loc, Box<Expression>, Box<Expression>, bool),
+    Variable(Loc, usize),
+    Load(Loc, Box<Expression>),
+    StorageLoad(Loc, resolver::Type, Box<Expression>),
+    ZeroExt(Loc, resolver::Type, Box<Expression>),
+    SignExt(Loc, resolver::Type, Box<Expression>),
+    Trunc(Loc, resolver::Type, Box<Expression>),
 
-    UMore(Box<Expression>, Box<Expression>),
-    ULess(Box<Expression>, Box<Expression>),
-    UMoreEqual(Box<Expression>, Box<Expression>),
-    ULessEqual(Box<Expression>, Box<Expression>),
-    SMore(Box<Expression>, Box<Expression>),
-    SLess(Box<Expression>, Box<Expression>),
-    SMoreEqual(Box<Expression>, Box<Expression>),
-    SLessEqual(Box<Expression>, Box<Expression>),
-    Equal(Box<Expression>, Box<Expression>),
-    NotEqual(Box<Expression>, Box<Expression>),
+    UMore(Loc, Box<Expression>, Box<Expression>),
+    ULess(Loc, Box<Expression>, Box<Expression>),
+    UMoreEqual(Loc, Box<Expression>, Box<Expression>),
+    ULessEqual(Loc, Box<Expression>, Box<Expression>),
+    SMore(Loc, Box<Expression>, Box<Expression>),
+    SLess(Loc, Box<Expression>, Box<Expression>),
+    SMoreEqual(Loc, Box<Expression>, Box<Expression>),
+    SLessEqual(Loc, Box<Expression>, Box<Expression>),
+    Equal(Loc, Box<Expression>, Box<Expression>),
+    NotEqual(Loc, Box<Expression>, Box<Expression>),
 
-    Not(Box<Expression>),
-    Complement(Box<Expression>),
-    UnaryMinus(Box<Expression>),
+    Not(Loc, Box<Expression>),
+    Complement(Loc, Box<Expression>),
+    UnaryMinus(Loc, Box<Expression>),
 
-    Ternary(Box<Expression>, Box<Expression>, Box<Expression>),
-    ArraySubscript(Box<Expression>, Box<Expression>),
-    StructMember(Box<Expression>, usize),
+    Ternary(Loc, Box<Expression>, Box<Expression>, Box<Expression>),
+    ArraySubscript(Loc, Box<Expression>, Box<Expression>),
+    StructMember(Loc, Box<Expression>, usize),
 
-    Or(Box<Expression>, Box<Expression>),
-    And(Box<Expression>, Box<Expression>),
+    Or(Loc, Box<Expression>, Box<Expression>),
+    And(Loc, Box<Expression>, Box<Expression>),
 
     Poison,
 }
 
 impl Expression {
+    /// Return the location for this expression
+    pub fn loc(&self) -> Loc {
+        match self {
+            Expression::BoolLiteral(loc, _)
+            | Expression::BytesLiteral(loc, _)
+            | Expression::NumberLiteral(loc, _, _)
+            | Expression::StructLiteral(loc, _, _)
+            | Expression::ArrayLiteral(loc, _, _, _)
+            | Expression::ConstArrayLiteral(loc, _, _)
+            | Expression::Add(loc, _, _)
+            | Expression::Subtract(loc, _, _)
+            | Expression::Multiply(loc, _, _)
+            | Expression::UDivide(loc, _, _)
+            | Expression::SDivide(loc, _, _)
+            | Expression::UModulo(loc, _, _)
+            | Expression::SModulo(loc, _, _)
+            | Expression::Power(loc, _, _)
+            | Expression::BitwiseOr(loc, _, _)
+            | Expression::BitwiseAnd(loc, _, _)
+            | Expression::BitwiseXor(loc, _, _)
+            | Expression::ShiftLeft(loc, _, _)
+            | Expression::ShiftRight(loc, _, _, _)
+            | Expression::Variable(loc, _)
+            | Expression::Load(loc, _)
+            | Expression::StorageLoad(loc, _, _)
+            | Expression::ZeroExt(loc, _, _)
+            | Expression::SignExt(loc, _, _)
+            | Expression::Trunc(loc, _, _)
+            | Expression::UMore(loc, _, _)
+            | Expression::ULess(loc, _, _)
+            | Expression::UMoreEqual(loc, _, _)
+            | Expression::ULessEqual(loc, _, _)
+            | Expression::SMore(loc, _, _)
+            | Expression::SLess(loc, _, _)
+            | Expression::SMoreEqual(loc, _, _)
+            | Expression::SLessEqual(loc, _, _)
+            | Expression::Equal(loc, _, _)
+            | Expression::NotEqual(loc, _, _)
+            | Expression::Not(loc, _)
+            | Expression::Complement(loc, _)
+            | Expression::UnaryMinus(loc, _)
+            | Expression::Ternary(loc, _, _, _)
+            | Expression::ArraySubscript(loc, _, _)
+            | Expression::StructMember(loc, _, _)
+            | Expression::Or(loc, _, _)
+            | Expression::And(loc, _, _) => *loc,
+            Expression::Poison => unreachable!(),
+        }
+    }
     /// Returns true if the Expression may load from contract storage using StorageLoad
     pub fn reads_contract_storage(&self) -> bool {
         match self {
-            Expression::StorageLoad(_, _) => true,
-            Expression::BoolLiteral(_)
-            | Expression::BytesLiteral(_)
-            | Expression::NumberLiteral(_, _) => false,
-            Expression::StructLiteral(_, exprs) => exprs.iter().any(|e| e.reads_contract_storage()),
-            Expression::ArrayLiteral(_, _, exprs) => {
+            Expression::StorageLoad(_, _, _) => true,
+            Expression::BoolLiteral(_, _)
+            | Expression::BytesLiteral(_, _)
+            | Expression::NumberLiteral(_, _, _) => false,
+            Expression::StructLiteral(_, _, exprs) => {
                 exprs.iter().any(|e| e.reads_contract_storage())
             }
-            Expression::ConstArrayLiteral(_, _) => false,
-            Expression::Add(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::Subtract(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::Multiply(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::UDivide(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::SDivide(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::UModulo(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::SModulo(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::ArrayLiteral(_, _, _, exprs) => {
+                exprs.iter().any(|e| e.reads_contract_storage())
+            }
+            Expression::ConstArrayLiteral(_, _, _) => false,
+            Expression::Add(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::Subtract(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::Multiply(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::UDivide(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::SDivide(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::UModulo(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::SModulo(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
 
-            Expression::Power(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::BitwiseOr(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::BitwiseAnd(l, r) => {
+            Expression::Power(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::BitwiseOr(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::BitwiseXor(l, r) => {
+            Expression::BitwiseAnd(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::ShiftLeft(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::ShiftRight(l, r, _) => {
+            Expression::BitwiseXor(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::ShiftLeft(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
+            Expression::ShiftRight(_, l, r, _) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
 
-            Expression::Variable(_, _) | Expression::Load(_) => false,
-            Expression::ZeroExt(_, e) => e.reads_contract_storage(),
-            Expression::SignExt(_, e) => e.reads_contract_storage(),
-            Expression::Trunc(_, e) => e.reads_contract_storage(),
+            Expression::Variable(_, _) | Expression::Load(_, _) => false,
+            Expression::ZeroExt(_, _, e) => e.reads_contract_storage(),
+            Expression::SignExt(_, _, e) => e.reads_contract_storage(),
+            Expression::Trunc(_, _, e) => e.reads_contract_storage(),
 
-            Expression::UMore(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::ULess(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::UMoreEqual(l, r) => {
+            Expression::UMore(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::ULess(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::UMoreEqual(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::ULessEqual(l, r) => {
+            Expression::ULessEqual(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::SMore(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::SLess(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::SLessEqual(l, r) => {
+            Expression::SMore(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::SLess(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::SLessEqual(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::SMoreEqual(l, r) => {
+            Expression::SMoreEqual(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::Equal(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::NotEqual(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::Equal(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::NotEqual(_, l, r) => {
+                l.reads_contract_storage() || r.reads_contract_storage()
+            }
 
-            Expression::Not(e) => e.reads_contract_storage(),
-            Expression::Complement(e) => e.reads_contract_storage(),
-            Expression::UnaryMinus(e) => e.reads_contract_storage(),
+            Expression::Not(_, e) => e.reads_contract_storage(),
+            Expression::Complement(_, e) => e.reads_contract_storage(),
+            Expression::UnaryMinus(_, e) => e.reads_contract_storage(),
 
-            Expression::Ternary(c, l, r) => {
+            Expression::Ternary(_, c, l, r) => {
                 c.reads_contract_storage()
                     || l.reads_contract_storage()
                     || r.reads_contract_storage()
             }
-            Expression::ArraySubscript(l, r) => {
+            Expression::ArraySubscript(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::StructMember(s, _) => s.reads_contract_storage(),
-            Expression::And(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::Or(l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::StructMember(_, s, _) => s.reads_contract_storage(),
+            Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
+            Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Poison => false,
-        }
-    }
-
-    /// Print the expression to string. This assumes the expression is a compile-time constant
-    /// without any references to e.g. variables.
-    pub fn print_constant_to_string(&self, ns: &resolver::Contract) -> String {
-        match self {
-            Expression::NumberLiteral(_, n) => n.to_string(),
-            Expression::Add(l, r) => format!(
-                "({} + {})",
-                l.print_constant_to_string(ns),
-                r.print_constant_to_string(ns)
-            ),
-            Expression::Subtract(l, r) => format!(
-                "({} - {})",
-                l.print_constant_to_string(ns),
-                r.print_constant_to_string(ns)
-            ),
-            Expression::Multiply(l, r) => format!(
-                "({} * {})",
-                l.print_constant_to_string(ns),
-                r.print_constant_to_string(ns)
-            ),
-            // FIXME: more to be implemented. Not needed for storage references
-            _ => unimplemented!(),
         }
     }
 }
@@ -322,7 +367,7 @@ fn bigint_to_expression(
             Err(())
         } else {
             Ok((
-                Expression::NumberLiteral(int_size, n.clone()),
+                Expression::NumberLiteral(*loc, int_size, n.clone()),
                 resolver::Type::Primitive(ast::PrimitiveType::Int(int_size)),
             ))
         }
@@ -331,7 +376,7 @@ fn bigint_to_expression(
         Err(())
     } else {
         Ok((
-            Expression::NumberLiteral(int_size, n.clone()),
+            Expression::NumberLiteral(*loc, int_size, n.clone()),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
         ))
     }
@@ -356,7 +401,7 @@ pub fn cast(
     if let resolver::Type::Ref(r) = from {
         return cast(
             loc,
-            Expression::Load(Box::new(expr)),
+            Expression::Load(*loc, Box::new(expr)),
             r,
             to,
             implicit,
@@ -369,7 +414,7 @@ pub fn cast(
     if let resolver::Type::StorageRef(r) = from {
         return cast(
             loc,
-            Expression::StorageLoad(*r.clone(), Box::new(expr)),
+            Expression::StorageLoad(*loc, *r.clone(), Box::new(expr)),
             r,
             to,
             implicit,
@@ -405,7 +450,7 @@ pub fn cast(
     // Special case: when converting literal sign can change if it fits
     match (&expr, &from_conv, &to_conv) {
         (
-            &Expression::NumberLiteral(_, ref n),
+            &Expression::NumberLiteral(_, _, ref n),
             &resolver::Type::Primitive(_),
             &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
         ) => {
@@ -431,11 +476,11 @@ pub fn cast(
 
                 Err(())
             } else {
-                Ok(Expression::NumberLiteral(to_len, n.clone()))
+                Ok(Expression::NumberLiteral(*loc, to_len, n.clone()))
             }
         }
         (
-            &Expression::NumberLiteral(_, ref n),
+            &Expression::NumberLiteral(_, _, ref n),
             &resolver::Type::Primitive(_),
             &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
         ) => {
@@ -451,12 +496,12 @@ pub fn cast(
 
                 Err(())
             } else {
-                Ok(Expression::NumberLiteral(to_len, n.clone()))
+                Ok(Expression::NumberLiteral(*loc, to_len, n.clone()))
             }
         }
         // Literal strings can be implicitly lengthened
         (
-            &Expression::BytesLiteral(ref bs),
+            &Expression::BytesLiteral(_, ref bs),
             &resolver::Type::Primitive(_),
             &resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
@@ -477,7 +522,7 @@ pub fn cast(
                 // Add zero's at the end as needed
                 bs.resize(to_len as usize, 0);
 
-                Ok(Expression::BytesLiteral(bs))
+                Ok(Expression::BytesLiteral(*loc, bs))
             };
         }
         _ => (),
@@ -501,10 +546,10 @@ pub fn cast(
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                    Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
                 }
             }
-            Ordering::Less => Ok(Expression::ZeroExt(to.clone(), Box::new(expr))),
+            Ordering::Less => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
             Ordering::Equal => Ok(expr),
         },
         (
@@ -523,16 +568,16 @@ pub fn cast(
                     ));
                     Err(())
                 } else {
-                    Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                    Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
                 }
             }
-            Ordering::Less => Ok(Expression::SignExt(to.clone(), Box::new(expr))),
+            Ordering::Less => Ok(Expression::SignExt(*loc, to.clone(), Box::new(expr))),
             Ordering::Equal => Ok(expr),
         },
         (
             resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) if to_len > from_len => Ok(Expression::ZeroExt(to.clone(), Box::new(expr))),
+        ) if to_len > from_len => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
         (
             resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
             resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
@@ -548,9 +593,9 @@ pub fn cast(
                 ));
                 Err(())
             } else if from_len > to_len {
-                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
             } else if from_len < to_len {
-                Ok(Expression::SignExt(to.clone(), Box::new(expr)))
+                Ok(Expression::SignExt(*loc, to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
             }
@@ -570,9 +615,9 @@ pub fn cast(
                 ));
                 Err(())
             } else if from_len > to_len {
-                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
             } else if from_len < to_len {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+                Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
             }
@@ -596,9 +641,9 @@ pub fn cast(
                 ));
                 Err(())
             } else if from_len > 160 {
-                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
             } else if from_len < 160 {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+                Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
             }
@@ -622,9 +667,9 @@ pub fn cast(
                 ));
                 Err(())
             } else if to_len < 160 {
-                Ok(Expression::Trunc(to.clone(), Box::new(expr)))
+                Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
             } else if to_len > 160 {
-                Ok(Expression::ZeroExt(to.clone(), Box::new(expr)))
+                Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
             }
@@ -648,8 +693,10 @@ pub fn cast(
                 let shift = (to_len - from_len) * 8;
 
                 Ok(Expression::ShiftLeft(
-                    Box::new(Expression::ZeroExt(to.clone(), Box::new(expr))),
+                    *loc,
+                    Box::new(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
                     Box::new(Expression::NumberLiteral(
+                        *loc,
                         to_len as u16 * 8,
                         BigInt::from_u8(shift).unwrap(),
                     )),
@@ -658,10 +705,13 @@ pub fn cast(
                 let shift = (from_len - to_len) * 8;
 
                 Ok(Expression::Trunc(
+                    *loc,
                     to.clone(),
                     Box::new(Expression::ShiftRight(
+                        *loc,
                         Box::new(expr),
                         Box::new(Expression::NumberLiteral(
+                            *loc,
                             from_len as u16 * 8,
                             BigInt::from_u8(shift).unwrap(),
                         )),
@@ -807,7 +857,7 @@ pub fn cast(
             resolver::Type::Primitive(ast::PrimitiveType::String),
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
         ) => {
-            if let Expression::BytesLiteral(from_str) = &expr {
+            if let Expression::BytesLiteral(_, from_str) = &expr {
                 if from_str.len() > to_len as usize {
                     errors.push(Output::type_error(
                         *loc,
@@ -847,19 +897,26 @@ pub fn expression(
         ast::Expression::ArrayLiteral(loc, exprs) => {
             resolve_array_literal(loc, exprs, cfg, ns, vartab, errors)
         }
-        ast::Expression::BoolLiteral(_, v) => Ok((
-            Expression::BoolLiteral(*v),
+        ast::Expression::BoolLiteral(loc, v) => Ok((
+            Expression::BoolLiteral(*loc, *v),
             resolver::Type::Primitive(ast::PrimitiveType::Bool),
         )),
         ast::Expression::StringLiteral(v) => {
             // Concatenate the strings
             let mut result = String::new();
+            let mut loc = ast::Loc(0, 0);
 
             for s in v {
                 // unescape supports octal escape values, solc does not
                 // neither solc nor unescape support unicode code points like \u{61}
                 match unescape(&s.string) {
-                    Some(v) => result.push_str(&v),
+                    Some(v) => {
+                        result.push_str(&v);
+                        if loc.0 == 0 {
+                            loc.0 = s.loc.0;
+                        }
+                        loc.1 = s.loc.1;
+                    }
                     None => {
                         // would be helpful if unescape told us what/where the problem was
                         errors.push(Output::error(
@@ -874,12 +931,13 @@ pub fn expression(
             let length = result.len();
 
             Ok((
-                Expression::BytesLiteral(result.into_bytes()),
+                Expression::BytesLiteral(loc, result.into_bytes()),
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
         }
         ast::Expression::HexLiteral(v) => {
             let mut result = Vec::new();
+            let mut loc = ast::Loc(0, 0);
 
             for s in v {
                 if (s.hex.len() % 2) != 0 {
@@ -890,13 +948,17 @@ pub fn expression(
                     return Err(());
                 } else {
                     result.extend_from_slice(&hex::decode(&s.hex).unwrap());
+                    if loc.0 == 0 {
+                        loc.0 = s.loc.0;
+                    }
+                    loc.1 = s.loc.1;
                 }
             }
 
             let length = result.len();
 
             Ok((
-                Expression::BytesLiteral(result),
+                Expression::BytesLiteral(loc, result),
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
             ))
         }
@@ -908,7 +970,7 @@ pub fn expression(
                 let s: String = address.chars().skip(2).collect();
 
                 Ok((
-                    Expression::NumberLiteral(160, BigInt::from_str_radix(&s, 16).unwrap()),
+                    Expression::NumberLiteral(*loc, 160, BigInt::from_str_radix(&s, 16).unwrap()),
                     resolver::Type::Primitive(ast::PrimitiveType::Address),
                 ))
             } else {
@@ -927,7 +989,7 @@ pub fn expression(
                 let v = tab.find(id, ns, errors)?;
                 match &v.storage {
                     Storage::Contract(n) => Ok((
-                        Expression::NumberLiteral(256, n.clone()),
+                        Expression::NumberLiteral(id.loc, 256, n.clone()),
                         resolver::Type::StorageRef(Box::new(v.ty)),
                     )),
                     Storage::Constant(n) => {
@@ -950,7 +1012,7 @@ pub fn expression(
                 Err(())
             }
         }
-        ast::Expression::Add(_, l, r) => {
+        ast::Expression::Add(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -966,13 +1028,14 @@ pub fn expression(
 
             Ok((
                 Expression::Add(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 ty,
             ))
         }
-        ast::Expression::Subtract(_, l, r) => {
+        ast::Expression::Subtract(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -988,13 +1051,14 @@ pub fn expression(
 
             Ok((
                 Expression::Subtract(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 ty,
             ))
         }
-        ast::Expression::BitwiseOr(_, l, r) => {
+        ast::Expression::BitwiseOr(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1010,13 +1074,14 @@ pub fn expression(
 
             Ok((
                 Expression::BitwiseOr(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 ty,
             ))
         }
-        ast::Expression::BitwiseAnd(_, l, r) => {
+        ast::Expression::BitwiseAnd(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1032,13 +1097,14 @@ pub fn expression(
 
             Ok((
                 Expression::BitwiseAnd(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 ty,
             ))
         }
-        ast::Expression::BitwiseXor(_, l, r) => {
+        ast::Expression::BitwiseXor(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1054,13 +1120,14 @@ pub fn expression(
 
             Ok((
                 Expression::BitwiseXor(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 ty,
             ))
         }
-        ast::Expression::ShiftLeft(_, l, r) => {
+        ast::Expression::ShiftLeft(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1071,13 +1138,14 @@ pub fn expression(
 
             Ok((
                 Expression::ShiftLeft(
+                    *loc,
                     Box::new(left),
-                    Box::new(cast_shift_arg(right, right_length, &left_type)),
+                    Box::new(cast_shift_arg(loc, right, right_length, &left_type)),
                 ),
                 left_type,
             ))
         }
-        ast::Expression::ShiftRight(_, l, r) => {
+        ast::Expression::ShiftRight(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1088,14 +1156,15 @@ pub fn expression(
 
             Ok((
                 Expression::ShiftRight(
+                    *loc,
                     Box::new(left),
-                    Box::new(cast_shift_arg(right, right_length, &left_type)),
+                    Box::new(cast_shift_arg(loc, right, right_length, &left_type)),
                     left_type.signed(),
                 ),
                 left_type,
             ))
         }
-        ast::Expression::Multiply(_, l, r) => {
+        ast::Expression::Multiply(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1111,13 +1180,14 @@ pub fn expression(
 
             Ok((
                 Expression::Multiply(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 ty,
             ))
         }
-        ast::Expression::Divide(_, l, r) => {
+        ast::Expression::Divide(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1134,6 +1204,7 @@ pub fn expression(
             if ty.signed() {
                 Ok((
                     Expression::SDivide(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1142,6 +1213,7 @@ pub fn expression(
             } else {
                 Ok((
                     Expression::UDivide(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1149,7 +1221,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Modulo(_, l, r) => {
+        ast::Expression::Modulo(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1166,6 +1238,7 @@ pub fn expression(
             if ty.signed() {
                 Ok((
                     Expression::SModulo(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1174,6 +1247,7 @@ pub fn expression(
             } else {
                 Ok((
                     Expression::UModulo(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1198,6 +1272,7 @@ pub fn expression(
 
             Ok((
                 Expression::Power(
+                    *loc,
                     Box::new(cast(&b.loc(), base, &base_type, &ty, true, ns, errors)?),
                     Box::new(cast(&e.loc(), exp, &exp_type, &ty, true, ns, errors)?),
                 ),
@@ -1206,7 +1281,7 @@ pub fn expression(
         }
 
         // compare
-        ast::Expression::More(_, l, r) => {
+        ast::Expression::More(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1223,6 +1298,7 @@ pub fn expression(
             if ty.signed() {
                 Ok((
                     Expression::SMore(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1231,6 +1307,7 @@ pub fn expression(
             } else {
                 Ok((
                     Expression::UMore(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1238,7 +1315,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Less(_, l, r) => {
+        ast::Expression::Less(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1255,6 +1332,7 @@ pub fn expression(
             if ty.signed() {
                 Ok((
                     Expression::SLess(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1263,6 +1341,7 @@ pub fn expression(
             } else {
                 Ok((
                     Expression::ULess(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1270,7 +1349,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::MoreEqual(_, l, r) => {
+        ast::Expression::MoreEqual(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1287,6 +1366,7 @@ pub fn expression(
             if ty.signed() {
                 Ok((
                     Expression::SMoreEqual(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1295,6 +1375,7 @@ pub fn expression(
             } else {
                 Ok((
                     Expression::UMoreEqual(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1302,7 +1383,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::LessEqual(_, l, r) => {
+        ast::Expression::LessEqual(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1319,6 +1400,7 @@ pub fn expression(
             if ty.signed() {
                 Ok((
                     Expression::SLessEqual(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1327,6 +1409,7 @@ pub fn expression(
             } else {
                 Ok((
                     Expression::ULessEqual(
+                        *loc,
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
@@ -1334,7 +1417,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Equal(_, l, r) => {
+        ast::Expression::Equal(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1342,13 +1425,14 @@ pub fn expression(
 
             Ok((
                 Expression::Equal(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
                 resolver::Type::bool(),
             ))
         }
-        ast::Expression::NotEqual(_, l, r) => {
+        ast::Expression::NotEqual(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
 
@@ -1356,6 +1440,7 @@ pub fn expression(
 
             Ok((
                 Expression::NotEqual(
+                    *loc,
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
@@ -1368,15 +1453,18 @@ pub fn expression(
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
             Ok((
-                Expression::Not(Box::new(cast(
-                    &loc,
-                    expr,
-                    &expr_type,
-                    &resolver::Type::bool(),
-                    true,
-                    ns,
-                    errors,
-                )?)),
+                Expression::Not(
+                    *loc,
+                    Box::new(cast(
+                        &loc,
+                        expr,
+                        &expr_type,
+                        &resolver::Type::bool(),
+                        true,
+                        ns,
+                        errors,
+                    )?),
+                ),
                 resolver::Type::bool(),
             ))
         }
@@ -1385,14 +1473,14 @@ pub fn expression(
 
             get_int_length(&expr_type, loc, true, ns, errors)?;
 
-            Ok((Expression::Complement(Box::new(expr)), expr_type))
+            Ok((Expression::Complement(*loc, Box::new(expr)), expr_type))
         }
         ast::Expression::UnaryMinus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
             get_int_length(&expr_type, loc, false, ns, errors)?;
 
-            Ok((Expression::UnaryMinus(Box::new(expr)), expr_type))
+            Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
         }
         ast::Expression::UnaryPlus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
@@ -1402,7 +1490,7 @@ pub fn expression(
             Ok((expr, expr_type))
         }
 
-        ast::Expression::Ternary(_, c, l, r) => {
+        ast::Expression::Ternary(loc, c, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
             let (cond, cond_type) = expression(c, cfg, ns, vartab, errors)?;
@@ -1420,7 +1508,7 @@ pub fn expression(
             let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
 
             Ok((
-                Expression::Ternary(Box::new(cond), Box::new(left), Box::new(right)),
+                Expression::Ternary(*loc, Box::new(cond), Box::new(left), Box::new(right)),
                 ty,
             ))
         }
@@ -1467,8 +1555,9 @@ pub fn expression(
 
             let lvalue = match &v.storage {
                 Storage::Contract(n) => Expression::StorageLoad(
+                    *loc,
                     v.ty.clone(),
-                    Box::new(Expression::NumberLiteral(256, n.clone())),
+                    Box::new(Expression::NumberLiteral(*loc, 256, n.clone())),
                 ),
                 Storage::Constant(_) => {
                     errors.push(Output::error(
@@ -1499,8 +1588,9 @@ pub fn expression(
                         Instr::Set {
                             res: v.pos,
                             expr: Expression::Add(
+                                *loc,
                                 Box::new(Expression::Variable(id.loc, v.pos)),
-                                Box::new(Expression::NumberLiteral(v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
                             ),
                         },
                     );
@@ -1512,7 +1602,7 @@ pub fn expression(
                             Instr::SetStorage {
                                 ty: v.ty.clone(),
                                 local: v.pos,
-                                storage: Expression::NumberLiteral(256, n.clone()),
+                                storage: Expression::NumberLiteral(*loc, 256, n.clone()),
                             },
                         );
                     }
@@ -1535,8 +1625,9 @@ pub fn expression(
                         Instr::Set {
                             res: v.pos,
                             expr: Expression::Subtract(
+                                *loc,
                                 Box::new(Expression::Variable(id.loc, temp_pos)),
-                                Box::new(Expression::NumberLiteral(v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
                             ),
                         },
                     );
@@ -1548,7 +1639,7 @@ pub fn expression(
                             Instr::SetStorage {
                                 ty: v.ty.clone(),
                                 local: v.pos,
-                                storage: Expression::NumberLiteral(256, n.clone()),
+                                storage: Expression::NumberLiteral(*loc, 256, n.clone()),
                             },
                         );
                     }
@@ -1562,8 +1653,9 @@ pub fn expression(
                         Instr::Set {
                             res: v.pos,
                             expr: Expression::Add(
+                                *loc,
                                 Box::new(lvalue),
-                                Box::new(Expression::NumberLiteral(v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
                             ),
                         },
                     );
@@ -1582,7 +1674,7 @@ pub fn expression(
                             Instr::SetStorage {
                                 ty: v.ty.clone(),
                                 local: v.pos,
-                                storage: Expression::NumberLiteral(256, n.clone()),
+                                storage: Expression::NumberLiteral(*loc, 256, n.clone()),
                             },
                         );
                     }
@@ -1596,8 +1688,9 @@ pub fn expression(
                         Instr::Set {
                             res: v.pos,
                             expr: Expression::Subtract(
+                                *loc,
                                 Box::new(lvalue),
-                                Box::new(Expression::NumberLiteral(v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
                             ),
                         },
                     );
@@ -1616,7 +1709,7 @@ pub fn expression(
                             Instr::SetStorage {
                                 ty: v.ty.clone(),
                                 local: v.pos,
-                                storage: Expression::NumberLiteral(256, n.clone()),
+                                storage: Expression::NumberLiteral(*loc, 256, n.clone()),
                             },
                         );
                     }
@@ -1664,7 +1757,7 @@ pub fn expression(
                                 Instr::SetStorage {
                                     ty: var.ty.clone(),
                                     local: var.pos,
-                                    storage: Expression::NumberLiteral(256, n.clone()),
+                                    storage: Expression::NumberLiteral(*loc, 256, n.clone()),
                                 },
                             );
                         }
@@ -1798,11 +1891,11 @@ pub fn expression(
                         if left_length == right_length {
                             set
                         } else if right_length < left_length && set_type.signed() {
-                            Expression::SignExt(ty.clone(), Box::new(set))
+                            Expression::SignExt(*loc, ty.clone(), Box::new(set))
                         } else if right_length < left_length && !set_type.signed() {
-                            Expression::ZeroExt(ty.clone(), Box::new(set))
+                            Expression::ZeroExt(*loc, ty.clone(), Box::new(set))
                         } else {
-                            Expression::Trunc(ty.clone(), Box::new(set))
+                            Expression::Trunc(*loc, ty.clone(), Box::new(set))
                         }
                     }
                     _ => cast(&var.loc(), set, &set_type, &ty, true, ns, errors)?,
@@ -1810,41 +1903,41 @@ pub fn expression(
 
                 Ok(match expr {
                     ast::Expression::AssignAdd(_, _, _) => {
-                        Expression::Add(Box::new(assign), Box::new(set))
+                        Expression::Add(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignSubtract(_, _, _) => {
-                        Expression::Subtract(Box::new(assign), Box::new(set))
+                        Expression::Subtract(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignMultiply(_, _, _) => {
-                        Expression::Multiply(Box::new(assign), Box::new(set))
+                        Expression::Multiply(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignOr(_, _, _) => {
-                        Expression::BitwiseOr(Box::new(assign), Box::new(set))
+                        Expression::BitwiseOr(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignAnd(_, _, _) => {
-                        Expression::BitwiseAnd(Box::new(assign), Box::new(set))
+                        Expression::BitwiseAnd(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignXor(_, _, _) => {
-                        Expression::BitwiseXor(Box::new(assign), Box::new(set))
+                        Expression::BitwiseXor(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignShiftLeft(_, _, _) => {
-                        Expression::ShiftLeft(Box::new(assign), Box::new(set))
+                        Expression::ShiftLeft(*loc, Box::new(assign), Box::new(set))
                     }
                     ast::Expression::AssignShiftRight(_, _, _) => {
-                        Expression::ShiftRight(Box::new(assign), Box::new(set), ty.signed())
+                        Expression::ShiftRight(*loc, Box::new(assign), Box::new(set), ty.signed())
                     }
                     ast::Expression::AssignDivide(_, _, _) => {
                         if ty.signed() {
-                            Expression::SDivide(Box::new(assign), Box::new(set))
+                            Expression::SDivide(*loc, Box::new(assign), Box::new(set))
                         } else {
-                            Expression::UDivide(Box::new(assign), Box::new(set))
+                            Expression::UDivide(*loc, Box::new(assign), Box::new(set))
                         }
                     }
                     ast::Expression::AssignModulo(_, _, _) => {
                         if ty.signed() {
-                            Expression::SModulo(Box::new(assign), Box::new(set))
+                            Expression::SModulo(*loc, Box::new(assign), Box::new(set))
                         } else {
-                            Expression::UModulo(Box::new(assign), Box::new(set))
+                            Expression::UModulo(*loc, Box::new(assign), Box::new(set))
                         }
                     }
                     _ => unreachable!(),
@@ -1886,8 +1979,9 @@ pub fn expression(
 
                     let lvalue = match &v.storage {
                         Storage::Contract(n) => Expression::StorageLoad(
+                            *loc,
                             v.ty.clone(),
-                            Box::new(Expression::NumberLiteral(256, n.clone())),
+                            Box::new(Expression::NumberLiteral(*loc, 256, n.clone())),
                         ),
                         Storage::Constant(_) => {
                             errors.push(Output::error(
@@ -1917,7 +2011,7 @@ pub fn expression(
                                 Instr::SetStorage {
                                     ty: v.ty.clone(),
                                     local: v.pos,
-                                    storage: Expression::NumberLiteral(256, n.clone()),
+                                    storage: Expression::NumberLiteral(*loc, 256, n.clone()),
                                 },
                             );
                         }
@@ -1987,6 +2081,7 @@ pub fn expression(
                             | resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => {
                                 let set = op(
                                     Expression::StorageLoad(
+                                        *loc,
                                         *r_ty.clone(),
                                         Box::new(var_expr.clone()),
                                     ),
@@ -2031,7 +2126,9 @@ pub fn expression(
             }
         }
         ast::Expression::NamedFunctionCall(loc, ty, args) => {
-            match ns.resolve_type(ty, None) {
+            let mut blackhole = Vec::new();
+
+            match ns.resolve_type(ty, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
                     let struct_def = &ns.structs[n];
 
@@ -2080,7 +2177,7 @@ pub fn expression(
 
                         let ty = resolver::Type::Struct(n);
 
-                        Ok((Expression::StructLiteral(ty.clone(), fields), ty))
+                        Ok((Expression::StructLiteral(*loc, ty.clone(), fields), ty))
                     };
                 }
                 Ok(_) => {
@@ -2096,7 +2193,9 @@ pub fn expression(
             function_call_with_named_arguments(loc, ty, args, cfg, ns, vartab, errors)
         }
         ast::Expression::FunctionCall(loc, ty, args) => {
-            match ns.resolve_type(ty, None) {
+            let mut blackhole = Vec::new();
+
+            match ns.resolve_type(ty, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
                     let struct_def = &ns.structs[n];
 
@@ -2130,7 +2229,7 @@ pub fn expression(
 
                         let ty = resolver::Type::Struct(n);
 
-                        Ok((Expression::StructLiteral(ty.clone(), fields), ty))
+                        Ok((Expression::StructLiteral(*loc, ty.clone(), fields), ty))
                     };
                 }
                 Ok(to) => {
@@ -2164,222 +2263,7 @@ pub fn expression(
             Err(())
         }
         ast::Expression::ArraySubscript(loc, array, Some(index)) => {
-            let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
-
-            let array_length = match if let resolver::Type::StorageRef(ty) = &array_ty {
-                &*ty
-            } else {
-                &array_ty
-            } {
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
-                resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
-                _ => {
-                    errors.push(Output::error(
-                        array.loc(),
-                        "expression is not an array".to_string(),
-                    ));
-                    return Err(());
-                }
-            };
-
-            let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
-
-            let tab = match vartab {
-                &mut Some(ref mut tab) => tab,
-                None => {
-                    errors.push(Output::error(
-                        *loc,
-                        "cannot read subscript in constant expression".to_string(),
-                    ));
-                    return Err(());
-                }
-            };
-
-            let (index_width, _) = get_int_length(&index_ty, &index.loc(), false, ns, errors)?;
-            let array_width = array_length.bits();
-
-            let pos = tab.temp(
-                &ast::Identifier {
-                    name: "index".to_owned(),
-                    loc: *loc,
-                },
-                &index_ty,
-            );
-
-            cfg.add(
-                tab,
-                Instr::Set {
-                    res: pos,
-                    expr: index_expr,
-                },
-            );
-
-            let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
-            let in_bounds = cfg.new_basic_block("in_bounds".to_string());
-
-            if index_ty.signed() {
-                // first check that our index is not negative
-                let positive = cfg.new_basic_block("positive".to_string());
-
-                cfg.add(
-                    tab,
-                    Instr::BranchCond {
-                        cond: Expression::SLess(
-                            Box::new(Expression::Variable(index.loc(), pos)),
-                            Box::new(Expression::NumberLiteral(index_width, BigInt::zero())),
-                        ),
-                        true_: out_of_bounds,
-                        false_: positive,
-                    },
-                );
-
-                cfg.set_basic_block(positive);
-
-                // If the index if of less bits than the array length, don't bother checking
-                if index_width as usize >= array_width {
-                    cfg.add(
-                        tab,
-                        Instr::BranchCond {
-                            cond: Expression::SMoreEqual(
-                                Box::new(Expression::Variable(index.loc(), pos)),
-                                Box::new(Expression::NumberLiteral(
-                                    index_width,
-                                    array_length.clone(),
-                                )),
-                            ),
-                            true_: out_of_bounds,
-                            false_: in_bounds,
-                        },
-                    );
-                } else {
-                    cfg.add(tab, Instr::Branch { bb: in_bounds });
-                }
-            } else if index_width as usize >= array_width {
-                cfg.add(
-                    tab,
-                    Instr::BranchCond {
-                        cond: Expression::UMoreEqual(
-                            Box::new(Expression::Variable(index.loc(), pos)),
-                            Box::new(Expression::NumberLiteral(index_width, array_length.clone())),
-                        ),
-                        true_: out_of_bounds,
-                        false_: in_bounds,
-                    },
-                );
-            } else {
-                // if the index is less bits than the array, it is always in bounds
-                cfg.add(tab, Instr::Branch { bb: in_bounds });
-            }
-
-            cfg.set_basic_block(out_of_bounds);
-            cfg.add(tab, Instr::AssertFailure {});
-
-            cfg.set_basic_block(in_bounds);
-
-            match array_ty {
-                resolver::Type::StorageRef(ty) => {
-                    let elem_ty = ty.storage_deref();
-                    let elem_size = elem_ty.storage_slots(ns);
-                    if array_length.mul(elem_size).to_u64().is_some() {
-                        // we need to calculate the storage offset. If this can be done with 64 bit
-                        // arithmetic it will be much more efficient on wasm
-                        Ok((
-                            Expression::Add(
-                                Box::new(array_expr),
-                                Box::new(Expression::ZeroExt(
-                                    resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                                    Box::new(Expression::Multiply(
-                                        Box::new(cast(
-                                            &index.loc(),
-                                            Expression::Variable(index.loc(), pos),
-                                            &index_ty,
-                                            &resolver::Type::Primitive(ast::PrimitiveType::Uint(
-                                                64,
-                                            )),
-                                            false,
-                                            ns,
-                                            errors,
-                                        )?),
-                                        Box::new(Expression::NumberLiteral(
-                                            64,
-                                            elem_ty.storage_slots(ns),
-                                        )),
-                                    )),
-                                )),
-                            ),
-                            elem_ty,
-                        ))
-                    } else {
-                        // the index needs to be cast to i256 and multiplied by the number
-                        // of slots for each element
-                        // FIXME: if elem_size is power-of-2 then shift.
-                        Ok((
-                            Expression::Add(
-                                Box::new(array_expr),
-                                Box::new(Expression::Multiply(
-                                    Box::new(cast(
-                                        &index.loc(),
-                                        Expression::Variable(index.loc(), pos),
-                                        &index_ty,
-                                        &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                                        false,
-                                        ns,
-                                        errors,
-                                    )?),
-                                    Box::new(Expression::NumberLiteral(
-                                        256,
-                                        elem_ty.storage_slots(ns),
-                                    )),
-                                )),
-                            ),
-                            elem_ty,
-                        ))
-                    }
-                }
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
-                    let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
-
-                    Ok((
-                        Expression::Trunc(
-                            res_ty.clone(),
-                            Box::new(Expression::ShiftRight(
-                                Box::new(array_expr),
-                                // shift by (array_length - 1 - index) * 8
-                                Box::new(Expression::ShiftLeft(
-                                    Box::new(Expression::Subtract(
-                                        Box::new(Expression::NumberLiteral(
-                                            array_length as u16 * 8,
-                                            BigInt::from_u8(array_length - 1).unwrap(),
-                                        )),
-                                        Box::new(cast_shift_arg(
-                                            Expression::Variable(index.loc(), pos),
-                                            index_width,
-                                            &array_ty,
-                                        )),
-                                    )),
-                                    Box::new(Expression::NumberLiteral(
-                                        array_length as u16 * 8,
-                                        BigInt::from_u8(3).unwrap(),
-                                    )),
-                                )),
-                                false,
-                            )),
-                        ),
-                        res_ty,
-                    ))
-                }
-                resolver::Type::FixedArray(_, _) => Ok((
-                    Expression::ArraySubscript(
-                        Box::new(array_expr),
-                        Box::new(Expression::Variable(index.loc(), pos)),
-                    ),
-                    array_ty.deref(),
-                )),
-                _ => {
-                    // should not happen as type-checking already done
-                    unreachable!();
-                }
-            }
+            array_subscript(loc, array, index, cfg, ns, vartab, errors)
         }
         ast::Expression::MemberAccess(loc, e, id) => {
             if let ast::Expression::Variable(namespace) = e.as_ref() {
@@ -2387,6 +2271,7 @@ pub fn expression(
                     return match ns.enums[e].values.get(&id.name) {
                         Some((_, val)) => Ok((
                             Expression::NumberLiteral(
+                                *loc,
                                 ns.enums[e].ty.bits(),
                                 BigInt::from_usize(*val).unwrap(),
                             ),
@@ -2411,7 +2296,7 @@ pub fn expression(
             // Dereference if need to. This could be struct-in-struct for
             // example.
             let (expr, expr_ty) = if let resolver::Type::Ref(ty) = expr_ty {
-                (Expression::Load(Box::new(expr)), *ty)
+                (Expression::Load(*loc, Box::new(expr)), *ty)
             } else {
                 (expr, expr_ty)
             };
@@ -2420,7 +2305,7 @@ pub fn expression(
                 resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
                     if id.name == "length" {
                         return Ok((
-                            Expression::NumberLiteral(8, BigInt::from_u8(n).unwrap()),
+                            Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
                             resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
                         ));
                     }
@@ -2430,16 +2315,17 @@ pub fn expression(
                         return bigint_to_expression(loc, dim.last().unwrap(), errors);
                     }
                 }
-                resolver::Type::StorageRef(r) => {
-                    if let resolver::Type::Struct(n) = *r {
+                resolver::Type::StorageRef(r) => match *r {
+                    resolver::Type::Struct(n) => {
                         let mut slot = BigInt::zero();
 
                         for field in &ns.structs[n].fields {
                             if id.name == field.name {
                                 return Ok((
                                     Expression::Add(
+                                        *loc,
                                         Box::new(expr),
-                                        Box::new(Expression::NumberLiteral(256, slot)),
+                                        Box::new(Expression::NumberLiteral(*loc, 256, slot)),
                                     ),
                                     resolver::Type::StorageRef(Box::new(field.ty.clone())),
                                 ));
@@ -2457,7 +2343,21 @@ pub fn expression(
                         ));
                         return Err(());
                     }
-                }
+                    resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+                        if id.name == "length" {
+                            return Ok((
+                                Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
+                                resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
+                            ));
+                        }
+                    }
+                    resolver::Type::FixedArray(_, dim) => {
+                        if id.name == "length" {
+                            return bigint_to_expression(loc, dim.last().unwrap(), errors);
+                        }
+                    }
+                    _ => {}
+                },
                 resolver::Type::Struct(n) => {
                     if let Some((i, f)) = ns.structs[n]
                         .fields
@@ -2466,7 +2366,7 @@ pub fn expression(
                         .find(|f| id.name == f.1.name)
                     {
                         return Ok((
-                            Expression::StructMember(Box::new(expr), i),
+                            Expression::StructMember(*loc, Box::new(expr), i),
                             resolver::Type::Ref(Box::new(f.ty.clone())),
                         ));
                     } else {
@@ -2500,6 +2400,7 @@ pub fn expression(
 
                     return Ok((
                         Expression::Or(
+                            *loc,
                             Box::new(l),
                             Box::new(cast(
                                 &loc,
@@ -2531,7 +2432,7 @@ pub fn expression(
                 tab,
                 Instr::Set {
                     res: pos,
-                    expr: Expression::BoolLiteral(true),
+                    expr: Expression::BoolLiteral(*loc, true),
                 },
             );
             cfg.add(
@@ -2573,6 +2474,7 @@ pub fn expression(
 
                     return Ok((
                         Expression::And(
+                            *loc,
                             Box::new(l),
                             Box::new(cast(
                                 &loc,
@@ -2604,7 +2506,7 @@ pub fn expression(
                 tab,
                 Instr::Set {
                     res: pos,
-                    expr: Expression::BoolLiteral(false),
+                    expr: Expression::BoolLiteral(*loc, false),
                 },
             );
             cfg.add(
@@ -2637,6 +2539,255 @@ pub fn expression(
     }
 }
 
+/// Resolve an array subscript expression
+fn array_subscript(
+    loc: &ast::Loc,
+    array: &ast::Expression,
+    index: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
+
+    let array_length = match if let resolver::Type::StorageRef(ty) = &array_ty {
+        &*ty
+    } else {
+        &array_ty
+    } {
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
+        resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
+        _ => {
+            errors.push(Output::error(
+                array.loc(),
+                "expression is not an array".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot read subscript in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let (index_width, _) = get_int_length(&index_ty, &index.loc(), false, ns, errors)?;
+    let array_width = array_length.bits();
+
+    let pos = tab.temp(
+        &ast::Identifier {
+            name: "index".to_owned(),
+            loc: *loc,
+        },
+        &index_ty,
+    );
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: pos,
+            expr: index_expr,
+        },
+    );
+
+    let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+    let in_bounds = cfg.new_basic_block("in_bounds".to_string());
+
+    if index_ty.signed() {
+        // first check that our index is not negative
+        let positive = cfg.new_basic_block("positive".to_string());
+
+        cfg.add(
+            tab,
+            Instr::BranchCond {
+                cond: Expression::SLess(
+                    *loc,
+                    Box::new(Expression::Variable(index.loc(), pos)),
+                    Box::new(Expression::NumberLiteral(*loc, index_width, BigInt::zero())),
+                ),
+                true_: out_of_bounds,
+                false_: positive,
+            },
+        );
+
+        cfg.set_basic_block(positive);
+
+        // If the index if of less bits than the array length, don't bother checking
+        if index_width as usize >= array_width {
+            cfg.add(
+                tab,
+                Instr::BranchCond {
+                    cond: Expression::SMoreEqual(
+                        *loc,
+                        Box::new(Expression::Variable(index.loc(), pos)),
+                        Box::new(Expression::NumberLiteral(
+                            *loc,
+                            index_width,
+                            array_length.clone(),
+                        )),
+                    ),
+                    true_: out_of_bounds,
+                    false_: in_bounds,
+                },
+            );
+        } else {
+            cfg.add(tab, Instr::Branch { bb: in_bounds });
+        }
+    } else if index_width as usize >= array_width {
+        cfg.add(
+            tab,
+            Instr::BranchCond {
+                cond: Expression::UMoreEqual(
+                    *loc,
+                    Box::new(Expression::Variable(index.loc(), pos)),
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        index_width,
+                        array_length.clone(),
+                    )),
+                ),
+                true_: out_of_bounds,
+                false_: in_bounds,
+            },
+        );
+    } else {
+        // if the index is less bits than the array, it is always in bounds
+        cfg.add(tab, Instr::Branch { bb: in_bounds });
+    }
+
+    cfg.set_basic_block(out_of_bounds);
+    cfg.add(tab, Instr::AssertFailure {});
+
+    cfg.set_basic_block(in_bounds);
+
+    match array_ty {
+        resolver::Type::StorageRef(ty) => {
+            let elem_ty = ty.storage_deref();
+            let elem_size = elem_ty.storage_slots(ns);
+            if array_length.mul(elem_size).to_u64().is_some() {
+                // we need to calculate the storage offset. If this can be done with 64 bit
+                // arithmetic it will be much more efficient on wasm
+                Ok((
+                    Expression::Add(
+                        *loc,
+                        Box::new(array_expr),
+                        Box::new(Expression::ZeroExt(
+                            *loc,
+                            resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                            Box::new(Expression::Multiply(
+                                *loc,
+                                Box::new(cast(
+                                    &index.loc(),
+                                    Expression::Variable(index.loc(), pos),
+                                    &index_ty,
+                                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(64)),
+                                    false,
+                                    ns,
+                                    errors,
+                                )?),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    64,
+                                    elem_ty.storage_slots(ns),
+                                )),
+                            )),
+                        )),
+                    ),
+                    elem_ty,
+                ))
+            } else {
+                // the index needs to be cast to i256 and multiplied by the number
+                // of slots for each element
+                // FIXME: if elem_size is power-of-2 then shift.
+                Ok((
+                    Expression::Add(
+                        *loc,
+                        Box::new(array_expr),
+                        Box::new(Expression::Multiply(
+                            *loc,
+                            Box::new(cast(
+                                &index.loc(),
+                                Expression::Variable(index.loc(), pos),
+                                &index_ty,
+                                &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                                false,
+                                ns,
+                                errors,
+                            )?),
+                            Box::new(Expression::NumberLiteral(
+                                *loc,
+                                256,
+                                elem_ty.storage_slots(ns),
+                            )),
+                        )),
+                    ),
+                    elem_ty,
+                ))
+            }
+        }
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
+            let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
+
+            Ok((
+                Expression::Trunc(
+                    *loc,
+                    res_ty.clone(),
+                    Box::new(Expression::ShiftRight(
+                        *loc,
+                        Box::new(array_expr),
+                        // shift by (array_length - 1 - index) * 8
+                        Box::new(Expression::ShiftLeft(
+                            *loc,
+                            Box::new(Expression::Subtract(
+                                *loc,
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    array_length as u16 * 8,
+                                    BigInt::from_u8(array_length - 1).unwrap(),
+                                )),
+                                Box::new(cast_shift_arg(
+                                    loc,
+                                    Expression::Variable(index.loc(), pos),
+                                    index_width,
+                                    &array_ty,
+                                )),
+                            )),
+                            Box::new(Expression::NumberLiteral(
+                                *loc,
+                                array_length as u16 * 8,
+                                BigInt::from_u8(3).unwrap(),
+                            )),
+                        )),
+                        false,
+                    )),
+                ),
+                res_ty,
+            ))
+        }
+        resolver::Type::FixedArray(_, _) => Ok((
+            Expression::ArraySubscript(
+                *loc,
+                Box::new(array_expr),
+                Box::new(Expression::Variable(index.loc(), pos)),
+            ),
+            array_ty.deref(),
+        )),
+        _ => {
+            // should not happen as type-checking already done
+            unreachable!();
+        }
+    }
+}
+
 /// Resolve a function call with positional arguments
 fn function_call_with_positional_arguments(
     loc: &ast::Loc,
@@ -2649,11 +2800,15 @@ fn function_call_with_positional_arguments(
 ) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
     let funcs = match ty {
-        ast::Type::Unresolved(_, dim) if !dim.is_empty() => {
-            errors.push(Output::error(*loc, "unexpected array type".to_string()));
-            return Err(());
+        ast::Type::Unresolved(expr) => {
+            let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+
+            if !dimensions.is_empty() {
+                errors.push(Output::error(*loc, "unexpected array type".to_string()));
+                return Err(());
+            }
+            ns.resolve_func(&id, errors)?
         }
-        ast::Type::Unresolved(s, _) => ns.resolve_func(s, errors)?,
         _ => unreachable!(),
     };
 
@@ -2789,11 +2944,15 @@ fn function_call_with_named_arguments(
 ) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
     let funcs = match ty {
-        ast::Type::Unresolved(_, dim) if !dim.is_empty() => {
-            errors.push(Output::error(*loc, "unexpected array type".to_string()));
-            return Err(());
+        ast::Type::Unresolved(expr) => {
+            let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+
+            if !dimensions.is_empty() {
+                errors.push(Output::error(*loc, "unexpected array type".to_string()));
+                return Err(());
+            }
+            ns.resolve_func(&id, errors)?
         }
-        ast::Type::Unresolved(s, _) => ns.resolve_func(s, errors)?,
         _ => unreachable!(),
     };
 
@@ -2931,17 +3090,22 @@ fn function_call_with_named_arguments(
 // When generating shifts, llvm wants both arguments to have the same width. We want the
 // result of the shift to be left argument, so this function coercies the right argument
 // into the right length.
-fn cast_shift_arg(expr: Expression, from_width: u16, ty: &resolver::Type) -> Expression {
+fn cast_shift_arg(
+    loc: &ast::Loc,
+    expr: Expression,
+    from_width: u16,
+    ty: &resolver::Type,
+) -> Expression {
     let to_width = ty.bits();
 
     if from_width == to_width {
         expr
     } else if from_width < to_width && ty.signed() {
-        Expression::SignExt(ty.clone(), Box::new(expr))
+        Expression::SignExt(*loc, ty.clone(), Box::new(expr))
     } else if from_width < to_width && !ty.signed() {
-        Expression::ZeroExt(ty.clone(), Box::new(expr))
+        Expression::ZeroExt(*loc, ty.clone(), Box::new(expr))
     } else {
-        Expression::Trunc(ty.clone(), Box::new(expr))
+        Expression::Trunc(*loc, ty.clone(), Box::new(expr))
     }
 }
 
@@ -2995,9 +3159,12 @@ fn resolve_array_literal(
     );
 
     if vartab.is_none() {
-        Ok((Expression::ConstArrayLiteral(*dims, exprs), aty))
+        Ok((Expression::ConstArrayLiteral(*loc, *dims, exprs), aty))
     } else {
-        Ok((Expression::ArrayLiteral(aty.clone(), *dims, exprs), aty))
+        Ok((
+            Expression::ArrayLiteral(*loc, aty.clone(), *dims, exprs),
+            aty,
+        ))
     }
 }
 
