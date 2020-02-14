@@ -82,7 +82,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
         }
 
         let module = if let Target::Ewasm = target {
-            "memory"
+            "ethereum"
         } else {
             "env"
         };
