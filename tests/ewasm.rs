@@ -1,11 +1,15 @@
 extern crate ethabi;
 extern crate ethereum_types;
+extern crate num_derive;
+extern crate num_traits;
 extern crate solang;
 extern crate wasmi;
 
 use ethabi::Token;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use std::collections::HashMap;
-use std::mem;
+use std::fmt;
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
@@ -14,20 +18,54 @@ use solang::{compile, Target};
 
 struct ContractStorage {
     memory: MemoryRef,
-    store: HashMap<u32, Vec<u8>>,
+    input: Vec<u8>,
+    output: Vec<u8>,
+    store: HashMap<[u8; 32], [u8; 32]>,
 }
 
-const SET_CONTRACT_STORAGE32: usize = 0;
-const GET_CONTRACT_STORAGE32: usize = 1;
+#[derive(FromPrimitive)]
+#[allow(non_camel_case_types)]
+pub enum Extern {
+    getCallDataSize = 1,
+    callDataCopy,
+    storageLoad,
+    storageStore,
+    finish,
+    revert,
+}
 
 impl ContractStorage {
     fn new() -> Self {
         ContractStorage {
             memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
             store: HashMap::new(),
+            input: Vec::new(),
+            output: Vec::new(),
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+struct HostCodeFinish {}
+
+impl HostError for HostCodeFinish {}
+
+impl fmt::Display for HostCodeFinish {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "finish")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct HostCodeRevert {}
+
+impl fmt::Display for HostCodeRevert {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "revert")
+    }
+}
+
+impl HostError for HostCodeRevert {}
 
 impl Externals for ContractStorage {
     fn invoke_index(
@@ -35,48 +73,98 @@ impl Externals for ContractStorage {
         index: usize,
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
-        let slot: u32 = args.nth_checked(0)?;
-        let offset: u32 = args.nth_checked(1)?;
-        let len: u32 = args.nth_checked(2)?;
+        match FromPrimitive::from_usize(index) {
+            Some(Extern::getCallDataSize) => Ok(Some(RuntimeValue::I32(self.input.len() as i32))),
+            Some(Extern::callDataCopy) => {
+                let dest = args.nth_checked::<u32>(0)?;
+                let input_offset = args.nth_checked::<u32>(1)? as usize;
+                let input_len = args.nth_checked::<u32>(2)? as usize;
 
-        match index {
-            SET_CONTRACT_STORAGE32 => {
-                let mut c = Vec::new();
-                c.resize(len as usize, 0u8);
-                if let Err(e) = self.memory.get_into(offset, &mut c) {
-                    panic!("set_storage32: {}", e);
-                }
-                self.store.insert(slot, c);
+                self.memory
+                    .set(
+                        dest,
+                        &self.input[input_offset as usize..input_offset + input_len],
+                    )
+                    .expect("calldatacopy should work");
+
+                Ok(None)
             }
-            GET_CONTRACT_STORAGE32 => {
-                let mut c = Vec::new();
-                if let Some(k) = self.store.get(&slot) {
-                    c = k.clone();
-                }
-                c.resize(len as usize, 0u8);
+            Some(Extern::finish) => {
+                let src: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
 
-                if let Err(e) = self.memory.set(offset, &c) {
-                    panic!("get_storage32: {}", e);
-                }
+                self.output.resize(len as usize, 0);
+
+                self.memory.get_into(src, &mut self.output).unwrap();
+
+                println!("finish: {} {}", len, self.output.len());
+
+                Err(Trap::new(TrapKind::Host(Box::new(HostCodeFinish {}))))
+            }
+            Some(Extern::revert) => {
+                let src: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+
+                self.output.resize(len as usize, 0);
+
+                self.memory.get_into(src, &mut self.output).unwrap();
+
+                Err(Trap::new(TrapKind::Host(Box::new(HostCodeRevert {}))))
+            }
+            Some(Extern::storageLoad) => {
+                let key_ptr: u32 = args.nth_checked(0)?;
+                let data_ptr: u32 = args.nth_checked(1)?;
+
+                let mut key = [0u8; 32];
+
+                self.memory
+                    .get_into(key_ptr, &mut key)
+                    .expect("copy key from wasm memory");
+
+                self.memory
+                    .set(data_ptr, &self.store[&key])
+                    .expect("copy key from wasm memory");
+
+                Ok(None)
+            }
+            Some(Extern::storageStore) => {
+                let key_ptr: u32 = args.nth_checked(0)?;
+                let data_ptr: u32 = args.nth_checked(1)?;
+
+                let mut key = [0u8; 32];
+                let mut data = [0u8; 32];
+
+                self.memory
+                    .get_into(key_ptr, &mut key)
+                    .expect("copy key from wasm memory");
+
+                self.memory
+                    .get_into(data_ptr, &mut data)
+                    .expect("copy key from wasm memory");
+
+                self.store.insert(key, data);
+                Ok(None)
             }
             _ => panic!("external {} unknown", index),
         }
-
-        Ok(None)
     }
 }
 
 impl ModuleImportResolver for ContractStorage {
     fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
         let index = match field_name {
-            "set_storage32" => SET_CONTRACT_STORAGE32,
-            "get_storage32" => GET_CONTRACT_STORAGE32,
+            "getCallDataSize" => Extern::getCallDataSize,
+            "callDataCopy" => Extern::callDataCopy,
+            "finish" => Extern::finish,
+            "revert" => Extern::revert,
+            "storageStore" => Extern::storageStore,
+            "storageLoad" => Extern::storageLoad,
             _ => {
                 panic!("{} not implemented", field_name);
             }
         };
 
-        Ok(FuncInstance::alloc_host(signature.clone(), index))
+        Ok(FuncInstance::alloc_host(signature.clone(), index as usize))
     }
 
     fn resolve_memory(
@@ -100,64 +188,62 @@ impl TestRuntime {
             Err(x) => panic!(format!("{}", x)),
         };
 
-        println!("CALLDATA: {}", hex::encode(&calldata));
-        // need to prepend length
-        store.memory.set_value(0, calldata.len() as u32).unwrap();
-        store
-            .memory
-            .set(mem::size_of::<u32>() as u32, &calldata)
-            .unwrap();
+        println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
-        let ret = self
-            .module
-            .invoke_export("function", &[RuntimeValue::I32(0)], store)
-            .expect("failed to call function");
+        store.input = calldata;
 
-        match ret {
-            Some(RuntimeValue::I32(offset)) => {
-                let length: u32 = store.memory.get_value(offset as u32).unwrap();
-                let offset = offset as u32;
-                let returndata = store
-                    .memory
-                    .get(offset + mem::size_of::<u32>() as u32, length as usize)
-                    .unwrap();
-
-                println!("RETURNDATA: {}", hex::encode(&returndata));
-
-                self.abi.functions[name][0]
-                    .decode_output(&returndata)
-                    .unwrap()
-            }
-            _ => panic!("expected return value when calling {}", name),
+        match self.module.invoke_export("main", &[], store) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Host(_) => {}
+                _ => panic!("fail to invoke main: {}", trap),
+            },
+            Ok(_) => {}
+            Err(e) => panic!("fail to invoke main: {}", e),
         }
+
+        println!("RETURNDATA: {}", hex::encode(&store.output));
+
+        self.abi.functions[name][0]
+            .decode_output(&store.output)
+            .unwrap()
     }
 
-    fn constructor(&self, store: &mut ContractStorage, args: &[Token]) {
-        if let Some(constructor) = &self.abi.constructor {
-            let calldata = constructor.encode_input(Vec::new(), args).unwrap();
+    fn constructor(&mut self, store: &mut ContractStorage, args: &[Token]) {
+        let calldata = if let Some(constructor) = &self.abi.constructor {
+            constructor.encode_input(Vec::new(), args).unwrap()
+        } else {
+            Vec::new()
+        };
 
-            // need to prepend length
-            store.memory.set_value(0, calldata.len() as u32).unwrap();
-            store
-                .memory
-                .set(mem::size_of::<u32>() as u32, &calldata)
-                .unwrap();
+        println!("CONSTRUCTOR CALLDATA: {}", hex::encode(&calldata));
 
-            let ret = self
-                .module
-                .invoke_export("constructor", &[RuntimeValue::I32(0)], store)
-                .expect("failed to call constructor");
+        store.input = calldata;
 
-            match ret {
-                None => (),
-                _ => panic!("not expected return value when calling constructor"),
-            }
+        match self.module.invoke_export("main", &[], store) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Host(_) => {}
+                _ => panic!("fail to invoke main: {}", trap),
+            },
+            Ok(_) => {}
+            Err(e) => panic!("fail to invoke main: {}", e),
         }
+
+        println!("DEPLOYER RETURNS: {}", hex::encode(&store.output));
+
+        let module = Module::from_buffer(&store.output).expect("parse wasm should work");
+
+        self.module = ModuleInstance::new(
+            &module,
+            &ImportsBuilder::new().with_resolver("ethereum", store),
+        )
+        .expect("Failed to instantiate module")
+        .run_start(&mut NopExternals)
+        .expect("Failed to run start function in module");
     }
 }
 
 fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (mut res, errors) = compile(src, "test.sol", "default", &Target::Burrow);
+    let (mut res, errors) = compile(src, "test.sol", "default", &Target::Ewasm);
 
     output::print_messages("test.sol", src, &errors, false);
 
@@ -174,7 +260,7 @@ fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
         TestRuntime {
             module: ModuleInstance::new(
                 &module,
-                &ImportsBuilder::new().with_resolver("env", &store),
+                &ImportsBuilder::new().with_resolver("ethereum", &store),
             )
             .expect("Failed to instantiate module")
             .run_start(&mut NopExternals)
@@ -188,7 +274,7 @@ fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
 #[test]
 fn simple_solidiy_compile_and_run() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         "
         contract test {
             function foo() public returns (uint32) {
@@ -196,6 +282,9 @@ fn simple_solidiy_compile_and_run() {
             }
         }",
     );
+
+    // call constructor
+    runtime.constructor(&mut store, &[]);
 
     let returns = runtime.function(&mut store, "foo", &[]);
 
@@ -207,7 +296,7 @@ fn simple_solidiy_compile_and_run() {
 
 #[test]
 fn simple_loops() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
 contract test3 {
 	function foo(uint32 a) public returns (uint32) {
@@ -249,6 +338,9 @@ contract test3 {
 	}
 }"##,
     );
+
+    // call constructor
+    runtime.constructor(&mut store, &[]);
 
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;
@@ -331,7 +423,7 @@ contract test3 {
 
 #[test]
 fn stack_test() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
 contract test3 {
 	function foo() public returns (bool) {
@@ -343,6 +435,9 @@ contract test3 {
 }"##,
     );
 
+    // call constructor
+    runtime.constructor(&mut store, &[]);
+
     let returns = runtime.function(&mut store, "foo", &[]);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
@@ -350,7 +445,7 @@ contract test3 {
 
 #[test]
 fn abi_call_return_test() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
 contract test {
 	function foo() public returns (uint32) {
@@ -358,6 +453,9 @@ contract test {
 	}
 }"##,
     );
+
+    // call constructor
+    runtime.constructor(&mut store, &[]);
 
     let returns = runtime.function(&mut store, "foo", &[]);
 
@@ -369,7 +467,7 @@ contract test {
 
 #[test]
 fn abi_call_pass_return_test() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
 contract test {
 	function foo(uint32 a) public returns (uint32) {
@@ -377,6 +475,9 @@ contract test {
 	}
 }"##,
     );
+
+    // call constructor
+    runtime.constructor(&mut store, &[]);
 
     for val in [102i32, 255, 256, 0x7fff_ffff].iter() {
         let returns = runtime.function(
@@ -394,7 +495,7 @@ contract test {
 
 #[test]
 fn contract_storage_test() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
 contract test {
 uint32 foo;
@@ -430,7 +531,7 @@ constructor() public {
 
 #[test]
 fn large_ints_encoded() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
     contract test {
         uint foo;
@@ -466,7 +567,7 @@ fn large_ints_encoded() {
 
 #[test]
 fn address() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         "
         contract address_tester {
             function encode_const() public returns (address) {
@@ -486,6 +587,9 @@ fn address() {
             }
         }",
     );
+
+    // call constructor
+    runtime.constructor(&mut store, &[]);
 
     let ret = runtime.function(&mut store, "encode_const", &[]);
 
@@ -520,7 +624,7 @@ fn address() {
 
 #[test]
 fn bytes() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract bar {
             bytes4 constant foo = hex"11223344";
@@ -611,7 +715,7 @@ fn bytes() {
 
 #[test]
 fn array() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract foo {
             function f(uint i1) public returns (int) {
@@ -651,7 +755,7 @@ fn array() {
 
 #[test]
 fn encode_array() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract foo {
             function f(int32[4] a, uint i) public returns (int32) {
@@ -685,7 +789,7 @@ fn encode_array() {
 #[test]
 #[should_panic]
 fn array_bounds_uint() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract foo {
             function f(int32[4] a, uint i) public returns (int32) {
@@ -714,7 +818,7 @@ fn array_bounds_uint() {
 }
 
 fn array_bounds_int(index: ethabi::Token) {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract foo {
             function f(int32[4] a, int i) public returns (int32) {
@@ -749,7 +853,7 @@ fn array_bounds_int_pos() {
 
 #[test]
 fn array_array() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract foo {
             function f(int a, uint i1, uint i2) public returns (int) {
@@ -789,7 +893,7 @@ fn array_array() {
 #[test]
 fn arrays_are_refs() {
     // verified on remix
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         pragma solidity >=0.4.22 <0.6.0;
 
@@ -832,7 +936,7 @@ fn arrays_are_refs() {
 #[test]
 fn storage_structs() {
     // verified on remix
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         pragma solidity 0;
         pragma experimental ABIEncoderV2;
@@ -862,7 +966,7 @@ fn storage_structs() {
 
 #[test]
 fn struct_encode() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract structs {
             struct foo {
@@ -878,6 +982,8 @@ fn struct_encode() {
         "##,
     );
 
+    runtime.constructor(&mut store, &[]);
+
     runtime.function(
         &mut store,
         "test",
@@ -890,7 +996,7 @@ fn struct_encode() {
 
 #[test]
 fn struct_decode() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract structs {
             struct foo {
@@ -909,6 +1015,8 @@ fn struct_decode() {
         }
         "##,
     );
+
+    runtime.constructor(&mut store, &[]);
 
     let val = runtime.function(&mut store, "test", &[]);
 
@@ -985,7 +1093,7 @@ fn struct_in_struct_decode() {
 
 #[test]
 fn struct_in_struct_encode() {
-    let (runtime, mut store) = build_solidity(
+    let (mut runtime, mut store) = build_solidity(
         r##"
         contract structs {
             enum suit { club, diamonds, hearts, spades }
@@ -1017,6 +1125,8 @@ fn struct_in_struct_encode() {
         }
         "##,
     );
+
+    runtime.constructor(&mut store, &[]);
 
     runtime.function(
         &mut store,
