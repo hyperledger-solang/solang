@@ -5,7 +5,6 @@ use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
 use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
-use lalrpop_util::ParseError;
 
 grammar<'input>(input: &'input str);
 
@@ -41,15 +40,15 @@ PrimitiveType: PrimitiveType = {
     Bytes => PrimitiveType::Bytes(<>),
 }
 
-ArrayDimension: Option<(Loc, BigInt)> = {
+ArrayDimension: Option<Expression> = {
     "[" "]" => None,
-    "[" <l:@L> <n:LexNumber> <r:@R> "]" => Some((Loc(l, r), BigInt::from_str(n).unwrap()))
+    "[" <e:Expression> "]" => Some(e)
 }
 
 Type: Type = {
     <p:PrimitiveType> => Type::Primitive(p, Vec::new()),
     <p:PrimitiveType> <d:ArrayDimension+> => Type::Primitive(p, d),
-    Precedence0 =>? expr_to_type(<>).map_err(|e| ParseError::User { error: e }),
+    Precedence0 => Type::Unresolved(Box::new(<>)),
 }
 
 StorageLocation: StorageLocation = {

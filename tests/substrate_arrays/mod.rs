@@ -445,3 +445,73 @@ fn storage_ref_returns() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn array_dimensions() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            bool[10 - 10] x;
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "zero size of array declared");
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            bool[-10 + 10] x;
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "zero size of array declared");
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            bool[1 / 10] x;
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "zero size of array declared");
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            enum e { e1, e2, e3 }
+            e[1 / 0] x;
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "divide by zero");
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            struct bar { 
+                int32 x;
+            }
+            bar[1 % 0] x;
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "divide by zero");
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract storage_refs {
+            int32[2**16] a;
+        
+            function test() public {
+                assert(a.length == 65536);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

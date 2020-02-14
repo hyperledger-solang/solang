@@ -14,13 +14,17 @@ use Target;
 mod address;
 mod builtin;
 pub mod cfg;
+mod eval;
 pub mod expression;
 mod functions;
 mod structs;
 mod variables;
 
 use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
-use resolver::expression::Expression;
+use resolver::eval::eval_number_expression;
+use resolver::expression::{expression, Expression};
+
+pub type ArrayDimension = Option<(ast::Loc, BigInt)>;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
@@ -422,14 +426,10 @@ impl Contract {
     }
 
     /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
-    pub fn resolve_type(
-        &self,
-        id: &ast::Type,
-        errors: Option<&mut Vec<Output>>,
-    ) -> Result<Type, ()> {
+    pub fn resolve_type(&self, id: &ast::Type, errors: &mut Vec<Output>) -> Result<Type, ()> {
         fn resolve_dimensions(
             dimensions: &[Option<(ast::Loc, BigInt)>],
-            errors: Option<&mut Vec<Output>>,
+            errors: &mut Vec<Output>,
         ) -> Result<Vec<BigInt>, ()> {
             let mut fixed = true;
             let mut fixed_dimensions = Vec::new();
@@ -437,20 +437,16 @@ impl Contract {
             for d in dimensions.iter() {
                 if let Some((loc, n)) = d {
                     if n.is_zero() {
-                        if let Some(errors) = errors {
-                            errors.push(Output::decl_error(
-                                *loc,
-                                "zero size of array declared".to_string(),
-                            ));
-                        }
+                        errors.push(Output::decl_error(
+                            *loc,
+                            "zero size of array declared".to_string(),
+                        ));
                         return Err(());
                     } else if n.is_negative() {
-                        if let Some(errors) = errors {
-                            errors.push(Output::decl_error(
-                                *loc,
-                                "negative size of array declared".to_string(),
-                            ));
-                        }
+                        errors.push(Output::decl_error(
+                            *loc,
+                            "negative size of array declared".to_string(),
+                        ));
                         return Err(());
                     }
                     fixed_dimensions.push(n.clone());
@@ -467,50 +463,116 @@ impl Contract {
 
         match id {
             ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::Primitive(*p)),
-            ast::Type::Primitive(p, dimensions) => Ok(Type::FixedArray(
-                Box::new(Type::Primitive(*p)),
-                resolve_dimensions(dimensions, errors)?,
-            )),
-            ast::Type::Unresolved(id, dimensions) => match self.symbols.get(&id.name) {
-                None => {
-                    if let Some(errors) = errors {
+            ast::Type::Primitive(p, exprs) => {
+                let mut dimensions = Vec::new();
+
+                for expr in exprs {
+                    dimensions.push(match expr {
+                        Some(e) => self.resolve_array_dimension(e, errors)?,
+                        None => None,
+                    });
+                }
+
+                Ok(Type::FixedArray(
+                    Box::new(Type::Primitive(*p)),
+                    resolve_dimensions(&dimensions, errors)?,
+                ))
+            }
+            ast::Type::Unresolved(expr) => {
+                let (id, dimensions) = self.expr_to_type(&expr, errors)?;
+
+                match self.symbols.get(&id.name) {
+                    None => {
                         errors.push(Output::decl_error(
                             id.loc,
                             format!("type ‘{}’ not found", id.name),
                         ));
+                        Err(())
                     }
-                    Err(())
-                }
-                Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
-                Some(Symbol::Enum(_, n)) => Ok(Type::FixedArray(
-                    Box::new(Type::Enum(*n)),
-                    resolve_dimensions(dimensions, errors)?,
-                )),
-                Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
-                Some(Symbol::Struct(_, n)) => Ok(Type::FixedArray(
-                    Box::new(Type::Struct(*n)),
-                    resolve_dimensions(dimensions, errors)?,
-                )),
-                Some(Symbol::Function(_)) => {
-                    if let Some(errors) = errors {
+                    Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
+                    Some(Symbol::Enum(_, n)) => Ok(Type::FixedArray(
+                        Box::new(Type::Enum(*n)),
+                        resolve_dimensions(&dimensions, errors)?,
+                    )),
+                    Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
+                    Some(Symbol::Struct(_, n)) => Ok(Type::FixedArray(
+                        Box::new(Type::Struct(*n)),
+                        resolve_dimensions(&dimensions, errors)?,
+                    )),
+                    Some(Symbol::Function(_)) => {
                         errors.push(Output::decl_error(
                             id.loc,
                             format!("‘{}’ is a function", id.name),
                         ));
+                        Err(())
                     }
-                    Err(())
-                }
-                Some(Symbol::Variable(_, _)) => {
-                    if let Some(errors) = errors {
+                    Some(Symbol::Variable(_, _)) => {
                         errors.push(Output::decl_error(
                             id.loc,
                             format!("‘{}’ is a contract variable", id.name),
                         ));
+                        Err(())
                     }
-                    Err(())
                 }
-            },
+            }
         }
+    }
+
+    // An array type can look like foo[2], if foo is an enum type. The lalrpop parses
+    // this as an expression, so we need to convert it to Type and check there are
+    // no unexpected expressions types.
+    pub fn expr_to_type(
+        &self,
+        expr: &ast::Expression,
+        errors: &mut Vec<Output>,
+    ) -> Result<(ast::Identifier, Vec<ArrayDimension>), ()> {
+        let mut expr = expr;
+        let mut dimensions = Vec::new();
+
+        loop {
+            expr = match expr {
+                ast::Expression::ArraySubscript(_, r, None) => {
+                    dimensions.push(None);
+
+                    &*r
+                }
+                ast::Expression::ArraySubscript(_, r, Some(index)) => {
+                    dimensions.push(self.resolve_array_dimension(index, errors)?);
+
+                    &*r
+                }
+                ast::Expression::Variable(id) => return Ok((id.clone(), dimensions)),
+                _ => {
+                    errors.push(Output::decl_error(
+                        expr.loc(),
+                        "expression found where type expected".to_string(),
+                    ));
+                    return Err(());
+                }
+            }
+        }
+    }
+
+    /// Resolve an expression which defines the array length, e.g. 2**8 in "bool[2**8]"
+    pub fn resolve_array_dimension(
+        &self,
+        expr: &ast::Expression,
+        errors: &mut Vec<Output>,
+    ) -> Result<ArrayDimension, ()> {
+        let mut cfg = ControlFlowGraph::new();
+        let (size_expr, size_ty) = expression(&expr, &mut cfg, &self, &mut None, errors)?;
+        match size_ty {
+            Type::Primitive(ast::PrimitiveType::Uint(_))
+            | Type::Primitive(ast::PrimitiveType::Int(_)) => {}
+            _ => {
+                errors.push(Output::decl_error(
+                    expr.loc(),
+                    "expression is not a number".to_string(),
+                ));
+                return Err(());
+            }
+        }
+        Ok(Some(eval_number_expression(&size_expr, errors)?))
     }
 
     pub fn resolve_enum(&self, id: &ast::Identifier) -> Option<usize> {

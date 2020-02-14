@@ -1,4 +1,3 @@
-use super::lexer::LexicalError;
 use num_bigint::BigInt;
 use std::fmt;
 
@@ -76,8 +75,8 @@ impl fmt::Display for PrimitiveType {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Type {
-    Primitive(PrimitiveType, Vec<Option<(Loc, BigInt)>>),
-    Unresolved(Identifier, Vec<Option<(Loc, BigInt)>>),
+    Primitive(PrimitiveType, Vec<Option<Expression>>),
+    Unresolved(Box<Expression>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -185,25 +184,25 @@ pub struct ContractVariableDefinition {
     pub initializer: Option<Expression>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StringLiteral {
     pub loc: Loc,
     pub string: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct HexLiteral {
     pub loc: Loc,
     pub hex: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct NamedArgument {
     pub name: Identifier,
     pub expr: Expression,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -427,41 +426,5 @@ impl Statement {
     pub fn loc(&self) -> Loc {
         // FIXME add to parser
         Loc(0, 0)
-    }
-}
-
-// An array type can look like foo[2], if foo is an enum type. The lalrpop parses
-// this as an expression, so we need to convert it to Type and check there are
-// no unexpected expressions types.
-pub fn expr_to_type(expr: Expression) -> Result<Type, LexicalError> {
-    let mut dimensions = Vec::new();
-
-    let mut expr = expr;
-
-    loop {
-        expr = match expr {
-            Expression::ArraySubscript(_, r, None) => {
-                dimensions.push(None);
-
-                *r
-            }
-            Expression::ArraySubscript(_, r, Some(index)) => {
-                let loc = index.loc();
-                dimensions.push(match *index {
-                    Expression::NumberLiteral(_, n) => Some((loc, n)),
-                    _ => {
-                        return Err(LexicalError::UnexpectedExpressionArrayDimension(
-                            loc.0, loc.1,
-                        ))
-                    }
-                });
-                *r
-            }
-            Expression::Variable(id) => return Ok(Type::Unresolved(id, dimensions)),
-            _ => {
-                let loc = expr.loc();
-                return Err(LexicalError::NonIdentifierInTypeName(loc.0, loc.1));
-            }
-        }
     }
 }
