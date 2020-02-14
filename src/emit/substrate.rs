@@ -210,7 +210,7 @@ impl SubstrateTarget {
             deploy_args,
             deploy_args_length,
             function,
-            &fallback_block,
+            fallback_block,
             self,
         );
 
@@ -237,7 +237,7 @@ impl SubstrateTarget {
             call_args,
             call_args_length,
             function,
-            &fallback_block,
+            fallback_block,
             self,
         );
 
@@ -261,7 +261,7 @@ impl SubstrateTarget {
     fn decode_primitive<'b>(
         &self,
         contract: &'b Contract,
-        ty: &ast::PrimitiveType,
+        ty: ast::PrimitiveType,
         to: Option<PointerValue<'b>>,
         src: PointerValue<'b>,
     ) -> (BasicValueEnum<'b>, u64) {
@@ -282,7 +282,7 @@ impl SubstrateTarget {
                 (val.into(), 1)
             }
             ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
-                let int_type = contract.context.custom_width_int_type(*n as u32);
+                let int_type = contract.context.custom_width_int_type(n as u32);
 
                 let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
 
@@ -295,9 +295,9 @@ impl SubstrateTarget {
                     "",
                 );
 
-                let len = *n as u64 / 8;
+                let len = n as u64 / 8;
 
-                if *n <= 64 && to.is_none() {
+                if n <= 64 && to.is_none() {
                     (val, len)
                 } else {
                     contract.builder.build_store(store, val);
@@ -306,7 +306,7 @@ impl SubstrateTarget {
                 }
             }
             ast::PrimitiveType::Bytes(len) => {
-                let int_type = contract.context.custom_width_int_type(*len as u32 * 8);
+                let int_type = contract.context.custom_width_int_type(len as u32 * 8);
 
                 let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
 
@@ -326,21 +326,19 @@ impl SubstrateTarget {
                         contract
                             .context
                             .i32_type()
-                            .const_int(*len as u64, false)
+                            .const_int(len as u64, false)
                             .into(),
                     ],
                     "",
                 );
 
-                if *len <= 8 && to.is_none() {
+                if len <= 8 && to.is_none() {
                     (
-                        contract
-                            .builder
-                            .build_load(store, &format!("bytes{}", *len)),
-                        *len as u64,
+                        contract.builder.build_load(store, &format!("bytes{}", len)),
+                        len as u64,
                     )
                 } else {
-                    (store.into(), *len as u64)
+                    (store.into(), len as u64)
                 }
             }
             ast::PrimitiveType::Address => {
@@ -388,7 +386,7 @@ impl SubstrateTarget {
     ) -> BasicValueEnum<'b> {
         match &ty {
             resolver::Type::Primitive(e) => {
-                let (arg, arglen) = self.decode_primitive(contract, &e, to, *data);
+                let (arg, arglen) = self.decode_primitive(contract, *e, to, *data);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -477,7 +475,7 @@ impl SubstrateTarget {
     fn encode_primitive(
         &self,
         contract: &Contract,
-        ty: &ast::PrimitiveType,
+        ty: ast::PrimitiveType,
         dest: PointerValue,
         val: BasicValueEnum,
     ) -> u64 {
@@ -517,7 +515,7 @@ impl SubstrateTarget {
                     val.into_int_value(),
                 );
 
-                *n as u64 / 8
+                n as u64 / 8
             }
             ast::PrimitiveType::Bytes(n) => {
                 let val = if val.is_pointer_value() {
@@ -548,13 +546,13 @@ impl SubstrateTarget {
                         contract
                             .context
                             .i32_type()
-                            .const_int(*n as u64, false)
+                            .const_int(n as u64, false)
                             .into(),
                     ],
                     "",
                 );
 
-                *n as u64
+                n as u64
             }
             ast::PrimitiveType::Address => {
                 // byte order needs to be reversed
@@ -597,7 +595,7 @@ impl SubstrateTarget {
     ) {
         match &ty {
             resolver::Type::Primitive(e) => {
-                let arglen = self.encode_primitive(contract, e, *data, arg);
+                let arglen = self.encode_primitive(contract, *e, *data, arg);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -608,7 +606,7 @@ impl SubstrateTarget {
                 };
             }
             resolver::Type::Enum(n) => {
-                self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
+                self.encode_primitive(contract, contract.ns.enums[*n].ty, *data, arg);
             }
             resolver::Type::FixedArray(_, dim) => {
                 contract.emit_static_loop(

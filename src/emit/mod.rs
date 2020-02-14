@@ -1426,7 +1426,7 @@ impl<'a> Contract<'a> {
         argsdata: inkwell::values::PointerValue,
         argslen: inkwell::values::IntValue,
         function: inkwell::values::FunctionValue,
-        fallback_block: &inkwell::basic_block::BasicBlock,
+        fallback_block: inkwell::basic_block::BasicBlock,
         runtime: &dyn TargetRuntime,
     ) {
         // create start function

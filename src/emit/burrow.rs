@@ -155,7 +155,7 @@ impl BurrowTarget {
             argsdata,
             argslen,
             function,
-            &fallback_block,
+            fallback_block,
             self,
         );
 

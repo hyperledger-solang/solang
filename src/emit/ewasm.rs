@@ -279,7 +279,7 @@ impl EwasmTarget {
             argsdata,
             argslen,
             function,
-            &fallback_block,
+            fallback_block,
             self,
         );
 

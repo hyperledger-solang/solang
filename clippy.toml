@@ -1,3 +1,2 @@
 too-many-arguments-threshold = 10
-cognitive-complexity-threshold = 50
-trivial-copy-size-limit = 0
+cognitive-complexity-threshold = 40
