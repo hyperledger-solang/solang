@@ -212,7 +212,7 @@ pub fn function_decl(
 
     if f.constructor {
         // In the eth solidity, only one constructor is allowed
-        if ns.target == Target::Burrow && !ns.constructors.is_empty() {
+        if ns.target == Target::Ewasm && !ns.constructors.is_empty() {
             let prev = &ns.constructors[i];
             errors.push(Output::error_with_note(
                 f.loc,
@@ -341,7 +341,7 @@ fn signatures() {
         variables: Vec::new(),
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
-        target: crate::Target::Burrow,
+        target: crate::Target::Ewasm,
         top_of_contract_storage: BigInt::zero(),
         symbols: HashMap::new(),
     };

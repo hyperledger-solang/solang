@@ -6,7 +6,7 @@ pub mod substrate;
 
 pub fn generate_abi(contract: &Contract, verbose: bool) -> (String, &'static str) {
     match contract.target {
-        Target::Ewasm | Target::Burrow => {
+        Target::Ewasm => {
             if verbose {
                 eprintln!(
                     "info: Generating Ethereum ABI for contract {}",

@@ -9,7 +9,7 @@ Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
 needs to be written in rust.
 
-Solang targets Substrate, Hyperledger Burrow and ewasm.
+Solang targets Substrate and ewasm.
 
 Solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at

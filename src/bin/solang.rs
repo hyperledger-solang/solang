@@ -61,7 +61,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .possible_values(&["substrate", "burrow", "ewasm"])
+                .possible_values(&["substrate", "ewasm"])
                 .default_value("substrate"),
         )
         .arg(
@@ -90,15 +90,7 @@ fn main() {
     };
 
     let target = match matches.value_of("TARGET") {
-        Some("substrate") => {
-            // This type of output is used by burrow deploy
-            if matches.is_present("STD-JSON") {
-                solang::Target::Burrow
-            } else {
-                solang::Target::Substrate
-            }
-        }
-        Some("burrow") => solang::Target::Burrow,
+        Some("substrate") => solang::Target::Substrate,
         Some("ewasm") => solang::Target::Ewasm,
         _ => unreachable!(),
     };

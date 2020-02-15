@@ -27,8 +27,6 @@ use std::fmt;
 pub enum Target {
     /// Parity Substrate, see https://substrate.dev/
     Substrate,
-    /// Hyperledger Burrow, see https://github.com/hyperledger/burrow/
-    Burrow,
     /// Ethereum ewasm, see https://github.com/ewasm/design
     Ewasm,
 }
@@ -37,7 +35,6 @@ impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Target::Substrate => write!(f, "Substrate"),
-            Target::Burrow => write!(f, "Burrow"),
             Target::Ewasm => write!(f, "ewasm"),
         }
     }

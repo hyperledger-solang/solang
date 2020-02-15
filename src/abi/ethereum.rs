@@ -1,5 +1,4 @@
 // ethereum style ABIs
-// This is used by Hyperledger Burrow and ewasm
 
 use parser::ast;
 use resolver::{Contract, Type};
