@@ -27,7 +27,6 @@ use inkwell::OptimizationLevel;
 
 const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
-mod burrow;
 mod ethabiencoder;
 mod ewasm;
 mod substrate;
@@ -109,7 +108,6 @@ impl<'a> Contract<'a> {
         opt: &str,
     ) -> Self {
         match contract.target {
-            super::Target::Burrow => burrow::BurrowTarget::build(context, contract, filename),
             super::Target::Substrate => {
                 substrate::SubstrateTarget::build(context, contract, filename)
             }

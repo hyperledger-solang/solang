@@ -717,8 +717,8 @@ A constructor must be declared ``public``.
 
 .. note::
 
-  Parity Substrate allows multiple constructors to be defined, which is not true for Hyperledger Burrow
-  or ewasm. So, when building for Substrate, multiple constructors can be
+  Parity Substrate allows multiple constructors to be defined, which is not true for
+  ewasm. So, when building for Substrate, multiple constructors can be
   defined as long as their argument list is different (i.e. overloaded).
 
   When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.

@@ -29,7 +29,6 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
     // or something like that.
     let allowed_externs = |name: &str| match target {
         Target::Ewasm => name == "main",
-        Target::Burrow => name == "constructor" || name == "function",
         Target::Substrate => name == "deploy" || name == "call",
     };
 
