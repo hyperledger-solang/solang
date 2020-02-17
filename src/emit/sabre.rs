@@ -439,7 +439,7 @@ impl TargetRuntime for SabreTarget {
         let encoded_data = contract
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
+                contract.module.get_function("alloc").unwrap(),
                 &[length.into()],
                 "",
             )

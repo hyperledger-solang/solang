@@ -35,7 +35,7 @@ Options:
   will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``ewasm``, or ``substrate``.
+  This takes one argument, which can either be ``ewasm``, ``sabre``, or ``substrate``.
   The default is substrate.
 
 -o, \\-\\-output *directory*
@@ -204,11 +204,16 @@ To run the constructor, run:
 
    sabre exec --contract flipper:1.0 --payload  ./constructor --inputs 12cd3c  --outputs 12cd3c --url http://rest-api:9708
 
-Lastly run the flip functin:
+Lastly, to run the flip function:
 
 .. code-block:: bash
 
   sabre exec --contract flipper:1.0 --payload  ./flip --inputs 12cd3c  --outputs 12cd3c --url http://rest-api:9708
+
+.. warning::
+
+  Returning values from Solidity is not yet implemented, and neither is ``revert()``. If you
+  attempt to call a function which returns a value, it will fail.
 
 Using Solang with Hyperledger Burrow
 ------------------------------------
