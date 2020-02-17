@@ -140,20 +140,20 @@ contract full_example {
 
 	// cards
 	enum suit { club, diamonds, hearts, spades }
-    enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
-    struct card {
-        value v;
-        suit s;
-    }
+	enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
+	struct card {
+		value v;
+		suit s;
+	}
 
-    card card1 = card(value.two, suit.club);
-    card card2 = card({s: suit.club, v: value.two});
+	card card1 = card(value.two, suit.club);
+	card card2 = card({s: suit.club, v: value.two});
 
-    // This function does a lot of copying
-    function set_card1(card c) public returns (card previous) {
-        previous = card1;
-        card1 = c;
-    }
+	// This function does a lot of copying
+	function set_card1(card c) public returns (card previous) {
+		previous = card1;
+		card1 = c;
+	}
 
 	/// return the ace of spades
 	function ace_of_spaces() public pure returns (card) {
@@ -161,20 +161,21 @@ contract full_example {
 	}
 
 	/// score card
-    function score_card(card c) public pure returns (uint32 score) {
-        if (c.s == suit.hearts) {
-            if (c.v == value.ace) {
-                score = 14;
-            }
-            if (c.v == value.king) {
-                score = 13;
-            }
-            if (c.v == value.queen) {
-                score = 12;
-            }
-            if (c.v == value.jack) {
-                score = 11;
-            }
-        }
-        // all others score 0
-    }}
+	function score_card(card c) public pure returns (uint32 score) {
+		if (c.s == suit.hearts) {
+			if (c.v == value.ace) {
+				score = 14;
+			}
+			if (c.v == value.king) {
+				score = 13;
+			}
+			if (c.v == value.queen) {
+				score = 12;
+			}
+			if (c.v == value.jack) {
+				score = 11;
+			}
+		}
+		// all others score 0
+	}
+}
