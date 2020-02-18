@@ -6,7 +6,7 @@ names are provided as command line arguments; the output is an optimized
 wasm file which is ready for deployment on a chain, and an abi file.
 
 Three targets are supported right now:
-`Ethereum ewasm <https://github.com/ewasm/design>`_,  and
+`Ethereum ewasm <https://github.com/ewasm/design>`_,
 `Parity Substrate <https://substrate.dev/>`_, and
 `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_.
 
