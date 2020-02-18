@@ -48,17 +48,9 @@ Alternatively this will work with podman too:
 Building Solang from source from crates.io
 ------------------------------------------
 
-Solang is listed on `crates.io <https://crates.io/crates/solang>`_. Only
-releases are pushed to cargo, and the current release is out of date. This is
-how you tell cargo to retrieve the latest version of solang and compile it
-from source:
-
-.. code-block:: bash
-
-	cargo install solang
-
-You will need the llvm libraries for this to work, see
-`Installing the LLVM Libraries`_.
+Solang is listed on `crates.io <https://crates.io/crates/solang>`_, however
+this has not been updated in a long time. This is due to
+`this inkwell issue <https://github.com/TheDan64/inkwell/issues/154>`_.
 
 Building Solang from source
 ---------------------------
