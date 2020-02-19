@@ -1329,3 +1329,21 @@ fn bytesn_overflow_index_acccess() {
         BytesArray(*b"nawabra", 7).encode(),
     );
 }
+
+#[test]
+fn unaryminus_and_subtract() {
+    // The minus sign can be a unary negative or subtract.
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                uint32 x = 10-10;
+                assert(x == 0);
+                int32 y = -10-10;
+                assert(y == -20);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

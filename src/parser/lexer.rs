@@ -688,12 +688,6 @@ impl<'input> Lexer<'input> {
                             self.chars.next();
                             Some(Ok((i, Token::Decrement, i + 2)))
                         }
-                        Some((end, ch)) if ch.is_ascii_digit() => {
-                            let ch = *ch;
-                            let end = *end;
-                            self.chars.next();
-                            self.parse_number(i, end, ch)
-                        }
                         _ => Some(Ok((i, Token::Subtract, i + 1))),
                     };
                 }
@@ -980,7 +974,8 @@ fn lexertest() {
     assert_eq!(
         tokens,
         vec!(
-            Ok((0, Token::Number("-16"), 3)),
+            Ok((0, Token::Subtract, 1)),
+            Ok((1, Token::Number("16"), 3)),
             Ok((4, Token::Decrement, 6)),
             Ok((7, Token::Subtract, 8)),
             Ok((9, Token::SubtractAssign, 11)),
@@ -989,7 +984,10 @@ fn lexertest() {
 
     let tokens = Lexer::new("-4 ").collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
-    assert_eq!(tokens, vec!(Ok((0, Token::Number("-4"), 2)),));
+    assert_eq!(
+        tokens,
+        vec!(Ok((0, Token::Subtract, 1)), Ok((1, Token::Number("4"), 2)),)
+    );
 
     let tokens =
         Lexer::new(r#"hex"abcdefg""#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
