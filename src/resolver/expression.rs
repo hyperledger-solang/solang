@@ -1476,11 +1476,22 @@ pub fn expression(
             Ok((Expression::Complement(*loc, Box::new(expr)), expr_type))
         }
         ast::Expression::UnaryMinus(loc, e) => {
-            let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+            let expr: &ast::Expression = e;
+            if let ast::Expression::NumberLiteral(loc, n) = expr {
+                expression(
+                    &ast::Expression::NumberLiteral(*loc, -n),
+                    cfg,
+                    ns,
+                    vartab,
+                    errors,
+                )
+            } else {
+                let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, false, ns, errors)?;
+                get_int_length(&expr_type, loc, false, ns, errors)?;
 
-            Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
+                Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
+            }
         }
         ast::Expression::UnaryPlus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
