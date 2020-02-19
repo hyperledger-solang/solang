@@ -37,7 +37,7 @@ impl EthAbiEncoder {
                 self.encode_primitive(contract, contract.ns.enums[*n].ty, *data, arg);
             }
             resolver::Type::FixedArray(_, dim) => {
-                contract.emit_static_loop(
+                contract.emit_static_loop_with_pointer(
                     function,
                     0,
                     dim[0].to_u64().unwrap(),
@@ -406,7 +406,7 @@ impl EthAbiEncoder {
                         .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
                 });
 
-                contract.emit_static_loop(
+                contract.emit_static_loop_with_pointer(
                     function,
                     0,
                     dim[0].to_u64().unwrap(),

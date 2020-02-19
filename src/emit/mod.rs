@@ -213,8 +213,8 @@ impl<'a> Contract<'a> {
     }
 
     /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
-    /// gets the loop variable passed to it as an IntValue.
-    pub fn emit_static_loop<'b, F>(
+    /// gets the loop variable passed to it as an IntValue, and a userdata PointerValue
+    pub fn emit_static_loop_with_pointer<'b, F>(
         &'b self,
         function: FunctionValue,
         from: u64,
@@ -253,6 +253,56 @@ impl<'a> Contract<'a> {
         );
         self.builder.build_conditional_branch(comp, &body, &done);
 
+        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), &entry), (&next, &body)]);
+        data_phi.add_incoming(&[(&*data_ref, &entry), (&data, &body)]);
+
+        self.builder.position_at_end(&done);
+
+        *data_ref = data;
+    }
+
+    /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
+    /// gets the loop variable passed to it as an IntValue, and a userdata IntValue
+    pub fn emit_static_loop_with_int<'b, F>(
+        &'b self,
+        function: FunctionValue,
+        from: u64,
+        to: u64,
+        data_ref: &mut IntValue<'b>,
+        mut insert_body: F,
+    ) where
+        F: FnMut(IntValue<'b>, &mut IntValue<'b>),
+    {
+        let body = self.context.append_basic_block(function, "body");
+        let done = self.context.append_basic_block(function, "done");
+        let entry = self.builder.get_insert_block().unwrap();
+
+        self.builder.build_unconditional_branch(&body);
+        self.builder.position_at_end(&body);
+
+        let loop_ty = self.context.i64_type();
+        let loop_phi = self.builder.build_phi(loop_ty, "index");
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let mut data = data_phi.as_basic_value().into_int_value();
+
+        let loop_var = loop_phi.as_basic_value().into_int_value();
+
+        // add loop body
+        insert_body(loop_var, &mut data);
+
+        let next = self
+            .builder
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+
+        let comp = self.builder.build_int_compare(
+            IntPredicate::ULT,
+            next,
+            loop_ty.const_int(to, false),
+            "loop_cond",
+        );
+        self.builder.build_conditional_branch(comp, &body, &done);
+
+        let body = self.builder.get_insert_block().unwrap();
         loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), &entry), (&next, &body)]);
         data_phi.add_incoming(&[(&*data_ref, &entry), (&data, &body)]);
 
@@ -934,56 +984,95 @@ impl<'a> Contract<'a> {
     }
 
     /// Recursively load a type from contract storage
-    fn storage_load(
-        &self,
+    fn storage_load<'b>(
+        &'b self,
         ty: &resolver::Type,
-        slot: &mut IntValue<'a>,
-        slot_ptr: PointerValue<'a>,
-        dest: PointerValue<'a>,
-        function: FunctionValue<'a>,
+        slot: &mut IntValue<'b>,
+        slot_ptr: PointerValue<'b>,
+        dest: PointerValue<'b>,
+        function: FunctionValue<'b>,
         runtime: &dyn TargetRuntime,
     ) {
-        // FIXME: load arrays from storage
-        if let resolver::Type::Struct(n) = ty {
-            for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
-                let elem = unsafe {
-                    self.builder.build_gep(
-                        dest,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_int(i as u64, false),
-                        ],
-                        &field.name,
-                    )
-                };
+        match ty {
+            resolver::Type::FixedArray(_, dim) => {
+                let ty = ty.deref();
 
-                if field.ty.is_reference_type() {
-                    let val = self
-                        .builder
-                        .build_alloca(field.ty.llvm_type(self.ns, self.context), &field.name);
+                self.emit_static_loop_with_int(
+                    function,
+                    0,
+                    dim[0].to_u64().unwrap(),
+                    slot,
+                    |index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                        let elem = unsafe {
+                            self.builder.build_gep(
+                                dest,
+                                &[self.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                        };
 
-                    self.storage_load(&field.ty, slot, slot_ptr, val, function, runtime);
+                        if ty.is_reference_type() {
+                            let val = self
+                                .builder
+                                .build_alloca(ty.llvm_type(self.ns, self.context), "");
+                            self.storage_load(&ty, slot, slot_ptr, val, function, runtime);
+                            self.builder.build_store(elem, val);
+                        } else {
+                            self.storage_load(&ty, slot, slot_ptr, elem, function, runtime);
+                        }
 
-                    self.builder.build_store(elem, val);
-                } else {
-                    self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
-                }
+                        if !ty.is_reference_type() {
+                            *slot = self.builder.build_int_add(
+                                *slot,
+                                self.number_literal(256, &ty.storage_slots(self.ns)),
+                                "",
+                            );
+                        }
+                    },
+                );
+            }
+            resolver::Type::Struct(n) => {
+                for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        self.builder.build_gep(
+                            dest,
+                            &[
+                                self.context.i32_type().const_zero(),
+                                self.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
 
-                if !field.ty.is_reference_type() {
-                    *slot = self.builder.build_int_add(
-                        *slot,
-                        self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                        &field.name,
-                    );
+                    if field.ty.is_reference_type() {
+                        let val = self
+                            .builder
+                            .build_alloca(field.ty.llvm_type(self.ns, self.context), &field.name);
+
+                        self.storage_load(&field.ty, slot, slot_ptr, val, function, runtime);
+
+                        self.builder.build_store(elem, val);
+                    } else {
+                        self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
+                    }
+
+                    if !field.ty.is_reference_type() {
+                        *slot = self.builder.build_int_add(
+                            *slot,
+                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                            &field.name,
+                        );
+                    }
                 }
             }
-        } else {
-            self.builder.build_store(slot_ptr, *slot);
+            _ => {
+                self.builder.build_store(slot_ptr, *slot);
 
-            // TODO ewasm allocates 32 bytes here, even though we have just
-            // allocated test. This can be folded into one allocation, if llvm
-            // does not already fold it into one.
-            runtime.get_storage(&self, function, slot_ptr, dest);
+                // TODO ewasm allocates 32 bytes here, even though we have just
+                // allocated test. This can be folded into one allocation, if llvm
+                // does not already fold it into one.
+                runtime.get_storage(&self, function, slot_ptr, dest);
+            }
         }
     }
 
