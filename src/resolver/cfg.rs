@@ -1072,8 +1072,9 @@ fn statement(
             }
 
             if body_reachable {
+                cfg.set_basic_block(next);
+
                 if let Some(next_stmt) = next_stmt {
-                    cfg.set_basic_block(next);
                     body_reachable = statement(next_stmt, f, cfg, ns, vartab, loops, errors)?;
                 }
 
