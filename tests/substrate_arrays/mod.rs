@@ -457,8 +457,9 @@ fn storage_to_memory() {
             int32[10] a;
         
             function test() public returns (int32[10]) {
-                for (int32 i  = 0; i < 10; i++) {
-                    a[i] = 7 * (i + 1);
+                for (int32 i  = 0; i < 10; ) {
+                    int32 index = i;
+                    a[index] = 7 * ++i;
                 }
 
                 return a;
