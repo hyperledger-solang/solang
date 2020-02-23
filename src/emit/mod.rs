@@ -1077,62 +1077,97 @@ impl<'a> Contract<'a> {
     }
 
     /// Recursively store a type to contract storage
-    fn storage_store(
-        &self,
+    fn storage_store<'b>(
+        &'b self,
         ty: &resolver::Type,
-        slot: &mut IntValue<'a>,
-        slot_ptr: PointerValue<'a>,
-        dest: BasicValueEnum<'a>,
-        function: FunctionValue<'a>,
+        slot: &mut IntValue<'b>,
+        slot_ptr: PointerValue<'b>,
+        dest: BasicValueEnum<'b>,
+        function: FunctionValue<'b>,
         runtime: &dyn TargetRuntime,
     ) {
-        // FIXME: store arrays to storage
-        if let resolver::Type::Struct(n) = ty {
-            for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
-                let mut elem = unsafe {
-                    self.builder.build_gep(
-                        dest.into_pointer_value(),
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_int(i as u64, false),
-                        ],
-                        &field.name,
-                    )
-                };
+        match ty {
+            resolver::Type::FixedArray(_, dim) => {
+                let ty = ty.deref();
 
-                if field.ty.is_reference_type() {
-                    elem = self
-                        .builder
-                        .build_load(elem, &field.name)
-                        .into_pointer_value();
-                }
+                self.emit_static_loop_with_int(
+                    function,
+                    0,
+                    dim[0].to_u64().unwrap(),
+                    slot,
+                    |index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                        let mut elem = unsafe {
+                            self.builder.build_gep(
+                                dest.into_pointer_value(),
+                                &[self.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
+                        };
 
-                self.storage_store(&field.ty, slot, slot_ptr, elem.into(), function, runtime);
+                        if ty.is_reference_type() {
+                            elem = self.builder.build_load(elem, "").into_pointer_value();
+                        }
 
-                if !field.ty.is_reference_type() {
-                    *slot = self.builder.build_int_add(
-                        *slot,
-                        self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                        &field.name,
-                    );
+                        self.storage_store(&ty, slot, slot_ptr, elem.into(), function, runtime);
+
+                        if !ty.is_reference_type() {
+                            *slot = self.builder.build_int_add(
+                                *slot,
+                                self.number_literal(256, &ty.storage_slots(self.ns)),
+                                "",
+                            );
+                        }
+                    },
+                );
+            }
+            resolver::Type::Struct(n) => {
+                for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
+                    let mut elem = unsafe {
+                        self.builder.build_gep(
+                            dest.into_pointer_value(),
+                            &[
+                                self.context.i32_type().const_zero(),
+                                self.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    if field.ty.is_reference_type() {
+                        elem = self
+                            .builder
+                            .build_load(elem, &field.name)
+                            .into_pointer_value();
+                    }
+
+                    self.storage_store(&field.ty, slot, slot_ptr, elem.into(), function, runtime);
+
+                    if !field.ty.is_reference_type() {
+                        *slot = self.builder.build_int_add(
+                            *slot,
+                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                            &field.name,
+                        );
+                    }
                 }
             }
-        } else {
-            self.builder.build_store(slot_ptr, *slot);
+            _ => {
+                self.builder.build_store(slot_ptr, *slot);
 
-            let dest = if dest.is_int_value() {
-                let m = self.builder.build_alloca(dest.get_type(), "");
-                self.builder.build_store(m, dest);
+                let dest = if dest.is_int_value() {
+                    let m = self.builder.build_alloca(dest.get_type(), "");
+                    self.builder.build_store(m, dest);
 
-                m
-            } else {
-                dest.into_pointer_value()
-            };
+                    m
+                } else {
+                    dest.into_pointer_value()
+                };
 
-            // TODO ewasm allocates 32 bytes here, even though we have just
-            // allocated test. This can be folded into one allocation, if llvm
-            // does not already fold it into one.
-            runtime.set_storage(&self, function, slot_ptr, dest);
+                // TODO ewasm allocates 32 bytes here, even though we have just
+                // allocated test. This can be folded into one allocation, if llvm
+                // does not already fold it into one.
+                runtime.set_storage(&self, function, slot_ptr, dest);
+            }
         }
     }
 

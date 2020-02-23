@@ -475,6 +475,33 @@ fn storage_to_memory() {
 }
 
 #[test]
+fn memory_to_storage() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret([u32; 10]);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract storage_refs {
+            int32[10] a;
+        
+            function test() public returns (int32[10]) {
+                int32[10] b = [ int32(7), 14, 21, 28, 35, 42, 49, 56, 63, 70 ];
+
+                a = b;
+
+                return a;
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
+
+    assert_eq!(store.scratch, val.encode());
+}
+
+#[test]
 fn array_dimensions() {
     let (_, errors) = parse_and_resolve(
         r#"
