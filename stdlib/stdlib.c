@@ -4,18 +4,6 @@
 #include <stdbool.h>
 
 /*
- * The external interface
- */
-
-/*
- * Retrieve contract storage for this account. If nothing is stored at the key,
- * set the memory at dest to 0. If the storage is shorter, pad the remaining bytes
- * with 0.
- */
-extern void get_storage32(uint32_t key, void *dest, int32_t length);
-extern void set_storage32(uint32_t key, void *src, int32_t length);
-
-/*
  */
 __attribute__((visibility("hidden"))) void __memset8(void *_dest, uint64_t val, size_t length)
 {
@@ -393,4 +381,23 @@ char *__u256ptohex(uint8_t *v, char *str)
 	}
 
 	return str;
+}
+
+/*
+ * Vector is used for dynamic array
+ */
+struct vector
+{
+	uint32_t size;
+	uint32_t len;
+	uint8_t data[];
+};
+
+__attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members, uint32_t size)
+{
+	struct vector *v = __malloc(sizeof(*v) + members * size);
+	v->size = members;
+	v->len = members;
+
+	return v;
 }

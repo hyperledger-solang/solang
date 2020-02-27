@@ -284,7 +284,7 @@ fn get_int_length(
             ));
             Err(())
         }
-        resolver::Type::FixedArray(_, _) => {
+        resolver::Type::Array(_, _) => {
             errors.push(Output::error(
                 *l_loc,
                 format!("type array {} not allowed", l.to_string(ns)),
@@ -2321,9 +2321,12 @@ pub fn expression(
                         ));
                     }
                 }
-                resolver::Type::FixedArray(_, dim) => {
+                resolver::Type::Array(_, dim) => {
                     if id.name == "length" {
-                        return bigint_to_expression(loc, dim.last().unwrap(), errors);
+                        return match dim.last().unwrap() {
+                            None => unimplemented!(),
+                            Some(d) => bigint_to_expression(loc, d, errors),
+                        };
                     }
                 }
                 resolver::Type::StorageRef(r) => match *r {
@@ -2362,9 +2365,12 @@ pub fn expression(
                             ));
                         }
                     }
-                    resolver::Type::FixedArray(_, dim) => {
+                    resolver::Type::Array(_, dim) => {
                         if id.name == "length" {
-                            return bigint_to_expression(loc, dim.last().unwrap(), errors);
+                            return match dim.last().unwrap() {
+                                None => unimplemented!(),
+                                Some(d) => bigint_to_expression(loc, d, errors),
+                            };
                         }
                     }
                     _ => {}
@@ -2564,7 +2570,11 @@ fn array_subscript(
 
     let array_length = match array_ty.deref() {
         resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
-        resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
+        resolver::Type::Array(_, _) => match array_ty.array_length() {
+            None => unimplemented!(),
+            Some(l) => l,
+        }
+        .clone(),
         _ => {
             errors.push(Output::error(
                 array.loc(),
@@ -2780,7 +2790,7 @@ fn array_subscript(
                     res_ty,
                 ))
             }
-            resolver::Type::FixedArray(_, _) => Ok((
+            resolver::Type::Array(_, _) => Ok((
                 Expression::ArraySubscript(
                     *loc,
                     Box::new(cast(
@@ -3167,11 +3177,11 @@ fn resolve_array_literal(
         exprs.push(other);
     }
 
-    let aty = resolver::Type::FixedArray(
+    let aty = resolver::Type::Array(
         Box::new(ty),
         dims.iter()
-            .map(|n| BigInt::from_u32(*n).unwrap())
-            .collect::<Vec<BigInt>>(),
+            .map(|n| Some(BigInt::from_u32(*n).unwrap()))
+            .collect::<Vec<Option<BigInt>>>(),
     );
 
     if vartab.is_none() {
