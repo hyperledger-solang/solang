@@ -356,9 +356,7 @@ impl<'a> Contract<'a> {
                 .into(),
             Expression::NumberLiteral(_, bits, n) => self.number_literal(*bits as u32, n).into(),
             Expression::StructLiteral(_, ty, exprs) => {
-                let s = self
-                    .builder
-                    .build_alloca(ty.llvm_type(self.ns, self.context), "struct");
+                let s = self.builder.build_alloca(self.llvm_type(ty), "struct");
 
                 for (i, f) in exprs.iter().enumerate() {
                     let elem = unsafe {
@@ -703,7 +701,7 @@ impl<'a> Contract<'a> {
             Expression::StorageLoad(_, ty, e) => {
                 let dest = self
                     .builder
-                    .build_alloca(ty.llvm_type(self.ns, &self.context), "storage_load_temp");
+                    .build_alloca(self.llvm_type(ty), "storage_load_temp");
                 // The storage slot is an i256 accessed through a pointer, so we need
                 // to store it
                 let mut slot = self
@@ -722,7 +720,7 @@ impl<'a> Contract<'a> {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
-                let ty = t.llvm_type(self.ns, &self.context);
+                let ty = self.llvm_type(t);
 
                 self.builder
                     .build_int_z_extend(e, ty.into_int_type(), "")
@@ -739,7 +737,7 @@ impl<'a> Contract<'a> {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
-                let ty = t.llvm_type(self.ns, &self.context);
+                let ty = self.llvm_type(t);
 
                 self.builder
                     .build_int_s_extend(e, ty.into_int_type(), "")
@@ -749,7 +747,7 @@ impl<'a> Contract<'a> {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
-                let ty = t.llvm_type(self.ns, &self.context);
+                let ty = self.llvm_type(t);
 
                 self.builder
                     .build_int_truncate(e, ty.into_int_type(), "")
@@ -943,7 +941,7 @@ impl<'a> Contract<'a> {
                 // non-const array literals should alloca'ed and each element assigned
                 let array = self
                     .builder
-                    .build_alloca(ty.llvm_type(self.ns, &self.context), "array_literal");
+                    .build_alloca(self.llvm_type(ty), "array_literal");
 
                 for (i, expr) in exprs.iter().enumerate() {
                     let mut ind = vec![self.context.i32_type().const_zero()];
@@ -990,45 +988,46 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) {
         match ty {
-            resolver::Type::FixedArray(_, dim) => {
+            resolver::Type::Array(_, dim) => {
                 let ty = ty.array_deref();
 
-                self.emit_static_loop_with_int(
-                    function,
-                    0,
-                    dim[0].to_u64().unwrap(),
-                    slot,
-                    |index: IntValue<'b>, slot: &mut IntValue<'b>| {
-                        let elem = unsafe {
-                            self.builder.build_gep(
-                                dest,
-                                &[self.context.i32_type().const_zero(), index],
-                                "index_access",
-                            )
-                        };
+                if let Some(d) = &dim[0] {
+                    self.emit_static_loop_with_int(
+                        function,
+                        0,
+                        d.to_u64().unwrap(),
+                        slot,
+                        |index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                            let elem = unsafe {
+                                self.builder.build_gep(
+                                    dest,
+                                    &[self.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
 
-                        if ty.is_reference_type() {
-                            let ty = ty.deref();
-                            let val = self
-                                .builder
-                                .build_alloca(ty.llvm_type(self.ns, self.context), "");
+                            if ty.is_reference_type() {
+                                let ty = ty.deref();
+                                let val = self.builder.build_alloca(self.llvm_type(&ty), "");
+                                self.storage_load(&ty, slot, slot_ptr, val, function, runtime);
 
-                            self.storage_load(&ty, slot, slot_ptr, val, function, runtime);
+                                self.builder.build_store(elem, val);
+                            } else {
+                                self.storage_load(&ty, slot, slot_ptr, elem, function, runtime);
+                            }
 
-                            self.builder.build_store(elem, val);
-                        } else {
-                            self.storage_load(&ty, slot, slot_ptr, elem, function, runtime);
-                        }
-
-                        if !ty.is_reference_type() {
-                            *slot = self.builder.build_int_add(
-                                *slot,
-                                self.number_literal(256, &ty.storage_slots(self.ns)),
-                                "",
-                            );
-                        }
-                    },
-                );
+                            if !ty.is_reference_type() {
+                                *slot = self.builder.build_int_add(
+                                    *slot,
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+                } else {
+                    // FIXME: iterate over dynamic array
+                }
             }
             resolver::Type::Struct(n) => {
                 for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
@@ -1044,10 +1043,9 @@ impl<'a> Contract<'a> {
                     };
 
                     if field.ty.is_reference_type() {
-                        let val = self.builder.build_alloca(
-                            field.ty.deref().llvm_type(self.ns, self.context),
-                            &field.name,
-                        );
+                        let val = self
+                            .builder
+                            .build_alloca(self.llvm_type(&field.ty.deref()), &field.name);
 
                         self.storage_load(&field.ty, slot, slot_ptr, val, function, runtime);
 
@@ -1087,38 +1085,42 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) {
         match ty.deref() {
-            resolver::Type::FixedArray(_, dim) => {
+            resolver::Type::Array(_, dim) => {
                 let ty = ty.array_deref();
 
-                self.emit_static_loop_with_int(
-                    function,
-                    0,
-                    dim[0].to_u64().unwrap(),
-                    slot,
-                    |index: IntValue<'b>, slot: &mut IntValue<'b>| {
-                        let mut elem = unsafe {
-                            self.builder.build_gep(
-                                dest.into_pointer_value(),
-                                &[self.context.i32_type().const_zero(), index],
-                                "index_access",
-                            )
-                        };
+                if let Some(d) = &dim[0] {
+                    self.emit_static_loop_with_int(
+                        function,
+                        0,
+                        d.to_u64().unwrap(),
+                        slot,
+                        |index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                            let mut elem = unsafe {
+                                self.builder.build_gep(
+                                    dest.into_pointer_value(),
+                                    &[self.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
 
-                        if ty.is_reference_type() {
-                            elem = self.builder.build_load(elem, "").into_pointer_value();
-                        }
+                            if ty.is_reference_type() {
+                                elem = self.builder.build_load(elem, "").into_pointer_value();
+                            }
 
-                        self.storage_store(&ty, slot, slot_ptr, elem.into(), function, runtime);
+                            self.storage_store(&ty, slot, slot_ptr, elem.into(), function, runtime);
 
-                        if !ty.is_reference_type() {
-                            *slot = self.builder.build_int_add(
-                                *slot,
-                                self.number_literal(256, &ty.storage_slots(self.ns)),
-                                "",
-                            );
-                        }
-                    },
-                );
+                            if !ty.is_reference_type() {
+                                *slot = self.builder.build_int_add(
+                                    *slot,
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+                } else {
+                    // FIMXE: iterate over dynamic array
+                }
             }
             resolver::Type::Struct(n) => {
                 for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
@@ -1192,7 +1194,7 @@ impl<'a> Contract<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
 
         for p in &f.params {
-            let ty = p.ty.llvm_type(self.ns, self.context);
+            let ty = self.llvm_type(&p.ty);
 
             args.push(if p.ty.stack_based() && !p.ty.is_contract_storage() {
                 ty.ptr_type(AddressSpace::Generic).into()
@@ -1202,23 +1204,19 @@ impl<'a> Contract<'a> {
         }
 
         let ftype = if f.wasm_return {
-            f.returns[0]
-                .ty
-                .llvm_type(self.ns, &self.context)
+            self.llvm_type(&f.returns[0].ty)
                 .into_int_type()
                 .fn_type(&args, false)
         } else {
             // add return values
             for p in &f.returns {
                 args.push(if p.ty.is_reference_type() && !p.ty.is_contract_storage() {
-                    p.ty.llvm_type(self.ns, &self.context)
+                    self.llvm_type(&p.ty)
                         .ptr_type(AddressSpace::Generic)
                         .ptr_type(AddressSpace::Generic)
                         .into()
                 } else {
-                    p.ty.llvm_type(self.ns, &self.context)
-                        .ptr_type(AddressSpace::Generic)
-                        .into()
+                    self.llvm_type(&p.ty).ptr_type(AddressSpace::Generic).into()
                 });
             }
             self.context.void_type().fn_type(&args, false)
@@ -1270,7 +1268,7 @@ impl<'a> Contract<'a> {
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
                     if !cfg.vars[*v].ty.stack_based() {
-                        let ty = cfg.vars[*v].ty.llvm_type(self.ns, &self.context);
+                        let ty = self.llvm_type(&cfg.vars[*v].ty);
 
                         phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
                     }
@@ -1293,7 +1291,7 @@ impl<'a> Contract<'a> {
                     vars.push(Variable {
                         value: self
                             .builder
-                            .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.id.name)
+                            .build_alloca(self.llvm_type(&v.ty), &v.id.name)
                             .into(),
                         stack: false,
                     });
@@ -1317,7 +1315,7 @@ impl<'a> Contract<'a> {
                     vars.push(Variable {
                         value: self
                             .builder
-                            .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.id.name)
+                            .build_alloca(self.llvm_type(&v.ty), &v.id.name)
                             .into(),
                         stack: true,
                     });
@@ -1486,9 +1484,7 @@ impl<'a> Contract<'a> {
 
                             parms.push(if ty.stack_based() && !ty.is_reference_type() {
                                 // copy onto stack
-                                let m = self
-                                    .builder
-                                    .build_alloca(ty.llvm_type(self.ns, &self.context), "");
+                                let m = self.builder.build_alloca(self.llvm_type(ty), "");
 
                                 self.builder.build_store(m, val);
 
@@ -1502,10 +1498,7 @@ impl<'a> Contract<'a> {
                             for v in f.returns.iter() {
                                 parms.push(
                                     self.builder
-                                        .build_alloca(
-                                            v.ty.llvm_var(self.ns, &self.context),
-                                            &v.name,
-                                        )
+                                        .build_alloca(self.llvm_var(&v.ty), &v.name)
                                         .into(),
                                 );
                             }
@@ -1617,13 +1610,12 @@ impl<'a> Contract<'a> {
                 for v in f.returns.iter() {
                     args.push(if !v.ty.is_reference_type() {
                         self.builder
-                            .build_alloca(v.ty.llvm_type(self.ns, &self.context), &v.name)
+                            .build_alloca(self.llvm_type(&v.ty), &v.name)
                             .into()
                     } else {
                         self.builder
                             .build_alloca(
-                                v.ty.llvm_type(self.ns, &self.context)
-                                    .ptr_type(AddressSpace::Generic),
+                                self.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
                                 &v.name,
                             )
                             .into()
@@ -2271,6 +2263,65 @@ impl<'a> Contract<'a> {
             None,
         )
     }
+
+    /// Return the llvm type for a variable holding the type, not the type itself
+    fn llvm_var(&self, ty: &resolver::Type) -> BasicTypeEnum<'a> {
+        let llvm_ty = self.llvm_type(ty);
+        match ty {
+            resolver::Type::Struct(_) | resolver::Type::Array(_, _) => {
+                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+            }
+            _ => llvm_ty,
+        }
+    }
+
+    /// Return the llvm type for the resolved type.
+    fn llvm_type(&self, ty: &resolver::Type) -> BasicTypeEnum<'a> {
+        match ty {
+            resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.llvm_type(self.context)),
+            resolver::Type::Enum(n) => {
+                BasicTypeEnum::IntType(self.ns.enums[*n].ty.llvm_type(self.context))
+            }
+            resolver::Type::Array(base_ty, dims) => {
+                let ty = self.llvm_var(base_ty);
+
+                let mut dims = dims.iter();
+
+                let mut aty = match dims.next().unwrap() {
+                    Some(d) => ty.array_type(d.to_u32().unwrap()),
+                    None => return self.module.get_type("vector").unwrap(),
+                };
+
+                for dim in dims {
+                    match dim {
+                        Some(d) => aty = aty.array_type(d.to_u32().unwrap()),
+                        None => return self.module.get_type("vector").unwrap(),
+                    }
+                }
+
+                BasicTypeEnum::ArrayType(aty)
+            }
+            resolver::Type::Struct(n) => self
+                .context
+                .struct_type(
+                    &self.ns.structs[*n]
+                        .fields
+                        .iter()
+                        .map(|f| self.llvm_var(&f.ty))
+                        .collect::<Vec<BasicTypeEnum>>(),
+                    false,
+                )
+                .as_basic_type_enum(),
+            resolver::Type::Undef => unreachable!(),
+            resolver::Type::Ref(r) => self
+                .llvm_type(r)
+                .ptr_type(AddressSpace::Generic)
+                .as_basic_type_enum(),
+            resolver::Type::StorageRef(_) => {
+                BasicTypeEnum::IntType(self.context.custom_width_int_type(256))
+            }
+        }
+    }
 }
 
 impl ast::PrimitiveType {
@@ -2302,63 +2353,13 @@ impl ast::PrimitiveType {
 }
 
 impl resolver::Type {
-    /// Return the llvm type for a variable holding the type, not the type itself
-    fn llvm_var<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
-        let ty = self.llvm_type(ns, context);
-        match self {
-            resolver::Type::Struct(_) | resolver::Type::FixedArray(_, _) => {
-                ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-            }
-            _ => ty,
-        }
-    }
-
-    /// Return the llvm type for the resolved type.
-    fn llvm_type<'a>(&self, ns: &resolver::Contract, context: &'a Context) -> BasicTypeEnum<'a> {
-        match self {
-            resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.llvm_type(context)),
-            resolver::Type::Enum(n) => BasicTypeEnum::IntType(ns.enums[*n].ty.llvm_type(context)),
-            resolver::Type::FixedArray(base_ty, dims) => {
-                let ty = base_ty.llvm_var(ns, context);
-
-                let mut dims = dims.iter();
-
-                let mut aty = ty.array_type(dims.next().unwrap().to_u32().unwrap());
-
-                for dim in dims {
-                    aty = aty.array_type(dim.to_u32().unwrap());
-                }
-
-                BasicTypeEnum::ArrayType(aty)
-            }
-            resolver::Type::Struct(n) => context
-                .struct_type(
-                    &ns.structs[*n]
-                        .fields
-                        .iter()
-                        .map(|f| f.ty.llvm_var(ns, context))
-                        .collect::<Vec<BasicTypeEnum>>(),
-                    false,
-                )
-                .as_basic_type_enum(),
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::Ref(r) => r
-                .llvm_type(ns, context)
-                .ptr_type(AddressSpace::Generic)
-                .as_basic_type_enum(),
-            resolver::Type::StorageRef(_) => {
-                BasicTypeEnum::IntType(context.custom_width_int_type(256))
-            }
-        }
-    }
-
     /// Is this type an reference type in the solidity language? (struct, array, mapping)
     pub fn is_reference_type(&self) -> bool {
         match self {
             resolver::Type::Primitive(_) => false,
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,
-            resolver::Type::FixedArray(_, _) => true,
+            resolver::Type::Array(_, _) => true,
             resolver::Type::Ref(r) => r.is_reference_type(),
             resolver::Type::StorageRef(r) => r.is_reference_type(),
             resolver::Type::Undef => unreachable!(),
@@ -2371,7 +2372,7 @@ impl resolver::Type {
             resolver::Type::Primitive(e) => e.stack_based(),
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,
-            resolver::Type::FixedArray(_, _) => true,
+            resolver::Type::Array(_, _) => true,
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(_) => false,
             resolver::Type::StorageRef(r) => r.stack_based(),

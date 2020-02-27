@@ -36,30 +36,34 @@ impl EthAbiEncoder {
             resolver::Type::Enum(n) => {
                 self.encode_primitive(contract, contract.ns.enums[*n].ty, *data, arg);
             }
-            resolver::Type::FixedArray(_, dim) => {
-                contract.emit_static_loop_with_pointer(
-                    function,
-                    0,
-                    dim[0].to_u64().unwrap(),
-                    data,
-                    |index, data| {
-                        let mut elem = unsafe {
-                            contract.builder.build_gep(
-                                arg.into_pointer_value(),
-                                &[contract.context.i32_type().const_zero(), index],
-                                "index_access",
-                            )
-                        };
+            resolver::Type::Array(_, dim) => {
+                if let Some(d) = &dim[0] {
+                    contract.emit_static_loop_with_pointer(
+                        function,
+                        0,
+                        d.to_u64().unwrap(),
+                        data,
+                        |index, data| {
+                            let mut elem = unsafe {
+                                contract.builder.build_gep(
+                                    arg.into_pointer_value(),
+                                    &[contract.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
 
-                        let ty = ty.array_deref();
+                            let ty = ty.array_deref();
 
-                        if ty.is_reference_type() {
-                            elem = contract.builder.build_load(elem, "").into_pointer_value();
-                        }
+                            if ty.is_reference_type() {
+                                elem = contract.builder.build_load(elem, "").into_pointer_value();
+                            }
 
-                        self.encode_ty(contract, function, &ty, elem.into(), data);
-                    },
-                );
+                            self.encode_ty(contract, function, &ty, elem.into(), data);
+                        },
+                    );
+                } else {
+                    // FIXME
+                }
             }
             resolver::Type::Struct(n) => {
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
@@ -380,9 +384,17 @@ impl EthAbiEncoder {
                 .iter()
                 .map(|f| self.encoded_length(&f.ty, contract))
                 .sum(),
-            resolver::Type::FixedArray(ty, dims) => {
-                self.encoded_length(ty, contract)
-                    * dims.iter().map(|d| d.to_u64().unwrap()).product::<u64>()
+            resolver::Type::Array(ty, dims) => {
+                let mut product = 1;
+
+                for dim in dims {
+                    match dim {
+                        Some(d) => product *= d.to_u64().unwrap(),
+                        None => return product,
+                    }
+                }
+
+                product * self.encoded_length(&ty, contract)
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(r, contract),
@@ -402,50 +414,47 @@ impl EthAbiEncoder {
         let pty = match &ty {
             resolver::Type::Primitive(e) => e,
             resolver::Type::Enum(n) => &contract.ns.enums[*n].ty,
-            resolver::Type::FixedArray(_, dim) => {
-                let to = to.unwrap_or_else(|| {
-                    contract
-                        .builder
-                        .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
-                });
+            resolver::Type::Array(_, dim) => {
+                let to =
+                    to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
 
-                contract.emit_static_loop_with_pointer(
-                    function,
-                    0,
-                    dim[0].to_u64().unwrap(),
-                    data,
-                    |index: IntValue<'b>, data: &mut PointerValue<'b>| {
-                        let elem = unsafe {
-                            contract.builder.build_gep(
-                                to,
-                                &[contract.context.i32_type().const_zero(), index],
-                                "index_access",
-                            )
-                        };
+                if let Some(d) = &dim[0] {
+                    contract.emit_static_loop_with_pointer(
+                        function,
+                        0,
+                        d.to_u64().unwrap(),
+                        data,
+                        |index: IntValue<'b>, data: &mut PointerValue<'b>| {
+                            let elem = unsafe {
+                                contract.builder.build_gep(
+                                    to,
+                                    &[contract.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
 
-                        let ty = ty.array_deref();
+                            let ty = ty.array_deref();
 
-                        if ty.is_reference_type() {
-                            let val = contract.builder.build_alloca(
-                                ty.deref().llvm_type(contract.ns, contract.context),
-                                "",
-                            );
-                            self.decode_ty(contract, function, &ty, Some(val), data);
-                            contract.builder.build_store(elem, val);
-                        } else {
-                            self.decode_ty(contract, function, &ty, Some(elem), data);
-                        }
-                    },
-                );
+                            if ty.is_reference_type() {
+                                let val = contract
+                                    .builder
+                                    .build_alloca(contract.llvm_type(&ty.deref()), "");
+                                self.decode_ty(contract, function, &ty, Some(val), data);
+                                contract.builder.build_store(elem, val);
+                            } else {
+                                self.decode_ty(contract, function, &ty, Some(elem), data);
+                            }
+                        },
+                    );
+                } else {
+                    // FIXME
+                }
 
                 return to.into();
             }
             resolver::Type::Struct(n) => {
-                let to = to.unwrap_or_else(|| {
-                    contract
-                        .builder
-                        .build_alloca(ty.llvm_type(contract.ns, contract.context), "")
-                });
+                let to =
+                    to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
 
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
@@ -462,7 +471,7 @@ impl EthAbiEncoder {
                     if field.ty.is_reference_type() {
                         let val = contract
                             .builder
-                            .build_alloca(field.ty.llvm_type(contract.ns, contract.context), "");
+                            .build_alloca(contract.llvm_type(&field.ty), "");
 
                         self.decode_ty(contract, function, &field.ty, Some(val), data);
 
@@ -609,9 +618,7 @@ impl EthAbiEncoder {
                 );
 
                 if *n <= 64 && to.is_none() {
-                    contract
-                        .builder
-                        .build_load(store, &format!("abi_int{}", *n))
+                    contract.builder.build_load(store, &format!("abi_int{}", n))
                 } else {
                     store.into()
                 }

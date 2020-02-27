@@ -412,13 +412,17 @@ fn ty_to_abi(
             }
         }
         resolver::Type::Undef => unreachable!(),
-        resolver::Type::FixedArray(ty, dims) => {
+        resolver::Type::Array(ty, dims) => {
             let mut param_ty = ty_to_abi(ty, contract, registry);
 
             for d in dims {
-                param_ty = ParamType {
-                    ty: registry.builtin_array_type(param_ty.ty, d.to_usize().unwrap()),
-                    display_name: vec![],
+                if let Some(d) = d {
+                    param_ty = ParamType {
+                        ty: registry.builtin_array_type(param_ty.ty, d.to_usize().unwrap()),
+                        display_name: vec![],
+                    }
+                } else {
+                    // FIXME:
                 }
             }
 

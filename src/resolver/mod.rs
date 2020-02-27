@@ -29,7 +29,7 @@ pub type ArrayDimension = Option<(ast::Loc, BigInt)>;
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
     Primitive(ast::PrimitiveType),
-    FixedArray(Box<Type>, Vec<BigInt>),
+    Array(Box<Type>, Vec<Option<BigInt>>),
     Enum(usize),
     Struct(usize),
     Ref(Box<Type>),
@@ -43,10 +43,15 @@ impl Type {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
             Type::Struct(n) => format!("struct {}.{}", ns.name, ns.structs[*n].name),
-            Type::FixedArray(ty, len) => format!(
+            Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_string(ns),
-                len.iter().map(|l| format!("[{}]", l)).collect::<String>()
+                len.iter()
+                    .map(|l| match l {
+                        None => "[]".to_string(),
+                        Some(l) => format!("[{}]", l),
+                    })
+                    .collect::<String>()
             ),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(ty) => format!("storage {}", ty.to_string(ns)),
@@ -58,10 +63,15 @@ impl Type {
         match self {
             Type::Primitive(e) => e.to_string(),
             Type::Enum(n) => ns.enums[*n].ty.to_string(),
-            Type::FixedArray(ty, len) => format!(
+            Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_signature_string(ns),
-                len.iter().map(|l| format!("[{}]", l)).collect::<String>()
+                len.iter()
+                    .map(|l| match l {
+                        None => "[]".to_string(),
+                        Some(l) => format!("[{}]", l),
+                    })
+                    .collect::<String>()
             ),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
@@ -75,10 +85,10 @@ impl Type {
     pub fn array_deref(&self) -> Self {
         match self {
             Type::Ref(t) => t.array_deref(),
-            Type::FixedArray(ty, dim) if dim.len() > 1 => {
-                Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec())
+            Type::Array(ty, dim) if dim.len() > 1 => {
+                Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())
             }
-            Type::FixedArray(ty, dim) if dim.len() == 1 => Type::Ref(Box::new(*ty.clone())),
+            Type::Array(ty, dim) if dim.len() == 1 => Type::Ref(Box::new(*ty.clone())),
             _ => panic!("deref on non-array"),
         }
     }
@@ -87,21 +97,22 @@ impl Type {
     /// array types and will cause a panic otherwise.
     pub fn storage_deref(&self) -> Self {
         match self {
-            Type::FixedArray(ty, dim) if dim.len() > 1 => Type::StorageRef(Box::new(
-                Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec()),
-            )),
-            Type::FixedArray(ty, dim) if dim.len() == 1 => Type::StorageRef(Box::new(*ty.clone())),
+            Type::Array(ty, dim) if dim.len() > 1 => Type::StorageRef(Box::new(Type::Array(
+                ty.clone(),
+                dim[..dim.len() - 1].to_vec(),
+            ))),
+            Type::Array(ty, dim) if dim.len() == 1 => Type::StorageRef(Box::new(*ty.clone())),
             _ => panic!("deref on non-array"),
         }
     }
 
     /// Give the length of the outer array. This can only be called on array types
     /// and will panic otherwise.
-    pub fn array_length(&self) -> &BigInt {
+    pub fn array_length(&self) -> Option<&BigInt> {
         match self {
             Type::StorageRef(ty) => ty.array_length(),
             Type::Ref(ty) => ty.array_length(),
-            Type::FixedArray(_, dim) => dim.last().unwrap(),
+            Type::Array(_, dim) => dim.last().unwrap().as_ref(),
             _ => panic!("array_length on non-array"),
         }
     }
@@ -117,7 +128,17 @@ impl Type {
             Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
             Type::Primitive(ast::PrimitiveType::Uint(n))
             | Type::Primitive(ast::PrimitiveType::Int(n)) => BigInt::from(n / 8),
-            Type::FixedArray(ty, dims) => ty.size_hint(ns).mul(dims.iter().product::<BigInt>()),
+            Type::Array(ty, dims) => {
+                let pointer_size = BigInt::from(4);
+                ty.size_hint(ns).mul(
+                    dims.iter()
+                        .map(|d| match d {
+                            None => &pointer_size,
+                            Some(d) => d,
+                        })
+                        .product::<BigInt>(),
+                )
+            }
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
@@ -149,7 +170,7 @@ impl Type {
             Type::Primitive(e) => e.ordered(),
             Type::Enum(_) => false,
             Type::Struct(_) => unreachable!(),
-            Type::FixedArray(_, _) => unreachable!(),
+            Type::Array(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
             Type::Ref(r) => r.ordered(),
             Type::StorageRef(r) => r.ordered(),
@@ -172,7 +193,18 @@ impl Type {
                 .map(|f| f.ty.storage_slots(ns))
                 .sum(),
             Type::Undef => unreachable!(),
-            Type::FixedArray(ty, dims) => ty.storage_slots(ns) * dims.iter().product::<BigInt>(),
+            Type::Array(ty, dims) => {
+                let one = BigInt::one();
+
+                ty.storage_slots(ns)
+                    * dims
+                        .iter()
+                        .map(|l| match l {
+                            None => &one,
+                            Some(l) => l,
+                        })
+                        .product::<BigInt>()
+            }
         }
     }
 
@@ -181,7 +213,7 @@ impl Type {
     /// allowed be storage are welcome.
     pub fn can_have_data_location(&self) -> bool {
         match self {
-            Type::FixedArray(_, _) => true,
+            Type::Array(_, _) => true,
             Type::Struct(_) => true,
             _ => false,
         }
@@ -307,10 +339,15 @@ impl FunctionDecl {
                         Type::Primitive(e) => e.to_string(),
                         Type::Enum(i) => ns.enums[*i].name.to_owned(),
                         Type::Struct(i) => ns.structs[*i].name.to_owned(),
-                        Type::FixedArray(ty, len) => format!(
+                        Type::Array(ty, len) => format!(
                             "{}{}",
                             ty.to_string(ns),
-                            len.iter().map(|r| format!(":{}", r)).collect::<String>()
+                            len.iter()
+                                .map(|r| match r {
+                                    None => ":".to_string(),
+                                    Some(r) => format!(":{}", r),
+                                })
+                                .collect::<String>()
                         ),
                         Type::Undef => unreachable!(),
                         Type::Ref(r) => type_to_wasm_name(r, ns),
@@ -439,13 +476,12 @@ impl Contract {
     /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
     pub fn resolve_type(&self, id: &ast::Type, errors: &mut Vec<Output>) -> Result<Type, ()> {
         fn resolve_dimensions(
-            dimensions: &[Option<(ast::Loc, BigInt)>],
+            ast_dimensions: &[Option<(ast::Loc, BigInt)>],
             errors: &mut Vec<Output>,
-        ) -> Result<Vec<BigInt>, ()> {
-            let mut fixed = true;
-            let mut fixed_dimensions = Vec::new();
+        ) -> Result<Vec<Option<BigInt>>, ()> {
+            let mut dimensions = Vec::new();
 
-            for d in dimensions.iter() {
+            for d in ast_dimensions.iter() {
                 if let Some((loc, n)) = d {
                     if n.is_zero() {
                         errors.push(Output::decl_error(
@@ -460,16 +496,13 @@ impl Contract {
                         ));
                         return Err(());
                     }
-                    fixed_dimensions.push(n.clone());
+                    dimensions.push(Some(n.clone()));
                 } else {
-                    fixed = false;
+                    dimensions.push(None);
                 }
             }
-            if fixed {
-                Ok(fixed_dimensions)
-            } else {
-                unimplemented!();
-            }
+
+            Ok(dimensions)
         }
 
         match id {
@@ -484,7 +517,7 @@ impl Contract {
                     });
                 }
 
-                Ok(Type::FixedArray(
+                Ok(Type::Array(
                     Box::new(Type::Primitive(*p)),
                     resolve_dimensions(&dimensions, errors)?,
                 ))
@@ -501,12 +534,12 @@ impl Contract {
                         Err(())
                     }
                     Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
-                    Some(Symbol::Enum(_, n)) => Ok(Type::FixedArray(
+                    Some(Symbol::Enum(_, n)) => Ok(Type::Array(
                         Box::new(Type::Enum(*n)),
                         resolve_dimensions(&dimensions, errors)?,
                     )),
                     Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
-                    Some(Symbol::Struct(_, n)) => Ok(Type::FixedArray(
+                    Some(Symbol::Struct(_, n)) => Ok(Type::Array(
                         Box::new(Type::Struct(*n)),
                         resolve_dimensions(&dimensions, errors)?,
                     )),

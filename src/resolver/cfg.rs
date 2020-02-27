@@ -1350,7 +1350,7 @@ impl resolver::Type {
             resolver::Type::Primitive(e) => e.default(),
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
             resolver::Type::Undef => unreachable!(),
-            resolver::Type::FixedArray(_, _) => unreachable!(),
+            resolver::Type::Array(_, _) => unreachable!(),
             resolver::Type::Struct(_) => {
                 Expression::StructLiteral(ast::Loc(0, 0), self.clone(), Vec::new())
             }
