@@ -214,7 +214,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, r)
             ),
             Expression::Variable(_, res) => format!("%{}", self.vars[*res].id.name),
-            Expression::Load(_, expr) => format!("*{}", self.expr_to_string(ns, expr)),
+            Expression::Load(_, expr) => format!("(load {})", self.expr_to_string(ns, expr)),
             Expression::StorageLoad(_, ty, expr) => format!(
                 "({} storage[{}])",
                 ty.to_string(ns),
@@ -282,12 +282,12 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, r)
             ),
             Expression::ArraySubscript(_, a, i) => format!(
-                "%{}[{}]",
+                "(array index {}[{}])",
                 self.expr_to_string(ns, a),
                 self.expr_to_string(ns, i)
             ),
             Expression::StructMember(_, a, f) => {
-                format!("%{} field {}", self.expr_to_string(ns, a), f)
+                format!("(struct {} field {})", self.expr_to_string(ns, a), f)
             }
             Expression::Or(_, l, r) => format!(
                 "({} || {})",

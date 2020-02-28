@@ -2562,11 +2562,7 @@ fn array_subscript(
 ) -> Result<(Expression, resolver::Type), ()> {
     let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
-    let array_length = match if let resolver::Type::StorageRef(ty) = &array_ty {
-        &*ty
-    } else {
-        &array_ty
-    } {
+    let array_length = match array_ty.ref_type() {
         resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
         resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
         _ => {
@@ -2680,121 +2676,130 @@ fn array_subscript(
 
     cfg.set_basic_block(in_bounds);
 
-    match array_ty {
-        resolver::Type::StorageRef(ty) => {
-            let elem_ty = ty.storage_deref();
-            let elem_size = elem_ty.storage_slots(ns);
-            if array_length.mul(elem_size).to_u64().is_some() {
-                // we need to calculate the storage offset. If this can be done with 64 bit
-                // arithmetic it will be much more efficient on wasm
-                Ok((
-                    Expression::Add(
+    if let resolver::Type::StorageRef(ty) = array_ty {
+        let elem_ty = ty.storage_deref();
+        let elem_size = elem_ty.storage_slots(ns);
+        if array_length.mul(elem_size).to_u64().is_some() {
+            // we need to calculate the storage offset. If this can be done with 64 bit
+            // arithmetic it will be much more efficient on wasm
+            Ok((
+                Expression::Add(
+                    *loc,
+                    Box::new(array_expr),
+                    Box::new(Expression::ZeroExt(
                         *loc,
-                        Box::new(array_expr),
-                        Box::new(Expression::ZeroExt(
-                            *loc,
-                            resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                            Box::new(Expression::Multiply(
-                                *loc,
-                                Box::new(cast(
-                                    &index.loc(),
-                                    Expression::Variable(index.loc(), pos),
-                                    &index_ty,
-                                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(64)),
-                                    false,
-                                    ns,
-                                    errors,
-                                )?),
-                                Box::new(Expression::NumberLiteral(
-                                    *loc,
-                                    64,
-                                    elem_ty.storage_slots(ns),
-                                )),
-                            )),
-                        )),
-                    ),
-                    elem_ty,
-                ))
-            } else {
-                // the index needs to be cast to i256 and multiplied by the number
-                // of slots for each element
-                // FIXME: if elem_size is power-of-2 then shift.
-                Ok((
-                    Expression::Add(
-                        *loc,
-                        Box::new(array_expr),
+                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
                         Box::new(Expression::Multiply(
                             *loc,
                             Box::new(cast(
                                 &index.loc(),
                                 Expression::Variable(index.loc(), pos),
                                 &index_ty,
-                                &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                                &resolver::Type::Primitive(ast::PrimitiveType::Uint(64)),
                                 false,
                                 ns,
                                 errors,
                             )?),
                             Box::new(Expression::NumberLiteral(
                                 *loc,
-                                256,
+                                64,
                                 elem_ty.storage_slots(ns),
                             )),
                         )),
-                    ),
-                    elem_ty,
-                ))
-            }
-        }
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
-            let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
-
-            Ok((
-                Expression::Trunc(
-                    *loc,
-                    res_ty.clone(),
-                    Box::new(Expression::ShiftRight(
-                        *loc,
-                        Box::new(array_expr),
-                        // shift by (array_length - 1 - index) * 8
-                        Box::new(Expression::ShiftLeft(
-                            *loc,
-                            Box::new(Expression::Subtract(
-                                *loc,
-                                Box::new(Expression::NumberLiteral(
-                                    *loc,
-                                    array_length as u16 * 8,
-                                    BigInt::from_u8(array_length - 1).unwrap(),
-                                )),
-                                Box::new(cast_shift_arg(
-                                    loc,
-                                    Expression::Variable(index.loc(), pos),
-                                    index_width,
-                                    &array_ty,
-                                )),
-                            )),
-                            Box::new(Expression::NumberLiteral(
-                                *loc,
-                                array_length as u16 * 8,
-                                BigInt::from_u8(3).unwrap(),
-                            )),
-                        )),
-                        false,
                     )),
                 ),
-                res_ty,
+                elem_ty,
+            ))
+        } else {
+            // the index needs to be cast to i256 and multiplied by the number
+            // of slots for each element
+            // FIXME: if elem_size is power-of-2 then shift.
+            Ok((
+                Expression::Add(
+                    *loc,
+                    Box::new(array_expr),
+                    Box::new(Expression::Multiply(
+                        *loc,
+                        Box::new(cast(
+                            &index.loc(),
+                            Expression::Variable(index.loc(), pos),
+                            &index_ty,
+                            &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                            false,
+                            ns,
+                            errors,
+                        )?),
+                        Box::new(Expression::NumberLiteral(
+                            *loc,
+                            256,
+                            elem_ty.storage_slots(ns),
+                        )),
+                    )),
+                ),
+                elem_ty,
             ))
         }
-        resolver::Type::FixedArray(_, _) => Ok((
-            Expression::ArraySubscript(
-                *loc,
-                Box::new(array_expr),
-                Box::new(Expression::Variable(index.loc(), pos)),
-            ),
-            array_ty.deref(),
-        )),
-        _ => {
-            // should not happen as type-checking already done
-            unreachable!();
+    } else {
+        match array_ty.ref_type() {
+            resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
+                let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
+
+                Ok((
+                    Expression::Trunc(
+                        *loc,
+                        res_ty.clone(),
+                        Box::new(Expression::ShiftRight(
+                            *loc,
+                            Box::new(array_expr),
+                            // shift by (array_length - 1 - index) * 8
+                            Box::new(Expression::ShiftLeft(
+                                *loc,
+                                Box::new(Expression::Subtract(
+                                    *loc,
+                                    Box::new(Expression::NumberLiteral(
+                                        *loc,
+                                        *array_length as u16 * 8,
+                                        BigInt::from_u8(array_length - 1).unwrap(),
+                                    )),
+                                    Box::new(cast_shift_arg(
+                                        loc,
+                                        Expression::Variable(index.loc(), pos),
+                                        index_width,
+                                        &array_ty,
+                                    )),
+                                )),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    *array_length as u16 * 8,
+                                    BigInt::from_u8(3).unwrap(),
+                                )),
+                            )),
+                            false,
+                        )),
+                    ),
+                    res_ty,
+                ))
+            }
+            resolver::Type::FixedArray(_, _) => Ok((
+                Expression::ArraySubscript(
+                    *loc,
+                    Box::new(cast(
+                        &array.loc(),
+                        array_expr,
+                        &array_ty,
+                        &array_ty.ref_type(),
+                        true,
+                        ns,
+                        errors,
+                    )?),
+                    Box::new(Expression::Variable(index.loc(), pos)),
+                ),
+                array_ty.deref(),
+            )),
+            _ => {
+                // should not happen as type-checking already done
+                unreachable!();
+            }
         }
     }
 }
