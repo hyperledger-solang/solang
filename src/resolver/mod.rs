@@ -74,6 +74,7 @@ impl Type {
     /// array types and will cause a panic otherwise.
     pub fn deref(&self) -> Self {
         match self {
+            Type::Ref(t) => t.deref(),
             Type::FixedArray(ty, dim) if dim.len() > 1 => {
                 Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec())
             }
@@ -99,6 +100,7 @@ impl Type {
     pub fn array_length(&self) -> &BigInt {
         match self {
             Type::StorageRef(ty) => ty.array_length(),
+            Type::Ref(ty) => ty.array_length(),
             Type::FixedArray(_, dim) => dim.last().unwrap(),
             _ => panic!("array_length on non-array"),
         }
@@ -190,6 +192,15 @@ impl Type {
         match self {
             Type::StorageRef(_) => true,
             _ => false,
+        }
+    }
+
+    /// If the type is Ref or StorageRef, get the underlying type
+    pub fn ref_type(&self) -> &Self {
+        match self {
+            Type::StorageRef(r) => r,
+            Type::Ref(r) => r,
+            _ => self,
         }
     }
 }

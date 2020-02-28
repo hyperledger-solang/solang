@@ -962,11 +962,8 @@ impl<'a> Contract<'a> {
                             .build_gep(array, &ind, &format!("elemptr{}", i))
                     };
 
-                    self.builder.build_store(
-                        elemptr,
-                        self.expression(expr, vartab, function, runtime)
-                            .into_int_value(),
-                    );
+                    self.builder
+                        .build_store(elemptr, self.expression(expr, vartab, function, runtime));
                 }
 
                 array.into()
@@ -1012,10 +1009,13 @@ impl<'a> Contract<'a> {
                         };
 
                         if ty.is_reference_type() {
+                            let ty = ty.ref_type();
                             let val = self
                                 .builder
                                 .build_alloca(ty.llvm_type(self.ns, self.context), "");
+
                             self.storage_load(&ty, slot, slot_ptr, val, function, runtime);
+
                             self.builder.build_store(elem, val);
                         } else {
                             self.storage_load(&ty, slot, slot_ptr, elem, function, runtime);
@@ -1045,9 +1045,10 @@ impl<'a> Contract<'a> {
                     };
 
                     if field.ty.is_reference_type() {
-                        let val = self
-                            .builder
-                            .build_alloca(field.ty.llvm_type(self.ns, self.context), &field.name);
+                        let val = self.builder.build_alloca(
+                            field.ty.ref_type().llvm_type(self.ns, self.context),
+                            &field.name,
+                        );
 
                         self.storage_load(&field.ty, slot, slot_ptr, val, function, runtime);
 
@@ -2331,7 +2332,7 @@ impl resolver::Type {
             resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.llvm_type(context)),
             resolver::Type::Enum(n) => BasicTypeEnum::IntType(ns.enums[*n].ty.llvm_type(context)),
             resolver::Type::FixedArray(base_ty, dims) => {
-                let ty = base_ty.llvm_type(ns, context).into_int_type();
+                let ty = base_ty.llvm_var(ns, context);
 
                 let mut dims = dims.iter();
 

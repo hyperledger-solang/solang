@@ -570,3 +570,60 @@ fn array_dimensions() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn array_in_struct() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret([u32; 10]);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract storage_refs {
+            struct foo {
+                int32[10] f1;
+            }
+        
+            function test() public returns (int32[10]) {
+                foo a = foo({f1: [ int32(7), 14, 21, 28, 35, 42, 49, 56, 63, 0 ]});
+                assert(a.f1[1] == 14);
+                a.f1[9] = 70;
+                return a.f1;
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
+
+    assert_eq!(store.scratch, val.encode());
+}
+
+#[test]
+fn struct_array_struct() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract flipper {
+            struct bool_struct {
+                bool foo_bool;
+            }
+        
+            struct struct_bool_struct_array {
+                bool_struct[1] foo_struct_array;
+            }
+    
+            function get_memory() public pure returns (bool) {
+                bool_struct memory foo = bool_struct({foo_bool: true});
+                bool_struct[1] memory foo_array = [foo];
+                struct_bool_struct_array memory foo_struct = struct_bool_struct_array({foo_struct_array: foo_array});
+        
+                /* return foo_array[0].foo_bool; */
+                return foo_struct.foo_struct_array[0].foo_bool;
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "get_memory", Vec::new());
+
+    assert_eq!(store.scratch, true.encode());
+}
