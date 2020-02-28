@@ -69,7 +69,7 @@ impl EwasmTarget {
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(&entry);
+        contract.builder.position_at_end(entry);
 
         // init our heap
         contract.builder.build_call(
@@ -287,7 +287,7 @@ impl EwasmTarget {
         );
 
         // emit fallback code
-        contract.builder.position_at_end(&fallback_block);
+        contract.builder.position_at_end(fallback_block);
 
         match contract.ns.fallback_function() {
             Some(f) => {

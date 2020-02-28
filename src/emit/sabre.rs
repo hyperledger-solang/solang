@@ -84,7 +84,7 @@ impl SabreTarget {
 
         let entry = contract.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(&entry);
+        contract.builder.position_at_end(entry);
 
         // we should not use our heap; use sabre provided heap instead
         let argsdata = function.get_first_param().unwrap().into_pointer_value();
@@ -130,11 +130,11 @@ impl SabreTarget {
 
         contract.builder.build_conditional_branch(
             is_function_call,
-            &function_block,
-            &constructor_block,
+            function_block,
+            constructor_block,
         );
 
-        contract.builder.position_at_end(&constructor_block);
+        contract.builder.position_at_end(constructor_block);
 
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
@@ -156,7 +156,7 @@ impl SabreTarget {
             .builder
             .build_return(Some(&contract.context.i32_type().const_int(1, false)));
 
-        contract.builder.position_at_end(&function_block);
+        contract.builder.position_at_end(function_block);
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
@@ -171,7 +171,7 @@ impl SabreTarget {
         );
 
         // emit fallback code
-        contract.builder.position_at_end(&fallback_block);
+        contract.builder.position_at_end(fallback_block);
 
         match contract.ns.fallback_function() {
             Some(f) => {
@@ -369,9 +369,9 @@ impl TargetRuntime for SabreTarget {
 
         contract
             .builder
-            .build_conditional_branch(exists, &retrieve_block, &clear_block);
+            .build_conditional_branch(exists, retrieve_block, clear_block);
 
-        contract.builder.position_at_end(&retrieve_block);
+        contract.builder.position_at_end(retrieve_block);
 
         let dest = contract.builder.build_pointer_cast(
             dest,
@@ -385,9 +385,9 @@ impl TargetRuntime for SabreTarget {
             "copy_from_storage",
         );
 
-        contract.builder.build_unconditional_branch(&done_storage);
+        contract.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(&clear_block);
+        contract.builder.position_at_end(clear_block);
 
         contract.builder.build_call(
             contract.module.get_function("__memset").unwrap(),
@@ -398,9 +398,9 @@ impl TargetRuntime for SabreTarget {
             ],
             "clear_storage",
         );
-        contract.builder.build_unconditional_branch(&done_storage);
+        contract.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(&done_storage);
+        contract.builder.position_at_end(done_storage);
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
