@@ -703,13 +703,13 @@ impl EthAbiEncoder {
 
         contract
             .builder
-            .build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
+            .build_conditional_branch(is_ok, decode_block, wrong_length_block);
 
         // FIXME: generate a call to revert/abort with some human readable error or error code
-        contract.builder.position_at_end(&wrong_length_block);
+        contract.builder.position_at_end(wrong_length_block);
         contract.builder.build_unreachable();
 
-        contract.builder.position_at_end(&decode_block);
+        contract.builder.position_at_end(decode_block);
 
         for arg in &spec.params {
             args.push(self.decode_ty(contract, function, &arg.ty, None, &mut data));

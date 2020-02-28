@@ -40,7 +40,7 @@ impl SubstrateTarget {
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
 
-        contract.builder.position_at_end(&entry);
+        contract.builder.position_at_end(entry);
 
         // init our heap
         contract.builder.build_call(
@@ -215,7 +215,7 @@ impl SubstrateTarget {
         );
 
         // emit fallback code
-        contract.builder.position_at_end(&fallback_block);
+        contract.builder.position_at_end(fallback_block);
         contract.builder.build_unreachable();
     }
 
@@ -242,7 +242,7 @@ impl SubstrateTarget {
         );
 
         // emit fallback code
-        contract.builder.position_at_end(&fallback_block);
+        contract.builder.position_at_end(fallback_block);
 
         if let Some(fallback) = contract.ns.fallback_function() {
             contract
@@ -769,9 +769,9 @@ impl TargetRuntime for SubstrateTarget {
 
         contract
             .builder
-            .build_conditional_branch(exists, &retrieve_block, &clear_block);
+            .build_conditional_branch(exists, retrieve_block, clear_block);
 
-        contract.builder.position_at_end(&retrieve_block);
+        contract.builder.position_at_end(retrieve_block);
 
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
@@ -795,9 +795,9 @@ impl TargetRuntime for SubstrateTarget {
             "",
         );
 
-        contract.builder.build_unconditional_branch(&done_storage);
+        contract.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(&clear_block);
+        contract.builder.position_at_end(clear_block);
 
         contract.builder.build_store(
             dest,
@@ -807,9 +807,9 @@ impl TargetRuntime for SubstrateTarget {
                 .const_zero(),
         );
 
-        contract.builder.build_unconditional_branch(&done_storage);
+        contract.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(&done_storage);
+        contract.builder.position_at_end(done_storage);
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
@@ -878,12 +878,12 @@ impl TargetRuntime for SubstrateTarget {
 
         contract
             .builder
-            .build_conditional_branch(is_ok, &decode_block, &wrong_length_block);
+            .build_conditional_branch(is_ok, decode_block, wrong_length_block);
 
-        contract.builder.position_at_end(&wrong_length_block);
+        contract.builder.position_at_end(wrong_length_block);
         contract.builder.build_unreachable();
 
-        contract.builder.position_at_end(&decode_block);
+        contract.builder.position_at_end(decode_block);
 
         let mut argsdata = contract.builder.build_pointer_cast(
             data,

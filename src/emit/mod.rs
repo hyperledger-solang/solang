@@ -228,8 +228,8 @@ impl<'a> Contract<'a> {
         let done = self.context.append_basic_block(function, "done");
         let entry = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(&body);
-        self.builder.position_at_end(&body);
+        self.builder.build_unconditional_branch(body);
+        self.builder.position_at_end(body);
 
         let loop_ty = self.context.i64_type();
         let loop_phi = self.builder.build_phi(loop_ty, "index");
@@ -251,12 +251,12 @@ impl<'a> Contract<'a> {
             loop_ty.const_int(to, false),
             "loop_cond",
         );
-        self.builder.build_conditional_branch(comp, &body, &done);
+        self.builder.build_conditional_branch(comp, body, done);
 
-        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), &entry), (&next, &body)]);
-        data_phi.add_incoming(&[(&*data_ref, &entry), (&data, &body)]);
+        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), entry), (&next, body)]);
+        data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
-        self.builder.position_at_end(&done);
+        self.builder.position_at_end(done);
 
         *data_ref = data;
     }
@@ -277,8 +277,8 @@ impl<'a> Contract<'a> {
         let done = self.context.append_basic_block(function, "done");
         let entry = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(&body);
-        self.builder.position_at_end(&body);
+        self.builder.build_unconditional_branch(body);
+        self.builder.position_at_end(body);
 
         let loop_ty = self.context.i64_type();
         let loop_phi = self.builder.build_phi(loop_ty, "index");
@@ -300,13 +300,13 @@ impl<'a> Contract<'a> {
             loop_ty.const_int(to, false),
             "loop_cond",
         );
-        self.builder.build_conditional_branch(comp, &body, &done);
+        self.builder.build_conditional_branch(comp, body, done);
 
         let body = self.builder.get_insert_block().unwrap();
-        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), &entry), (&next, &body)]);
-        data_phi.add_incoming(&[(&*data_ref, &entry), (&data, &body)]);
+        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), entry), (&next, body)]);
+        data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
-        self.builder.position_at_end(&done);
+        self.builder.position_at_end(done);
 
         *data_ref = data;
     }
@@ -1249,7 +1249,7 @@ impl<'a> Contract<'a> {
     ) {
         // recurse through basic blocks
         struct BasicBlock<'a> {
-            bb: inkwell::basic_block::BasicBlock,
+            bb: inkwell::basic_block::BasicBlock<'a>,
             phis: HashMap<usize, PhiValue<'a>>,
         }
 
@@ -1266,7 +1266,7 @@ impl<'a> Contract<'a> {
 
             let bb = self.context.append_basic_block(function, &cfg_bb.name);
 
-            self.builder.position_at_end(&bb);
+            self.builder.position_at_end(bb);
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
@@ -1331,7 +1331,7 @@ impl<'a> Contract<'a> {
         while let Some(mut w) = work.pop_front() {
             let bb = blocks.get(&w.bb_no).unwrap();
 
-            self.builder.position_at_end(&bb.bb);
+            self.builder.position_at_end(bb.bb);
 
             for (v, phi) in bb.phis.iter() {
                 w.vars[*v].value = (*phi).as_basic_value();
@@ -1393,12 +1393,12 @@ impl<'a> Contract<'a> {
 
                         for (v, phi) in bb.phis.iter() {
                             if !w.vars[*v].value.is_pointer_value() {
-                                phi.add_incoming(&[(&w.vars[*v].value, &pos)]);
+                                phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                             }
                         }
 
-                        self.builder.position_at_end(&pos);
-                        self.builder.build_unconditional_branch(&bb.bb);
+                        self.builder.position_at_end(pos);
+                        self.builder.build_unconditional_branch(bb.bb);
                     }
                     cfg::Instr::Store { dest, pos } => {
                         let value_ref = w.vars[*pos].value;
@@ -1430,7 +1430,7 @@ impl<'a> Contract<'a> {
 
                             for (v, phi) in bb.phis.iter() {
                                 if !w.vars[*v].value.is_pointer_value() {
-                                    phi.add_incoming(&[(&w.vars[*v].value, &pos)]);
+                                    phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                                 }
                             }
 
@@ -1450,18 +1450,18 @@ impl<'a> Contract<'a> {
 
                             for (v, phi) in bb.phis.iter() {
                                 if !w.vars[*v].value.is_pointer_value() {
-                                    phi.add_incoming(&[(&w.vars[*v].value, &pos)]);
+                                    phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                                 }
                             }
 
                             bb.bb
                         };
 
-                        self.builder.position_at_end(&pos);
+                        self.builder.position_at_end(pos);
                         self.builder.build_conditional_branch(
                             cond.into_int_value(),
-                            &bb_true,
-                            &bb_false,
+                            bb_true,
+                            bb_false,
                         );
                     }
                     cfg::Instr::SetStorage { ty, local, storage } => {
@@ -1567,9 +1567,9 @@ impl<'a> Contract<'a> {
         let nomatch = self.context.append_basic_block(function, "nomatch");
 
         self.builder
-            .build_conditional_branch(not_fallback, &switch_block, &nomatch);
+            .build_conditional_branch(not_fallback, switch_block, nomatch);
 
-        self.builder.position_at_end(&switch_block);
+        self.builder.position_at_end(switch_block);
 
         let fid = self.builder.build_load(argsdata, "function_selector");
 
@@ -1606,7 +1606,7 @@ impl<'a> Contract<'a> {
 
             let id = f.selector();
 
-            self.builder.position_at_end(&bb);
+            self.builder.position_at_end(bb);
 
             let mut args = Vec::new();
 
@@ -1655,20 +1655,12 @@ impl<'a> Contract<'a> {
             cases.push((self.context.i32_type().const_int(id as u64, false), bb));
         }
 
-        self.builder.position_at_end(&switch_block);
-
-        let mut c = Vec::new();
-
-        for (id, bb) in cases.iter() {
-            c.push((*id, bb));
-        }
-
-        //let c = cases.into_iter().map(|(id, bb)| (id, &bb)).collect();
+        self.builder.position_at_end(switch_block);
 
         self.builder
-            .build_switch(fid.into_int_value(), &fallback_block, &c);
+            .build_switch(fid.into_int_value(), fallback_block, &cases);
 
-        self.builder.position_at_end(&nomatch);
+        self.builder.position_at_end(nomatch);
 
         self.builder.build_unreachable();
     }
@@ -1704,7 +1696,7 @@ impl<'a> Contract<'a> {
 
         let entry = self.context.append_basic_block(function, "entry");
 
-        self.builder.position_at_end(&entry);
+        self.builder.position_at_end(entry);
 
         let dividend = function.get_nth_param(0).unwrap().into_int_value();
         let divisor = function.get_nth_param(1).unwrap().into_int_value();
@@ -1718,14 +1710,13 @@ impl<'a> Contract<'a> {
             ty.const_zero(),
             "divisor_is_zero",
         );
-        self.builder
-            .build_conditional_branch(is_zero, &error, &next);
+        self.builder.build_conditional_branch(is_zero, error, next);
 
-        self.builder.position_at_end(&error);
+        self.builder.position_at_end(error);
         // throw division by zero error should be an assert
         runtime.assert_failure(self);
 
-        self.builder.position_at_end(&next);
+        self.builder.position_at_end(next);
         let is_one_block = self.context.append_basic_block(function, "is_one_block");
         let next = self.context.append_basic_block(function, "next");
         let is_one = self.builder.build_int_compare(
@@ -1735,28 +1726,28 @@ impl<'a> Contract<'a> {
             "divisor_is_one",
         );
         self.builder
-            .build_conditional_branch(is_one, &is_one_block, &next);
+            .build_conditional_branch(is_one, is_one_block, next);
 
         // return quotient: dividend, rem: 0
-        self.builder.position_at_end(&is_one_block);
+        self.builder.position_at_end(is_one_block);
         self.builder.build_store(rem, ty.const_zero());
         self.builder.build_return(Some(&dividend));
 
-        self.builder.position_at_end(&next);
+        self.builder.position_at_end(next);
         let is_eq_block = self.context.append_basic_block(function, "is_eq_block");
         let next = self.context.append_basic_block(function, "next");
         let is_eq = self
             .builder
             .build_int_compare(IntPredicate::EQ, dividend, divisor, "is_eq");
         self.builder
-            .build_conditional_branch(is_eq, &is_eq_block, &next);
+            .build_conditional_branch(is_eq, is_eq_block, next);
 
         // return rem: 0, quotient: 1
-        self.builder.position_at_end(&is_eq_block);
+        self.builder.position_at_end(is_eq_block);
         self.builder.build_store(rem, ty.const_zero());
         self.builder.build_return(Some(&ty.const_int(1, false)));
 
-        self.builder.position_at_end(&next);
+        self.builder.position_at_end(next);
 
         let is_toobig_block = self.context.append_basic_block(function, "is_toobig_block");
         let next = self.context.append_basic_block(function, "next");
@@ -1775,16 +1766,16 @@ impl<'a> Contract<'a> {
         self.builder.build_conditional_branch(
             self.builder
                 .build_or(dividend_is_zero, dividend_lt_divisor, ""),
-            &is_toobig_block,
-            &next,
+            is_toobig_block,
+            next,
         );
 
         // return quotient: 0, rem: divisor
-        self.builder.position_at_end(&is_toobig_block);
+        self.builder.position_at_end(is_toobig_block);
         self.builder.build_store(rem, dividend);
         self.builder.build_return(Some(&ty.const_zero()));
 
-        self.builder.position_at_end(&next);
+        self.builder.position_at_end(next);
 
         let ctlz = self.llvm_ctlz(bit);
 
@@ -1844,9 +1835,9 @@ impl<'a> Contract<'a> {
             .build_int_compare(IntPredicate::UGT, copyd1, dividend, "");
 
         self.builder
-            .build_conditional_branch(comp, &true_block, &while_cond_block);
+            .build_conditional_branch(comp, true_block, while_cond_block);
 
-        self.builder.position_at_end(&true_block);
+        self.builder.position_at_end(true_block);
 
         let copyd2 = self
             .builder
@@ -1854,25 +1845,25 @@ impl<'a> Contract<'a> {
         let adder2 = self
             .builder
             .build_right_shift(adder1, ty.const_int(1, false), false, "");
-        self.builder.build_unconditional_branch(&while_cond_block);
+        self.builder.build_unconditional_branch(while_cond_block);
 
         let while_body_block = self.context.append_basic_block(function, "while_body");
         let while_end_block = self.context.append_basic_block(function, "while_post");
 
-        self.builder.position_at_end(&while_cond_block);
+        self.builder.position_at_end(while_cond_block);
 
         let quotient = self.builder.build_phi(ty, "quotient");
-        quotient.add_incoming(&[(&ty.const_zero(), &next)]);
-        quotient.add_incoming(&[(&ty.const_zero(), &true_block)]);
+        quotient.add_incoming(&[(&ty.const_zero(), next)]);
+        quotient.add_incoming(&[(&ty.const_zero(), true_block)]);
 
         let remainder = self.builder.build_phi(ty, "remainder");
-        remainder.add_incoming(&[(&dividend, &next)]);
-        remainder.add_incoming(&[(&dividend, &true_block)]);
+        remainder.add_incoming(&[(&dividend, next)]);
+        remainder.add_incoming(&[(&dividend, true_block)]);
 
         let copyd = self.builder.build_phi(ty, "copyd");
-        copyd.add_incoming(&[(&copyd1, &next), (&copyd2, &true_block)]);
+        copyd.add_incoming(&[(&copyd1, next), (&copyd2, true_block)]);
         let adder = self.builder.build_phi(ty, "adder");
-        adder.add_incoming(&[(&adder1, &next), (&adder2, &true_block)]);
+        adder.add_incoming(&[(&adder1, next), (&adder2, true_block)]);
 
         let loop_cond = self.builder.build_int_compare(
             IntPredicate::UGE,
@@ -1881,9 +1872,9 @@ impl<'a> Contract<'a> {
             "loop_cond",
         );
         self.builder
-            .build_conditional_branch(loop_cond, &while_body_block, &while_end_block);
+            .build_conditional_branch(loop_cond, while_body_block, while_end_block);
 
-        self.builder.position_at_end(&while_body_block);
+        self.builder.position_at_end(while_body_block);
 
         let if_true_block = self.context.append_basic_block(function, "if_true_block");
         let post_if_block = self.context.append_basic_block(function, "post_if_block");
@@ -1895,11 +1886,11 @@ impl<'a> Contract<'a> {
                 copyd.as_basic_value().into_int_value(),
                 "",
             ),
-            &if_true_block,
-            &post_if_block,
+            if_true_block,
+            post_if_block,
         );
 
-        self.builder.position_at_end(&if_true_block);
+        self.builder.position_at_end(if_true_block);
 
         let remainder2 = self.builder.build_int_sub(
             remainder.as_basic_value().into_int_value(),
@@ -1912,9 +1903,9 @@ impl<'a> Contract<'a> {
             "quotient",
         );
 
-        self.builder.build_unconditional_branch(&post_if_block);
+        self.builder.build_unconditional_branch(post_if_block);
 
-        self.builder.position_at_end(&post_if_block);
+        self.builder.position_at_end(post_if_block);
 
         let quotient3 = self.builder.build_phi(ty, "quotient3");
         let remainder3 = self.builder.build_phi(ty, "remainder");
@@ -1931,31 +1922,31 @@ impl<'a> Contract<'a> {
             false,
             "adder",
         );
-        copyd.add_incoming(&[(&copyd3, &post_if_block)]);
-        adder.add_incoming(&[(&adder3, &post_if_block)]);
+        copyd.add_incoming(&[(&copyd3, post_if_block)]);
+        adder.add_incoming(&[(&adder3, post_if_block)]);
 
         quotient3.add_incoming(&[
-            (&quotient2, &if_true_block),
-            (&quotient.as_basic_value(), &while_body_block),
+            (&quotient2, if_true_block),
+            (&quotient.as_basic_value(), while_body_block),
         ]);
         remainder3.add_incoming(&[
-            (&remainder2, &if_true_block),
-            (&remainder.as_basic_value(), &while_body_block),
+            (&remainder2, if_true_block),
+            (&remainder.as_basic_value(), while_body_block),
         ]);
 
-        quotient.add_incoming(&[(&quotient3.as_basic_value(), &post_if_block)]);
-        remainder.add_incoming(&[(&remainder3.as_basic_value(), &post_if_block)]);
+        quotient.add_incoming(&[(&quotient3.as_basic_value(), post_if_block)]);
+        remainder.add_incoming(&[(&remainder3.as_basic_value(), post_if_block)]);
 
-        self.builder.build_unconditional_branch(&while_cond_block);
+        self.builder.build_unconditional_branch(while_cond_block);
 
-        self.builder.position_at_end(&while_end_block);
+        self.builder.position_at_end(while_end_block);
 
         self.builder
             .build_store(rem, remainder.as_basic_value().into_int_value());
         self.builder
             .build_return(Some(&quotient.as_basic_value().into_int_value()));
 
-        self.builder.position_at_end(&pos);
+        self.builder.position_at_end(pos);
 
         function
     }
@@ -1986,7 +1977,7 @@ impl<'a> Contract<'a> {
 
         let entry = self.context.append_basic_block(function, "entry");
 
-        self.builder.position_at_end(&entry);
+        self.builder.position_at_end(entry);
 
         let dividend = function.get_nth_param(0).unwrap().into_int_value();
         let divisor = function.get_nth_param(1).unwrap().into_int_value();
@@ -2047,13 +2038,13 @@ impl<'a> Contract<'a> {
         let posrem = self.context.append_basic_block(function, "positive_rem");
 
         self.builder
-            .build_conditional_branch(dividend_negative, &negrem, &posrem);
+            .build_conditional_branch(dividend_negative, negrem, posrem);
 
-        self.builder.position_at_end(&posrem);
+        self.builder.position_at_end(posrem);
 
         self.builder.build_return(Some(&quotient));
 
-        self.builder.position_at_end(&negrem);
+        self.builder.position_at_end(negrem);
 
         let remainder = self.builder.build_load(rem, "remainder").into_int_value();
 
@@ -2064,7 +2055,7 @@ impl<'a> Contract<'a> {
 
         self.builder.build_return(Some(&quotient));
 
-        self.builder.position_at_end(&pos);
+        self.builder.position_at_end(pos);
 
         function
     }
@@ -2108,23 +2099,23 @@ impl<'a> Contract<'a> {
         let done = self.context.append_basic_block(function, "done");
         let notdone = self.context.append_basic_block(function, "notdone");
 
-        self.builder.position_at_end(&entry);
+        self.builder.position_at_end(entry);
 
         let l = self.builder.build_alloca(ty, "");
         let r = self.builder.build_alloca(ty, "");
         let o = self.builder.build_alloca(ty, "");
 
-        self.builder.build_unconditional_branch(&loop_block);
+        self.builder.build_unconditional_branch(loop_block);
 
-        self.builder.position_at_end(&loop_block);
+        self.builder.position_at_end(loop_block);
         let base = self.builder.build_phi(ty, "base");
-        base.add_incoming(&[(&function.get_nth_param(0).unwrap(), &entry)]);
+        base.add_incoming(&[(&function.get_nth_param(0).unwrap(), entry)]);
 
         let exp = self.builder.build_phi(ty, "exp");
-        exp.add_incoming(&[(&function.get_nth_param(1).unwrap(), &entry)]);
+        exp.add_incoming(&[(&function.get_nth_param(1).unwrap(), entry)]);
 
         let result = self.builder.build_phi(ty, "result");
-        result.add_incoming(&[(&ty.const_int(1, false), &entry)]);
+        result.add_incoming(&[(&ty.const_int(1, false), entry)]);
 
         let lowbit = self.builder.build_int_truncate(
             exp.as_basic_value().into_int_value(),
@@ -2133,9 +2124,9 @@ impl<'a> Contract<'a> {
         );
 
         self.builder
-            .build_conditional_branch(lowbit, &multiply, &nomultiply);
+            .build_conditional_branch(lowbit, multiply, nomultiply);
 
-        self.builder.position_at_end(&multiply);
+        self.builder.position_at_end(multiply);
 
         let result2 = if bit > 64 {
             self.builder
@@ -2184,14 +2175,11 @@ impl<'a> Contract<'a> {
             )
         };
 
-        self.builder.build_unconditional_branch(&nomultiply);
-        self.builder.position_at_end(&nomultiply);
+        self.builder.build_unconditional_branch(nomultiply);
+        self.builder.position_at_end(nomultiply);
 
         let result3 = self.builder.build_phi(ty, "result");
-        result3.add_incoming(&[
-            (&result.as_basic_value(), &loop_block),
-            (&result2, &multiply),
-        ]);
+        result3.add_incoming(&[(&result.as_basic_value(), loop_block), (&result2, multiply)]);
 
         let exp2 = self.builder.build_right_shift(
             exp.as_basic_value().into_int_value(),
@@ -2203,13 +2191,13 @@ impl<'a> Contract<'a> {
             .builder
             .build_int_compare(IntPredicate::EQ, exp2, ty.const_zero(), "zero");
 
-        self.builder.build_conditional_branch(zero, &done, &notdone);
+        self.builder.build_conditional_branch(zero, done, notdone);
 
-        self.builder.position_at_end(&done);
+        self.builder.position_at_end(done);
 
         self.builder.build_return(Some(&result3.as_basic_value()));
 
-        self.builder.position_at_end(&notdone);
+        self.builder.position_at_end(notdone);
 
         let base2 = if bit > 64 {
             self.builder
@@ -2258,13 +2246,13 @@ impl<'a> Contract<'a> {
             )
         };
 
-        base.add_incoming(&[(&base2, &notdone)]);
-        result.add_incoming(&[(&result3.as_basic_value(), &notdone)]);
-        exp.add_incoming(&[(&exp2, &notdone)]);
+        base.add_incoming(&[(&base2, notdone)]);
+        result.add_incoming(&[(&result3.as_basic_value(), notdone)]);
+        exp.add_incoming(&[(&exp2, notdone)]);
 
-        self.builder.build_unconditional_branch(&loop_block);
+        self.builder.build_unconditional_branch(loop_block);
 
-        self.builder.position_at_end(&pos);
+        self.builder.position_at_end(pos);
 
         function
     }
