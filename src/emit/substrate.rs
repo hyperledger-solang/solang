@@ -459,11 +459,11 @@ impl SubstrateTarget {
                             )
                         };
 
-                        let ty = ty.deref();
+                        let ty = ty.array_deref();
 
                         if ty.is_reference_type() {
                             let val = contract.builder.build_alloca(
-                                ty.ref_type().llvm_type(contract.ns, contract.context),
+                                ty.deref().llvm_type(contract.ns, contract.context),
                                 "",
                             );
                             self.decode_ty(contract, function, &ty, Some(val), data);
@@ -634,7 +634,7 @@ impl SubstrateTarget {
                             )
                         };
 
-                        let ty = ty.deref();
+                        let ty = ty.array_deref();
 
                         if ty.is_reference_type() {
                             elem = contract.builder.build_load(elem, "").into_pointer_value()

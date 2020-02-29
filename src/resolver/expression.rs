@@ -2562,7 +2562,7 @@ fn array_subscript(
 ) -> Result<(Expression, resolver::Type), ()> {
     let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
-    let array_length = match array_ty.ref_type() {
+    let array_length = match array_ty.deref() {
         resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
         resolver::Type::FixedArray(_, _) => array_ty.array_length().clone(),
         _ => {
@@ -2740,7 +2740,7 @@ fn array_subscript(
             ))
         }
     } else {
-        match array_ty.ref_type() {
+        match array_ty.deref() {
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
                 let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
 
@@ -2787,14 +2787,14 @@ fn array_subscript(
                         &array.loc(),
                         array_expr,
                         &array_ty,
-                        &array_ty.ref_type(),
+                        &array_ty.deref(),
                         true,
                         ns,
                         errors,
                     )?),
                     Box::new(Expression::Variable(index.loc(), pos)),
                 ),
-                array_ty.deref(),
+                array_ty.array_deref(),
             )),
             _ => {
                 // should not happen as type-checking already done

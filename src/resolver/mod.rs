@@ -72,9 +72,9 @@ impl Type {
 
     /// Give the type of an array after dereference. This can only be used on
     /// array types and will cause a panic otherwise.
-    pub fn deref(&self) -> Self {
+    pub fn array_deref(&self) -> Self {
         match self {
-            Type::Ref(t) => t.deref(),
+            Type::Ref(t) => t.array_deref(),
             Type::FixedArray(ty, dim) if dim.len() > 1 => {
                 Type::FixedArray(ty.clone(), dim[..dim.len() - 1].to_vec())
             }
@@ -196,7 +196,7 @@ impl Type {
     }
 
     /// If the type is Ref or StorageRef, get the underlying type
-    pub fn ref_type(&self) -> &Self {
+    pub fn deref(&self) -> &Self {
         match self {
             Type::StorageRef(r) => r,
             Type::Ref(r) => r,
