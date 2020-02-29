@@ -992,7 +992,7 @@ impl<'a> Contract<'a> {
     ) {
         match ty {
             resolver::Type::FixedArray(_, dim) => {
-                let ty = ty.deref();
+                let ty = ty.array_deref();
 
                 self.emit_static_loop_with_int(
                     function,
@@ -1009,7 +1009,7 @@ impl<'a> Contract<'a> {
                         };
 
                         if ty.is_reference_type() {
-                            let ty = ty.ref_type();
+                            let ty = ty.deref();
                             let val = self
                                 .builder
                                 .build_alloca(ty.llvm_type(self.ns, self.context), "");
@@ -1046,7 +1046,7 @@ impl<'a> Contract<'a> {
 
                     if field.ty.is_reference_type() {
                         let val = self.builder.build_alloca(
-                            field.ty.ref_type().llvm_type(self.ns, self.context),
+                            field.ty.deref().llvm_type(self.ns, self.context),
                             &field.name,
                         );
 
@@ -1087,9 +1087,9 @@ impl<'a> Contract<'a> {
         function: FunctionValue<'b>,
         runtime: &dyn TargetRuntime,
     ) {
-        match ty {
+        match ty.deref() {
             resolver::Type::FixedArray(_, dim) => {
-                let ty = ty.deref();
+                let ty = ty.array_deref();
 
                 self.emit_static_loop_with_int(
                     function,

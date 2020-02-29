@@ -652,6 +652,8 @@ fn struct_array_struct_abi() {
             struct bar  {
                 foo[10] bars;
             }
+
+            bar s;
     
             function get_bar() public returns (bar) {
                 bar a = bar({ bars: [
@@ -667,6 +669,8 @@ fn struct_array_struct_abi() {
                     foo({ f1: 10, f2: true})
                 ]});
 
+                s = a;
+                
                 return a;
             }
 
@@ -675,6 +679,8 @@ fn struct_array_struct_abi() {
                     assert(a.bars[i].f1 == i + 1);
                     assert(a.bars[i].f2 == (i != 6));
                 }
+
+                a = s;
             }
         }"##,
     );
