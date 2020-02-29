@@ -627,3 +627,76 @@ fn struct_array_struct() {
 
     assert_eq!(store.scratch, true.encode());
 }
+
+#[test]
+fn struct_array_struct_abi() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Foo {
+        f1: u32,
+        f2: bool,
+    }
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Bar {
+        bars: [Foo; 10],
+    }
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract flipper {
+            struct foo {
+                int32 f1;
+                bool f2;
+            }
+        
+            struct bar  {
+                foo[10] bars;
+            }
+    
+            function get_bar() public returns (bar) {
+                bar a = bar({ bars: [
+                    foo({ f1: 1, f2: true}), 
+                    foo({ f1: 2, f2: true}), 
+                    foo({ f1: 3, f2: true}), 
+                    foo({ f1: 4, f2: true}), 
+                    foo({ f1: 5, f2: true}), 
+                    foo({ f1: 6, f2: true}), 
+                    foo({ f1: 7, f2: false}), 
+                    foo({ f1: 8, f2: true}), 
+                    foo({ f1: 9, f2: true}), 
+                    foo({ f1: 10, f2: true})
+                ]});
+
+                return a;
+            }
+
+            function set_bar(bar a) public {
+                for (int32 i = 0; i < 10; i++) {
+                    assert(a.bars[i].f1 == i + 1);
+                    assert(a.bars[i].f2 == (i != 6));
+                }
+            }
+        }"##,
+    );
+
+    let b = Bar {
+        bars: [
+            Foo { f1: 1, f2: true },
+            Foo { f1: 2, f2: true },
+            Foo { f1: 3, f2: true },
+            Foo { f1: 4, f2: true },
+            Foo { f1: 5, f2: true },
+            Foo { f1: 6, f2: true },
+            Foo { f1: 7, f2: false },
+            Foo { f1: 8, f2: true },
+            Foo { f1: 9, f2: true },
+            Foo { f1: 10, f2: true },
+        ],
+    };
+
+    runtime.function(&mut store, "get_bar", Vec::new());
+
+    assert_eq!(store.scratch, b.encode());
+
+    runtime.function(&mut store, "set_bar", b.encode());
+}

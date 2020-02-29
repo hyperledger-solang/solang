@@ -43,18 +43,21 @@ impl EthAbiEncoder {
                     dim[0].to_u64().unwrap(),
                     data,
                     |index, data| {
-                        let elem = unsafe {
-                            contract
-                                .builder
-                                .build_gep(
-                                    arg.into_pointer_value(),
-                                    &[contract.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
-                                .into()
+                        let mut elem = unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[contract.context.i32_type().const_zero(), index],
+                                "index_access",
+                            )
                         };
 
-                        self.encode_ty(contract, function, &ty.deref(), elem, data);
+                        let ty = ty.deref();
+
+                        if ty.is_reference_type() {
+                            elem = contract.builder.build_load(elem, "").into_pointer_value();
+                        }
+
+                        self.encode_ty(contract, function, &ty, elem.into(), data);
                     },
                 );
             }
@@ -420,7 +423,18 @@ impl EthAbiEncoder {
                             )
                         };
 
-                        self.decode_ty(contract, function, &ty.deref(), Some(elem), data);
+                        let ty = ty.deref();
+
+                        if ty.is_reference_type() {
+                            let val = contract.builder.build_alloca(
+                                ty.ref_type().llvm_type(contract.ns, contract.context),
+                                "",
+                            );
+                            self.decode_ty(contract, function, &ty, Some(val), data);
+                            contract.builder.build_store(elem, val);
+                        } else {
+                            self.decode_ty(contract, function, &ty, Some(elem), data);
+                        }
                     },
                 );
 
