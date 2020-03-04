@@ -139,6 +139,10 @@ pub enum Token<'input> {
     Underscore,
     Complement,
     Question,
+
+    Def,
+    Indent,
+    Dedent,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -241,6 +245,9 @@ impl<'input> fmt::Display for Token<'input> {
             Token::If => write!(f, "if"),
             Token::Constructor => write!(f, "constructor"),
             Token::Indexed => write!(f, "indexed"),
+            Token::Indent => write!(f, "Indent"),
+            Token::Dedent => write!(f, "Dedent"),
+            Token::Def => write!(f, "def"),
         }
     }
 }
@@ -374,6 +381,12 @@ impl<'input> Lexer<'input> {
         keywords.insert(String::from("if"), Token::If);
         keywords.insert(String::from("else"), Token::Else);
         keywords.insert(String::from("_"), Token::Underscore);
+
+        keywords.insert(String::from("def"), Token::Def);
+        keywords.insert(String::from("__init__"), Token::Constructor);
+        keywords.insert(String::from("Indent"), Token::Indent);
+        keywords.insert(String::from("Dedent"), Token::Dedent);
+
 
         Lexer {
             input,

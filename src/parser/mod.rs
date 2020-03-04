@@ -5,6 +5,10 @@ pub mod lexer;
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub mod solidity;
 
+#[allow(clippy::all,unused_parens)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
+pub mod vyper;
+
 use lalrpop_util::ParseError;
 use output::Output;
 
@@ -12,7 +16,7 @@ pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
     // parse phase
     let lex = lexer::Lexer::new(src);
 
-    let s = solidity::SourceUnitParser::new().parse(src, lex);
+    let s = vyper::SourceUnitParser::new().parse(src, lex);
 
     let mut errors = Vec::new();
 
