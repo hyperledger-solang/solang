@@ -139,6 +139,13 @@ pub enum Token<'input> {
     Underscore,
     Complement,
     Question,
+
+    Def,
+    Indent,
+    Dedent,
+    Newline,
+    At,
+    This,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -184,7 +191,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Equal => write!(f, "=="),
             Token::Assign => write!(f, "="),
             Token::NotEqual => write!(f, "!="),
-            Token::Not => write!(f, "!"),
+            Token::Not => write!(f, "not"),
             Token::ShiftLeft => write!(f, "<<"),
             Token::ShiftLeftAssign => write!(f, "<<="),
             Token::More => write!(f, ">"),
@@ -241,6 +248,12 @@ impl<'input> fmt::Display for Token<'input> {
             Token::If => write!(f, "if"),
             Token::Constructor => write!(f, "constructor"),
             Token::Indexed => write!(f, "indexed"),
+            Token::Def => write!(f, "def"),
+            Token::Indent => write!(f, "Indent"),
+            Token::Dedent => write!(f, "Dedent"),
+            Token::Newline => write!(f, "\n"),
+            Token::At => write!(f, "@"),
+            Token::This => write!(f, "self"),
         }
     }
 }
@@ -250,6 +263,7 @@ pub struct Lexer<'input> {
     chars: Peekable<CharIndices<'input>>,
     keywords: HashMap<String, Token<'input>>,
     pragma_state: PragmaParserState,
+    at_line_start: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -350,6 +364,8 @@ impl<'input> Lexer<'input> {
 
         keywords.insert(String::from("new"), Token::New);
         keywords.insert(String::from("delete"), Token::Delete);
+        keywords.insert(String::from("not"), Token::Not);
+        keywords.insert(String::from("self"), Token::This);
 
         keywords.insert(String::from("pure"), Token::Pure);
         keywords.insert(String::from("view"), Token::View);
@@ -375,11 +391,20 @@ impl<'input> Lexer<'input> {
         keywords.insert(String::from("else"), Token::Else);
         keywords.insert(String::from("_"), Token::Underscore);
 
+        keywords.insert(String::from("__init__"), Token::Constructor);
+        keywords.insert(String::from("def"), Token::Def);
+        keywords.insert(String::from("Indent"), Token::Indent);
+        keywords.insert(String::from("Dedent"), Token::Dedent);
+        keywords.insert(String::from("\n"), Token::Newline);
+        keywords.insert(String::from("@"), Token::At);
+        keywords.insert(String::from("self"), Token::This);        
+
         Lexer {
             input,
             chars: input.char_indices().peekable(),
             keywords,
             pragma_state: PragmaParserState::NotParsingPragma,
+            at_line_start: true,
         }
     }
 
@@ -441,6 +466,7 @@ impl<'input> Lexer<'input> {
             match self.chars.next() {
                 Some((start, ch)) if ch == '_' || ch == '$' || ch.is_alphabetic() => {
                     let mut end = start;
+                    self.at_line_start = false;
 
                     while let Some((i, ch)) = self.chars.peek() {
                         if !ch.is_alphanumeric() && *ch != '_' && *ch != '$' {
@@ -607,6 +633,7 @@ impl<'input> Lexer<'input> {
                 Some((start, ch)) if ch.is_ascii_digit() => {
                     return self.parse_number(start, start, ch)
                 }
+                Some((i, '@')) => return Some(Ok((i, Token::At, i + 1))),
                 Some((i, ';')) => return Some(Ok((i, Token::Semicolon, i + 1))),
                 Some((i, ',')) => return Some(Ok((i, Token::Comma, i + 1))),
                 Some((i, '(')) => return Some(Ok((i, Token::OpenParenthesis, i + 1))),
@@ -688,6 +715,10 @@ impl<'input> Lexer<'input> {
                             self.chars.next();
                             Some(Ok((i, Token::Decrement, i + 2)))
                         }
+                        Some((_, '>')) => {
+                            self.chars.next();
+                            Some(Ok((i, Token::Returns, i + 2)))
+                        }
                         _ => Some(Ok((i, Token::Subtract, i + 1))),
                     };
                 }
@@ -754,7 +785,28 @@ impl<'input> Lexer<'input> {
                 Some((i, ']')) => return Some(Ok((i, Token::CloseBracket, i + 1))),
                 Some((i, ':')) => return Some(Ok((i, Token::Colon, i + 1))),
                 Some((i, '?')) => return Some(Ok((i, Token::Question, i + 1))),
-                Some((_, '\t')) | Some((_, '\r')) | Some((_, ' ')) | Some((_, '\n')) => (),
+                Some((_, '\t')) => (),
+                Some((_, '\r')) => (),
+                Some((i, ' ')) => {
+                    if self.at_line_start {
+                        self.at_line_start = false;
+                        let mut spaces = 1;
+                            while let Some((_, ch)) = self.chars.peek() {
+                            if !ch.is_ascii_whitespace() {
+                                break;
+                            }
+                            self.chars.next();
+                            spaces += 1;
+                        }
+                        if spaces == 4 {
+                            return Some(Ok((i, Token::Indent, i+1)));
+                        }
+                    }
+                },
+                Some((i, '\n')) => {
+                    self.at_line_start = true;
+                    return Some(Ok((i, Token::Newline, i + 1)));
+                },
                 Some((start, _)) => {
                     let mut end;
 

@@ -1,0 +1,497 @@
+
+use std::str::FromStr;
+use num_bigint::BigInt;
+use num_traits::Num;
+use parser::ast::*;
+use parser::box_option;
+use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
+
+grammar<'input>(input: &'input str);
+
+pub SourceUnit: SourceUnit = {
+    SourceUnitPart => {
+        return SourceUnit(vec!(<>))
+    },
+}
+
+SourceUnitPart: SourceUnitPart = {
+    ContractDefinition => SourceUnitPart::ContractDefinition(<>),
+}
+
+DocComments: Vec<String> = {
+    DocComment* => fold_doc_comments(<>)
+}
+
+PrimitiveType: PrimitiveType = {
+    "bool" => PrimitiveType::Bool,
+    "address" => PrimitiveType::Address,
+    "string" => PrimitiveType::String,
+    Uint => PrimitiveType::Uint(<>),
+    Int => PrimitiveType::Int(<>),
+    Bytes => PrimitiveType::Bytes(<>),
+}
+
+ArrayDimension: Option<Expression> = {
+    "[" "]" => None,
+    "[" <e:Expression> "]" => Some(e)
+}
+
+Type: Type = {
+    <p:PrimitiveType> => Type::Primitive(p, Vec::new()),
+    <p:PrimitiveType> <d:ArrayDimension+> => Type::Primitive(p, d),
+    Precedence0 => Type::Unresolved(Box::new(<>)),
+}
+
+StorageLocation: StorageLocation = {
+    <l:@L> "memory" <r:@R> => StorageLocation::Memory(Loc(l, r)),
+    <l:@L> "storage" <r:@R> => StorageLocation::Storage(Loc(l, r)),
+    <l:@L> "calldata" <r:@R> => StorageLocation::Calldata(Loc(l, r)),
+}
+
+Identifier: Identifier = {
+    <l:@L> <n:LexIdentifier> <r:@R> => Identifier{loc: Loc(l, r), name: n.to_string()},
+}
+
+VariableDeclaration: VariableDeclaration = {
+    <t:Type> <i:Identifier> => VariableDeclaration {
+        typ: t, storage: None, name: i
+    }
+}
+
+ContractType: ContractType = {
+    "contract" => ContractType::Contract,
+}
+
+ContractPart: ContractPart = {
+    ContractVariableDefinition => ContractPart::ContractVariableDefinition(<>),
+    FunctionDefinition => ContractPart::FunctionDefinition(<>),
+    "\n" => ContractPart::Empty,
+}
+
+ContractDefinition: Box<ContractDefinition> = {
+    <l:@L> <p:(<ContractPart>)+> <r:@R> => {
+        Box::new(ContractDefinition{doc: vec!(), loc: Loc(l, r), ty: ContractType::Contract, name: Identifier{loc: Loc(1, r), name: "flipper".to_string()}, parts: p})
+    }
+}
+
+ContractVariableDefinition: Box<ContractVariableDefinition> = {
+    <d:DocComments> <l:@L> <i:Identifier> ":" <t:Type> <r:@R> "\n" => {
+        // TODO: variable attributes, initializer?
+        Box::new(ContractVariableDefinition{
+            doc: d, loc: Loc(l, r), ty: t, attrs: vec!(), name: i, initializer: None,
+        })
+    }
+}
+
+Visibility: Visibility = {
+    <l:@L> "@" "public" "\n" <r:@R> => Visibility::Public(Loc(l, r)),
+    <l:@L> "@" "external" "\n" <r:@R> => Visibility::External(Loc(l, r)),
+    <l:@L> "@" "internal" "\n" <r:@R> => Visibility::Internal(Loc(l, r)),
+    <l:@L> "@" "private" "\n" <r:@R> => Visibility::Private(Loc(l, r)),
+}
+
+Expression: Expression = {
+    Precedence15,
+}
+
+Precedence15: Expression = {
+    <l:Precedence14> <a:@L> "=" <b:@R> <r:Precedence15> => Expression::Assign(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "|=" <b:@R> <r:Precedence15> => Expression::AssignOr(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "^=" <b:@R> <r:Precedence15> => Expression::AssignXor(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "&=" <b:@R> <r:Precedence15> => Expression::AssignAnd(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "<<=" <b:@R> <r:Precedence15> => Expression::AssignShiftLeft(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> ">>=" <b:@R> <r:Precedence15> => Expression::AssignShiftRight(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "+=" <b:@R> <r:Precedence15> => Expression::AssignAdd(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "-=" <b:@R> <r:Precedence15> => Expression::AssignSubtract(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "*=" <b:@R> <r:Precedence15> => Expression::AssignMultiply(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "/=" <b:@R> <r:Precedence15> => Expression::AssignDivide(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence14> <a:@L> "%=" <b:@R> <r:Precedence15> => Expression::AssignModulo(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence14,
+}
+
+Precedence14: Expression = {
+    <c:Precedence14> <a:@L> "?" <l:Precedence13> ":" <b:@R> <r:Precedence13> => Expression::Ternary(Loc(a, b), Box::new(c), Box::new(l), Box::new(r)),
+    Precedence13,
+}
+
+Precedence13: Expression = {
+    <l:Precedence13> <a:@L> "||" <b:@R> <r:Precedence12> => Expression::Or(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence12,
+}
+
+Precedence12: Expression = {
+    <l:Precedence12> <a:@L> "&&" <b:@R> <r:Precedence11> => Expression::And(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence11,
+}
+
+Precedence11: Expression = {
+    <l:Precedence11> <a:@L> "==" <b:@R> <r:Precedence10> => Expression::Equal(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence11> <a:@L> "!=" <b:@R> <r:Precedence10> => Expression::NotEqual(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence10,
+}
+
+Precedence10: Expression = {
+    <l:Precedence10> <a:@L> "<" <b:@R> <r:Precedence9> => Expression::Less(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">" <b:@R> <r:Precedence9> => Expression::More(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> "<=" <b:@R> <r:Precedence9> => Expression::LessEqual(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence10> <a:@L> ">=" <b:@R> <r:Precedence9> => Expression::MoreEqual(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence9,
+}
+
+Precedence9: Expression = {
+    <l:Precedence9> <a:@L> "|" <b:@R> <r:Precedence8> => Expression::BitwiseOr(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence8,
+}
+
+Precedence8: Expression = {
+    <l:Precedence8> <a:@L> "^" <b:@R> <r:Precedence7> => Expression::BitwiseXor(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence7,
+}
+
+Precedence7: Expression = {
+    <l:Precedence7> <a:@L> "&" <b:@R> <r:Precedence6> => Expression::BitwiseAnd(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence6,
+}
+
+Precedence6: Expression = {
+    <l:Precedence6> <a:@L> "<<" <b:@R> <r:Precedence5> => Expression::ShiftLeft(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence6> <a:@L> ">>" <b:@R> <r:Precedence5> => Expression::ShiftRight(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence5,
+}
+
+Precedence5: Expression = {
+    <l:Precedence5> <a:@L> "+" <b:@R> <r:Precedence4> => Expression::Add(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence5> <a:@L> "-" <b:@R> <r:Precedence4> => Expression::Subtract(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence4,
+}
+
+Precedence4: Expression = {
+    <l:Precedence4> <a:@L> "*" <b:@R> <r:Precedence3> => Expression::Multiply(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "/" <b:@R> <r:Precedence3> => Expression::Divide(Loc(a, b), Box::new(l), Box::new(r)),
+    <l:Precedence4> <a:@L> "%" <b:@R> <r:Precedence3> => Expression::Modulo(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence3,
+}
+
+Precedence3: Expression = {
+    <l:Precedence3> <a:@L> "**" <b:@R> <r:Precedence2> => Expression::Power(Loc(a, b), Box::new(l), Box::new(r)),
+    Precedence2,
+}
+
+Precedence2: Expression = {
+    <a:@L> "not" <b:@R> <e:Precedence2> => Expression::Not(Loc(a, b), Box::new(e)),
+    <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc(a, b), Box::new(e)),
+    <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc(a, b), Box::new(e)),
+    <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc(a, b), Box::new(e)),
+    <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc(a, b), Box::new(e)),
+    <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc(a, b), Box::new(e)),
+    <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc(a, b), Box::new(e)),
+    Precedence1,
+    Precedence0,
+}
+
+NamedArgument: NamedArgument = {
+    <i:Identifier> ":" <e:Expression> => NamedArgument { name: i, expr: e }
+}
+
+Precedence1: Expression = {
+    <a:@L> <i:Type> "(" ")" <b:@R> => {
+        Expression::FunctionCall(Loc(a, b), i, Vec::new())
+    },
+    <a:@L> <i:Type> "(" "{" "}" ")" <b:@R> => {
+        Expression::NamedFunctionCall(Loc(a, b), i, Vec::new())
+    },
+    <a:@L> <i:Type> "(" <v:(<Expression> ",")*> <e:Expression> ")" <b:@R> => {
+        let mut v = v;
+        v.push(e);
+        Expression::FunctionCall(Loc(a, b), i, v)
+    },
+    <a:@L> <i:Type> "(" "{" <v:(<NamedArgument> ",")*> <e:NamedArgument> "}" ")" <b:@R> => {
+        let mut v = v;
+        v.push(e);
+        Expression::NamedFunctionCall(Loc(a, b), i, v)
+    },
+}
+
+Precedence0: Expression = {
+    <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
+    <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
+    <a:@L> "new" <t:Type> <b:@R> "(" ")" => Expression::New(Loc(a, b), t),
+    <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i)),
+    <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
+    <a:@L> "self" "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(Expression::Variable(Identifier{loc: Loc(a, b), name: "self".to_string()})), i),
+    <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
+    <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
+    <StringLiteral+> => Expression::StringLiteral(<>),
+    <HexLiteral+> => Expression::HexLiteral(<>),
+    <a:@L> "[" <v:(<Expression> ",")*> <e:Expression> "]" <b:@R> => {
+        let mut v = v;
+        v.push(e);
+        Expression::ArrayLiteral(Loc(a, b), v)
+    },
+    <i:Identifier> => Expression::Variable(i),
+    "(" <e:Expression> ")" => e,
+    <l:@L> <n:LexNumber> <r:@R> => {
+        let s: String = n.chars().filter(|v| *v != '_').collect();
+
+        Expression::NumberLiteral(Loc(l, r), BigInt::from_str(&s).unwrap())
+    },
+    <l:@L> <n:LexHexNumber> <r:@R> => {
+        let is_address = n.len() == 42 && n.starts_with("0x") && !n.chars().any(|c| c == '_');
+
+        if is_address {
+            Expression::AddressLiteral(Loc(l, r), n.to_string())
+        } else {
+            // from_str_radix does not like the 0x prefix
+            let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
+
+            Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
+        }
+    }
+}
+
+StringLiteral: StringLiteral = {
+    <l:@L> <s:LexStringLiteral> <r:@R> => {
+        StringLiteral{ loc: Loc(l, r), string: s.replace("\\\n", "") }
+    }
+}
+
+HexLiteral: HexLiteral = {
+    <l:@L> <s:LexHexLiteral> <r:@R> => {
+        let v = s.to_string();
+        let hex_len = v.len() - 5;
+
+        HexLiteral{ loc: Loc(l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"').collect() }
+    }
+}
+
+Parameter: Parameter = {
+    <e:Type> => {
+        Parameter{typ: e, storage: None, name: None}
+    },
+    <i:Identifier?> ":" <e:Type> => {
+        Parameter{typ: e, storage: None, name: i}
+    }
+}
+
+ParameterList: Vec<Parameter> = {
+    "(" ")" => Vec::new(),
+    "(" <v:(<Parameter> ",")*> <e:Parameter> ")" => {
+        let mut v = v;
+        v.push(e);
+        v
+    }
+}
+
+StateMutability: StateMutability = {
+    <l:@L> "@" "pure" "\n" <r:@R> => StateMutability::Pure(Loc(l, r)),
+    <l:@L> "@" "view" "\n" <r:@R> => StateMutability::View(Loc(l, r)),
+    <l:@L> "@" "payable" "\n" <r:@R> => StateMutability::Payable(Loc(l, r)),
+}
+
+FunctionAttribute: FunctionAttribute = {
+    StateMutability => FunctionAttribute::StateMutability(<>),
+    Visibility => FunctionAttribute::Visibility(<>),
+}
+
+FunctionDefinition: Box<FunctionDefinition> = {
+    <d:DocComments> <t:FunctionAttribute*> <l:@L> "def" "__init__" <a:ParameterList> <r:("->" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
+        let returns = match r {
+            None => vec!(),
+            Some(v) => v,
+        };
+        
+        Box::new(FunctionDefinition{
+            doc: d,
+            loc: Loc(l, e),
+            constructor: true,
+            name: None,
+            params: a,
+            attributes: t,
+            returns: returns,
+            body: Statement::BlockStatement(b),
+        })
+    },
+    <d:DocComments> <t:FunctionAttribute*> <l:@L> "def" <n:Identifier?> <a:ParameterList> <r:("->" <ParameterList>)?> ";" <e:@R> => {
+        let returns = match r {
+            None => vec!(),
+            Some(v) => v,
+        };
+        
+        Box::new(FunctionDefinition{
+            doc: d,
+            loc: Loc(l, e),
+            constructor: false,
+            name: n,
+            params: a,
+            attributes: t,
+            returns: returns,
+            body: Statement::Empty,
+        })
+    },
+    <d:DocComments> <t:FunctionAttribute*> <l:@L> "def" <n:Identifier?> <a:ParameterList> <r:("->" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
+        let returns = match r {
+            None => vec!(),
+            Some(v) => v,
+        };
+        
+        Box::new(FunctionDefinition{
+            doc: d,
+            loc: Loc(l, e),
+            constructor: false,
+            name: n,
+            params: a,
+            attributes: t,
+            returns: returns,
+            body: Statement::BlockStatement(b),
+        })
+    }
+}
+
+BlockStatement: BlockStatement = {
+    ":" <s:Statement*> "\n" => {
+        BlockStatement(s)
+    }
+}
+
+ClosedStatement: Statement = {
+    NonIfStatement,
+}
+
+Statement: Statement = {
+    ClosedStatement
+}
+
+SimpleStatement: Statement = {
+    <v:VariableDeclaration> <e:("=" <Expression>)?> => {
+        Statement::VariableDefinition(v, e)
+    },
+    <e:Expression> => {
+        Statement::Expression(e)
+    },
+}
+
+NonIfStatement: Statement = {
+    "\n" Indent <b:SimpleStatement> => b,
+    "\n" Indent <l:@L> "return" <r:@R> => {
+        Statement::Return(Loc(l, r), Vec::new())
+    },
+    "\n" Indent <l:@L> "return" <e:Expression> <r:@R> => {
+        Statement::Return(Loc(l, r), vec!(e))
+    },
+    "\n" Indent <l:@L> "return" "(" <v:(<Expression> ",")+> <e:Expression> ")" <r:@R> => {
+        let mut v = v;
+        v.push(e);
+        Statement::Return(Loc(l, r), v)
+    },
+}
+
+extern {
+    type Location = usize;
+    type Error = LexicalError;
+
+    enum Token<'input> {
+        Indent => Token::Indent,
+        Dedent => Token::Dedent,
+        "__init__" => Token::Constructor,
+        "def" => Token::Def,
+        "\n" => Token::Newline,
+        "@" => Token::At,
+        "self" => Token::This,
+
+        ";" => Token::Semicolon,
+        "import" => Token::Import,
+        "contract" => Token::Contract,
+        "pragma" => Token::Pragma,
+        "bool" => Token::Bool,
+        "address" => Token::Address,
+        "string" => Token::String,
+        Uint => Token::Uint(<u16>),
+        Int => Token::Int(<u16>),
+        Bytes => Token::Bytes(<u8>),
+        "memory" => Token::Memory,
+        "calldata" => Token::Calldata,
+        "storage" => Token::Storage,
+        LexIdentifier => Token::Identifier(<&'input str>),
+        LexStringLiteral => Token::StringLiteral(<&'input str>),
+        LexHexLiteral => Token::HexLiteral(<&'input str>),
+        LexNumber => Token::Number(<&'input str>),
+        LexHexNumber => Token::HexNumber(<&'input str>),
+        "struct" => Token::Struct,
+        "{" => Token::OpenCurlyBrace,
+        "}" => Token::CloseCurlyBrace,
+        "(" => Token::OpenParenthesis,
+        ")" => Token::CloseParenthesis,
+        "interface" => Token::Interface,
+        "library" => Token::Library,
+        "event" => Token::Event,
+        "enum" => Token::Enum,
+        "public" => Token::Public,
+        "private" => Token::Private,
+        "external" => Token::External,
+        "internal" => Token::Internal,
+        "constant" => Token::Constant,
+        "=" => Token::Assign,
+        "==" => Token::Equal,
+        "|=" => Token::BitwiseOrAssign,
+        "^=" => Token::BitwiseXorAssign,
+        "&=" => Token::BitwiseAndAssign,
+        "<<=" => Token::ShiftLeftAssign,
+        ">>=" => Token::ShiftRightAssign,
+        "+=" => Token::AddAssign,
+        "-=" => Token::SubtractAssign,
+        "*=" => Token::MulAssign,
+        "/=" => Token::DivideAssign,
+        "%=" => Token::ModuloAssign,
+        "?" => Token::Question,
+        ":" => Token::Colon,
+        "||" => Token::Or,
+        "&&" => Token::And,
+        "!=" => Token::NotEqual,
+        "<" => Token::Less,
+        "<=" => Token::LessEqual,
+        ">" => Token::More,
+        ">=" => Token::MoreEqual,
+        "|" => Token::BitwiseOr,
+        "&" => Token::BitwiseAnd,
+        "^" => Token::BitwiseXor,
+        "<<" => Token::ShiftLeft,
+        ">>" => Token::ShiftRight,
+        "+" => Token::Add,
+        "-" => Token::Subtract,
+        "*" => Token::Mul,
+        "/" => Token::Divide,
+        "%" => Token::Modulo,
+        "**" => Token::Power,
+        "not" => Token::Not,
+        "~" => Token::Complement,
+        "delete" => Token::Delete,
+        "new" => Token::New,
+        "++" => Token::Increment,
+        "--" => Token::Decrement,
+        "[" => Token::OpenBracket,
+        "]" => Token::CloseBracket,
+        "." => Token::Member,
+        "true" => Token::True,
+        "false" => Token::False,
+        "pure" => Token::Pure,
+        "view" => Token::View,
+        "payable" => Token::Payable,
+        "function" => Token::Function,
+        "->" => Token::Returns,
+        "return" => Token::Return,
+        "if" => Token::If,
+        "for" => Token::For,
+        "while" => Token::While,
+        "else" => Token::Else,
+        "_" => Token::Underscore,
+        "do" => Token::Do,
+        "continue" => Token::Continue,
+        "break" => Token::Break,
+        "throw" => Token::Throw,
+        "emit" => Token::Emit,
+        "," => Token::Comma,
+        "anonymous" => Token::Anonymous,
+        "indexed" => Token::Indexed,
+        DocComment => Token::DocComment(<CommentType>, <&'input str>)
+    }
+}

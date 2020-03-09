@@ -65,6 +65,8 @@ pub fn compile(
         }
     };
 
+    println!("{:?}", ast);
+
     // resolve
     let (contracts, errors) = resolver::resolver(ast, target);
 

@@ -128,6 +128,7 @@ pub enum ContractPart {
     EnumDefinition(Box<EnumDefinition>),
     ContractVariableDefinition(Box<ContractVariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
+    Empty,
 }
 
 #[derive(Debug, PartialEq)]

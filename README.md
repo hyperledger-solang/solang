@@ -52,3 +52,27 @@ docker run --rm -it -v $(pwd):/sources hyperledgerlabs/solang -v -o /sources /so
 You will have a flipper.wasm and flipper.json. You can use these directly in
 the [Polkadot UI](https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain), as if your smart
 contract was written using ink!.
+
+## (WIP) Vyper
+
+This is the experimental WIP Vyper branch, fully valid syntax is not currently supported.
+
+You may compile the following contract:
+
+```vyper
+value: bool
+
+@public
+def __init__(initvalue: bool):
+    value = initvalue
+
+@public
+def flip():
+    value = not value
+
+@public
+def get() -> (bool):
+    return value
+```
+
+> Note: global contract variables in Vyper are currently referenced as in Solidity (i.e. without `self.`), this is not valid syntax and will be fixed in a future release.
