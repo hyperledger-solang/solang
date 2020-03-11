@@ -68,6 +68,7 @@ pub enum Expression {
     ArraySubscript(Loc, Box<Expression>, Box<Expression>),
     StructMember(Loc, Box<Expression>, usize),
 
+    AllocDynamicArray(Loc, resolver::Type, Box<Expression>),
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
 
@@ -120,6 +121,7 @@ impl Expression {
             | Expression::ArraySubscript(loc, _, _)
             | Expression::StructMember(loc, _, _)
             | Expression::Or(loc, _, _)
+            | Expression::AllocDynamicArray(loc, _, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison => unreachable!(),
         }
@@ -213,6 +215,7 @@ impl Expression {
             Expression::ArraySubscript(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
+            Expression::AllocDynamicArray(_, _, s) => s.reads_contract_storage(),
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
@@ -2203,6 +2206,7 @@ pub fn expression(
 
             function_call_with_named_arguments(loc, ty, args, cfg, ns, vartab, errors)
         }
+        ast::Expression::New(loc, ty, args) => new(loc, ty, args, cfg, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
 
@@ -2554,6 +2558,148 @@ pub fn expression(
         }
         _ => panic!("unimplemented: {:?}", expr),
     }
+}
+
+/// Resolve an new expression
+fn new(
+    loc: &ast::Loc,
+    ty: &ast::Type,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // TODO: new can also be used for creating contracts
+    let ty = ns.resolve_type(ty, errors)?;
+
+    match &ty {
+        resolver::Type::Array(_, dim) => {
+            if dim.last().unwrap().is_some() {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "new cannot allocate fixed array type ‘{}’",
+                        ty.to_string(ns)
+                    ),
+                ));
+                return Err(());
+            }
+        }
+        _ => {
+            errors.push(Output::error(
+                *loc,
+                format!("new cannot allocate type ‘{}’", ty.to_string(ns)),
+            ));
+            return Err(());
+        }
+    };
+
+    if args.len() != 1 {
+        errors.push(Output::error(
+            *loc,
+            "new dynamic array should have a single length argument".to_string(),
+        ));
+        return Err(());
+    }
+    let size_loc = args[0].loc();
+
+    // TODO: if size is a constant expression, do bounds checks at compile time, not runtime
+
+    let (size_expr, size_ty) = expression(&args[0], cfg, ns, vartab, errors)?;
+    let (size_width, _) = get_int_length(&size_ty, &size_loc, false, ns, errors)?;
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot allocate  in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let pos = tab.temp(
+        &ast::Identifier {
+            name: "size".to_owned(),
+            loc: *loc,
+        },
+        &size_ty,
+    );
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: pos,
+            expr: size_expr,
+        },
+    );
+
+    let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
+    let in_bounds = cfg.new_basic_block("in_bounds".to_string());
+
+    if size_ty.signed() {
+        cfg.add(
+            tab,
+            Instr::BranchCond {
+                cond: Expression::SLessEqual(
+                    *loc,
+                    Box::new(Expression::Variable(size_loc, pos)),
+                    Box::new(Expression::NumberLiteral(
+                        size_loc,
+                        size_width,
+                        BigInt::zero(),
+                    )),
+                ),
+                true_: out_of_bounds,
+                false_: in_bounds,
+            },
+        );
+    } else {
+        cfg.add(
+            tab,
+            Instr::BranchCond {
+                cond: Expression::Equal(
+                    *loc,
+                    Box::new(Expression::Variable(size_loc, pos)),
+                    Box::new(Expression::NumberLiteral(
+                        size_loc,
+                        size_width,
+                        BigInt::zero(),
+                    )),
+                ),
+                true_: out_of_bounds,
+                false_: in_bounds,
+            },
+        );
+    }
+
+    cfg.set_basic_block(out_of_bounds);
+    cfg.add(tab, Instr::AssertFailure {});
+
+    cfg.set_basic_block(in_bounds);
+
+    let size = Expression::Variable(size_loc, pos);
+
+    // TODO: should we check an upper bound? Large allocations will fail anyway
+    let size = match size_width.cmp(&32) {
+        Ordering::Greater => Expression::Trunc(
+            size_loc,
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+            Box::new(size),
+        ),
+        Ordering::Less => Expression::ZeroExt(
+            size_loc,
+            resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+            Box::new(size),
+        ),
+        Ordering::Equal => size,
+    };
+
+    Ok((
+        Expression::AllocDynamicArray(*loc, ty.clone(), Box::new(size)),
+        ty,
+    ))
 }
 
 /// Resolve an array subscript expression
