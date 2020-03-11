@@ -15,7 +15,7 @@ use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::module::{Linkage, Module};
-use inkwell::targets::{CodeModel, FileType, RelocMode, Target};
+use inkwell::targets::{CodeModel, FileType, RelocMode, Target, TargetTriple};
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::{BasicType, IntType, StringRadix};
 use inkwell::values::{
@@ -24,8 +24,6 @@ use inkwell::values::{
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
-
-const WASMTRIPLE: &str = "wasm32-unknown-unknown-wasm";
 
 mod ethabiencoder;
 mod ewasm;
@@ -94,7 +92,7 @@ pub struct Contract<'a> {
     pub runtime: Option<Box<Contract<'a>>>,
     builder: Builder<'a>,
     context: &'a Context,
-    target: Target,
+    triple: TargetTriple,
     ns: &'a resolver::Contract,
     constructors: Vec<FunctionValue<'a>>,
     functions: Vec<FunctionValue<'a>>,
@@ -126,10 +124,11 @@ impl<'a> Contract<'a> {
             _ => unreachable!(),
         };
 
-        let target_machine = self
-            .target
+        let target = Target::from_name("wasm32").unwrap();
+
+        let target_machine = target
             .create_target_machine(
-                WASMTRIPLE,
+                &self.triple,
                 "",
                 "",
                 opt,
@@ -164,10 +163,10 @@ impl<'a> Contract<'a> {
     ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
-        let target = Target::from_triple(WASMTRIPLE).unwrap();
+        let triple = TargetTriple::create("wasm32-unknown-unknown-wasm");
         let module = context.create_module(&contract.name);
 
-        module.set_target(&target);
+        module.set_triple(&triple);
         module.set_source_file_name(filename);
 
         // stdlib
@@ -179,7 +178,7 @@ impl<'a> Contract<'a> {
             module,
             runtime,
             builder: context.create_builder(),
-            target,
+            triple,
             context,
             ns: contract,
             constructors: Vec::new(),
