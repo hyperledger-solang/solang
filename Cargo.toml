@@ -6,14 +6,14 @@ homepage = "https://github.com/hyperledger-labs/solang"
 documentation = "https://solang.readthedocs.io/"
 license = "Apache-2.0 OR MIT"
 build = "build.rs"
-description = "Solidity to WASM Smart Contract Compiler"
+description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "ewasm",  "llvm", "smart-contract", "substrate" ]
 
 [build-dependencies]
-lalrpop = "0.17"
+lalrpop = "0.18"
 
 [dependencies]
-lalrpop-util = "0.17"
+lalrpop-util = "0.18"
 regex = "1"
 num-bigint = "0.2"
 num-traits = "0.2.6"

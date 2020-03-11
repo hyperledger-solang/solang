@@ -1,4 +1,4 @@
-// auto-generated: "lalrpop 0.17.2"
+// auto-generated: "lalrpop 0.18.1"
 // sha256: 6db352e8f48594e8d5a1a1d91f27957ab42f5bed40b6fd2c626569ecb99a21
 use std::str::FromStr;
 use num_bigint::BigInt;
@@ -2977,7 +2977,7 @@ mod __parse__SourceUnit {
         }
 
         fn simulate_reduce(&self, action: i16) -> __state_machine::SimulatedReduce<Self> {
-            __simulate_reduce(action, ::std::marker::PhantomData::<(&())>)
+            panic!("error recovery not enabled for this grammar")
         }
     }
     fn __token_to_integer<
@@ -3096,2113 +3096,24 @@ mod __parse__SourceUnit {
     ) -> __Symbol<'input>
     {
         match __token_index {
-            0 => match __token {
-                __tok @ Token::Not => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            1 => match __token {
-                __tok @ Token::NotEqual => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            2 => match __token {
-                __tok @ Token::Modulo => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            3 => match __token {
-                __tok @ Token::ModuloAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            4 => match __token {
-                __tok @ Token::BitwiseAnd => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            5 => match __token {
-                __tok @ Token::And => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            6 => match __token {
-                __tok @ Token::BitwiseAndAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            7 => match __token {
-                __tok @ Token::OpenParenthesis => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            8 => match __token {
-                __tok @ Token::CloseParenthesis => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            9 => match __token {
-                __tok @ Token::Mul => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            10 => match __token {
-                __tok @ Token::Power => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            11 => match __token {
-                __tok @ Token::MulAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            12 => match __token {
-                __tok @ Token::Add => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            13 => match __token {
-                __tok @ Token::Increment => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            14 => match __token {
-                __tok @ Token::AddAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            15 => match __token {
-                __tok @ Token::Comma => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            16 => match __token {
-                __tok @ Token::Subtract => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            17 => match __token {
-                __tok @ Token::Decrement => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            18 => match __token {
-                __tok @ Token::SubtractAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            19 => match __token {
-                __tok @ Token::Member => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            20 => match __token {
-                __tok @ Token::Divide => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            21 => match __token {
-                __tok @ Token::DivideAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            22 => match __token {
-                __tok @ Token::Colon => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            23 => match __token {
-                __tok @ Token::Semicolon => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            24 => match __token {
-                __tok @ Token::Less => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            25 => match __token {
-                __tok @ Token::ShiftLeft => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            26 => match __token {
-                __tok @ Token::ShiftLeftAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            27 => match __token {
-                __tok @ Token::LessEqual => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            28 => match __token {
-                __tok @ Token::Assign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            29 => match __token {
-                __tok @ Token::Equal => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            30 => match __token {
-                __tok @ Token::More => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            31 => match __token {
-                __tok @ Token::MoreEqual => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            32 => match __token {
-                __tok @ Token::ShiftRight => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            33 => match __token {
-                __tok @ Token::ShiftRightAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            34 => match __token {
-                __tok @ Token::Question => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            35 => match __token {
-                __tok @ Token::OpenBracket => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            36 => match __token {
-                __tok @ Token::CloseBracket => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            37 => match __token {
-                __tok @ Token::BitwiseXor => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            38 => match __token {
-                __tok @ Token::BitwiseXorAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            39 => match __token {
-                __tok @ Token::Underscore => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            40 => match __token {
-                __tok @ Token::Address => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            41 => match __token {
-                __tok @ Token::Anonymous => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            42 => match __token {
-                __tok @ Token::Bool => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            43 => match __token {
-                __tok @ Token::Break => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            44 => match __token {
-                __tok @ Token::Calldata => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            45 => match __token {
-                __tok @ Token::Constant => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            46 => match __token {
-                __tok @ Token::Constructor => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            47 => match __token {
-                __tok @ Token::Continue => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            48 => match __token {
-                __tok @ Token::Contract => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            49 => match __token {
-                __tok @ Token::Delete => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            50 => match __token {
-                __tok @ Token::Do => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            51 => match __token {
-                __tok @ Token::Else => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            52 => match __token {
-                __tok @ Token::Emit => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            53 => match __token {
-                __tok @ Token::Enum => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            54 => match __token {
-                __tok @ Token::Event => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            55 => match __token {
-                __tok @ Token::External => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            56 => match __token {
-                __tok @ Token::False => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            57 => match __token {
-                __tok @ Token::For => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            58 => match __token {
-                __tok @ Token::Function => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            59 => match __token {
-                __tok @ Token::If => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            60 => match __token {
-                __tok @ Token::Import => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            61 => match __token {
-                __tok @ Token::Indexed => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            62 => match __token {
-                __tok @ Token::Interface => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            63 => match __token {
-                __tok @ Token::Internal => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            64 => match __token {
-                __tok @ Token::Library => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            65 => match __token {
-                __tok @ Token::Memory => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            66 => match __token {
-                __tok @ Token::New => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            67 => match __token {
-                __tok @ Token::Payable => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            68 => match __token {
-                __tok @ Token::Pragma => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            69 => match __token {
-                __tok @ Token::Private => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            70 => match __token {
-                __tok @ Token::Public => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            71 => match __token {
-                __tok @ Token::Pure => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            72 => match __token {
-                __tok @ Token::Return => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            73 => match __token {
-                __tok @ Token::Returns => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            74 => match __token {
-                __tok @ Token::Storage => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            75 => match __token {
-                __tok @ Token::String => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            76 => match __token {
-                __tok @ Token::Struct => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            77 => match __token {
-                __tok @ Token::Throw => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            78 => match __token {
-                __tok @ Token::True => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            79 => match __token {
-                __tok @ Token::View => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            80 => match __token {
-                __tok @ Token::While => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            81 => match __token {
-                __tok @ Token::OpenCurlyBrace => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            82 => match __token {
-                __tok @ Token::BitwiseOr => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            83 => match __token {
-                __tok @ Token::BitwiseOrAssign => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            84 => match __token {
-                __tok @ Token::Or => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            85 => match __token {
-                __tok @ Token::CloseCurlyBrace => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
-            86 => match __token {
-                __tok @ Token::Complement => __Symbol::Variant0((__tok)),
-                _ => unreachable!(),
-            },
+            0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 => __Symbol::Variant0(__token),
             87 => match __token {
-                Token::Bytes(__tok0) => __Symbol::Variant1((__tok0)),
+                Token::Bytes(__tok0) if true => __Symbol::Variant1(__tok0),
                 _ => unreachable!(),
             },
             88 => match __token {
-                Token::DocComment(__tok0, __tok1) => __Symbol::Variant2((__tok0, __tok1)),
+                Token::DocComment(__tok0, __tok1) if true => __Symbol::Variant2((__tok0, __tok1)),
                 _ => unreachable!(),
             },
-            89 => match __token {
-                Token::Int(__tok0) => __Symbol::Variant3((__tok0)),
+            89 | 95 => match __token {
+                Token::Int(__tok0) | Token::Uint(__tok0) if true => __Symbol::Variant3(__tok0),
                 _ => unreachable!(),
             },
-            90 => match __token {
-                Token::HexLiteral(__tok0) => __Symbol::Variant4((__tok0)),
-                _ => unreachable!(),
-            },
-            91 => match __token {
-                Token::HexNumber(__tok0) => __Symbol::Variant4((__tok0)),
-                _ => unreachable!(),
-            },
-            92 => match __token {
-                Token::Identifier(__tok0) => __Symbol::Variant4((__tok0)),
-                _ => unreachable!(),
-            },
-            93 => match __token {
-                Token::Number(__tok0) => __Symbol::Variant4((__tok0)),
-                _ => unreachable!(),
-            },
-            94 => match __token {
-                Token::StringLiteral(__tok0) => __Symbol::Variant4((__tok0)),
-                _ => unreachable!(),
-            },
-            95 => match __token {
-                Token::Uint(__tok0) => __Symbol::Variant3((__tok0)),
+            90 | 91 | 92 | 93 | 94 => match __token {
+                Token::HexLiteral(__tok0) | Token::HexNumber(__tok0) | Token::Identifier(__tok0) | Token::Number(__tok0) | Token::StringLiteral(__tok0) if true => __Symbol::Variant4(__tok0),
                 _ => unreachable!(),
             },
             _ => unreachable!(),
-        }
-    }
-    fn __simulate_reduce<
-        'input,
-    >(
-        __reduce_index: i16,
-        _: ::std::marker::PhantomData<(&'input ())>,
-    ) -> __state_machine::SimulatedReduce<__StateMachine<'input>>
-    {
-        match __reduce_index {
-            0 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 0,
-                }
-            }
-            1 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 0,
-                }
-            }
-            2 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 1,
-                }
-            }
-            3 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 1,
-                }
-            }
-            4 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 2,
-                }
-            }
-            5 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 3,
-                }
-            }
-            6 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 3,
-                }
-            }
-            7 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 4,
-                }
-            }
-            8 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 5,
-                }
-            }
-            9 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 5,
-                }
-            }
-            10 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 6,
-                }
-            }
-            11 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 7,
-                }
-            }
-            12 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 7,
-                }
-            }
-            13 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 8,
-                }
-            }
-            14 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 9,
-                }
-            }
-            15 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 9,
-                }
-            }
-            16 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 10,
-                }
-            }
-            17 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 10,
-                }
-            }
-            18 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 11,
-                }
-            }
-            19 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 12,
-                }
-            }
-            20 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 12,
-                }
-            }
-            21 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 13,
-                }
-            }
-            22 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 13,
-                }
-            }
-            23 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 14,
-                }
-            }
-            24 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 15,
-                }
-            }
-            25 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 15,
-                }
-            }
-            26 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 16,
-                }
-            }
-            27 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 16,
-                }
-            }
-            28 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 17,
-                }
-            }
-            29 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 18,
-                }
-            }
-            30 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 18,
-                }
-            }
-            31 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 19,
-                }
-            }
-            32 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 19,
-                }
-            }
-            33 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 20,
-                }
-            }
-            34 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 21,
-                }
-            }
-            35 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 21,
-                }
-            }
-            36 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 22,
-                }
-            }
-            37 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 22,
-                }
-            }
-            38 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 23,
-                }
-            }
-            39 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 24,
-                }
-            }
-            40 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 24,
-                }
-            }
-            41 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 25,
-                }
-            }
-            42 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 25,
-                }
-            }
-            43 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 26,
-                }
-            }
-            44 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 27,
-                }
-            }
-            45 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 28,
-                }
-            }
-            46 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 28,
-                }
-            }
-            47 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 29,
-                }
-            }
-            48 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 29,
-                }
-            }
-            49 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 30,
-                }
-            }
-            50 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 30,
-                }
-            }
-            51 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 31,
-                }
-            }
-            52 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            53 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 31,
-                }
-            }
-            54 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 9,
-                    nonterminal_produced: 31,
-                }
-            }
-            55 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 31,
-                }
-            }
-            56 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 31,
-                }
-            }
-            57 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            58 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 31,
-                }
-            }
-            59 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            60 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            61 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 31,
-                }
-            }
-            62 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 9,
-                    nonterminal_produced: 31,
-                }
-            }
-            63 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 31,
-                }
-            }
-            64 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 31,
-                }
-            }
-            65 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            66 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 31,
-                }
-            }
-            67 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            68 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 31,
-                }
-            }
-            69 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 31,
-                }
-            }
-            70 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 32,
-                }
-            }
-            71 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 33,
-                }
-            }
-            72 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 33,
-                }
-            }
-            73 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 33,
-                }
-            }
-            74 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 33,
-                }
-            }
-            75 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 33,
-                }
-            }
-            76 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 34,
-                }
-            }
-            77 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 34,
-                }
-            }
-            78 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 34,
-                }
-            }
-            79 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 35,
-                }
-            }
-            80 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 35,
-                }
-            }
-            81 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 35,
-                }
-            }
-            82 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 35,
-                }
-            }
-            83 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 36,
-                }
-            }
-            84 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 36,
-                }
-            }
-            85 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 37,
-                }
-            }
-            86 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 37,
-                }
-            }
-            87 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 38,
-                }
-            }
-            88 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 38,
-                }
-            }
-            89 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 39,
-                }
-            }
-            90 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 39,
-                }
-            }
-            91 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 40,
-                }
-            }
-            92 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 9,
-                    nonterminal_produced: 40,
-                }
-            }
-            93 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 40,
-                }
-            }
-            94 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 40,
-                }
-            }
-            95 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 41,
-                }
-            }
-            96 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 41,
-                }
-            }
-            97 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 41,
-                }
-            }
-            98 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 41,
-                }
-            }
-            99 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 42,
-                }
-            }
-            100 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 43,
-                }
-            }
-            101 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 43,
-                }
-            }
-            102 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 44,
-                }
-            }
-            103 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 44,
-                }
-            }
-            104 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 45,
-                }
-            }
-            105 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 45,
-                }
-            }
-            106 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 46,
-                }
-            }
-            107 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 46,
-                }
-            }
-            108 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 47,
-                }
-            }
-            109 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 47,
-                }
-            }
-            110 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 47,
-                }
-            }
-            111 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 47,
-                }
-            }
-            112 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 47,
-                }
-            }
-            113 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 47,
-                }
-            }
-            114 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 47,
-                }
-            }
-            115 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 47,
-                }
-            }
-            116 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 47,
-                }
-            }
-            117 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 47,
-                }
-            }
-            118 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 47,
-                }
-            }
-            119 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 47,
-                }
-            }
-            120 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 47,
-                }
-            }
-            121 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 47,
-                }
-            }
-            122 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 8,
-                    nonterminal_produced: 47,
-                }
-            }
-            123 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 47,
-                }
-            }
-            124 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 47,
-                }
-            }
-            125 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 47,
-                }
-            }
-            126 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 47,
-                }
-            }
-            127 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 47,
-                }
-            }
-            128 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 48,
-                }
-            }
-            129 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 49,
-                }
-            }
-            130 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 49,
-                }
-            }
-            131 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 50,
-                }
-            }
-            132 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 51,
-                }
-            }
-            133 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 51,
-                }
-            }
-            134 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 52,
-                }
-            }
-            135 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 53,
-                }
-            }
-            136 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 54,
-                }
-            }
-            137 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 54,
-                }
-            }
-            138 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 54,
-                }
-            }
-            139 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 54,
-                }
-            }
-            140 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 54,
-                }
-            }
-            141 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 54,
-                }
-            }
-            142 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 54,
-                }
-            }
-            143 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 54,
-                }
-            }
-            144 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 54,
-                }
-            }
-            145 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 54,
-                }
-            }
-            146 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 54,
-                }
-            }
-            147 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 54,
-                }
-            }
-            148 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 55,
-                }
-            }
-            149 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 55,
-                }
-            }
-            150 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 55,
-                }
-            }
-            151 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 56,
-                }
-            }
-            152 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 56,
-                }
-            }
-            153 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 56,
-                }
-            }
-            154 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 56,
-                }
-            }
-            155 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 57,
-                }
-            }
-            156 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 57,
-                }
-            }
-            157 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 57,
-                }
-            }
-            158 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 58,
-                }
-            }
-            159 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 59,
-                }
-            }
-            160 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 59,
-                }
-            }
-            161 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 59,
-                }
-            }
-            162 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 59,
-                }
-            }
-            163 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 59,
-                }
-            }
-            164 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 59,
-                }
-            }
-            165 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            166 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            167 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            168 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            169 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 59,
-                }
-            }
-            170 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 59,
-                }
-            }
-            171 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            172 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 59,
-                }
-            }
-            173 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            174 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 59,
-                }
-            }
-            175 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 60,
-                }
-            }
-            176 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 60,
-                }
-            }
-            177 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 4,
-                    nonterminal_produced: 60,
-                }
-            }
-            178 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 60,
-                }
-            }
-            179 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 60,
-                }
-            }
-            180 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 7,
-                    nonterminal_produced: 60,
-                }
-            }
-            181 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 61,
-                }
-            }
-            182 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 61,
-                }
-            }
-            183 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 61,
-                }
-            }
-            184 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 61,
-                }
-            }
-            185 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 61,
-                }
-            }
-            186 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 62,
-                }
-            }
-            187 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 62,
-                }
-            }
-            188 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 62,
-                }
-            }
-            189 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 63,
-                }
-            }
-            190 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 63,
-                }
-            }
-            191 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 64,
-                }
-            }
-            192 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 64,
-                }
-            }
-            193 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 65,
-                }
-            }
-            194 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 65,
-                }
-            }
-            195 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            196 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            197 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            198 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            199 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            200 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            201 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            202 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            203 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            204 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            205 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 66,
-                }
-            }
-            206 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 66,
-                }
-            }
-            207 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            208 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            209 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            210 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            211 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            212 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            213 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 67,
-                }
-            }
-            214 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 67,
-                }
-            }
-            215 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 67,
-                }
-            }
-            216 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 68,
-                }
-            }
-            217 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 68,
-                }
-            }
-            218 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 69,
-                }
-            }
-            219 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 69,
-                }
-            }
-            220 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 69,
-                }
-            }
-            221 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 69,
-                }
-            }
-            222 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 70,
-                }
-            }
-            223 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 70,
-                }
-            }
-            224 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 70,
-                }
-            }
-            225 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 71,
-                }
-            }
-            226 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 71,
-                }
-            }
-            227 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 71,
-                }
-            }
-            228 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 72,
-                }
-            }
-            229 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 72,
-                }
-            }
-            230 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 73,
-                }
-            }
-            231 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 73,
-                }
-            }
-            232 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 74,
-                }
-            }
-            233 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 74,
-                }
-            }
-            234 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 75,
-                }
-            }
-            235 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 75,
-                }
-            }
-            236 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 75,
-                }
-            }
-            237 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 75,
-                }
-            }
-            238 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 75,
-                }
-            }
-            239 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 75,
-                }
-            }
-            240 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 76,
-                }
-            }
-            241 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 76,
-                }
-            }
-            242 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 76,
-                }
-            }
-            243 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 77,
-                }
-            }
-            244 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 77,
-                }
-            }
-            245 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 78,
-                }
-            }
-            246 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 79,
-                }
-            }
-            247 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 79,
-                }
-            }
-            248 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 79,
-                }
-            }
-            249 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 80,
-                }
-            }
-            250 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 80,
-                }
-            }
-            251 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 81,
-                }
-            }
-            252 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 81,
-                }
-            }
-            253 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 81,
-                }
-            }
-            254 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 82,
-                }
-            }
-            255 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 82,
-                }
-            }
-            256 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 83,
-                }
-            }
-            257 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 83,
-                }
-            }
-            258 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 84,
-                }
-            }
-            259 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 84,
-                }
-            }
-            260 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 85,
-                }
-            }
-            261 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 85,
-                }
-            }
-            262 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 85,
-                }
-            }
-            263 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 86,
-                }
-            }
-            264 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 86,
-                }
-            }
-            265 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 87,
-                }
-            }
-            266 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 88,
-                }
-            }
-            267 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 88,
-                }
-            }
-            268 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 5,
-                    nonterminal_produced: 89,
-                }
-            }
-            269 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 6,
-                    nonterminal_produced: 89,
-                }
-            }
-            270 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 90,
-                }
-            }
-            271 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 90,
-                }
-            }
-            272 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 90,
-                }
-            }
-            273 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 91,
-                }
-            }
-            274 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 91,
-                }
-            }
-            275 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 0,
-                    nonterminal_produced: 92,
-                }
-            }
-            276 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 92,
-                }
-            }
-            277 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 93,
-                }
-            }
-            278 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 93,
-                }
-            }
-            279 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 3,
-                    nonterminal_produced: 94,
-                }
-            }
-            280 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 2,
-                    nonterminal_produced: 94,
-                }
-            }
-            281 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 95,
-                }
-            }
-            282 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 95,
-                }
-            }
-            283 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 95,
-                }
-            }
-            284 => {
-                __state_machine::SimulatedReduce::Reduce {
-                    states_to_pop: 1,
-                    nonterminal_produced: 95,
-                }
-            }
-            285 => __state_machine::SimulatedReduce::Accept,
-            _ => panic!("invalid reduction index {}", __reduce_index)
         }
     }
     pub struct SourceUnitParser {
@@ -5252,859 +3163,859 @@ mod __parse__SourceUnit {
     {
         let (__pop_states, __nonterminal) = match __action {
             0 => {
-                __reduce0(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce0(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             1 => {
-                __reduce1(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce1(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             2 => {
-                __reduce2(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce2(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             3 => {
-                __reduce3(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce3(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             4 => {
-                __reduce4(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce4(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             5 => {
-                __reduce5(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce5(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             6 => {
-                __reduce6(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce6(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             7 => {
-                __reduce7(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce7(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             8 => {
-                __reduce8(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce8(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             9 => {
-                __reduce9(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce9(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             10 => {
-                __reduce10(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce10(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             11 => {
-                __reduce11(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce11(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             12 => {
-                __reduce12(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce12(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             13 => {
-                __reduce13(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce13(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             14 => {
-                __reduce14(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce14(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             15 => {
-                __reduce15(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce15(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             16 => {
-                __reduce16(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce16(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             17 => {
-                __reduce17(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce17(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             18 => {
-                __reduce18(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce18(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             19 => {
-                __reduce19(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce19(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             20 => {
-                __reduce20(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce20(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             21 => {
-                __reduce21(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce21(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             22 => {
-                __reduce22(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce22(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             23 => {
-                __reduce23(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce23(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             24 => {
-                __reduce24(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce24(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             25 => {
-                __reduce25(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce25(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             26 => {
-                __reduce26(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce26(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             27 => {
-                __reduce27(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce27(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             28 => {
-                __reduce28(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce28(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             29 => {
-                __reduce29(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce29(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             30 => {
-                __reduce30(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce30(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             31 => {
-                __reduce31(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce31(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             32 => {
-                __reduce32(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce32(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             33 => {
-                __reduce33(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce33(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             34 => {
-                __reduce34(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce34(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             35 => {
-                __reduce35(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce35(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             36 => {
-                __reduce36(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce36(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             37 => {
-                __reduce37(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce37(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             38 => {
-                __reduce38(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce38(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             39 => {
-                __reduce39(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce39(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             40 => {
-                __reduce40(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce40(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             41 => {
-                __reduce41(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce41(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             42 => {
-                __reduce42(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce42(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             43 => {
-                __reduce43(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce43(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             44 => {
-                __reduce44(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce44(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             45 => {
-                __reduce45(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce45(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             46 => {
-                __reduce46(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce46(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             47 => {
-                __reduce47(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce47(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             48 => {
-                __reduce48(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce48(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             49 => {
-                __reduce49(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce49(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             50 => {
-                __reduce50(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce50(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             51 => {
-                __reduce51(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce51(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             52 => {
-                __reduce52(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce52(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             53 => {
-                __reduce53(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce53(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             54 => {
-                __reduce54(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce54(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             55 => {
-                __reduce55(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce55(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             56 => {
-                __reduce56(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce56(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             57 => {
-                __reduce57(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce57(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             58 => {
-                __reduce58(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce58(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             59 => {
-                __reduce59(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce59(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             60 => {
-                __reduce60(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce60(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             61 => {
-                __reduce61(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce61(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             62 => {
-                __reduce62(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce62(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             63 => {
-                __reduce63(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce63(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             64 => {
-                __reduce64(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce64(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             65 => {
-                __reduce65(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce65(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             66 => {
-                __reduce66(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce66(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             67 => {
-                __reduce67(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce67(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             68 => {
-                __reduce68(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce68(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             69 => {
-                __reduce69(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce69(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             70 => {
-                __reduce70(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce70(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             71 => {
-                __reduce71(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce71(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             72 => {
-                __reduce72(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce72(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             73 => {
-                __reduce73(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce73(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             74 => {
-                __reduce74(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce74(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             75 => {
-                __reduce75(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce75(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             76 => {
-                __reduce76(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce76(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             77 => {
-                __reduce77(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce77(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             78 => {
-                __reduce78(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce78(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             79 => {
-                __reduce79(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce79(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             80 => {
-                __reduce80(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce80(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             81 => {
-                __reduce81(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce81(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             82 => {
-                __reduce82(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce82(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             83 => {
-                __reduce83(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce83(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             84 => {
-                __reduce84(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce84(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             85 => {
-                __reduce85(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce85(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             86 => {
-                __reduce86(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce86(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             87 => {
-                __reduce87(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce87(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             88 => {
-                __reduce88(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce88(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             89 => {
-                __reduce89(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce89(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             90 => {
-                __reduce90(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce90(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             91 => {
-                __reduce91(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce91(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             92 => {
-                __reduce92(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce92(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             93 => {
-                __reduce93(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce93(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             94 => {
-                __reduce94(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce94(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             95 => {
-                __reduce95(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce95(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             96 => {
-                __reduce96(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce96(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             97 => {
-                __reduce97(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce97(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             98 => {
-                __reduce98(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce98(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             99 => {
-                __reduce99(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce99(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             100 => {
-                __reduce100(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce100(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             101 => {
-                __reduce101(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce101(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             102 => {
-                __reduce102(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce102(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             103 => {
-                __reduce103(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce103(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             104 => {
-                __reduce104(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce104(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             105 => {
-                __reduce105(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce105(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             106 => {
-                __reduce106(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce106(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             107 => {
-                __reduce107(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce107(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             108 => {
-                __reduce108(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce108(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             109 => {
-                __reduce109(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce109(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             110 => {
-                __reduce110(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce110(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             111 => {
-                __reduce111(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce111(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             112 => {
-                __reduce112(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce112(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             113 => {
-                __reduce113(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce113(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             114 => {
-                __reduce114(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce114(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             115 => {
-                __reduce115(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce115(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             116 => {
-                __reduce116(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce116(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             117 => {
-                __reduce117(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce117(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             118 => {
-                __reduce118(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce118(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             119 => {
-                __reduce119(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce119(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             120 => {
-                __reduce120(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce120(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             121 => {
-                __reduce121(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce121(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             122 => {
-                __reduce122(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce122(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             123 => {
-                __reduce123(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce123(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             124 => {
-                __reduce124(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce124(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             125 => {
-                __reduce125(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce125(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             126 => {
-                __reduce126(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce126(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             127 => {
-                __reduce127(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce127(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             128 => {
-                __reduce128(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce128(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             129 => {
-                __reduce129(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce129(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             130 => {
-                __reduce130(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce130(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             131 => {
-                __reduce131(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce131(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             132 => {
-                __reduce132(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce132(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             133 => {
-                __reduce133(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce133(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             134 => {
-                __reduce134(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce134(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             135 => {
-                __reduce135(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce135(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             136 => {
-                __reduce136(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce136(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             137 => {
-                __reduce137(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce137(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             138 => {
-                __reduce138(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce138(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             139 => {
-                __reduce139(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce139(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             140 => {
-                __reduce140(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce140(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             141 => {
-                __reduce141(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce141(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             142 => {
-                __reduce142(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce142(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             143 => {
-                __reduce143(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce143(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             144 => {
-                __reduce144(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce144(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             145 => {
-                __reduce145(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce145(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             146 => {
-                __reduce146(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce146(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             147 => {
-                __reduce147(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce147(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             148 => {
-                __reduce148(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce148(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             149 => {
-                __reduce149(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce149(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             150 => {
-                __reduce150(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce150(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             151 => {
-                __reduce151(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce151(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             152 => {
-                __reduce152(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce152(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             153 => {
-                __reduce153(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce153(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             154 => {
-                __reduce154(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce154(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             155 => {
-                __reduce155(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce155(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             156 => {
-                __reduce156(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce156(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             157 => {
-                __reduce157(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce157(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             158 => {
-                __reduce158(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce158(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             159 => {
-                __reduce159(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce159(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             160 => {
-                __reduce160(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce160(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             161 => {
-                __reduce161(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce161(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             162 => {
-                __reduce162(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce162(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             163 => {
-                __reduce163(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce163(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             164 => {
-                __reduce164(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce164(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             165 => {
-                __reduce165(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce165(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             166 => {
-                __reduce166(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce166(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             167 => {
-                __reduce167(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce167(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             168 => {
-                __reduce168(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce168(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             169 => {
-                __reduce169(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce169(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             170 => {
-                __reduce170(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce170(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             171 => {
-                __reduce171(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce171(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             172 => {
-                __reduce172(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce172(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             173 => {
-                __reduce173(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce173(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             174 => {
-                __reduce174(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce174(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             175 => {
-                __reduce175(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce175(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             176 => {
-                __reduce176(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce176(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             177 => {
-                __reduce177(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce177(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             178 => {
-                __reduce178(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce178(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             179 => {
-                __reduce179(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce179(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             180 => {
-                __reduce180(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce180(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             181 => {
-                __reduce181(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce181(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             182 => {
-                __reduce182(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce182(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             183 => {
-                __reduce183(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce183(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             184 => {
-                __reduce184(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce184(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             185 => {
-                __reduce185(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce185(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             186 => {
-                __reduce186(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce186(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             187 => {
-                __reduce187(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce187(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             188 => {
-                __reduce188(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce188(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             189 => {
-                __reduce189(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce189(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             190 => {
-                __reduce190(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce190(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             191 => {
-                __reduce191(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce191(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             192 => {
-                __reduce192(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce192(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             193 => {
-                __reduce193(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce193(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             194 => {
-                __reduce194(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce194(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             195 => {
-                __reduce195(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce195(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             196 => {
-                __reduce196(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce196(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             197 => {
-                __reduce197(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce197(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             198 => {
-                __reduce198(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce198(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             199 => {
-                __reduce199(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce199(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             200 => {
-                __reduce200(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce200(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             201 => {
-                __reduce201(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce201(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             202 => {
-                __reduce202(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce202(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             203 => {
-                __reduce203(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce203(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             204 => {
-                __reduce204(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce204(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             205 => {
-                __reduce205(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce205(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             206 => {
-                __reduce206(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce206(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             207 => {
-                __reduce207(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce207(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             208 => {
-                __reduce208(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce208(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             209 => {
-                __reduce209(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce209(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             210 => {
-                __reduce210(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce210(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             211 => {
-                __reduce211(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce211(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             212 => {
-                __reduce212(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce212(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             213 => {
-                __reduce213(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce213(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             214 => {
-                __reduce214(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce214(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             215 => {
-                __reduce215(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce215(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             216 => {
-                __reduce216(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce216(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             217 => {
-                __reduce217(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce217(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             218 => {
-                __reduce218(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce218(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             219 => {
-                __reduce219(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce219(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             220 => {
-                __reduce220(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce220(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             221 => {
-                __reduce221(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce221(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             222 => {
-                __reduce222(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce222(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             223 => {
-                __reduce223(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce223(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             224 => {
-                __reduce224(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce224(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             225 => {
-                __reduce225(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce225(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             226 => {
-                __reduce226(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce226(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             227 => {
-                __reduce227(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce227(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             228 => {
-                __reduce228(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce228(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             229 => {
-                __reduce229(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce229(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             230 => {
-                __reduce230(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce230(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             231 => {
-                __reduce231(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce231(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             232 => {
-                __reduce232(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce232(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             233 => {
-                __reduce233(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce233(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             234 => {
-                __reduce234(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce234(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             235 => {
-                __reduce235(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce235(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             236 => {
-                __reduce236(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce236(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             237 => {
-                __reduce237(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce237(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             238 => {
-                __reduce238(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce238(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             239 => {
-                __reduce239(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce239(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             240 => {
-                __reduce240(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce240(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             241 => {
-                __reduce241(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce241(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             242 => {
-                __reduce242(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce242(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             243 => {
-                __reduce243(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce243(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             244 => {
-                __reduce244(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce244(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             245 => {
-                __reduce245(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce245(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             246 => {
-                __reduce246(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce246(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             247 => {
-                __reduce247(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce247(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             248 => {
-                __reduce248(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce248(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             249 => {
-                __reduce249(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce249(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             250 => {
-                __reduce250(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce250(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             251 => {
-                __reduce251(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce251(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             252 => {
-                __reduce252(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce252(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             253 => {
-                __reduce253(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce253(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             254 => {
-                __reduce254(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce254(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             255 => {
-                __reduce255(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce255(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             256 => {
-                __reduce256(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce256(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             257 => {
-                __reduce257(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce257(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             258 => {
-                __reduce258(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce258(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             259 => {
-                __reduce259(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce259(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             260 => {
-                __reduce260(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce260(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             261 => {
-                __reduce261(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce261(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             262 => {
-                __reduce262(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce262(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             263 => {
-                __reduce263(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce263(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             264 => {
-                __reduce264(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce264(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             265 => {
-                __reduce265(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce265(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             266 => {
-                __reduce266(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce266(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             267 => {
-                __reduce267(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce267(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             268 => {
-                __reduce268(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce268(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             269 => {
-                __reduce269(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce269(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             270 => {
-                __reduce270(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce270(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             271 => {
-                __reduce271(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce271(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             272 => {
-                __reduce272(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce272(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             273 => {
-                __reduce273(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce273(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             274 => {
-                __reduce274(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce274(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             275 => {
-                __reduce275(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce275(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             276 => {
-                __reduce276(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce276(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             277 => {
-                __reduce277(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce277(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             278 => {
-                __reduce278(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce278(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             279 => {
-                __reduce279(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce279(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             280 => {
-                __reduce280(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce280(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             281 => {
-                __reduce281(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce281(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             282 => {
-                __reduce282(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce282(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             283 => {
-                __reduce283(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce283(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             284 => {
-                __reduce284(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce284(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             285 => {
                 // __SourceUnit = SourceUnit => ActionFn(0);
@@ -6765,9 +4676,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6784,9 +4693,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6802,9 +4709,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6821,9 +4726,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6839,14 +4742,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("=" <Expression>) = "=", Expression => ActionFn(186);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -6859,14 +4761,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("=" <Expression>)? = "=", Expression => ActionFn(237);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -6879,9 +4780,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6897,14 +4796,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList>) = "returns", ParameterList => ActionFn(164);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -6917,14 +4815,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList>)? = "returns", ParameterList => ActionFn(242);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -6937,9 +4834,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6955,9 +4850,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6974,9 +4867,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -6993,14 +4884,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<ContractPart>)+ = (<ContractPart>)+, ContractPart => ActionFn(250);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant10(__symbols);
         let __sym0 = __pop_Variant11(__symbols);
         let __start = __sym0.0.clone();
@@ -7013,14 +4903,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<EventParameter> ",") = EventParameter, "," => ActionFn(196);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant12(__symbols);
         let __start = __sym0.0.clone();
@@ -7033,9 +4922,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7051,9 +4938,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7070,14 +4955,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<EventParameter> ",")+ = EventParameter, "," => ActionFn(251);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant12(__symbols);
         let __start = __sym0.0.clone();
@@ -7090,14 +4974,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<EventParameter> ",")+ = (<EventParameter> ",")+, EventParameter, "," => ActionFn(252);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant12(__symbols);
         let __sym0 = __pop_Variant13(__symbols);
@@ -7111,14 +4994,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Expression> ",") = Expression, "," => ActionFn(183);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
@@ -7131,9 +5013,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7149,9 +5029,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7168,14 +5046,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Expression> ",")+ = Expression, "," => ActionFn(257);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
@@ -7188,14 +5065,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Expression> ",")+ = (<Expression> ",")+, Expression, "," => ActionFn(258);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant14(__symbols);
@@ -7209,14 +5085,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Identifier> ",") = Identifier, "," => ActionFn(191);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant15(__symbols);
         let __start = __sym0.0.clone();
@@ -7229,9 +5104,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7247,9 +5120,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7266,14 +5137,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Identifier> ",")+ = Identifier, "," => ActionFn(263);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant15(__symbols);
         let __start = __sym0.0.clone();
@@ -7286,14 +5156,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Identifier> ",")+ = (<Identifier> ",")+, Identifier, "," => ActionFn(264);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant16(__symbols);
@@ -7307,14 +5176,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<NamedArgument> ",") = NamedArgument, "," => ActionFn(180);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant17(__symbols);
         let __start = __sym0.0.clone();
@@ -7327,9 +5195,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7345,9 +5211,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7364,14 +5228,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<NamedArgument> ",")+ = NamedArgument, "," => ActionFn(267);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant17(__symbols);
         let __start = __sym0.0.clone();
@@ -7384,14 +5247,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<NamedArgument> ",")+ = (<NamedArgument> ",")+, NamedArgument, "," => ActionFn(268);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant17(__symbols);
         let __sym0 = __pop_Variant18(__symbols);
@@ -7405,14 +5267,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Parameter> ",") = Parameter, "," => ActionFn(169);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant19(__symbols);
         let __start = __sym0.0.clone();
@@ -7425,9 +5286,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7443,9 +5302,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7462,14 +5319,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Parameter> ",")+ = Parameter, "," => ActionFn(271);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant19(__symbols);
         let __start = __sym0.0.clone();
@@ -7482,14 +5338,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<Parameter> ",")+ = (<Parameter> ",")+, Parameter, "," => ActionFn(272);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant19(__symbols);
         let __sym0 = __pop_Variant20(__symbols);
@@ -7503,14 +5358,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";") = VariableDeclaration, ";" => ActionFn(206);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant21(__symbols);
         let __start = __sym0.0.clone();
@@ -7523,9 +5377,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7541,9 +5393,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7560,14 +5410,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";")+ = VariableDeclaration, ";" => ActionFn(275);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant21(__symbols);
         let __start = __sym0.0.clone();
@@ -7580,14 +5429,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";")+ = (<VariableDeclaration> ";")+, VariableDeclaration, ";" => ActionFn(276);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant21(__symbols);
         let __sym0 = __pop_Variant22(__symbols);
@@ -7601,9 +5449,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7619,9 +5465,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7637,14 +5481,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ArrayDimension = "[", "]" => ActionFn(14);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -7657,14 +5500,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ArrayDimension = "[", Expression, "]" => ActionFn(15);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -7678,9 +5520,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7697,14 +5537,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ArrayDimension+ = ArrayDimension+, ArrayDimension => ActionFn(210);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant24(__symbols);
         let __sym0 = __pop_Variant25(__symbols);
         let __start = __sym0.0.clone();
@@ -7717,14 +5556,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatement = "{", "}" => ActionFn(499);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -7737,14 +5575,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatement = "{", Statement+, "}" => ActionFn(500);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant49(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -7758,9 +5595,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -7777,14 +5612,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "if", "(", Expression, ")", ClosedStatement, "else", ClosedStatement => ActionFn(136);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant27(__symbols);
@@ -7802,14 +5636,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "while", "(", Expression, ")", ClosedStatement => ActionFn(137);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
@@ -7825,14 +5658,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(483);
+        assert!(__symbols.len() >= 9);
         let __sym8 = __pop_Variant27(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant27(__symbols);
@@ -7852,14 +5684,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ClosedStatement => ActionFn(484);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -7878,14 +5709,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(485);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -7904,14 +5734,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", ")", ClosedStatement => ActionFn(486);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -7929,14 +5758,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(487);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -7955,14 +5783,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ClosedStatement => ActionFn(488);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -7980,14 +5807,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(489);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant27(__symbols);
@@ -8005,14 +5831,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", ")", ClosedStatement => ActionFn(490);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant27(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8029,14 +5854,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(491);
+        assert!(__symbols.len() >= 9);
         let __sym8 = __pop_Variant0(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant27(__symbols);
@@ -8056,14 +5880,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ";" => ActionFn(492);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -8082,14 +5905,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(493);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -8108,14 +5930,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", ")", ";" => ActionFn(494);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -8133,14 +5954,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ";" => ActionFn(495);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant27(__symbols);
@@ -8159,14 +5979,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ";" => ActionFn(496);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -8184,14 +6003,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ";" => ActionFn(497);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant27(__symbols);
@@ -8209,14 +6027,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", ")", ";" => ActionFn(498);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8233,14 +6050,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractDefinition = DocComments, ContractType, Identifier, "{", (<ContractPart>)+, "}" => ActionFn(360);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant11(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8257,9 +6073,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8276,9 +6090,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8295,9 +6107,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8314,9 +6124,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8333,9 +6141,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8352,9 +6158,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8371,9 +6175,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8390,9 +6192,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8409,14 +6209,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractVariableDefinition = DocComments, Type, Identifier, "=", Expression, ";" => ActionFn(505);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant6(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8433,14 +6232,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractVariableDefinition = DocComments, Type, VariableAttribute+, Identifier, "=", Expression, ";" => ActionFn(506);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant6(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -8458,14 +6256,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractVariableDefinition = DocComments, Type, Identifier, ";" => ActionFn(507);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant54(__symbols);
@@ -8480,14 +6277,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractVariableDefinition = DocComments, Type, VariableAttribute+, Identifier, ";" => ActionFn(508);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant15(__symbols);
         let __sym2 = __pop_Variant56(__symbols);
@@ -8503,9 +6299,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8521,9 +6315,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8540,9 +6332,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8559,14 +6349,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // DocComment+ = DocComment+, DocComment => ActionFn(216);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant2(__symbols);
         let __sym0 = __pop_Variant31(__symbols);
         let __start = __sym0.0.clone();
@@ -8579,9 +6368,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8597,9 +6384,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8616,14 +6401,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EnumDefinition = DocComments, "enum", Identifier, "{", Identifier, "}" => ActionFn(265);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant15(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8640,14 +6424,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EnumDefinition = DocComments, "enum", Identifier, "{", (<Identifier> ",")+, Identifier, "}" => ActionFn(266);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant15(__symbols);
         let __sym4 = __pop_Variant16(__symbols);
@@ -8665,14 +6448,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventDefinition = DocComments, "event", Identifier, "(", EventParameter, ")", "anonymous", ";" => ActionFn(253);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -8691,14 +6473,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventDefinition = DocComments, "event", Identifier, "(", (<EventParameter> ",")+, EventParameter, ")", "anonymous", ";" => ActionFn(254);
+        assert!(__symbols.len() >= 9);
         let __sym8 = __pop_Variant0(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -8718,14 +6499,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventDefinition = DocComments, "event", Identifier, "(", EventParameter, ")", ";" => ActionFn(255);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant12(__symbols);
@@ -8743,14 +6523,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventDefinition = DocComments, "event", Identifier, "(", (<EventParameter> ",")+, EventParameter, ")", ";" => ActionFn(256);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant12(__symbols);
@@ -8769,14 +6548,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Type, "indexed", Identifier => ActionFn(461);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
@@ -8790,14 +6568,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Type, "indexed" => ActionFn(462);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
@@ -8810,14 +6587,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Type, Identifier => ActionFn(463);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
@@ -8830,9 +6606,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8849,9 +6623,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8868,9 +6640,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8887,9 +6657,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8905,9 +6673,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8924,9 +6690,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8943,9 +6707,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8961,9 +6723,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8980,9 +6740,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -8999,14 +6757,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute+ = FunctionAttribute+, FunctionAttribute => ActionFn(230);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant35(__symbols);
         let __sym0 = __pop_Variant36(__symbols);
         let __start = __sym0.0.clone();
@@ -9019,14 +6776,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "constructor", ParameterList, "returns", ParameterList, BlockStatement => ActionFn(449);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant26(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -9043,14 +6799,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "constructor", ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(450);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant26(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9068,14 +6823,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "constructor", ParameterList, BlockStatement => ActionFn(451);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant26(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
@@ -9090,14 +6844,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "constructor", ParameterList, FunctionAttribute+, BlockStatement => ActionFn(452);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant26(__symbols);
         let __sym3 = __pop_Variant36(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -9113,14 +6866,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, "returns", ParameterList, ";" => ActionFn(465);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9138,14 +6890,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, "returns", ParameterList, ";" => ActionFn(466);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -9162,14 +6913,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, ";" => ActionFn(467);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant8(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -9188,14 +6938,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, "returns", ParameterList, ";" => ActionFn(468);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9213,14 +6962,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, ";" => ActionFn(469);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
@@ -9236,14 +6984,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, ";" => ActionFn(470);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
@@ -9258,14 +7005,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, ";" => ActionFn(471);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant36(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
@@ -9282,14 +7028,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, ";" => ActionFn(472);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant36(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -9305,14 +7050,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, "returns", ParameterList, BlockStatement => ActionFn(473);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant26(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9330,14 +7074,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, "returns", ParameterList, BlockStatement => ActionFn(474);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant26(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -9354,14 +7097,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(475);
+        assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant26(__symbols);
         let __sym6 = __pop_Variant8(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -9380,14 +7122,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatement => ActionFn(476);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant26(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -9405,14 +7146,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, BlockStatement => ActionFn(477);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant26(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
@@ -9428,14 +7168,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, BlockStatement => ActionFn(478);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant26(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
@@ -9450,14 +7189,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, BlockStatement => ActionFn(479);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant26(__symbols);
         let __sym4 = __pop_Variant36(__symbols);
         let __sym3 = __pop_Variant8(__symbols);
@@ -9474,14 +7212,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", ParameterList, FunctionAttribute+, BlockStatement => ActionFn(480);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant26(__symbols);
         let __sym3 = __pop_Variant36(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -9497,9 +7234,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -9516,9 +7251,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -9535,14 +7268,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // HexLiteral+ = HexLiteral+, HexLiteral => ActionFn(173);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant38(__symbols);
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
@@ -9555,9 +7287,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -9574,9 +7304,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -9593,9 +7321,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -9611,14 +7337,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ImportDirective = "import", StringLiteral, ";" => ActionFn(5);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant41(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -9632,14 +7357,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NamedArgument = Identifier, ":", Expression => ActionFn(99);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant15(__symbols);
@@ -9653,9 +7377,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -9672,14 +7394,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = SimpleStatement, ";" => ActionFn(145);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
@@ -9692,14 +7413,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "_", ";" => ActionFn(146);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -9712,14 +7432,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "do", Statement, "while", "(", Expression, ")", ";" => ActionFn(147);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant6(__symbols);
@@ -9737,14 +7456,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "continue", ";" => ActionFn(148);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -9757,14 +7475,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "break", ";" => ActionFn(149);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -9777,14 +7494,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "return", ";" => ActionFn(371);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -9797,14 +7513,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "return", Expression, ";" => ActionFn(372);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -9818,14 +7533,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "return", "(", (<Expression> ",")+, Expression, ")", ";" => ActionFn(373);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant6(__symbols);
@@ -9842,14 +7556,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "throw", ";" => ActionFn(153);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -9862,14 +7575,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "emit", Identifier, "(", ")", ";" => ActionFn(154);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant0(__symbols);
@@ -9885,14 +7597,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "emit", Identifier, "(", (<Expression> ",")+, Expression, ")", ";" => ActionFn(155);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant6(__symbols);
@@ -9910,14 +7621,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OpenStatement = "if", "(", Expression, ")", Statement => ActionFn(132);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
@@ -9933,14 +7643,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OpenStatement = "if", "(", Expression, ")", ClosedStatement, "else", OpenStatement => ActionFn(133);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant27(__symbols);
@@ -9958,14 +7667,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OpenStatement = "while", "(", Expression, ")", OpenStatement => ActionFn(134);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
@@ -9981,14 +7689,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Type, StorageLocation, Identifier => ActionFn(501);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant50(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
@@ -10002,14 +7709,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Type, Identifier => ActionFn(502);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
@@ -10022,14 +7728,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Type, StorageLocation => ActionFn(503);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant50(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
@@ -10042,9 +7747,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10061,14 +7764,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList = "(", ")" => ActionFn(121);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -10081,14 +7783,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList = "(", Parameter, ")" => ActionFn(273);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant19(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -10102,14 +7803,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList = "(", (<Parameter> ",")+, Parameter, ")" => ActionFn(274);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant19(__symbols);
         let __sym1 = __pop_Variant20(__symbols);
@@ -10124,14 +7824,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // PragmaDirective = "pragma", Identifier, StringLiteral => ActionFn(6);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant41(__symbols);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -10145,14 +7844,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = Precedence0, "++" => ActionFn(374);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
@@ -10165,14 +7863,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = Precedence0, "--" => ActionFn(375);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
@@ -10185,14 +7882,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = "new", Type, "(", ")" => ActionFn(376);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant54(__symbols);
@@ -10207,14 +7903,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = Precedence0, "[", Expression, "]" => ActionFn(447);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
@@ -10229,14 +7924,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = Precedence0, "[", "]" => ActionFn(448);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10250,14 +7944,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = Precedence0, ".", Identifier => ActionFn(378);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10271,9 +7964,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10290,9 +7981,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10309,9 +7998,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10328,9 +8015,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10347,14 +8032,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = "[", Expression, "]" => ActionFn(381);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -10368,14 +8052,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = "[", (<Expression> ",")+, Expression, "]" => ActionFn(382);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant14(__symbols);
@@ -10390,9 +8073,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10409,14 +8090,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = "(", Expression, ")" => ActionFn(115);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
@@ -10430,9 +8110,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10449,9 +8127,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10468,14 +8144,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence1 = Type, "(", ")" => ActionFn(385);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
@@ -10489,14 +8164,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence1 = Type, "(", "{", "}", ")" => ActionFn(386);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant0(__symbols);
@@ -10512,14 +8186,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence1 = Type, "(", Expression, ")" => ActionFn(387);
+        assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
@@ -10534,14 +8207,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence1 = Type, "(", (<Expression> ",")+, Expression, ")" => ActionFn(388);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant6(__symbols);
         let __sym2 = __pop_Variant14(__symbols);
@@ -10557,14 +8229,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence1 = Type, "(", "{", NamedArgument, "}", ")" => ActionFn(389);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant17(__symbols);
@@ -10581,14 +8252,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence1 = Type, "(", "{", (<NamedArgument> ",")+, NamedArgument, "}", ")" => ActionFn(390);
+        assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant17(__symbols);
@@ -10606,14 +8276,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, "<", Precedence9 => ActionFn(391);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10627,14 +8296,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, ">", Precedence9 => ActionFn(392);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10648,14 +8316,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, "<=", Precedence9 => ActionFn(393);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10669,14 +8336,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, ">=", Precedence9 => ActionFn(394);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10690,9 +8356,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10709,14 +8373,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence11 = Precedence11, "==", Precedence10 => ActionFn(395);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10730,14 +8393,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence11 = Precedence11, "!=", Precedence10 => ActionFn(396);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10751,9 +8413,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10770,14 +8430,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence12 = Precedence12, "&&", Precedence11 => ActionFn(397);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10791,9 +8450,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10810,14 +8467,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence13 = Precedence13, "||", Precedence12 => ActionFn(398);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10831,9 +8487,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10850,14 +8504,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence14 = Precedence14, "?", Precedence13, ":", Precedence13 => ActionFn(399);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant6(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant6(__symbols);
@@ -10873,9 +8526,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -10892,14 +8543,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "=", Precedence15 => ActionFn(400);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10913,14 +8563,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "|=", Precedence15 => ActionFn(401);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10934,14 +8583,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "^=", Precedence15 => ActionFn(402);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10955,14 +8603,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "&=", Precedence15 => ActionFn(403);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10976,14 +8623,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "<<=", Precedence15 => ActionFn(404);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -10997,14 +8643,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, ">>=", Precedence15 => ActionFn(405);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11018,14 +8663,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "+=", Precedence15 => ActionFn(406);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11039,14 +8683,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "-=", Precedence15 => ActionFn(407);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11060,14 +8703,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "*=", Precedence15 => ActionFn(408);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11081,14 +8723,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "/=", Precedence15 => ActionFn(409);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11102,14 +8743,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "%=", Precedence15 => ActionFn(410);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11123,9 +8763,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11142,14 +8780,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "!", Precedence2 => ActionFn(411);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11162,14 +8799,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "~", Precedence2 => ActionFn(412);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11182,14 +8818,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "delete", Precedence2 => ActionFn(413);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11202,14 +8837,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "++", Precedence2 => ActionFn(414);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11222,14 +8856,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "--", Precedence2 => ActionFn(415);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11242,14 +8875,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "+", Precedence2 => ActionFn(416);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11262,14 +8894,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "-", Precedence2 => ActionFn(417);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant6(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
@@ -11282,9 +8913,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11301,9 +8930,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11320,14 +8947,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence3 = Precedence3, "**", Precedence2 => ActionFn(418);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11341,9 +8967,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11360,14 +8984,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence4, "*", Precedence3 => ActionFn(419);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11381,14 +9004,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence4, "/", Precedence3 => ActionFn(420);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11402,14 +9024,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence4, "%", Precedence3 => ActionFn(421);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11423,9 +9044,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11442,14 +9061,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence5 = Precedence5, "+", Precedence4 => ActionFn(422);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11463,14 +9081,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence5 = Precedence5, "-", Precedence4 => ActionFn(423);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11484,9 +9101,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11503,14 +9118,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence6 = Precedence6, "<<", Precedence5 => ActionFn(424);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11524,14 +9138,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence6 = Precedence6, ">>", Precedence5 => ActionFn(425);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11545,9 +9158,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11564,14 +9175,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence7 = Precedence7, "&", Precedence6 => ActionFn(426);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11585,9 +9195,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11604,14 +9212,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence8 = Precedence8, "^", Precedence7 => ActionFn(427);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11625,9 +9232,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11644,14 +9249,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence9 = Precedence9, "|", Precedence8 => ActionFn(428);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant6(__symbols);
@@ -11665,9 +9269,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11684,9 +9286,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11703,9 +9303,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11722,9 +9320,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11741,9 +9337,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11760,9 +9354,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11779,9 +9371,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11798,14 +9388,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SimpleStatement = VariableDeclaration, "=", Expression => ActionFn(240);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant6(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant21(__symbols);
@@ -11819,9 +9408,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11838,9 +9425,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11857,9 +9442,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11876,9 +9459,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11894,9 +9475,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11913,9 +9492,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11932,9 +9509,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11951,9 +9526,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11970,9 +9543,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -11989,14 +9560,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart+ = SourceUnitPart+, SourceUnitPart => ActionFn(214);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant46(__symbols);
         let __sym0 = __pop_Variant47(__symbols);
         let __start = __sym0.0.clone();
@@ -12009,9 +9579,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12028,9 +9596,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12047,9 +9613,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12066,9 +9630,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12085,9 +9647,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12104,9 +9664,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12122,9 +9680,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12141,9 +9697,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12160,14 +9714,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement+ = Statement+, Statement => ActionFn(232);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant27(__symbols);
         let __sym0 = __pop_Variant49(__symbols);
         let __start = __sym0.0.clone();
@@ -12180,9 +9733,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12199,9 +9750,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12218,9 +9767,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12237,9 +9784,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12256,9 +9801,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12274,9 +9817,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12293,9 +9834,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12312,14 +9851,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StringLiteral+ = StringLiteral+, StringLiteral => ActionFn(175);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant41(__symbols);
         let __sym0 = __pop_Variant52(__symbols);
         let __start = __sym0.0.clone();
@@ -12332,14 +9870,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StructDefinition = DocComments, "struct", Identifier, "{", "}" => ActionFn(277);
+        assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant15(__symbols);
@@ -12355,14 +9892,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StructDefinition = DocComments, "struct", Identifier, "{", (<VariableDeclaration> ";")+, "}" => ActionFn(278);
+        assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant22(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -12379,9 +9915,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12398,14 +9932,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Type = PrimitiveType, ArrayDimension+ => ActionFn(17);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant25(__symbols);
         let __sym0 = __pop_Variant43(__symbols);
         let __start = __sym0.0.clone();
@@ -12418,9 +9951,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12437,9 +9968,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12456,9 +9985,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12475,9 +10002,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12493,9 +10018,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12512,9 +10035,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12531,14 +10052,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute+ = VariableAttribute+, VariableAttribute => ActionFn(224);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant55(__symbols);
         let __sym0 = __pop_Variant56(__symbols);
         let __start = __sym0.0.clone();
@@ -12551,14 +10071,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDeclaration = Type, StorageLocation, Identifier => ActionFn(23);
+        assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant15(__symbols);
         let __sym1 = __pop_Variant50(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
@@ -12572,14 +10091,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDeclaration = Type, Identifier => ActionFn(24);
+        assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant15(__symbols);
         let __sym0 = __pop_Variant54(__symbols);
         let __start = __sym0.0.clone();
@@ -12592,9 +10110,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12611,9 +10127,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12630,9 +10144,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12649,9 +10161,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
-        __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
@@ -12675,7 +10185,7 @@ fn __action0<
     (_, __0, _): (usize, SourceUnit, usize),
 ) -> SourceUnit
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13258,7 +10768,7 @@ fn __action45<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13434,7 +10944,7 @@ fn __action57<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13462,7 +10972,7 @@ fn __action59<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13488,7 +10998,7 @@ fn __action61<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13514,7 +11024,7 @@ fn __action63<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13555,7 +11065,7 @@ fn __action66<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13626,7 +11136,7 @@ fn __action71<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13652,7 +11162,7 @@ fn __action73<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13678,7 +11188,7 @@ fn __action75<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13704,7 +11214,7 @@ fn __action77<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13745,7 +11255,7 @@ fn __action80<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13786,7 +11296,7 @@ fn __action83<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13842,7 +11352,7 @@ fn __action87<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13868,7 +11378,7 @@ fn __action89<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13977,7 +11487,7 @@ fn __action97<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -13988,7 +11498,7 @@ fn __action98<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -14611,7 +12121,7 @@ fn __action135<
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -14700,7 +12210,7 @@ fn __action140<
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -14711,7 +12221,7 @@ fn __action141<
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15035,7 +12545,7 @@ fn __action164<
     (_, __0, _): (usize, Vec<Parameter>, usize),
 ) -> Vec<Parameter>
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15093,7 +12603,7 @@ fn __action169<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Parameter
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15220,7 +12730,7 @@ fn __action180<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> NamedArgument
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15255,7 +12765,7 @@ fn __action183<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15290,7 +12800,7 @@ fn __action186<
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15348,7 +12858,7 @@ fn __action191<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Identifier
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15406,7 +12916,7 @@ fn __action196<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> EventParameter
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15486,7 +12996,7 @@ fn __action203<
     (_, __0, _): (usize, ContractPart, usize),
 ) -> ContractPart
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
@@ -15521,7 +13031,7 @@ fn __action206<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> VariableDeclaration
 {
-    (__0)
+    __0
 }
 
 #[allow(unused_variables)]
