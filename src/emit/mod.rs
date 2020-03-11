@@ -965,6 +965,29 @@ impl<'a> Contract<'a> {
 
                 array.into()
             }
+            Expression::AllocDynamicArray(_, ty, size) => {
+                let elem = ty.array_deref();
+
+                let size = self
+                    .expression(size, vartab, function, runtime)
+                    .into_int_value();
+
+                let elem_size = self
+                    .llvm_type(&elem)
+                    .size_of()
+                    .unwrap()
+                    .const_cast(self.context.i32_type(), false);
+
+                self.builder
+                    .build_call(
+                        self.module.get_function("vector_new").unwrap(),
+                        &[size.into(), elem_size.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
             Expression::Poison => unreachable!(),
         }
     }
@@ -2289,13 +2312,13 @@ impl<'a> Contract<'a> {
 
                 let mut aty = match dims.next().unwrap() {
                     Some(d) => ty.array_type(d.to_u32().unwrap()),
-                    None => return self.module.get_type("vector").unwrap(),
+                    None => return self.module.get_type("struct.vector").unwrap(),
                 };
 
                 for dim in dims {
                     match dim {
                         Some(d) => aty = aty.array_type(d.to_u32().unwrap()),
-                        None => return self.module.get_type("vector").unwrap(),
+                        None => return self.module.get_type("struct.vector").unwrap(),
                     }
                 }
 

@@ -388,16 +388,16 @@ char *__u256ptohex(uint8_t *v, char *str)
  */
 struct vector
 {
-	uint32_t size;
 	uint32_t len;
+	uint32_t size;
 	uint8_t data[];
 };
 
 __attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members, uint32_t size)
 {
 	struct vector *v = __malloc(sizeof(*v) + members * size);
-	v->size = members;
 	v->len = members;
+	v->size = members;
 
 	return v;
 }

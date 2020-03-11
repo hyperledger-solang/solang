@@ -309,6 +309,11 @@ impl ControlFlowGraph {
             Expression::Complement(_, e) => format!("~{}", self.expr_to_string(ns, e)),
             Expression::UnaryMinus(_, e) => format!("-{}", self.expr_to_string(ns, e)),
             Expression::Poison => "☠".to_string(),
+            Expression::AllocDynamicArray(_, ty, size) => format!(
+                "(alloc {} len {})",
+                ty.to_string(ns),
+                self.expr_to_string(ns, size)
+            ),
         }
     }
 
