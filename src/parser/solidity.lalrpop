@@ -244,15 +244,10 @@ NamedArgument: NamedArgument = {
 }
 
 Precedence1: Expression = {
-    <a:@L> <i:Type> "(" ")" <b:@R> => {
-        Expression::FunctionCall(Loc(a, b), i, Vec::new())
-    },
     <a:@L> <i:Type> "(" "{" "}" ")" <b:@R> => {
         Expression::NamedFunctionCall(Loc(a, b), i, Vec::new())
     },
-    <a:@L> <i:Type> "(" <v:(<Expression> ",")*> <e:Expression> ")" <b:@R> => {
-        let mut v = v;
-        v.push(e);
+    <a:@L> <i:Type> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), i, v)
     },
     <a:@L> <i:Type> "(" "{" <v:(<NamedArgument> ",")*> <e:NamedArgument> "}" ")" <b:@R> => {
@@ -265,7 +260,7 @@ Precedence1: Expression = {
 Precedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
-    <a:@L> "new" <t:Type> <b:@R> "(" ")" => Expression::New(Loc(a, b), t),
+    <a:@L> "new" <t:Type> <b:@R> "(" <v:Comma<Expression>> ")" => Expression::New(Loc(a, b), t, v),
     <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
@@ -481,6 +476,17 @@ NonIfStatement: Statement = {
         Statement::Emit(n, v)
     }
 }
+
+Comma<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            let mut v = v;
+            v.push(e);
+            v
+        }
+    }
+};
 
 extern {
     type Location = usize;
