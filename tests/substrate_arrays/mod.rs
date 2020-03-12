@@ -454,11 +454,11 @@ fn storage_to_memory() {
     let (runtime, mut store) = build_solidity(
         r##"
         contract storage_refs {
-            int32[10] a;
+            uint32[10] a;
         
-            function test() public returns (int32[10]) {
-                for (int32 i  = 0; i < 10; ) {
-                    int32 index = i;
+            function test() public returns (uint32[10]) {
+                for (uint32 i  = 0; i < 10; ) {
+                    uint32 index = i;
                     a[index] = 7 * ++i;
                 }
 
@@ -656,7 +656,7 @@ fn struct_array_struct_abi() {
             bar s;
     
             function get_bar() public returns (bar) {
-                bar a = bar({ bars: [
+                bar memory a = bar({ bars: [
                     foo({ f1: 1, f2: true}), 
                     foo({ f1: 2, f2: true}), 
                     foo({ f1: 3, f2: true}), 
@@ -674,8 +674,8 @@ fn struct_array_struct_abi() {
                 return a;
             }
 
-            function set_bar(bar a) public {
-                for (int32 i = 0; i < 10; i++) {
+            function set_bar(bar memory a) public {
+                for (uint32 i = 0; i < 10; i++) {
                     assert(a.bars[i].f1 == i + 1);
                     assert(a.bars[i].f2 == (i != 6));
                 }
@@ -804,7 +804,7 @@ fn memory_dynamic_array_new() {
 
     runtime.function(&mut store, "test", Vec::new());
 
-    // The Ethereum Foundation allows you to create arrays of length 0
+    // The Ethereum Foundation solc allows you to create arrays of length 0
     let (runtime, mut store) = build_solidity(
         r#"
         contract foo {
@@ -818,3 +818,148 @@ fn memory_dynamic_array_new() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn memory_dynamic_array_deref() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](2);
+
+                a[-1] = 5;
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "array subscript must be an unsigned integer, not ‘int8’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](2);
+                int32 i = 1;
+
+                a[i] = 5;
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "array subscript must be an unsigned integer, not ‘int32’"
+    );
+
+    // The Ethereum Foundation solc allows you to create arrays of length 0
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](5);
+
+                assert(a.length == 5);
+                a[0] = 102;
+                a[1] = -5;
+                a[4] = 0x7cafeeed;
+
+                assert(a[0] == 102);
+                assert(a[1] == -5);
+                assert(a[4] == 0x7cafeeed);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn array_bounds_dynamic_array() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](5);
+
+                a[5] = 102;
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn empty_array_bounds_dynamic_array() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                bytes32[] memory a = new bytes32[](0);
+
+                a[0] = "yo";
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn memory_dynamic_array_types_call_return() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract foo {
+            function a(bool cond) public returns (bytes27[]) {
+                bytes27[] foo;
+                foo = new bytes27[](5);
+                foo[1] = "cond was true";
+                return foo;
+            }
+
+            function b(bytes27[] x) private {
+                x[1] = "b was called";
+
+                x = new bytes27[](3);
+                x[1] = "should not be";
+            }
+
+            function test() public {
+                bytes27[] x = a(true);
+                assert(x.length == 5);
+                assert(x[1] == "cond was true");
+
+                b(x);
+                assert(x.length == 5);
+                assert(x[1] == "b was called");
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+
+// test:
+// arrays of enum/bool/bytes32
+// function param and return
+// see if phi nodes work dynamic array variables
+// alignment of array elements
+// see if reference types work as expected
+
+// arrays of other structs/arrays/darrays
+// nil pointer should fail
+
+// dynamic storage arrays
+// copy to/from storage <=> memory
+// abi encode/decode
+
+// push/pop on dynamic storage array
+
+// string/bytes

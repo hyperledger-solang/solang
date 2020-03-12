@@ -859,6 +859,39 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
+            Expression::DynamicArraySubscript(_, a, elem_ty, i) => {
+                let array = self
+                    .expression(a, vartab, function, runtime)
+                    .into_pointer_value();
+
+                let ty = self.llvm_var(elem_ty);
+                let index = self.builder.build_int_mul(
+                    self.expression(i, vartab, function, runtime)
+                        .into_int_value(),
+                    ty.into_pointer_type()
+                        .get_element_type()
+                        .size_of()
+                        .unwrap()
+                        .const_cast(self.context.i32_type(), false),
+                    "",
+                );
+
+                let elem = unsafe {
+                    self.builder.build_gep(
+                        array,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(2, false),
+                            index,
+                        ],
+                        "index_access",
+                    )
+                };
+
+                self.builder
+                    .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
+                    .into()
+            }
             Expression::StructMember(_, a, i) => {
                 let array = self
                     .expression(a, vartab, function, runtime)
