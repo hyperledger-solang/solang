@@ -706,3 +706,115 @@ fn struct_array_struct_abi() {
 
     runtime.function(&mut store, "set_bar", b.encode());
 }
+
+#[test]
+fn memory_dynamic_array_new() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[]();
+
+                assert(a.length == 5);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "new dynamic array should have a single length argument"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](1, 2);
+
+                assert(a.length == 5);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "new dynamic array should have a single length argument"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](hex"ab");
+
+                assert(a.length == 5);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "new size argument must be unsigned integer, not ‘bytes1’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](-1);
+
+                assert(a.length == 5);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "new size argument must be unsigned integer, not ‘int8’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new bool(1);
+
+                assert(a.length == 5);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "new cannot allocate type ‘bool’");
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                int32[] memory a = new int32[](5);
+
+                assert(a.length == 5);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    // The Ethereum Foundation allows you to create arrays of length 0
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract foo {
+            function test() public {
+                bool[] memory a = new bool[](0);
+
+                assert(a.length == 0);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

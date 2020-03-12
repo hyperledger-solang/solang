@@ -993,6 +993,7 @@ impl<'a> Contract<'a> {
                     .expression(a, vartab, function, runtime)
                     .into_pointer_value();
 
+                // field 0 is the length
                 let len = unsafe {
                     self.builder.build_gep(
                         array,

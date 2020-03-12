@@ -2610,96 +2610,36 @@ fn new(
     }
     let size_loc = args[0].loc();
 
-    // TODO: if size is a constant expression, do bounds checks at compile time, not runtime
-
     let (size_expr, size_ty) = expression(&args[0], cfg, ns, vartab, errors)?;
-    let (size_width, _) = get_int_length(&size_ty, &size_loc, false, ns, errors)?;
-    let tab = match vartab {
-        &mut Some(ref mut tab) => tab,
-        None => {
+
+    let size_width = match size_ty {
+        resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => n,
+        _ => {
             errors.push(Output::error(
-                *loc,
-                "cannot allocate  in constant expression".to_string(),
+                size_loc,
+                format!(
+                    "new size argument must be unsigned integer, not ‘{}’",
+                    size_ty.to_string(ns)
+                ),
             ));
             return Err(());
         }
     };
 
-    let pos = tab.temp(
-        &ast::Identifier {
-            name: "size".to_owned(),
-            loc: *loc,
-        },
-        &size_ty,
-    );
-
-    cfg.add(
-        tab,
-        Instr::Set {
-            res: pos,
-            expr: size_expr,
-        },
-    );
-
-    let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
-    let in_bounds = cfg.new_basic_block("in_bounds".to_string());
-
-    if size_ty.signed() {
-        cfg.add(
-            tab,
-            Instr::BranchCond {
-                cond: Expression::SLessEqual(
-                    *loc,
-                    Box::new(Expression::Variable(size_loc, pos)),
-                    Box::new(Expression::NumberLiteral(
-                        size_loc,
-                        size_width,
-                        BigInt::zero(),
-                    )),
-                ),
-                true_: out_of_bounds,
-                false_: in_bounds,
-            },
-        );
-    } else {
-        cfg.add(
-            tab,
-            Instr::BranchCond {
-                cond: Expression::Equal(
-                    *loc,
-                    Box::new(Expression::Variable(size_loc, pos)),
-                    Box::new(Expression::NumberLiteral(
-                        size_loc,
-                        size_width,
-                        BigInt::zero(),
-                    )),
-                ),
-                true_: out_of_bounds,
-                false_: in_bounds,
-            },
-        );
-    }
-
-    cfg.set_basic_block(out_of_bounds);
-    cfg.add(tab, Instr::AssertFailure {});
-
-    cfg.set_basic_block(in_bounds);
-
-    let size = Expression::Variable(size_loc, pos);
-
-    // TODO: should we check an upper bound? Large allocations will fail anyway
+    // TODO: should we check an upper bound? Large allocations will fail anyway,
+    // and ethereum solidity does not check at compile time
     let size = match size_width.cmp(&32) {
         Ordering::Greater => Expression::Trunc(
             size_loc,
             resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
-            Box::new(size),
+            Box::new(size_expr),
         ),
         Ordering::Less => Expression::ZeroExt(
             size_loc,
             resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
-            Box::new(size),
+            Box::new(size_expr),
         ),
-        Ordering::Equal => size,
+        Ordering::Equal => size_expr,
     };
 
     Ok((
