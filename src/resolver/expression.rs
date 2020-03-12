@@ -69,6 +69,7 @@ pub enum Expression {
     StructMember(Loc, Box<Expression>, usize),
 
     AllocDynamicArray(Loc, resolver::Type, Box<Expression>),
+    DynamicArrayLength(Loc, Box<Expression>),
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
 
@@ -122,6 +123,7 @@ impl Expression {
             | Expression::StructMember(loc, _, _)
             | Expression::Or(loc, _, _)
             | Expression::AllocDynamicArray(loc, _, _)
+            | Expression::DynamicArrayLength(loc, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison => unreachable!(),
         }
@@ -216,6 +218,7 @@ impl Expression {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
             Expression::AllocDynamicArray(_, _, s) => s.reads_contract_storage(),
+            Expression::DynamicArrayLength(_, s) => s.reads_contract_storage(),
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
@@ -2328,7 +2331,10 @@ pub fn expression(
                 resolver::Type::Array(_, dim) => {
                     if id.name == "length" {
                         return match dim.last().unwrap() {
-                            None => unimplemented!(),
+                            None => Ok((
+                                Expression::DynamicArrayLength(*loc, Box::new(expr)),
+                                resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+                            )),
                             Some(d) => bigint_to_expression(loc, d, errors),
                         };
                     }

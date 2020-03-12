@@ -988,6 +988,24 @@ impl<'a> Contract<'a> {
                     .left()
                     .unwrap()
             }
+            Expression::DynamicArrayLength(_, a) => {
+                let array = self
+                    .expression(a, vartab, function, runtime)
+                    .into_pointer_value();
+
+                let len = unsafe {
+                    self.builder.build_gep(
+                        array,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_zero(),
+                        ],
+                        "array_len",
+                    )
+                };
+
+                self.builder.build_load(len, "array_len")
+            }
             Expression::Poison => unreachable!(),
         }
     }
