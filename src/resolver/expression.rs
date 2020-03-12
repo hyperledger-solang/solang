@@ -20,6 +20,7 @@ use parser::ast::Loc;
 use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
+use resolver::eval::eval_number_expression;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -70,6 +71,8 @@ pub enum Expression {
 
     AllocDynamicArray(Loc, resolver::Type, Box<Expression>),
     DynamicArrayLength(Loc, Box<Expression>),
+    DynamicArraySubscript(Loc, Box<Expression>, resolver::Type, Box<Expression>),
+
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
 
@@ -124,6 +127,7 @@ impl Expression {
             | Expression::Or(loc, _, _)
             | Expression::AllocDynamicArray(loc, _, _)
             | Expression::DynamicArrayLength(loc, _)
+            | Expression::DynamicArraySubscript(loc, _, _, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison => unreachable!(),
         }
@@ -214,7 +218,7 @@ impl Expression {
                     || l.reads_contract_storage()
                     || r.reads_contract_storage()
             }
-            Expression::ArraySubscript(_, l, r) => {
+            Expression::DynamicArraySubscript(_, l, _, r) | Expression::ArraySubscript(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
             Expression::AllocDynamicArray(_, _, s) => s.reads_contract_storage(),
@@ -2660,13 +2664,17 @@ fn array_subscript(
 ) -> Result<(Expression, resolver::Type), ()> {
     let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
-    let array_length = match array_ty.deref() {
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
-        resolver::Type::Array(_, _) => match array_ty.array_length() {
-            None => unimplemented!(),
-            Some(l) => l,
+    let (array_length, array_length_ty) = match array_ty.deref() {
+        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+            bigint_to_expression(loc, &BigInt::from(*n), errors)?
         }
-        .clone(),
+        resolver::Type::Array(_, _) => match array_ty.array_length() {
+            None => (
+                Expression::DynamicArrayLength(*loc, Box::new(array_expr.clone())),
+                resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+            ),
+            Some(l) => bigint_to_expression(loc, l, errors)?,
+        },
         _ => {
             errors.push(Output::error(
                 array.loc(),
@@ -2689,89 +2697,73 @@ fn array_subscript(
         }
     };
 
-    let (index_width, _) = get_int_length(&index_ty, &index.loc(), false, ns, errors)?;
-    let array_width = array_length.bits();
+    let index_width = match index_ty {
+        resolver::Type::Primitive(ast::PrimitiveType::Uint(w)) => w,
+        _ => {
+            errors.push(Output::error(
+                *loc,
+                format!(
+                    "array subscript must be an unsigned integer, not ‘{}’",
+                    index_ty.to_string(ns)
+                ),
+            ));
+            return Err(());
+        }
+    };
+
+    let array_width = array_length_ty.bits();
+    let width = std::cmp::max(array_width, index_width);
+    let coerced_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(width));
 
     let pos = tab.temp(
         &ast::Identifier {
             name: "index".to_owned(),
             loc: *loc,
         },
-        &index_ty,
+        &coerced_ty,
     );
 
     cfg.add(
         tab,
         Instr::Set {
             res: pos,
-            expr: index_expr,
+            expr: cast(
+                &index.loc(),
+                index_expr,
+                &index_ty,
+                &coerced_ty,
+                false,
+                ns,
+                errors,
+            )?,
         },
     );
 
+    // If the array is fixed length and the index also constant, the
+    // branch will be optimized away.
     let out_of_bounds = cfg.new_basic_block("out_of_bounds".to_string());
     let in_bounds = cfg.new_basic_block("in_bounds".to_string());
 
-    if index_ty.signed() {
-        // first check that our index is not negative
-        let positive = cfg.new_basic_block("positive".to_string());
-
-        cfg.add(
-            tab,
-            Instr::BranchCond {
-                cond: Expression::SLess(
-                    *loc,
-                    Box::new(Expression::Variable(index.loc(), pos)),
-                    Box::new(Expression::NumberLiteral(*loc, index_width, BigInt::zero())),
-                ),
-                true_: out_of_bounds,
-                false_: positive,
-            },
-        );
-
-        cfg.set_basic_block(positive);
-
-        // If the index if of less bits than the array length, don't bother checking
-        if index_width as usize >= array_width {
-            cfg.add(
-                tab,
-                Instr::BranchCond {
-                    cond: Expression::SMoreEqual(
-                        *loc,
-                        Box::new(Expression::Variable(index.loc(), pos)),
-                        Box::new(Expression::NumberLiteral(
-                            *loc,
-                            index_width,
-                            array_length.clone(),
-                        )),
-                    ),
-                    true_: out_of_bounds,
-                    false_: in_bounds,
-                },
-            );
-        } else {
-            cfg.add(tab, Instr::Branch { bb: in_bounds });
-        }
-    } else if index_width as usize >= array_width {
-        cfg.add(
-            tab,
-            Instr::BranchCond {
-                cond: Expression::UMoreEqual(
-                    *loc,
-                    Box::new(Expression::Variable(index.loc(), pos)),
-                    Box::new(Expression::NumberLiteral(
-                        *loc,
-                        index_width,
-                        array_length.clone(),
-                    )),
-                ),
-                true_: out_of_bounds,
-                false_: in_bounds,
-            },
-        );
-    } else {
-        // if the index is less bits than the array, it is always in bounds
-        cfg.add(tab, Instr::Branch { bb: in_bounds });
-    }
+    cfg.add(
+        tab,
+        Instr::BranchCond {
+            cond: Expression::UMoreEqual(
+                *loc,
+                Box::new(Expression::Variable(index.loc(), pos)),
+                Box::new(cast(
+                    &array.loc(),
+                    array_length.clone(),
+                    &array_length_ty,
+                    &coerced_ty,
+                    false,
+                    ns,
+                    errors,
+                )?),
+            ),
+            true_: out_of_bounds,
+            false_: in_bounds,
+        },
+    );
 
     cfg.set_basic_block(out_of_bounds);
     cfg.add(tab, Instr::AssertFailure {});
@@ -2781,66 +2773,69 @@ fn array_subscript(
     if let resolver::Type::StorageRef(ty) = array_ty {
         let elem_ty = ty.storage_deref();
         let elem_size = elem_ty.storage_slots(ns);
-        if array_length.mul(elem_size).to_u64().is_some() {
-            // we need to calculate the storage offset. If this can be done with 64 bit
-            // arithmetic it will be much more efficient on wasm
-            Ok((
-                Expression::Add(
-                    *loc,
-                    Box::new(array_expr),
-                    Box::new(Expression::ZeroExt(
+        let mut nullsink = Vec::new();
+
+        if let Ok(array_length) = eval_number_expression(&array_length, &mut nullsink) {
+            if array_length.1.mul(elem_size).to_u64().is_some() {
+                // we need to calculate the storage offset. If this can be done with 64 bit
+                // arithmetic it will be much more efficient on wasm
+                return Ok((
+                    Expression::Add(
                         *loc,
-                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                        Box::new(Expression::Multiply(
+                        Box::new(array_expr),
+                        Box::new(Expression::ZeroExt(
                             *loc,
-                            Box::new(cast(
-                                &index.loc(),
-                                Expression::Variable(index.loc(), pos),
-                                &index_ty,
-                                &resolver::Type::Primitive(ast::PrimitiveType::Uint(64)),
-                                false,
-                                ns,
-                                errors,
-                            )?),
-                            Box::new(Expression::NumberLiteral(
+                            resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                            Box::new(Expression::Multiply(
                                 *loc,
-                                64,
-                                elem_ty.storage_slots(ns),
+                                Box::new(cast(
+                                    &index.loc(),
+                                    Expression::Variable(index.loc(), pos),
+                                    &coerced_ty,
+                                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(64)),
+                                    false,
+                                    ns,
+                                    errors,
+                                )?),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    64,
+                                    elem_ty.storage_slots(ns),
+                                )),
                             )),
                         )),
-                    )),
-                ),
-                elem_ty,
-            ))
-        } else {
-            // the index needs to be cast to i256 and multiplied by the number
-            // of slots for each element
-            // FIXME: if elem_size is power-of-2 then shift.
-            Ok((
-                Expression::Add(
-                    *loc,
-                    Box::new(array_expr),
-                    Box::new(Expression::Multiply(
-                        *loc,
-                        Box::new(cast(
-                            &index.loc(),
-                            Expression::Variable(index.loc(), pos),
-                            &index_ty,
-                            &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                            false,
-                            ns,
-                            errors,
-                        )?),
-                        Box::new(Expression::NumberLiteral(
-                            *loc,
-                            256,
-                            elem_ty.storage_slots(ns),
-                        )),
-                    )),
-                ),
-                elem_ty,
-            ))
+                    ),
+                    elem_ty,
+                ));
+            }
         }
+        // the index needs to be cast to i256 and multiplied by the number
+        // of slots for each element
+        // FIXME: if elem_size is power-of-2 then shift.
+        Ok((
+            Expression::Add(
+                *loc,
+                Box::new(array_expr),
+                Box::new(Expression::Multiply(
+                    *loc,
+                    Box::new(cast(
+                        &index.loc(),
+                        Expression::Variable(index.loc(), pos),
+                        &coerced_ty,
+                        &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                        false,
+                        ns,
+                        errors,
+                    )?),
+                    Box::new(Expression::NumberLiteral(
+                        *loc,
+                        256,
+                        elem_ty.storage_slots(ns),
+                    )),
+                )),
+            ),
+            elem_ty,
+        ))
     } else {
         match array_ty.deref() {
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
@@ -2882,7 +2877,7 @@ fn array_subscript(
                     res_ty,
                 ))
             }
-            resolver::Type::Array(_, _) => Ok((
+            resolver::Type::Array(_, dim) if dim.last().unwrap().is_some() => Ok((
                 Expression::ArraySubscript(
                     *loc,
                     Box::new(cast(
@@ -2894,6 +2889,23 @@ fn array_subscript(
                         ns,
                         errors,
                     )?),
+                    Box::new(Expression::Variable(index.loc(), pos)),
+                ),
+                array_ty.array_deref(),
+            )),
+            resolver::Type::Array(_, _) => Ok((
+                Expression::DynamicArraySubscript(
+                    *loc,
+                    Box::new(cast(
+                        &array.loc(),
+                        array_expr,
+                        &array_ty,
+                        &array_ty.deref(),
+                        true,
+                        ns,
+                        errors,
+                    )?),
+                    array_ty.array_deref(),
                     Box::new(Expression::Variable(index.loc(), pos)),
                 ),
                 array_ty.array_deref(),

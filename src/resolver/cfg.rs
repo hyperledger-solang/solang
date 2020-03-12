@@ -286,6 +286,11 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, a),
                 self.expr_to_string(ns, i)
             ),
+            Expression::DynamicArraySubscript(_, a, _, i) => format!(
+                "(darray index {}[{}])",
+                self.expr_to_string(ns, a),
+                self.expr_to_string(ns, i)
+            ),
             Expression::StructMember(_, a, f) => {
                 format!("(struct {} field {})", self.expr_to_string(ns, a), f)
             }
