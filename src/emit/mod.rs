@@ -40,6 +40,7 @@ lazy_static::lazy_static! {
 struct Variable<'a> {
     value: BasicValueEnum<'a>,
     stack: bool,
+    phi: bool,
 }
 
 pub trait TargetRuntime {
@@ -1342,8 +1343,8 @@ impl<'a> Contract<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
-                    if !cfg.vars[*v].ty.stack_based() {
-                        let ty = self.llvm_type(&cfg.vars[*v].ty);
+                    if cfg.vars[*v].ty.needs_phi() {
+                        let ty = self.llvm_var(&cfg.vars[*v].ty);
 
                         phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
                     }
@@ -1369,12 +1370,14 @@ impl<'a> Contract<'a> {
                             .build_alloca(self.llvm_type(&v.ty), &v.id.name)
                             .into(),
                         stack: false,
+                        phi: v.ty.needs_phi(),
                     });
                 }
                 cfg::Storage::Local if !v.ty.stack_based() || v.ty.is_reference_type() => {
                     vars.push(Variable {
                         value: self.context.i32_type().const_zero().into(),
                         stack: false,
+                        phi: v.ty.needs_phi(),
                     });
                 }
                 cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
@@ -1384,6 +1387,7 @@ impl<'a> Contract<'a> {
                     vars.push(Variable {
                         value: self.context.bool_type().get_undef().into(),
                         stack: false,
+                        phi: v.ty.needs_phi(),
                     });
                 }
                 cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
@@ -1393,6 +1397,7 @@ impl<'a> Contract<'a> {
                             .build_alloca(self.llvm_type(&v.ty), &v.id.name)
                             .into(),
                         stack: true,
+                        phi: v.ty.needs_phi(),
                     });
                 }
             }
@@ -1464,7 +1469,7 @@ impl<'a> Contract<'a> {
                         let bb = blocks.get(dest).unwrap();
 
                         for (v, phi) in bb.phis.iter() {
-                            if !w.vars[*v].value.is_pointer_value() {
+                            if w.vars[*v].phi {
                                 phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                             }
                         }
@@ -1501,7 +1506,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(true_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                if !w.vars[*v].value.is_pointer_value() {
+                                if w.vars[*v].phi {
                                     phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                                 }
                             }
@@ -1521,7 +1526,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(false_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                if !w.vars[*v].value.is_pointer_value() {
+                                if w.vars[*v].phi {
                                     phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                                 }
                             }
@@ -2437,6 +2442,19 @@ impl resolver::Type {
             resolver::Type::Array(_, _) => true,
             resolver::Type::Ref(r) => r.is_reference_type(),
             resolver::Type::StorageRef(r) => r.is_reference_type(),
+            resolver::Type::Undef => unreachable!(),
+        }
+    }
+
+    /// Does this type need a phi node
+    pub fn needs_phi(&self) -> bool {
+        match self {
+            resolver::Type::Primitive(e) => !e.stack_based(),
+            resolver::Type::Enum(_) => true,
+            resolver::Type::Struct(_) => true,
+            resolver::Type::Array(_, _) => true,
+            resolver::Type::Ref(r) => r.needs_phi(),
+            resolver::Type::StorageRef(_) => true,
             resolver::Type::Undef => unreachable!(),
         }
     }
