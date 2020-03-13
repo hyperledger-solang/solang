@@ -946,13 +946,43 @@ fn memory_dynamic_array_types_call_return() {
     runtime.function(&mut store, "test", Vec::new());
 }
 
-// test:
-// arrays of enum/bool/bytes32
-// function param and return
-// see if phi nodes work dynamic array variables
-// alignment of array elements
-// see if reference types work as expected
+#[test]
+fn dynamic_arrays_need_phi_node() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
 
+        contract foo {
+            enum bar { bar1, bar2, bar3, bar4 }
+
+            function a(bool cond) public returns (bar[] memory) {
+                bar[] memory foo;
+                if (cond) {
+                    foo = new bar[](5);
+                    foo[1] = bar.bar2;
+                } else {
+                    foo = new bar[](3);
+                    foo[1] = bar.bar3;
+                }
+                return foo;
+            }
+
+            function test() public {
+                bar[] memory x = a(true);
+                assert(x.length == 5);
+                assert(x[1] == bar.bar2);
+
+                x = a(false);
+                assert(x.length == 3);
+                assert(x[1] == bar.bar3);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}
+// test:
+// alignment of array elements
 // arrays of other structs/arrays/darrays
 // nil pointer should fail
 
