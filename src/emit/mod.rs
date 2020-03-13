@@ -1056,12 +1056,24 @@ impl<'a> Contract<'a> {
                 self.builder.build_call(
                     self.module.get_function("sha3").unwrap(),
                     &[
-                        src.into(),
+                        self.builder
+                            .build_pointer_cast(
+                                src,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "src",
+                            )
+                            .into(),
                         val.get_type()
                             .size_of()
                             .const_cast(self.context.i32_type(), false)
                             .into(),
-                        dst.into(),
+                        self.builder
+                            .build_pointer_cast(
+                                dst,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "dst",
+                            )
+                            .into(),
                         self.context.i32_type().const_int(256, false).into(),
                     ],
                     "",

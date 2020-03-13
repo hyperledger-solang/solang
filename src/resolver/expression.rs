@@ -2671,17 +2671,34 @@ fn array_subscript(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
+    let (mut array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
     let (array_length, array_length_ty) = match array_ty.deref() {
         resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
             bigint_to_expression(loc, &BigInt::from(*n), errors)?
         }
         resolver::Type::Array(_, _) => match array_ty.array_length() {
-            None => (
-                Expression::DynamicArrayLength(*loc, Box::new(array_expr.clone())),
-                resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
-            ),
+            None => {
+                if let resolver::Type::StorageRef(_) = array_ty {
+                    let array_length = Expression::StorageLoad(
+                        *loc,
+                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                        Box::new(array_expr.clone()),
+                    );
+
+                    array_expr = Expression::Keccak256(*loc, Box::new(array_expr));
+
+                    (
+                        array_length,
+                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                    )
+                } else {
+                    (
+                        Expression::DynamicArrayLength(*loc, Box::new(array_expr.clone())),
+                        resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+                    )
+                }
+            }
             Some(l) => bigint_to_expression(loc, l, errors)?,
         },
         _ => {
