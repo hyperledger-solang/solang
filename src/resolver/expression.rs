@@ -76,6 +76,8 @@ pub enum Expression {
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
 
+    Keccak256(Loc, Box<Expression>),
+
     Poison,
 }
 
@@ -128,6 +130,7 @@ impl Expression {
             | Expression::AllocDynamicArray(loc, _, _)
             | Expression::DynamicArrayLength(loc, _)
             | Expression::DynamicArraySubscript(loc, _, _, _)
+            | Expression::Keccak256(loc, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison => unreachable!(),
         }
@@ -224,6 +227,7 @@ impl Expression {
             Expression::AllocDynamicArray(_, _, s) => s.reads_contract_storage(),
             Expression::DynamicArrayLength(_, s) => s.reads_contract_storage(),
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
+            Expression::Keccak256(_, e) => e.reads_contract_storage(),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Poison => false,

@@ -322,6 +322,7 @@ impl ControlFlowGraph {
             Expression::DynamicArrayLength(_, a) => {
                 format!("(array {} len)", self.expr_to_string(ns, a))
             }
+            Expression::Keccak256(_, e) => format!("(keccak256 {})", self.expr_to_string(ns, e)),
         }
     }
 

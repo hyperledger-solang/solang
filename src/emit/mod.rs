@@ -1041,6 +1041,34 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_load(len, "array_len")
             }
+            Expression::Keccak256(_, a) => {
+                let val = self
+                    .expression(a, vartab, function, runtime)
+                    .into_int_value();
+
+                let src = self.builder.build_alloca(val.get_type(), "keccak_src");
+                let dst = self
+                    .builder
+                    .build_alloca(self.context.custom_width_int_type(256), "keccak_dst");
+
+                self.builder.build_store(src, val);
+
+                self.builder.build_call(
+                    self.module.get_function("sha3").unwrap(),
+                    &[
+                        src.into(),
+                        val.get_type()
+                            .size_of()
+                            .const_cast(self.context.i32_type(), false)
+                            .into(),
+                        dst.into(),
+                        self.context.i32_type().const_int(256, false).into(),
+                    ],
+                    "",
+                );
+
+                self.builder.build_load(dst, "keccak256_hash")
+            }
             Expression::Poison => unreachable!(),
         }
     }
