@@ -993,3 +993,21 @@ fn dynamic_arrays_need_phi_node() {
 // push/pop on dynamic storage array
 
 // string/bytes
+
+#[test]
+fn storage_dynamic_array_length() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                assert(bar.length == 0);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

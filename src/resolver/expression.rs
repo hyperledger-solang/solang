@@ -2382,7 +2382,12 @@ pub fn expression(
                     resolver::Type::Array(_, dim) => {
                         if id.name == "length" {
                             return match dim.last().unwrap() {
-                                None => unimplemented!(),
+                                None => Ok((
+                                    expr,
+                                    resolver::Type::StorageRef(Box::new(
+                                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                                    )),
+                                )),
                                 Some(d) => bigint_to_expression(loc, d, errors),
                             };
                         }
