@@ -2802,7 +2802,7 @@ fn array_subscript(
         let mut nullsink = Vec::new();
 
         if let Ok(array_length) = eval_number_expression(&array_length, &mut nullsink) {
-            if array_length.1.mul(elem_size).to_u64().is_some() {
+            if array_length.1.mul(elem_size.clone()).to_u64().is_some() {
                 // we need to calculate the storage offset. If this can be done with 64 bit
                 // arithmetic it will be much more efficient on wasm
                 return Ok((
@@ -2823,11 +2823,7 @@ fn array_subscript(
                                     ns,
                                     errors,
                                 )?),
-                                Box::new(Expression::NumberLiteral(
-                                    *loc,
-                                    64,
-                                    elem_ty.storage_slots(ns),
-                                )),
+                                Box::new(Expression::NumberLiteral(*loc, 64, elem_size)),
                             )),
                         )),
                     ),
@@ -2838,12 +2834,11 @@ fn array_subscript(
         // the index needs to be cast to i256 and multiplied by the number
         // of slots for each element
         // FIXME: if elem_size is power-of-2 then shift.
-        Ok((
-            Expression::Add(
-                *loc,
-                Box::new(array_expr),
-                Box::new(Expression::Multiply(
+        if elem_size == BigInt::one() {
+            Ok((
+                Expression::Add(
                     *loc,
+                    Box::new(array_expr),
                     Box::new(cast(
                         &index.loc(),
                         Expression::Variable(index.loc(), pos),
@@ -2853,15 +2848,31 @@ fn array_subscript(
                         ns,
                         errors,
                     )?),
-                    Box::new(Expression::NumberLiteral(
+                ),
+                elem_ty,
+            ))
+        } else {
+            Ok((
+                Expression::Add(
+                    *loc,
+                    Box::new(array_expr),
+                    Box::new(Expression::Multiply(
                         *loc,
-                        256,
-                        elem_ty.storage_slots(ns),
+                        Box::new(cast(
+                            &index.loc(),
+                            Expression::Variable(index.loc(), pos),
+                            &coerced_ty,
+                            &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                            false,
+                            ns,
+                            errors,
+                        )?),
+                        Box::new(Expression::NumberLiteral(*loc, 256, elem_size)),
                     )),
-                )),
-            ),
-            elem_ty,
-        ))
+                ),
+                elem_ty,
+            ))
+        }
     } else {
         match array_ty.deref() {
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
