@@ -42,7 +42,7 @@ jobs:
         toolchain: stable
         override: true
     - name: Compile stdlib
-      run: clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c
+      run: clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c
       working-directory:  ./stdlib
     - name: Build
       run: cargo build --verbose

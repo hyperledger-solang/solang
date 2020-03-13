@@ -2474,11 +2474,20 @@ impl resolver::Type {
 }
 
 static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
+static SHA3_IR: &[u8] = include_bytes!("../../stdlib/sha3.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
 /// the solang library
 fn load_stdlib(context: &Context) -> Module {
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
 
-    Module::parse_bitcode_from_buffer(&memory, context).unwrap()
+    let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
+
+    let memory = MemoryBuffer::create_from_memory_range(SHA3_IR, "sha3");
+
+    module
+        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+        .unwrap();
+
+    module
 }
