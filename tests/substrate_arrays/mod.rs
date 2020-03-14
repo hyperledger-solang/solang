@@ -1011,3 +1011,56 @@ fn storage_dynamic_array_length() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn storage_dynamic_array_push() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                assert(bar.length == 0);
+                bar.push(102, 20);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "method ‘push()’ takes 1 argument");
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            int32[4] bar;
+
+            function test() public {
+                bar.push(102);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "method ‘push()’ not allowed on fixed length array"
+    );
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                assert(bar.length == 0);
+                bar.push(102);
+                assert(bar[0] == 102);
+                assert(bar.length == 1);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

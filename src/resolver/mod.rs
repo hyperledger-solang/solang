@@ -17,6 +17,7 @@ pub mod cfg;
 mod eval;
 pub mod expression;
 mod functions;
+mod storage;
 mod structs;
 mod variables;
 
