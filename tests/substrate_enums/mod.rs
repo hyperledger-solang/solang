@@ -71,6 +71,18 @@ fn test_cast_errors() {
 
     let (_, errors) = parse_and_resolve(
         "contract test {
+            enum state {  }
+            function foo() public pure returns (uint8) {
+                return state.foo;
+            }
+        }",
+        &Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "enum ‘state’ is missing fields");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
             enum state { foo, bar, baz }
             function foo() public pure returns (uint8) {
                 return uint8(state.foo);

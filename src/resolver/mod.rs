@@ -844,11 +844,7 @@ fn resolve_contract(
     // first resolve enums
     for parts in &def.parts {
         if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            let pos = ns.enums.len();
-
-            ns.enums.push(enum_decl(e, errors));
-
-            if !ns.add_symbol(&e.name, Symbol::Enum(e.name.loc, pos), errors) {
+            if !enum_decl(e, &mut ns, errors) {
                 broken = true;
             }
         }
@@ -990,10 +986,24 @@ fn resolve_contract(
     }
 }
 
-fn enum_decl(enum_: &ast::EnumDefinition, errors: &mut Vec<Output>) -> EnumDecl {
-    // Number of bits required to represent this enum
-    let mut bits =
-        std::mem::size_of::<usize>() as u32 * 8 - (enum_.values.len() - 1).leading_zeros();
+/// Parse enum declaration. If the declaration is invalid, it is still generated
+/// so that we can continue parsing, with errors recorded.
+fn enum_decl(enum_: &ast::EnumDefinition, ns: &mut Contract, errors: &mut Vec<Output>) -> bool {
+    let mut valid = true;
+
+    let mut bits = if enum_.values.is_empty() {
+        errors.push(Output::error(
+            enum_.name.loc,
+            format!("enum ‘{}’ is missing fields", enum_.name.name),
+        ));
+        valid = false;
+
+        0
+    } else {
+        // Number of bits required to represent this enum
+        std::mem::size_of::<usize>() as u32 * 8 - (enum_.values.len() - 1).leading_zeros()
+    };
+
     // round it up to the next
     if bits <= 8 {
         bits = 8;
@@ -1013,17 +1023,28 @@ fn enum_decl(enum_: &ast::EnumDefinition, errors: &mut Vec<Output>) -> EnumDecl 
                 prev.0,
                 "location of previous definition".to_string(),
             ));
+            valid = false;
             continue;
         }
 
         entries.insert(e.name.to_string(), (e.loc, i));
     }
 
-    EnumDecl {
+    let decl = EnumDecl {
         name: enum_.name.name.to_string(),
         ty: ast::PrimitiveType::Uint(bits as u16),
         values: entries,
+    };
+
+    let pos = ns.enums.len();
+
+    ns.enums.push(decl);
+
+    if !ns.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), errors) {
+        valid = false;
     }
+
+    valid
 }
 
 #[test]
@@ -1036,14 +1057,28 @@ fn enum_256values_is_uint8() {
         },
         values: Vec::new(),
     };
+    let mut ns = Contract {
+        name: "foo".to_string(),
+        doc: Vec::new(),
+        enums: Vec::new(),
+        structs: Vec::new(),
+        constructors: Vec::new(),
+        functions: Vec::new(),
+        variables: Vec::new(),
+        constants: Vec::new(),
+        initializer: cfg::ControlFlowGraph::new(),
+        target: Target::Ewasm,
+        top_of_contract_storage: BigInt::zero(),
+        symbols: HashMap::new(),
+    };
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "first".into(),
     });
 
-    let f = enum_decl(&e, &mut Vec::new());
-    assert_eq!(f.ty, ast::PrimitiveType::Uint(8));
+    assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
+    assert_eq!(ns.enums.last().unwrap().ty, ast::PrimitiveType::Uint(8));
 
     for i in 1..256 {
         e.values.push(ast::Identifier {
@@ -1054,14 +1089,16 @@ fn enum_256values_is_uint8() {
 
     assert_eq!(e.values.len(), 256);
 
-    let r = enum_decl(&e, &mut Vec::new());
-    assert_eq!(r.ty, ast::PrimitiveType::Uint(8));
+    e.name.name = "foo2".to_owned();
+    assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
+    assert_eq!(ns.enums.last().unwrap().ty, ast::PrimitiveType::Uint(8));
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "another".into(),
     });
 
-    let r2 = enum_decl(&e, &mut Vec::new());
-    assert_eq!(r2.ty, ast::PrimitiveType::Uint(16));
+    e.name.name = "foo3".to_owned();
+    assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
+    assert_eq!(ns.enums.last().unwrap().ty, ast::PrimitiveType::Uint(16));
 }
