@@ -21,6 +21,7 @@ use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
+use resolver::storage::array_offset;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -2779,48 +2780,25 @@ fn array_subscript(
                 ));
             }
         }
-        // the index needs to be cast to i256 and multiplied by the number
-        // of slots for each element
-        // FIXME: if elem_size is power-of-2 then shift.
-        if elem_size == BigInt::one() {
-            Ok((
-                Expression::Add(
-                    *loc,
-                    Box::new(array_expr),
-                    Box::new(cast(
-                        &index.loc(),
-                        Expression::Variable(index.loc(), pos),
-                        &coerced_ty,
-                        &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                        false,
-                        ns,
-                        errors,
-                    )?),
-                ),
-                elem_ty,
-            ))
-        } else {
-            Ok((
-                Expression::Add(
-                    *loc,
-                    Box::new(array_expr),
-                    Box::new(Expression::Multiply(
-                        *loc,
-                        Box::new(cast(
-                            &index.loc(),
-                            Expression::Variable(index.loc(), pos),
-                            &coerced_ty,
-                            &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                            false,
-                            ns,
-                            errors,
-                        )?),
-                        Box::new(Expression::NumberLiteral(*loc, 256, elem_size)),
-                    )),
-                ),
-                elem_ty,
-            ))
-        }
+
+        Ok((
+            array_offset(
+                loc,
+                array_expr,
+                cast(
+                    &index.loc(),
+                    Expression::Variable(index.loc(), pos),
+                    &coerced_ty,
+                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                    false,
+                    ns,
+                    errors,
+                )?,
+                elem_ty.clone(),
+                ns,
+            ),
+            elem_ty,
+        ))
     } else {
         match array_ty.deref() {
             resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
@@ -3285,7 +3263,7 @@ fn named_struct_literal(
 /// Resolve a method call with positional arguments
 fn method_call(
     loc: &ast::Loc,
-    member: &ast::Expression,
+    var: &ast::Expression,
     func: &ast::Identifier,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
@@ -3293,6 +3271,122 @@ fn method_call(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+
+    if let resolver::Type::StorageRef(ty) = &var_ty {
+        if let resolver::Type::Array(_, dim) = ty.as_ref() {
+            if func.name == "push" {
+                if dim.last().unwrap().is_some() {
+                    errors.push(Output::error(
+                        func.loc,
+                        "method ‘push()’ not allowed on fixed length array".to_string(),
+                    ));
+                    return Err(());
+                }
+                if args.len() != 1 {
+                    errors.push(Output::error(
+                        func.loc,
+                        "method ‘push()’ takes 1 argument".to_string(),
+                    ));
+                    return Err(());
+                }
+                let (val_expr, val_ty) = expression(&args[0], cfg, ns, vartab, errors)?;
+                let elem_ty = ty.array_deref();
+
+                let tab = match vartab {
+                    &mut Some(ref mut tab) => tab,
+                    None => {
+                        errors.push(Output::error(
+                            *loc,
+                            format!("cannot call method ‘{}’ in constant expression", func.name),
+                        ));
+                        return Err(());
+                    }
+                };
+
+                // set array+length to val_expr
+                let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
+                let slot_pos = tab.temp_anonymous(&slot_ty);
+
+                cfg.add(
+                    tab,
+                    Instr::Set {
+                        res: slot_pos,
+                        expr: Expression::StorageLoad(
+                            *loc,
+                            slot_ty.clone(),
+                            Box::new(var_expr.clone()),
+                        ),
+                    },
+                );
+
+                let pos = tab.temp_anonymous(&elem_ty);
+
+                cfg.add(
+                    tab,
+                    Instr::Set {
+                        res: pos,
+                        expr: cast(
+                            &args[0].loc(),
+                            val_expr,
+                            &val_ty,
+                            &elem_ty.deref(),
+                            true,
+                            ns,
+                            errors,
+                        )?,
+                    },
+                );
+
+                cfg.add(
+                    tab,
+                    Instr::SetStorage {
+                        ty: elem_ty.clone(),
+                        local: pos,
+                        storage: array_offset(
+                            loc,
+                            Expression::Keccak256(*loc, Box::new(var_expr.clone())),
+                            Expression::Variable(*loc, slot_pos),
+                            elem_ty,
+                            ns,
+                        ),
+                    },
+                );
+
+                // increase length
+                let new_length = tab.temp_anonymous(&slot_ty);
+
+                cfg.add(
+                    tab,
+                    Instr::Set {
+                        res: new_length,
+                        expr: Expression::Add(
+                            *loc,
+                            Box::new(Expression::Variable(*loc, slot_pos)),
+                            Box::new(Expression::NumberLiteral(*loc, 256, BigInt::one())),
+                        ),
+                    },
+                );
+
+                cfg.add(
+                    tab,
+                    Instr::SetStorage {
+                        ty: slot_ty,
+                        local: new_length,
+                        storage: var_expr,
+                    },
+                );
+
+                return Ok((Expression::Poison, resolver::Type::Undef));
+            }
+        }
+    }
+
+    errors.push(Output::error(
+        func.loc,
+        format!("method ‘{}’ does not exist", func.name),
+    ));
+
     Err(())
 }
 
