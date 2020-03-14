@@ -21,7 +21,7 @@ use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
-use resolver::storage::array_offset;
+use resolver::storage::{array_offset, storage_array_push};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -3284,113 +3284,7 @@ fn method_call(
                     return Err(());
                 }
 
-                let tab = match vartab {
-                    &mut Some(ref mut tab) => tab,
-                    None => {
-                        errors.push(Output::error(
-                            *loc,
-                            format!("cannot call method ‘{}’ in constant expression", func.name),
-                        ));
-                        return Err(());
-                    }
-                };
-
-                if args.len() > 1 {
-                    errors.push(Output::error(
-                        func.loc,
-                        "method ‘push()’ takes at most 1 argument".to_string(),
-                    ));
-                    return Err(());
-                }
-                // set array+length to val_expr
-                let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
-                let slot_pos = tab.temp_anonymous(&slot_ty);
-
-                cfg.add(
-                    tab,
-                    Instr::Set {
-                        res: slot_pos,
-                        expr: Expression::StorageLoad(
-                            *loc,
-                            slot_ty.clone(),
-                            Box::new(var_expr.clone()),
-                        ),
-                    },
-                );
-
-                let elem_ty = ty.array_deref();
-                let storage = array_offset(
-                    loc,
-                    Expression::Keccak256(*loc, Box::new(var_expr.clone())),
-                    Expression::Variable(*loc, slot_pos),
-                    elem_ty.clone(),
-                    ns,
-                );
-
-                if args.len() == 1 {
-                    let (val_expr, val_ty) = expression(&args[0], cfg, ns, &mut Some(tab), errors)?;
-
-                    let pos = tab.temp_anonymous(&elem_ty);
-
-                    cfg.add(
-                        tab,
-                        Instr::Set {
-                            res: pos,
-                            expr: cast(
-                                &args[0].loc(),
-                                val_expr,
-                                &val_ty,
-                                &elem_ty.deref(),
-                                true,
-                                ns,
-                                errors,
-                            )?,
-                        },
-                    );
-
-                    cfg.add(
-                        tab,
-                        Instr::SetStorage {
-                            ty: elem_ty,
-                            local: pos,
-                            storage,
-                        },
-                    );
-                } else {
-                    cfg.add(
-                        tab,
-                        Instr::ClearStorage {
-                            ty: elem_ty,
-                            storage,
-                        },
-                    );
-                }
-
-                // increase length
-                let new_length = tab.temp_anonymous(&slot_ty);
-
-                cfg.add(
-                    tab,
-                    Instr::Set {
-                        res: new_length,
-                        expr: Expression::Add(
-                            *loc,
-                            Box::new(Expression::Variable(*loc, slot_pos)),
-                            Box::new(Expression::NumberLiteral(*loc, 256, BigInt::one())),
-                        ),
-                    },
-                );
-
-                cfg.add(
-                    tab,
-                    Instr::SetStorage {
-                        ty: slot_ty,
-                        local: new_length,
-                        storage: var_expr,
-                    },
-                );
-
-                return Ok((Expression::Poison, resolver::Type::Undef));
+                return storage_array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors);
             }
         }
     }
