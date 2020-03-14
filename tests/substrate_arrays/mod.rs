@@ -1027,7 +1027,10 @@ fn storage_dynamic_array_push() {
         &Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "method ‘push()’ takes 1 argument");
+    assert_eq!(
+        first_error(errors),
+        "method ‘push()’ takes at most 1 argument"
+    );
 
     let (_, errors) = parse_and_resolve(
         r#"
@@ -1058,6 +1061,9 @@ fn storage_dynamic_array_push() {
                 bar.push(102);
                 assert(bar[0] == 102);
                 assert(bar.length == 1);
+                bar.push();
+                assert(bar[1] == 0);
+                assert(bar.length == 2);
             }
         }"#,
     );

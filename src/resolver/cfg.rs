@@ -15,6 +15,10 @@ pub enum Instr {
         res: usize,
         arg: usize,
     },
+    ClearStorage {
+        ty: resolver::Type,
+        storage: Expression,
+    },
     SetStorage {
         ty: resolver::Type,
         local: usize,
@@ -366,6 +370,11 @@ impl ControlFlowGraph {
             Instr::FuncArg { res, arg } => {
                 format!("%{} = funcarg({})", self.vars[*res].id.name, arg)
             }
+            Instr::ClearStorage { ty, storage } => format!(
+                "set storage slot({}) ty:{}",
+                self.expr_to_string(ns, storage),
+                ty.to_string(ns),
+            ),
             Instr::SetStorage { ty, local, storage } => format!(
                 "set storage slot({}) ty:{} = %{}",
                 self.expr_to_string(ns, storage),

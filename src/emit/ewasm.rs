@@ -303,6 +303,48 @@ impl EwasmTarget {
 }
 
 impl TargetRuntime for EwasmTarget {
+    fn clear_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) {
+        let value = contract
+            .builder
+            .build_alloca(contract.context.custom_width_int_type(256), "value");
+
+        let value8 = contract.builder.build_pointer_cast(
+            value,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "value8",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[
+                value8.into(),
+                contract.context.i32_type().const_int(4, false).into(),
+            ],
+            "",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("storageStore").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                value8.into(),
+            ],
+            "",
+        );
+    }
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,

@@ -43,6 +43,11 @@ impl SabreTarget {
             Some(Linkage::External),
         );
         contract.module.add_function(
+            "delete_state",
+            u8_ptr.fn_type(&[u8_ptr.into()], false),
+            Some(Linkage::External),
+        );
+        contract.module.add_function(
             "set_state",
             u8_ptr.fn_type(&[u8_ptr.into()], false),
             Some(Linkage::External),
@@ -193,6 +198,55 @@ impl SabreTarget {
 }
 
 impl TargetRuntime for SabreTarget {
+    fn clear_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) {
+        let address = contract
+            .builder
+            .build_call(
+                contract.module.get_function("alloc").unwrap(),
+                &[contract.context.i32_type().const_int(64, false).into()],
+                "address",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        // convert slot to address
+        contract.builder.build_call(
+            contract.module.get_function("__u256ptohex").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "slot",
+                    )
+                    .into(),
+                address.into(),
+            ],
+            "address_from_slot",
+        );
+
+        // create collection for delete_state
+        contract.builder.build_call(
+            contract.module.get_function("create_collection").unwrap(),
+            &[address.into()],
+            "",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("delete_state").unwrap(),
+            &[address.into()],
+            "",
+        );
+    }
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,
