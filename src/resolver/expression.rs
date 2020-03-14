@@ -3283,15 +3283,6 @@ fn method_call(
                     ));
                     return Err(());
                 }
-                if args.len() != 1 {
-                    errors.push(Output::error(
-                        func.loc,
-                        "method ‘push()’ takes 1 argument".to_string(),
-                    ));
-                    return Err(());
-                }
-                let (val_expr, val_ty) = expression(&args[0], cfg, ns, vartab, errors)?;
-                let elem_ty = ty.array_deref();
 
                 let tab = match vartab {
                     &mut Some(ref mut tab) => tab,
@@ -3304,6 +3295,13 @@ fn method_call(
                     }
                 };
 
+                if args.len() > 1 {
+                    errors.push(Output::error(
+                        func.loc,
+                        "method ‘push()’ takes at most 1 argument".to_string(),
+                    ));
+                    return Err(());
+                }
                 // set array+length to val_expr
                 let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
                 let slot_pos = tab.temp_anonymous(&slot_ty);
@@ -3320,38 +3318,53 @@ fn method_call(
                     },
                 );
 
-                let pos = tab.temp_anonymous(&elem_ty);
-
-                cfg.add(
-                    tab,
-                    Instr::Set {
-                        res: pos,
-                        expr: cast(
-                            &args[0].loc(),
-                            val_expr,
-                            &val_ty,
-                            &elem_ty.deref(),
-                            true,
-                            ns,
-                            errors,
-                        )?,
-                    },
+                let elem_ty = ty.array_deref();
+                let storage = array_offset(
+                    loc,
+                    Expression::Keccak256(*loc, Box::new(var_expr.clone())),
+                    Expression::Variable(*loc, slot_pos),
+                    elem_ty.clone(),
+                    ns,
                 );
 
-                cfg.add(
-                    tab,
-                    Instr::SetStorage {
-                        ty: elem_ty.clone(),
-                        local: pos,
-                        storage: array_offset(
-                            loc,
-                            Expression::Keccak256(*loc, Box::new(var_expr.clone())),
-                            Expression::Variable(*loc, slot_pos),
-                            elem_ty,
-                            ns,
-                        ),
-                    },
-                );
+                if args.len() == 1 {
+                    let (val_expr, val_ty) = expression(&args[0], cfg, ns, &mut Some(tab), errors)?;
+
+                    let pos = tab.temp_anonymous(&elem_ty);
+
+                    cfg.add(
+                        tab,
+                        Instr::Set {
+                            res: pos,
+                            expr: cast(
+                                &args[0].loc(),
+                                val_expr,
+                                &val_ty,
+                                &elem_ty.deref(),
+                                true,
+                                ns,
+                                errors,
+                            )?,
+                        },
+                    );
+
+                    cfg.add(
+                        tab,
+                        Instr::SetStorage {
+                            ty: elem_ty,
+                            local: pos,
+                            storage,
+                        },
+                    );
+                } else {
+                    cfg.add(
+                        tab,
+                        Instr::ClearStorage {
+                            ty: elem_ty,
+                            storage,
+                        },
+                    );
+                }
 
                 // increase length
                 let new_length = tab.temp_anonymous(&slot_ty);

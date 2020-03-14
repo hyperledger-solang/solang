@@ -708,6 +708,36 @@ impl SubstrateTarget {
 }
 
 impl TargetRuntime for SubstrateTarget {
+    fn clear_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) {
+        contract.builder.build_call(
+            contract.module.get_function("ext_set_storage").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_zero().into(),
+                contract
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null()
+                    .into(),
+                contract.context.i32_type().const_zero().into(),
+            ],
+            "",
+        );
+    }
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,

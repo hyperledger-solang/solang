@@ -62,6 +62,13 @@ pub trait TargetRuntime {
     ) -> (PointerValue<'b>, IntValue<'b>);
 
     // Access storage
+    fn clear_storage<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+    );
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,
@@ -1289,6 +1296,59 @@ impl<'a> Contract<'a> {
         }
     }
 
+    /// Recursively clear contract storage
+    fn storage_clear<'b>(
+        &'b self,
+        ty: &resolver::Type,
+        slot: &mut IntValue<'b>,
+        slot_ptr: PointerValue<'b>,
+        function: FunctionValue<'b>,
+        runtime: &dyn TargetRuntime,
+    ) {
+        match ty.deref() {
+            resolver::Type::Array(_, dim) => {
+                let ty = ty.array_deref();
+
+                if let Some(d) = &dim[0] {
+                    self.emit_static_loop_with_int(
+                        function,
+                        0,
+                        d.to_u64().unwrap(),
+                        slot,
+                        |_index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                            self.storage_clear(&ty, slot, slot_ptr, function, runtime);
+
+                            if !ty.is_reference_type() {
+                                *slot = self.builder.build_int_add(
+                                    *slot,
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+                } else {
+                    // FIMXE: iterate over dynamic array
+                }
+            }
+            resolver::Type::Struct(n) => {
+                for (_, field) in self.ns.structs[*n].fields.iter().enumerate() {
+                    self.storage_clear(&field.ty, slot, slot_ptr, function, runtime);
+
+                    if !field.ty.is_reference_type() {
+                        *slot = self.builder.build_int_add(
+                            *slot,
+                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
+                            &field.name,
+                        );
+                    }
+                }
+            }
+            _ => {
+                runtime.clear_storage(&self, function, slot_ptr);
+            }
+        }
+    }
     fn emit_initializer(&self, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
         let function = self.module.add_function(
             "storage_initializers",
@@ -1580,6 +1640,14 @@ impl<'a> Contract<'a> {
                             bb_true,
                             bb_false,
                         );
+                    }
+                    cfg::Instr::ClearStorage { ty, storage } => {
+                        let mut slot = self
+                            .expression(storage, &w.vars, function, runtime)
+                            .into_int_value();
+                        let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+
+                        self.storage_clear(ty, &mut slot, slot_ptr, function, runtime);
                     }
                     cfg::Instr::SetStorage { ty, local, storage } => {
                         let value = w.vars[*local].value;
