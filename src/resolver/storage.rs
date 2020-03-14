@@ -83,25 +83,35 @@ pub fn storage_array_push(
         ));
         return Err(());
     }
+
     // set array+length to val_expr
     let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
-    let slot_pos = tab.temp_anonymous(&slot_ty);
+    let length_pos = tab.temp_anonymous(&slot_ty);
 
     cfg.add(
         tab,
         Instr::Set {
-            res: slot_pos,
+            res: length_pos,
             expr: Expression::StorageLoad(*loc, slot_ty.clone(), Box::new(var_expr.clone())),
         },
     );
 
-    let elem_ty = ty.array_deref();
-    let storage = array_offset(
-        loc,
-        Expression::Keccak256(*loc, Box::new(var_expr.clone())),
-        Expression::Variable(*loc, slot_pos),
-        elem_ty.clone(),
-        ns,
+    let elem_ty = ty.storage_deref();
+
+    let entry_pos = tab.temp_anonymous(&slot_ty);
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: entry_pos,
+            expr: array_offset(
+                loc,
+                Expression::Keccak256(*loc, Box::new(var_expr.clone())),
+                Expression::Variable(*loc, length_pos),
+                elem_ty.clone(),
+                ns,
+            ),
+        },
     );
 
     if args.len() == 1 {
@@ -128,17 +138,9 @@ pub fn storage_array_push(
         cfg.add(
             tab,
             Instr::SetStorage {
-                ty: elem_ty,
+                ty: elem_ty.clone(),
                 local: pos,
-                storage,
-            },
-        );
-    } else {
-        cfg.add(
-            tab,
-            Instr::ClearStorage {
-                ty: elem_ty,
-                storage,
+                storage: Expression::Variable(*loc, entry_pos),
             },
         );
     }
@@ -152,7 +154,7 @@ pub fn storage_array_push(
             res: new_length,
             expr: Expression::Add(
                 *loc,
-                Box::new(Expression::Variable(*loc, slot_pos)),
+                Box::new(Expression::Variable(*loc, length_pos)),
                 Box::new(Expression::NumberLiteral(*loc, 256, BigInt::one())),
             ),
         },
@@ -167,5 +169,140 @@ pub fn storage_array_push(
         },
     );
 
-    Ok((Expression::Poison, resolver::Type::Undef))
+    if args.is_empty() {
+        Ok((Expression::Variable(*loc, entry_pos), elem_ty))
+    } else {
+        Ok((Expression::Poison, resolver::Type::Undef))
+    }
+}
+
+/// Pop() method on dynamic array in storage
+pub fn storage_array_pop(
+    loc: &ast::Loc,
+    var_expr: Expression,
+    func: &ast::Identifier,
+    ty: &resolver::Type,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                format!("cannot call method ‘{}’ in constant expression", func.name),
+            ));
+            return Err(());
+        }
+    };
+
+    if !args.is_empty() {
+        errors.push(Output::error(
+            func.loc,
+            "method ‘pop()’ does not take any arguments".to_string(),
+        ));
+        return Err(());
+    }
+
+    // set array+length to val_expr
+    let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
+    let length_pos = tab.temp_anonymous(&slot_ty);
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: length_pos,
+            expr: Expression::StorageLoad(*loc, slot_ty.clone(), Box::new(var_expr.clone())),
+        },
+    );
+
+    let empty_array = cfg.new_basic_block("empty_array".to_string());
+    let has_elements = cfg.new_basic_block("has_elements".to_string());
+
+    cfg.add(
+        tab,
+        Instr::BranchCond {
+            cond: Expression::Equal(
+                *loc,
+                Box::new(Expression::Variable(*loc, length_pos)),
+                Box::new(Expression::NumberLiteral(*loc, 256, BigInt::zero())),
+            ),
+            true_: empty_array,
+            false_: has_elements,
+        },
+    );
+
+    cfg.set_basic_block(empty_array);
+    cfg.add(tab, Instr::AssertFailure {});
+
+    cfg.set_basic_block(has_elements);
+    let new_length = tab.temp_anonymous(&slot_ty);
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: new_length,
+            expr: Expression::Subtract(
+                *loc,
+                Box::new(Expression::Variable(*loc, length_pos)),
+                Box::new(Expression::NumberLiteral(*loc, 256, BigInt::one())),
+            ),
+        },
+    );
+
+    // The array element will be loaded before clearing. So, the return
+    // type of pop() is the derefenced array dereference
+    let elem_ty = ty.storage_deref().deref().clone();
+    let entry_pos = tab.temp_anonymous(&slot_ty);
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: entry_pos,
+            expr: array_offset(
+                loc,
+                Expression::Keccak256(*loc, Box::new(var_expr.clone())),
+                Expression::Variable(*loc, new_length),
+                elem_ty.clone(),
+                ns,
+            ),
+        },
+    );
+
+    let res_pos = tab.temp_anonymous(&elem_ty);
+
+    cfg.add(
+        tab,
+        Instr::Set {
+            res: res_pos,
+            expr: Expression::StorageLoad(
+                *loc,
+                elem_ty.clone(),
+                Box::new(Expression::Variable(*loc, entry_pos)),
+            ),
+        },
+    );
+
+    cfg.add(
+        tab,
+        Instr::ClearStorage {
+            ty: elem_ty.clone(),
+            storage: Expression::Variable(*loc, entry_pos),
+        },
+    );
+
+    // set decrease length
+    cfg.add(
+        tab,
+        Instr::SetStorage {
+            ty: slot_ty,
+            local: new_length,
+            storage: var_expr,
+        },
+    );
+
+    Ok((Expression::Variable(*loc, res_pos), elem_ty))
 }

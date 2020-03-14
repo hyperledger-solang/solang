@@ -371,7 +371,7 @@ impl ControlFlowGraph {
                 format!("%{} = funcarg({})", self.vars[*res].id.name, arg)
             }
             Instr::ClearStorage { ty, storage } => format!(
-                "set storage slot({}) ty:{}",
+                "clear storage slot({}) ty:{}",
                 self.expr_to_string(ns, storage),
                 ty.to_string(ns),
             ),

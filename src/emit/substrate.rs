@@ -725,7 +725,7 @@ impl TargetRuntime for SubstrateTarget {
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_zero().into(),
+                contract.context.i32_type().const_zero().into(), // value_not_null, 0 for remove
                 contract
                     .context
                     .i8_type()

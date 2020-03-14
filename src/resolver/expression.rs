@@ -21,7 +21,7 @@ use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
-use resolver::storage::{array_offset, storage_array_push};
+use resolver::storage::{array_offset, storage_array_pop, storage_array_push};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -886,6 +886,13 @@ pub fn cast(
                 }
             }
             Ok(expr)
+        }
+        (resolver::Type::Undef, _) => {
+            errors.push(Output::type_error(
+                *loc,
+                "function or method does not return a value".to_string(),
+            ));
+            Err(())
         }
         _ => {
             errors.push(Output::type_error(
@@ -3276,15 +3283,26 @@ fn method_call(
     if let resolver::Type::StorageRef(ty) = &var_ty {
         if let resolver::Type::Array(_, dim) = ty.as_ref() {
             if func.name == "push" {
-                if dim.last().unwrap().is_some() {
+                return if dim.last().unwrap().is_some() {
                     errors.push(Output::error(
                         func.loc,
                         "method ‘push()’ not allowed on fixed length array".to_string(),
                     ));
-                    return Err(());
-                }
-
-                return storage_array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors);
+                    Err(())
+                } else {
+                    storage_array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                };
+            }
+            if func.name == "pop" {
+                return if dim.last().unwrap().is_some() {
+                    errors.push(Output::error(
+                        func.loc,
+                        "method ‘pop()’ not allowed on fixed length array".to_string(),
+                    ));
+                    Err(())
+                } else {
+                    storage_array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                };
             }
         }
     }
