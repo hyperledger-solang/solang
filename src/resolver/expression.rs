@@ -2155,55 +2155,7 @@ pub fn expression(
 
             match ns.resolve_type(ty, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
-                    let struct_def = &ns.structs[n];
-
-                    return if args.len() != struct_def.fields.len() {
-                        errors.push(Output::error(
-                            *loc,
-                            format!(
-                                "struct ‘{}’ has {} fields, not {}",
-                                struct_def.name,
-                                struct_def.fields.len(),
-                                args.len()
-                            ),
-                        ));
-                        Err(())
-                    } else {
-                        let mut fields = Vec::new();
-
-                        fields.resize(args.len(), Expression::Poison);
-
-                        for a in args {
-                            match struct_def
-                                .fields
-                                .iter()
-                                .enumerate()
-                                .find(|(_, f)| f.name == a.name.name)
-                            {
-                                Some((i, f)) => {
-                                    let (expr, expr_type) =
-                                        expression(&a.expr, cfg, ns, vartab, errors)?;
-
-                                    fields[i] =
-                                        cast(loc, expr, &expr_type, &f.ty, true, ns, errors)?;
-                                }
-                                None => {
-                                    errors.push(Output::error(
-                                        a.name.loc,
-                                        format!(
-                                            "struct ‘{}’ has no field ‘{}’",
-                                            struct_def.name, a.name.name,
-                                        ),
-                                    ));
-                                    return Err(());
-                                }
-                            }
-                        }
-
-                        let ty = resolver::Type::Struct(n);
-
-                        Ok((Expression::StructLiteral(*loc, ty.clone(), fields), ty))
-                    };
+                    return named_struct_literal(loc, n, args, cfg, ns, vartab, errors);
                 }
                 Ok(_) => {
                     errors.push(Output::error(
@@ -2215,7 +2167,18 @@ pub fn expression(
                 _ => {}
             }
 
-            function_call_with_named_arguments(loc, ty, args, cfg, ns, vartab, errors)
+            match ty {
+                ast::Type::Unresolved(expr) => {
+                    let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+                    if !dimensions.is_empty() {
+                        errors.push(Output::error(*loc, "unexpected array type".to_string()));
+                        return Err(());
+                    }
+
+                    function_call_with_named_arguments(loc, &id, args, cfg, ns, vartab, errors)
+                }
+                _ => unreachable!(),
+            }
         }
         ast::Expression::New(loc, ty, args) => new(loc, ty, args, cfg, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
@@ -2223,40 +2186,7 @@ pub fn expression(
 
             match ns.resolve_type(ty, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
-                    let struct_def = &ns.structs[n];
-
-                    return if args.len() != struct_def.fields.len() {
-                        errors.push(Output::error(
-                            *loc,
-                            format!(
-                                "struct ‘{}’ has {} fields, not {}",
-                                struct_def.name,
-                                struct_def.fields.len(),
-                                args.len()
-                            ),
-                        ));
-                        Err(())
-                    } else {
-                        let mut fields = Vec::new();
-
-                        for (i, a) in args.iter().enumerate() {
-                            let (expr, expr_type) = expression(&a, cfg, ns, vartab, errors)?;
-
-                            fields.push(cast(
-                                loc,
-                                expr,
-                                &expr_type,
-                                &struct_def.fields[i].ty,
-                                true,
-                                ns,
-                                errors,
-                            )?);
-                        }
-
-                        let ty = resolver::Type::Struct(n);
-
-                        Ok((Expression::StructLiteral(*loc, ty.clone(), fields), ty))
-                    };
+                    return struct_literal(loc, n, args, cfg, ns, vartab, errors);
                 }
                 Ok(to) => {
                     // Cast
@@ -2278,7 +2208,25 @@ pub fn expression(
                 Err(_) => {}
             }
 
-            function_call_with_positional_arguments(loc, ty, args, cfg, ns, vartab, errors)
+            match ty {
+                ast::Type::Unresolved(expr) => {
+                    if let ast::Expression::MemberAccess(_, member, func) = expr.as_ref() {
+                        method_call(loc, member, func, args, cfg, ns, vartab, errors)
+                    } else {
+                        let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+
+                        if !dimensions.is_empty() {
+                            errors.push(Output::error(*loc, "unexpected array type".to_string()));
+                            return Err(());
+                        }
+
+                        function_call_with_positional_arguments(
+                            loc, &id, args, cfg, ns, vartab, errors,
+                        )
+                    }
+                }
+                _ => unreachable!(),
+            }
         }
         ast::Expression::ArraySubscript(loc, _, None) => {
             errors.push(Output::error(
@@ -2956,9 +2904,55 @@ fn array_subscript(
 }
 
 /// Resolve a function call with positional arguments
+fn struct_literal(
+    loc: &ast::Loc,
+    struct_no: usize,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let struct_def = &ns.structs[struct_no];
+
+    if args.len() != struct_def.fields.len() {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "struct ‘{}’ has {} fields, not {}",
+                struct_def.name,
+                struct_def.fields.len(),
+                args.len()
+            ),
+        ));
+        Err(())
+    } else {
+        let mut fields = Vec::new();
+
+        for (i, a) in args.iter().enumerate() {
+            let (expr, expr_type) = expression(&a, cfg, ns, vartab, errors)?;
+
+            fields.push(cast(
+                loc,
+                expr,
+                &expr_type,
+                &struct_def.fields[i].ty,
+                true,
+                ns,
+                errors,
+            )?);
+        }
+
+        let ty = resolver::Type::Struct(struct_no);
+
+        Ok((Expression::StructLiteral(*loc, ty.clone(), fields), ty))
+    }
+}
+
+/// Resolve a function call with positional arguments
 fn function_call_with_positional_arguments(
     loc: &ast::Loc,
-    ty: &ast::Type,
+    id: &ast::Identifier,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     ns: &resolver::Contract,
@@ -2966,18 +2960,7 @@ fn function_call_with_positional_arguments(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
-    let funcs = match ty {
-        ast::Type::Unresolved(expr) => {
-            let (id, dimensions) = ns.expr_to_type(expr, errors)?;
-
-            if !dimensions.is_empty() {
-                errors.push(Output::error(*loc, "unexpected array type".to_string()));
-                return Err(());
-            }
-            ns.resolve_func(&id, errors)?
-        }
-        _ => unreachable!(),
-    };
+    let funcs = ns.resolve_func(&id, errors)?;
 
     let mut resolved_args = Vec::new();
     let mut resolved_types = Vec::new();
@@ -3102,7 +3085,7 @@ fn function_call_with_positional_arguments(
 /// Resolve a function call with named arguments
 fn function_call_with_named_arguments(
     loc: &ast::Loc,
-    ty: &ast::Type,
+    id: &ast::Identifier,
     args: &[ast::NamedArgument],
     cfg: &mut ControlFlowGraph,
     ns: &resolver::Contract,
@@ -3110,18 +3093,7 @@ fn function_call_with_named_arguments(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
-    let funcs = match ty {
-        ast::Type::Unresolved(expr) => {
-            let (id, dimensions) = ns.expr_to_type(expr, errors)?;
-
-            if !dimensions.is_empty() {
-                errors.push(Output::error(*loc, "unexpected array type".to_string()));
-                return Err(());
-            }
-            ns.resolve_func(&id, errors)?
-        }
-        _ => unreachable!(),
-    };
+    let funcs = ns.resolve_func(&id, errors)?;
 
     let mut arguments = HashMap::new();
 
@@ -3254,6 +3226,76 @@ fn function_call_with_named_arguments(
 
     Err(())
 }
+
+/// Resolve a struct literal with named fields
+fn named_struct_literal(
+    loc: &ast::Loc,
+    struct_no: usize,
+    args: &[ast::NamedArgument],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let struct_def = &ns.structs[struct_no];
+
+    if args.len() != struct_def.fields.len() {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "struct ‘{}’ has {} fields, not {}",
+                struct_def.name,
+                struct_def.fields.len(),
+                args.len()
+            ),
+        ));
+        Err(())
+    } else {
+        let mut fields = Vec::new();
+        fields.resize(args.len(), Expression::Poison);
+        for a in args {
+            match struct_def
+                .fields
+                .iter()
+                .enumerate()
+                .find(|(_, f)| f.name == a.name.name)
+            {
+                Some((i, f)) => {
+                    let (expr, expr_type) = expression(&a.expr, cfg, ns, vartab, errors)?;
+
+                    fields[i] = cast(loc, expr, &expr_type, &f.ty, true, ns, errors)?;
+                }
+                None => {
+                    errors.push(Output::error(
+                        a.name.loc,
+                        format!(
+                            "struct ‘{}’ has no field ‘{}’",
+                            struct_def.name, a.name.name,
+                        ),
+                    ));
+                    return Err(());
+                }
+            }
+        }
+        let ty = resolver::Type::Struct(struct_no);
+        Ok((Expression::StructLiteral(*loc, ty.clone(), fields), ty))
+    }
+}
+
+/// Resolve a method call with positional arguments
+fn method_call(
+    loc: &ast::Loc,
+    member: &ast::Expression,
+    func: &ast::Identifier,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    Err(())
+}
+
 // When generating shifts, llvm wants both arguments to have the same width. We want the
 // result of the shift to be left argument, so this function coercies the right argument
 // into the right length.
