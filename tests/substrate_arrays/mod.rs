@@ -1069,4 +1069,111 @@ fn storage_dynamic_array_push() {
     );
 
     runtime.function(&mut store, "test", Vec::new());
+
+    // push() returns a reference to the thing
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+            s[] bar;
+
+            function test() public {
+                s storage n = bar.push();
+                n.f1 = 102;
+                n.f2 = true;
+
+                assert(bar[0].f1 == 102);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+            s[] bar;
+
+            function test() public {
+                s storage n = bar.push(s(-1, false));
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function or method does not return a value"
+    );
+}
+
+#[test]
+fn storage_dynamic_array_pop() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                assert(bar.length == 0);
+                bar.pop(102);
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "method ‘pop()’ does not take any arguments"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            int32[4] bar;
+
+            function test() public {
+                bar.pop();
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "method ‘pop()’ not allowed on fixed length array"
+    );
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                assert(bar.length == 0);
+                bar.push(102);
+                assert(bar[0] == 102);
+                assert(bar.length == 1);
+                int32 v = bar.pop();
+                assert(bar.length == 0);
+                assert(v == 102);
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    // We should have one entry for the length; pop should have removed the 102 entry
+    assert_eq!(store.store.len(), 1);
 }

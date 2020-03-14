@@ -138,9 +138,11 @@ impl Externals for ContractStorage {
                     if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
                         panic!("ext_set_storage: {}", e);
                     }
+                    println!("ext_set_storage: {:?} = {:?}", key, data);
 
                     self.store.insert(key, data);
                 } else {
+                    println!("ext_set_storage: {:?} = removed", key);
                     self.store.remove(&key);
                 }
 

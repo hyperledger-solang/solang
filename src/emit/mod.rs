@@ -1345,10 +1345,14 @@ impl<'a> Contract<'a> {
                 }
             }
             _ => {
+                self.builder.build_store(slot_ptr, *slot);
+
                 runtime.clear_storage(&self, function, slot_ptr);
             }
         }
     }
+
+    /// Emit the contract storage initializers
     fn emit_initializer(&self, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
         let function = self.module.add_function(
             "storage_initializers",
