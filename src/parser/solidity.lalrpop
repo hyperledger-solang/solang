@@ -113,9 +113,7 @@ EventDefinition: Box<EventDefinition> = {
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    <d:DocComments> "enum" <n:Identifier> "{" <v:(<Identifier> ",")*> <e:Identifier> "}" => {
-        let mut v = v;
-        v.push(e);
+    <d:DocComments> "enum" <n:Identifier> "{" <v:Comma<Identifier>> "}" => {
         Box::new(EnumDefinition{doc: d, name: n, values: v})
     }
 }
