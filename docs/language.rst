@@ -5,8 +5,8 @@ The Solidity language supported by Solang is compatible with the
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
 these caveats:
 
-- At this point Solang is very much a work in progress; not at all features
-  are supported yet.
+- At this point Solang is very much a work in progress; not all features are
+  supported yet.
 
 - Solang can target different blockchains and some features depending on the target.
   For example, Parity Substrate uses a different ABI encoding and allows constructors
@@ -125,7 +125,7 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
   ``uint32`` types.
 
   The Solidity language has its origins for the Ethereum Virtual Machine (EVM), which has
-  support for 256 bit registers. Most common CPUs like x86_64 do not implement arithmetic
+  support for 256 bit arithmetic. Most common CPUs like x86_64 do not implement arithmetic
   for such large types, and any EVM virtual machine implementation has to do bigint
   calculations, which are expensive.
 
