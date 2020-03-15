@@ -32,7 +32,7 @@ pub struct JsonResult {
 
 fn main() {
     let matches = App::new("solang")
-        .version(&*format!("commit {}", env!("GIT_HASH")))
+        .version(&*format!("version {}", env!("GIT_HASH")))
         .author(env!("CARGO_PKG_AUTHORS"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
@@ -97,7 +97,7 @@ fn main() {
     };
 
     if matches.is_present("VERBOSE") {
-        eprintln!("info: Solang commit {}", env!("GIT_HASH"));
+        eprintln!("info: Solang version {}", env!("GIT_HASH"));
     }
 
     for filename in matches.values_of("INPUT").unwrap() {
