@@ -53,8 +53,49 @@ pub fn array_offset(
     }
 }
 
+/// Resolve delete statement
+pub fn delete(
+    loc: &ast::Loc,
+    var: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot use ‘delete’ in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    if let resolver::Type::StorageRef(ty) = &var_ty {
+        cfg.add(
+            tab,
+            Instr::ClearStorage {
+                ty: ty.as_ref().clone(),
+                storage: var_expr,
+            },
+        );
+    } else {
+        errors.push(Output::error(
+            *loc,
+            "argument to ‘delete’ should be storage reference".to_string(),
+        ));
+        return Err(());
+    }
+
+    Ok((Expression::Poison, resolver::Type::Undef))
+}
+
 /// Push() method on dynamic array in storage
-pub fn storage_array_push(
+pub fn array_push(
     loc: &ast::Loc,
     var_expr: Expression,
     func: &ast::Identifier,
@@ -177,7 +218,7 @@ pub fn storage_array_push(
 }
 
 /// Pop() method on dynamic array in storage
-pub fn storage_array_pop(
+pub fn array_pop(
     loc: &ast::Loc,
     var_expr: Expression,
     func: &ast::Identifier,
