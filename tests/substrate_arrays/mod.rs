@@ -1239,3 +1239,100 @@ fn storage_dynamic_array_pop() {
         "conversion from struct foo.s to storage struct foo.s not possible"
     );
 }
+
+#[test]
+fn storage_delete() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                delete 102;
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "argument to ‘delete’ should be storage reference"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            int32[] bar;
+
+            function test() public {
+                int32 x = delete bar;
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function or method does not return a value"
+    );
+
+    // ensure that structs and fixed arrays are wiped by pop
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            uint64 bar;
+
+            function test() public {
+                bar = 0xdeaddeaddeaddead;
+
+                delete bar;
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    // We should have one entry for the length; pop should have removed the 102 entry
+    assert!(store.store.is_empty());
+
+    // ensure that structs and fixed arrays are wiped by pop
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            enum enum1 { val1, val2, val3 }
+            struct s {
+                bool f1;
+                bytes3 f2;
+                enum1 f3;
+                uint64 f4;
+                int64[2] f5;
+            }
+            s[] bar;
+
+            function test() public {
+                s storage first = bar.push();
+
+                first.f1 = true;
+                first.f2 = "abc";
+                first.f3 = enum1.val2;
+                first.f4 = 65536;
+                first.f5[0] = -1;
+                first.f5[1] = 5;
+
+                assert(bar[0].f5[1] == 5);
+
+                // now erase it again
+                delete bar[0];
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    // We should have one entry for the length; delete should have removed the entry
+    assert_eq!(store.store.len(), 1);
+}

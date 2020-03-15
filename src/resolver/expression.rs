@@ -21,7 +21,7 @@ use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
-use resolver::storage::{array_offset, storage_array_pop, storage_array_push};
+use resolver::storage::{array_offset, array_pop, array_push, delete};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -2189,6 +2189,7 @@ pub fn expression(
             }
         }
         ast::Expression::New(loc, ty, args) => new(loc, ty, args, cfg, ns, vartab, errors),
+        ast::Expression::Delete(loc, var) => delete(loc, var, cfg, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
 
@@ -2531,7 +2532,6 @@ pub fn expression(
 
             Ok((Expression::Variable(*loc, pos), boolty))
         }
-        _ => panic!("unimplemented: {:?}", expr),
     }
 }
 
@@ -3290,7 +3290,7 @@ fn method_call(
                     ));
                     Err(())
                 } else {
-                    storage_array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                    array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
                 };
             }
             if func.name == "pop" {
@@ -3301,7 +3301,7 @@ fn method_call(
                     ));
                     Err(())
                 } else {
-                    storage_array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                    array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
                 };
             }
         }
