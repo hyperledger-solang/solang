@@ -76,6 +76,7 @@ pub fn delete(
     };
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
+        cfg.writes_contract_storage = true;
         cfg.add(
             tab,
             Instr::ClearStorage {
@@ -141,6 +142,7 @@ pub fn array_push(
 
     let entry_pos = tab.temp_anonymous(&slot_ty);
 
+    cfg.writes_contract_storage = true;
     cfg.add(
         tab,
         Instr::Set {
@@ -263,6 +265,7 @@ pub fn array_pop(
     let empty_array = cfg.new_basic_block("empty_array".to_string());
     let has_elements = cfg.new_basic_block("has_elements".to_string());
 
+    cfg.writes_contract_storage = true;
     cfg.add(
         tab,
         Instr::BranchCond {

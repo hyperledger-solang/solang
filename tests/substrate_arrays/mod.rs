@@ -1297,7 +1297,7 @@ fn storage_delete() {
     // We should have one entry for the length; pop should have removed the 102 entry
     assert!(store.store.is_empty());
 
-    // ensure that structs and fixed arrays are wiped by pop
+    // ensure that structs and fixed arrays are wiped by delete
     let (runtime, mut store) = build_solidity(
         r#"
         pragma solidity 0;
@@ -1335,4 +1335,31 @@ fn storage_delete() {
 
     // We should have one entry for the length; delete should have removed the entry
     assert_eq!(store.store.len(), 1);
+
+    // ensure that structs and fixed arrays are wiped by delete
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            int[] bar;
+
+            function setup() public {
+                bar.push(102);
+                bar.push(305);
+            }
+
+            function clear() public {
+                delete bar;
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "setup", Vec::new());
+
+    assert_eq!(store.store.len(), 3);
+
+    runtime.function(&mut store, "clear", Vec::new());
+
+    assert_eq!(store.store.len(), 0);
 }
