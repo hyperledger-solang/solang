@@ -273,8 +273,8 @@ impl<'a> Contract<'a> {
     pub fn emit_static_loop_with_int<'b, F>(
         &'b self,
         function: FunctionValue,
-        from: u64,
-        to: u64,
+        from: IntValue<'b>,
+        to: IntValue<'b>,
         data_ref: &mut IntValue<'b>,
         mut insert_body: F,
     ) where
@@ -287,7 +287,7 @@ impl<'a> Contract<'a> {
         self.builder.build_unconditional_branch(body);
         self.builder.position_at_end(body);
 
-        let loop_ty = self.context.i64_type();
+        let loop_ty = from.get_type();
         let loop_phi = self.builder.build_phi(loop_ty, "index");
         let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
         let mut data = data_phi.as_basic_value().into_int_value();
@@ -301,16 +301,13 @@ impl<'a> Contract<'a> {
             .builder
             .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
 
-        let comp = self.builder.build_int_compare(
-            IntPredicate::ULT,
-            next,
-            loop_ty.const_int(to, false),
-            "loop_cond",
-        );
+        let comp = self
+            .builder
+            .build_int_compare(IntPredicate::ULT, next, to, "loop_cond");
         self.builder.build_conditional_branch(comp, body, done);
 
         let body = self.builder.get_insert_block().unwrap();
-        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), entry), (&next, body)]);
+        loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
         data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
         self.builder.position_at_end(done);
@@ -1117,8 +1114,10 @@ impl<'a> Contract<'a> {
                 if let Some(d) = &dim[0] {
                     self.emit_static_loop_with_int(
                         function,
-                        0,
-                        d.to_u64().unwrap(),
+                        self.context.i64_type().const_zero(),
+                        self.context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
                         slot,
                         |index: IntValue<'b>, slot: &mut IntValue<'b>| {
                             let elem = unsafe {
@@ -1214,8 +1213,10 @@ impl<'a> Contract<'a> {
                 if let Some(d) = &dim[0] {
                     self.emit_static_loop_with_int(
                         function,
-                        0,
-                        d.to_u64().unwrap(),
+                        self.context.i64_type().const_zero(),
+                        self.context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
                         slot,
                         |index: IntValue<'b>, slot: &mut IntValue<'b>| {
                             let mut elem = unsafe {
@@ -1312,8 +1313,10 @@ impl<'a> Contract<'a> {
                 if let Some(d) = &dim[0] {
                     self.emit_static_loop_with_int(
                         function,
-                        0,
-                        d.to_u64().unwrap(),
+                        self.context.i64_type().const_zero(),
+                        self.context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
                         slot,
                         |_index: IntValue<'b>, slot: &mut IntValue<'b>| {
                             self.storage_clear(&ty, slot, slot_ptr, function, runtime);
@@ -1328,7 +1331,76 @@ impl<'a> Contract<'a> {
                         },
                     );
                 } else {
-                    // FIMXE: iterate over dynamic array
+                    // dynamic length array.
+                    // load length
+                    self.builder.build_store(slot_ptr, *slot);
+
+                    let slot_ty = self.context.custom_width_int_type(256);
+
+                    let buf = self.builder.build_alloca(slot_ty, "buf");
+
+                    runtime.get_storage(self, function, slot_ptr, buf);
+
+                    let length = self.builder.build_load(buf, "length").into_int_value();
+
+                    // we need to hash the length slot in order to get the slot of the first
+                    // entry of the array
+                    self.builder.build_call(
+                        self.module.get_function("sha3").unwrap(),
+                        &[
+                            self.builder
+                                .build_pointer_cast(
+                                    slot_ptr,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "src",
+                                )
+                                .into(),
+                            slot.get_type()
+                                .size_of()
+                                .const_cast(self.context.i32_type(), false)
+                                .into(),
+                            self.builder
+                                .build_pointer_cast(
+                                    buf,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "dst",
+                                )
+                                .into(),
+                            self.context.i32_type().const_int(256, false).into(),
+                        ],
+                        "",
+                    );
+
+                    let mut entry_slot =
+                        self.builder.build_load(buf, "entry_slot").into_int_value();
+
+                    // now loop from first slot to first slot + length
+                    self.emit_static_loop_with_int(
+                        function,
+                        length.get_type().const_zero(),
+                        length,
+                        &mut entry_slot,
+                        |_index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                            self.storage_clear(&ty, slot, slot_ptr, function, runtime);
+
+                            if !ty.is_reference_type() {
+                                *slot = self.builder.build_int_add(
+                                    *slot,
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+
+                    // clear length itself
+                    self.storage_clear(
+                        &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                        slot,
+                        slot_ptr,
+                        function,
+                        runtime,
+                    );
                 }
             }
             resolver::Type::Struct(n) => {
