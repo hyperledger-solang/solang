@@ -981,6 +981,7 @@ fn dynamic_arrays_need_phi_node() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
 // test:
 // alignment of array elements
 // arrays of other structs/arrays/darrays
@@ -1176,4 +1177,65 @@ fn storage_dynamic_array_pop() {
 
     // We should have one entry for the length; pop should have removed the 102 entry
     assert_eq!(store.store.len(), 1);
+
+    // ensure that structs and fixed arrays are wiped by pop
+    let (runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            enum enum1 { val1, val2, val3 }
+            struct s {
+                bool f1;
+                bytes3 f2;
+                enum1 f3;
+                uint64 f4;
+                int64[2] f5;
+            }
+            s[] bar;
+
+            function test() public {
+                s storage first = bar.push();
+
+                first.f1 = true;
+                first.f2 = "abc";
+                first.f3 = enum1.val2;
+                first.f4 = 65536;
+                first.f5[0] = -1;
+                first.f5[1] = 5;
+
+                assert(bar[0].f5[1] == 5);
+
+                // now erase it again
+                bar.pop();
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    // We should have one entry for the length; pop should have removed the 102 entry
+    assert_eq!(store.store.len(), 1);
+
+    // pop returns the dereferenced value, not a reference to storage
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract foo {
+            struct s {
+                bool f1;
+                int32 f2;
+            }
+            s[] bar;
+
+            function test() public {
+                s storage x = bar.pop();
+            }
+        }"#,
+        &Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "conversion from struct foo.s to storage struct foo.s not possible"
+    );
 }
