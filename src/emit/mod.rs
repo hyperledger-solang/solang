@@ -315,6 +315,55 @@ impl<'a> Contract<'a> {
         *data_ref = data;
     }
 
+    /// Emit a loop from `from` to `to`, checking the condition _before_ the body.
+    pub fn emit_loop_cond_first_with_int<'b, F>(
+        &'b self,
+        function: FunctionValue,
+        from: IntValue<'b>,
+        to: IntValue<'b>,
+        data_ref: &mut IntValue<'b>,
+        mut insert_body: F,
+    ) where
+        F: FnMut(IntValue<'b>, &mut IntValue<'b>),
+    {
+        let cond = self.context.append_basic_block(function, "cond");
+        let body = self.context.append_basic_block(function, "body");
+        let done = self.context.append_basic_block(function, "done");
+        let entry = self.builder.get_insert_block().unwrap();
+
+        self.builder.build_unconditional_branch(cond);
+        self.builder.position_at_end(cond);
+
+        let loop_ty = from.get_type();
+        let loop_phi = self.builder.build_phi(loop_ty, "index");
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let mut data = data_phi.as_basic_value().into_int_value();
+
+        let loop_var = loop_phi.as_basic_value().into_int_value();
+
+        let next = self
+            .builder
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+
+        let comp = self
+            .builder
+            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond");
+        self.builder.build_conditional_branch(comp, body, done);
+
+        self.builder.position_at_end(body);
+        // add loop body
+        insert_body(loop_var, &mut data);
+
+        self.builder.build_unconditional_branch(cond);
+
+        loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
+        data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
+
+        self.builder.position_at_end(done);
+
+        *data_ref = data;
+    }
+
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
         for func in &self.ns.functions {
             let name = if func.name != "" {
@@ -1078,7 +1127,7 @@ impl<'a> Contract<'a> {
                                 "dst",
                             )
                             .into(),
-                        self.context.i32_type().const_int(256, false).into(),
+                        self.context.i32_type().const_int(32, false).into(),
                     ],
                     "",
                 );
@@ -1366,7 +1415,7 @@ impl<'a> Contract<'a> {
                                     "dst",
                                 )
                                 .into(),
-                            self.context.i32_type().const_int(256, false).into(),
+                            self.context.i32_type().const_int(32, false).into(),
                         ],
                         "",
                     );
@@ -1375,7 +1424,7 @@ impl<'a> Contract<'a> {
                         self.builder.build_load(buf, "entry_slot").into_int_value();
 
                     // now loop from first slot to first slot + length
-                    self.emit_static_loop_with_int(
+                    self.emit_loop_cond_first_with_int(
                         function,
                         length.get_type().const_zero(),
                         length,

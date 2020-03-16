@@ -987,11 +987,8 @@ fn dynamic_arrays_need_phi_node() {
 // arrays of other structs/arrays/darrays
 // nil pointer should fail
 
-// dynamic storage arrays
 // copy to/from storage <=> memory
 // abi encode/decode
-
-// push/pop on dynamic storage array
 
 // string/bytes
 
@@ -1359,6 +1356,11 @@ fn storage_delete() {
 
     assert_eq!(store.store.len(), 3);
 
+    runtime.function(&mut store, "clear", Vec::new());
+
+    assert_eq!(store.store.len(), 0);
+
+    // our delete operator has to iterate over the dynamic array. Ensure it works if the array is empty
     runtime.function(&mut store, "clear", Vec::new());
 
     assert_eq!(store.store.len(), 0);
