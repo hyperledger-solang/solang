@@ -68,6 +68,7 @@ pub enum Token<'input> {
     Uint(u16),
     Int(u16),
     Bytes(u8),
+    DynamicBytes,
     Bool,
     Address,
     String,
@@ -154,6 +155,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Uint(w) => write!(f, "uint{}", w),
             Token::Int(w) => write!(f, "int{}", w),
             Token::Bytes(w) => write!(f, "bytes{}", w),
+            Token::DynamicBytes => write!(f, "bytes"),
             Token::Semicolon => write!(f, ";"),
             Token::Comma => write!(f, ","),
             Token::OpenParenthesis => write!(f, "("),
@@ -374,6 +376,7 @@ impl<'input> Lexer<'input> {
         keywords.insert(String::from("if"), Token::If);
         keywords.insert(String::from("else"), Token::Else);
         keywords.insert(String::from("_"), Token::Underscore);
+        keywords.insert(String::from("bytes"), Token::DynamicBytes);
 
         Lexer {
             input,

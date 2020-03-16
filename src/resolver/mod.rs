@@ -34,6 +34,8 @@ pub enum Type {
     Int(u16),
     Uint(u16),
     Bytes(u8),
+    DynamicBytes,
+    String,
     Array(Box<Type>, Vec<Option<BigInt>>),
     Enum(usize),
     Struct(usize),
@@ -50,6 +52,8 @@ impl Type {
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
             Type::Bytes(n) => format!("bytes{}", n),
+            Type::String => "string".to_string(),
+            Type::DynamicBytes => "bytes".to_string(),
             Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
             Type::Struct(n) => format!("struct {}.{}", ns.name, ns.structs[*n].name),
             Type::Array(ty, len) => format!(
@@ -89,6 +93,8 @@ impl Type {
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
             Type::Bytes(n) => format!("bytes{}", n),
+            Type::DynamicBytes => "bytes".to_string(),
+            Type::String => "string".to_string(),
             Type::Enum(n) => ns.enums[*n].ty.to_signature_string(ns),
             Type::Array(ty, len) => format!(
                 "{}{}",
@@ -170,6 +176,7 @@ impl Type {
                 .iter()
                 .map(|f| f.ty.size_hint(ns))
                 .sum(),
+            Type::String | Type::DynamicBytes => BigInt::from(4),
             _ => unimplemented!(),
         }
     }
@@ -367,6 +374,8 @@ impl FunctionDecl {
                         Type::Int(n) => format!("int{}", n),
                         Type::Uint(n) => format!("uint{}", n),
                         Type::Bytes(n) => format!("bytes{}", n),
+                        Type::DynamicBytes => "bytes".to_string(),
+                        Type::String => "string".to_string(),
                         Type::Enum(i) => ns.enums[*i].name.to_owned(),
                         Type::Struct(i) => ns.structs[*i].name.to_owned(),
                         Type::Array(ty, len) => format!(
@@ -401,7 +410,8 @@ impl From<ast::Type> for Type {
             ast::Type::Int(n) => Type::Int(n),
             ast::Type::Uint(n) => Type::Uint(n),
             ast::Type::Bytes(n) => Type::Bytes(n),
-            _ => unimplemented!(),
+            ast::Type::String => Type::String,
+            ast::Type::DynamicBytes => Type::DynamicBytes,
         }
     }
 }
