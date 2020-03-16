@@ -1444,7 +1444,7 @@ impl<'a> Contract<'a> {
 
                     // clear length itself
                     self.storage_clear(
-                        &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                        &resolver::Type::Uint(256),
                         slot,
                         slot_ptr,
                         function,
@@ -2591,7 +2591,16 @@ impl<'a> Contract<'a> {
     /// Return the llvm type for the resolved type.
     fn llvm_type(&self, ty: &resolver::Type) -> BasicTypeEnum<'a> {
         match ty {
-            resolver::Type::Primitive(e) => BasicTypeEnum::IntType(e.llvm_type(self.context)),
+            resolver::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
+            resolver::Type::Int(n) | resolver::Type::Uint(n) => {
+                BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
+            }
+            resolver::Type::Address => {
+                BasicTypeEnum::IntType(self.context.custom_width_int_type(20 * 8))
+            }
+            resolver::Type::Bytes(n) => {
+                BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
+            }
             resolver::Type::Enum(n) => {
                 BasicTypeEnum::IntType(self.ns.enums[*n].ty.llvm_type(self.context))
             }
@@ -2637,39 +2646,30 @@ impl<'a> Contract<'a> {
     }
 }
 
-impl ast::PrimitiveType {
+impl resolver::Type {
     /// Return the llvm type for this primitive. Non-primitives will panic and should be generated via resolver::Type.llvm_Type()
     fn llvm_type<'a>(&self, context: &'a Context) -> IntType<'a> {
         match self {
-            ast::PrimitiveType::Bool => context.bool_type(),
-            ast::PrimitiveType::Int(n) | ast::PrimitiveType::Uint(n) => {
+            resolver::Type::Bool => context.bool_type(),
+            resolver::Type::Int(n) | resolver::Type::Uint(n) => {
                 context.custom_width_int_type(*n as u32)
             }
-            ast::PrimitiveType::Address => context.custom_width_int_type(20 * 8),
-            ast::PrimitiveType::Bytes(n) => context.custom_width_int_type(*n as u32 * 8),
+            resolver::Type::Address => context.custom_width_int_type(20 * 8),
+            resolver::Type::Bytes(n) => context.custom_width_int_type(*n as u32 * 8),
             _ => {
                 panic!("llvm type for {:?} not implemented", self);
             }
         }
     }
 
-    fn stack_based(self) -> bool {
-        match self {
-            ast::PrimitiveType::Bool => false,
-            ast::PrimitiveType::Int(n) => n > 64,
-            ast::PrimitiveType::Uint(n) => n > 64,
-            ast::PrimitiveType::Address => true,
-            ast::PrimitiveType::Bytes(n) => n > 8,
-            _ => unimplemented!(),
-        }
-    }
-}
-
-impl resolver::Type {
     /// Is this type an reference type in the solidity language? (struct, array, mapping)
     pub fn is_reference_type(&self) -> bool {
         match self {
-            resolver::Type::Primitive(_) => false,
+            resolver::Type::Bool => false,
+            resolver::Type::Address => false,
+            resolver::Type::Int(_) => false,
+            resolver::Type::Uint(_) => false,
+            resolver::Type::Bytes(_) => false,
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,
             resolver::Type::Array(_, _) => true,
@@ -2682,7 +2682,11 @@ impl resolver::Type {
     /// Does this type need a phi node
     pub fn needs_phi(&self) -> bool {
         match self {
-            resolver::Type::Primitive(e) => !e.stack_based(),
+            resolver::Type::Bool
+            | resolver::Type::Int(_)
+            | resolver::Type::Uint(_)
+            | resolver::Type::Address
+            | resolver::Type::Bytes(_) => !self.stack_based(),
             resolver::Type::Enum(_) => true,
             resolver::Type::Struct(_) => true,
             resolver::Type::Array(_, _) => true,
@@ -2695,7 +2699,11 @@ impl resolver::Type {
     /// Should this value be stored in alloca'ed space
     pub fn stack_based(&self) -> bool {
         match self {
-            resolver::Type::Primitive(e) => e.stack_based(),
+            resolver::Type::Bool => false,
+            resolver::Type::Int(n) => *n > 64,
+            resolver::Type::Uint(n) => *n > 64,
+            resolver::Type::Address => true,
+            resolver::Type::Bytes(n) => *n > 8,
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,
             resolver::Type::Array(_, _) => true,

@@ -29,7 +29,11 @@ pub type ArrayDimension = Option<(ast::Loc, BigInt)>;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
-    Primitive(ast::PrimitiveType),
+    Address,
+    Bool,
+    Int(u16),
+    Uint(u16),
+    Bytes(u8),
     Array(Box<Type>, Vec<Option<BigInt>>),
     Enum(usize),
     Struct(usize),
@@ -41,7 +45,11 @@ pub enum Type {
 impl Type {
     pub fn to_string(&self, ns: &Contract) -> String {
         match self {
-            Type::Primitive(e) => e.to_string(),
+            Type::Bool => "bool".to_string(),
+            Type::Address => "address".to_string(),
+            Type::Int(n) => format!("int{}", n),
+            Type::Uint(n) => format!("uint{}", n),
+            Type::Bytes(n) => format!("bytes{}", n),
             Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
             Type::Struct(n) => format!("struct {}.{}", ns.name, ns.structs[*n].name),
             Type::Array(ty, len) => format!(
@@ -60,10 +68,28 @@ impl Type {
         }
     }
 
+    /// Is this a primitive, i.e. bool, address, int, uint, bytes
+    pub fn is_primitive(&self) -> bool {
+        match self {
+            Type::Bool => true,
+            Type::Address => true,
+            Type::Int(_) => true,
+            Type::Uint(_) => true,
+            Type::Bytes(_) => true,
+            Type::Ref(r) => r.is_primitive(),
+            Type::StorageRef(r) => r.is_primitive(),
+            _ => false,
+        }
+    }
+
     pub fn to_signature_string(&self, ns: &Contract) -> String {
         match self {
-            Type::Primitive(e) => e.to_string(),
-            Type::Enum(n) => ns.enums[*n].ty.to_string(),
+            Type::Bool => "bool".to_string(),
+            Type::Address => "address".to_string(),
+            Type::Int(n) => format!("int{}", n),
+            Type::Uint(n) => format!("uint{}", n),
+            Type::Bytes(n) => format!("bytes{}", n),
+            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(ns),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_signature_string(ns),
@@ -124,11 +150,10 @@ impl Type {
     pub fn size_hint(&self, ns: &Contract) -> BigInt {
         match self {
             Type::Enum(_) => BigInt::one(),
-            Type::Primitive(ast::PrimitiveType::Bool) => BigInt::one(),
-            Type::Primitive(ast::PrimitiveType::Address) => BigInt::from(20),
-            Type::Primitive(ast::PrimitiveType::Bytes(n)) => BigInt::from(*n),
-            Type::Primitive(ast::PrimitiveType::Uint(n))
-            | Type::Primitive(ast::PrimitiveType::Int(n)) => BigInt::from(n / 8),
+            Type::Bool => BigInt::one(),
+            Type::Address => BigInt::from(20),
+            Type::Bytes(n) => BigInt::from(*n),
+            Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
                 ty.size_hint(ns).mul(
@@ -151,35 +176,35 @@ impl Type {
 
     pub fn bits(&self) -> u16 {
         match self {
-            Type::Primitive(e) => e.bits(),
+            Type::Address => 160,
+            Type::Bool => 1,
+            Type::Int(n) => *n,
+            Type::Uint(n) => *n,
+            Type::Bytes(n) => *n as u16 * 8,
             _ => panic!("type not allowed"),
         }
     }
 
     pub fn signed(&self) -> bool {
         match self {
-            Type::Primitive(e) => e.signed(),
-            Type::Enum(_) => false,
+            Type::Int(_) => true,
             Type::Ref(r) => r.signed(),
             Type::StorageRef(r) => r.signed(),
-            _ => unreachable!(),
+            _ => false,
         }
     }
 
     pub fn ordered(&self) -> bool {
         match self {
-            Type::Primitive(e) => e.ordered(),
-            Type::Enum(_) => false,
+            Type::Int(_) => true,
+            Type::Uint(_) => true,
             Type::Struct(_) => unreachable!(),
             Type::Array(_, _) => unreachable!(),
             Type::Undef => unreachable!(),
             Type::Ref(r) => r.ordered(),
             Type::StorageRef(r) => r.ordered(),
+            _ => false,
         }
-    }
-
-    pub fn bool() -> Self {
-        Type::Primitive(ast::PrimitiveType::Bool)
     }
 
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
@@ -187,7 +212,6 @@ impl Type {
     pub fn storage_slots(&self, ns: &Contract) -> BigInt {
         match self {
             Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
-            Type::Enum(_) | Type::Primitive(_) => BigInt::one(),
             Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
@@ -206,6 +230,7 @@ impl Type {
                         })
                         .product::<BigInt>()
             }
+            _ => BigInt::one(),
         }
     }
 
@@ -251,7 +276,7 @@ pub struct StructDecl {
 
 pub struct EnumDecl {
     pub name: String,
-    pub ty: ast::PrimitiveType,
+    pub ty: Type,
     pub values: HashMap<String, (ast::Loc, usize)>,
 }
 
@@ -337,7 +362,11 @@ impl FunctionDecl {
 
                 fn type_to_wasm_name(ty: &Type, ns: &Contract) -> String {
                     match ty {
-                        Type::Primitive(e) => e.to_string(),
+                        Type::Bool => "bool".to_string(),
+                        Type::Address => "address".to_string(),
+                        Type::Int(n) => format!("int{}", n),
+                        Type::Uint(n) => format!("uint{}", n),
+                        Type::Bytes(n) => format!("bytes{}", n),
                         Type::Enum(i) => ns.enums[*i].name.to_owned(),
                         Type::Struct(i) => ns.structs[*i].name.to_owned(),
                         Type::Array(ty, len) => format!(
@@ -361,6 +390,19 @@ impl FunctionDecl {
         }
 
         sig
+    }
+}
+
+impl From<ast::PrimitiveType> for Type {
+    fn from(p: ast::PrimitiveType) -> Type {
+        match p {
+            ast::PrimitiveType::Bool => Type::Bool,
+            ast::PrimitiveType::Address => Type::Address,
+            ast::PrimitiveType::Int(n) => Type::Int(n),
+            ast::PrimitiveType::Uint(n) => Type::Uint(n),
+            ast::PrimitiveType::Bytes(n) => Type::Bytes(n),
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -507,7 +549,7 @@ impl Contract {
         }
 
         match id {
-            ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::Primitive(*p)),
+            ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::from(*p)),
             ast::Type::Primitive(p, exprs) => {
                 let mut dimensions = Vec::new();
 
@@ -519,7 +561,7 @@ impl Contract {
                 }
 
                 Ok(Type::Array(
-                    Box::new(Type::Primitive(*p)),
+                    Box::new(Type::from(*p)),
                     resolve_dimensions(&dimensions, errors)?,
                 ))
             }
@@ -607,8 +649,7 @@ impl Contract {
         let mut cfg = ControlFlowGraph::new();
         let (size_expr, size_ty) = expression(&expr, &mut cfg, &self, &mut None, errors)?;
         match size_ty {
-            Type::Primitive(ast::PrimitiveType::Uint(_))
-            | Type::Primitive(ast::PrimitiveType::Int(_)) => {}
+            Type::Uint(_) | Type::Int(_) => {}
             _ => {
                 errors.push(Output::decl_error(
                     expr.loc(),
@@ -1033,7 +1074,7 @@ fn enum_decl(enum_: &ast::EnumDefinition, ns: &mut Contract, errors: &mut Vec<Ou
 
     let decl = EnumDecl {
         name: enum_.name.name.to_string(),
-        ty: ast::PrimitiveType::Uint(bits as u16),
+        ty: Type::Uint(bits as u16),
         values: entries,
     };
 
@@ -1079,7 +1120,7 @@ fn enum_256values_is_uint8() {
     });
 
     assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, ast::PrimitiveType::Uint(8));
+    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
         e.values.push(ast::Identifier {
@@ -1092,7 +1133,7 @@ fn enum_256values_is_uint8() {
 
     e.name.name = "foo2".to_owned();
     assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, ast::PrimitiveType::Uint(8));
+    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -1101,5 +1142,5 @@ fn enum_256values_is_uint8() {
 
     e.name.name = "foo3".to_owned();
     assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, ast::PrimitiveType::Uint(16));
+    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }

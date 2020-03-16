@@ -127,7 +127,7 @@ pub fn array_push(
     }
 
     // set array+length to val_expr
-    let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
+    let slot_ty = resolver::Type::Uint(256);
     let length_pos = tab.temp_anonymous(&slot_ty);
 
     cfg.add(
@@ -251,7 +251,7 @@ pub fn array_pop(
     }
 
     // set array+length to val_expr
-    let slot_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(256));
+    let slot_ty = resolver::Type::Uint(256);
     let length_pos = tab.temp_anonymous(&slot_ty);
 
     cfg.add(

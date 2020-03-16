@@ -31,34 +31,6 @@ pub enum PrimitiveType {
     DynamicBytes,
 }
 
-impl PrimitiveType {
-    pub fn signed(self) -> bool {
-        match self {
-            PrimitiveType::Int(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn ordered(self) -> bool {
-        match self {
-            PrimitiveType::Int(_) => true,
-            PrimitiveType::Uint(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn bits(self) -> u16 {
-        match self {
-            PrimitiveType::Address => 160,
-            PrimitiveType::Bool => 1,
-            PrimitiveType::Int(n) => n,
-            PrimitiveType::Uint(n) => n,
-            PrimitiveType::Bytes(n) => n as u16 * 8,
-            _ => panic!("{} not fixed size", self.to_string()),
-        }
-    }
-}
-
 impl fmt::Display for PrimitiveType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
