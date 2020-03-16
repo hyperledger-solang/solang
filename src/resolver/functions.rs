@@ -93,7 +93,7 @@ pub fn function_decl(
     };
 
     for p in &f.params {
-        match ns.resolve_type(&p.typ, errors) {
+        match ns.resolve_type(&p.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
@@ -135,7 +135,7 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
-        match ns.resolve_type(&r.typ, errors) {
+        match ns.resolve_type(&r.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {

@@ -31,13 +31,13 @@ DocComments: Vec<String> = {
     DocComment* => fold_doc_comments(<>)
 }
 
-PrimitiveType: PrimitiveType = {
-    "bool" => PrimitiveType::Bool,
-    "address" => PrimitiveType::Address,
-    "string" => PrimitiveType::String,
-    Uint => PrimitiveType::Uint(<>),
-    Int => PrimitiveType::Int(<>),
-    Bytes => PrimitiveType::Bytes(<>),
+Type: Type = {
+    "bool" => Type::Bool,
+    "address" => Type::Address,
+    "string" => Type::String,
+    Uint => Type::Uint(<>),
+    Int => Type::Int(<>),
+    Bytes => Type::Bytes(<>),
 }
 
 ArrayDimension: Option<Expression> = {
@@ -45,10 +45,10 @@ ArrayDimension: Option<Expression> = {
     "[" <e:Expression> "]" => Some(e)
 }
 
-Type: Type = {
-    <p:PrimitiveType> => Type::Primitive(p, Vec::new()),
-    <p:PrimitiveType> <d:ArrayDimension+> => Type::Primitive(p, d),
-    Precedence0 => Type::Unresolved(Box::new(<>)),
+ComplexType: ComplexType = {
+    <p:Type> => ComplexType::Primitive(p, Vec::new()),
+    <p:Type> <d:ArrayDimension+> => ComplexType::Primitive(p, d),
+    Precedence0 => ComplexType::Unresolved(Box::new(<>)),
 }
 
 StorageLocation: StorageLocation = {
@@ -62,11 +62,11 @@ Identifier: Identifier = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <t:Type> <s:StorageLocation> <i:Identifier> => VariableDeclaration {
-        typ: t, storage: Some(s), name: i
+    <t:ComplexType> <s:StorageLocation> <i:Identifier> => VariableDeclaration {
+        ty: t, storage: Some(s), name: i
     },
-    <t:Type> <i:Identifier> => VariableDeclaration {
-        typ: t, storage: None, name: i
+    <t:ComplexType> <i:Identifier> => VariableDeclaration {
+        ty: t, storage: None, name: i
     }
 }
 
@@ -97,8 +97,8 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <t:Type> <i:"indexed"?> <n:Identifier?> => EventParameter{
-        typ: t, indexed: match i { Some(_) => true, _ => false }, name:n
+    <t:ComplexType> <i:"indexed"?> <n:Identifier?> => EventParameter{
+        ty: t, indexed: match i { Some(_) => true, _ => false }, name:n
     }
 }
 
@@ -119,7 +119,7 @@ EnumDefinition: Box<EnumDefinition> = {
 }
 
 ContractVariableDefinition: Box<ContractVariableDefinition> = {
-    <d:DocComments> <l:@L> <t:Type> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <d:DocComments> <l:@L> <t:ComplexType> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
         Box::new(ContractVariableDefinition{
             doc: d, loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
         })
@@ -242,13 +242,13 @@ NamedArgument: NamedArgument = {
 }
 
 Precedence1: Expression = {
-    <a:@L> <i:Type> "(" "{" "}" ")" <b:@R> => {
+    <a:@L> <i:ComplexType> "(" "{" "}" ")" <b:@R> => {
         Expression::NamedFunctionCall(Loc(a, b), i, Vec::new())
     },
-    <a:@L> <i:Type> "(" <v:Comma<Expression>> ")" <b:@R> => {
+    <a:@L> <i:ComplexType> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), i, v)
     },
-    <a:@L> <i:Type> "(" "{" <v:(<NamedArgument> ",")*> <e:NamedArgument> "}" ")" <b:@R> => {
+    <a:@L> <i:ComplexType> "(" "{" <v:(<NamedArgument> ",")*> <e:NamedArgument> "}" ")" <b:@R> => {
         let mut v = v;
         v.push(e);
         Expression::NamedFunctionCall(Loc(a, b), i, v)
@@ -258,7 +258,7 @@ Precedence1: Expression = {
 Precedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
-    <a:@L> "new" <t:Type> <b:@R> "(" <v:Comma<Expression>> ")" => Expression::New(Loc(a, b), t, v),
+    <a:@L> "new" <t:ComplexType> <b:@R> "(" <v:Comma<Expression>> ")" => Expression::New(Loc(a, b), t, v),
     <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
@@ -307,8 +307,8 @@ HexLiteral: HexLiteral = {
 }
 
 Parameter: Parameter = {
-    <e:Type> <s:StorageLocation?> <i:Identifier?> => {
-        Parameter{typ: e, storage: s, name: i}
+    <e:ComplexType> <s:StorageLocation?> <i:Identifier?> => {
+        Parameter{ty: e, storage: s, name: i}
     }
 }
 

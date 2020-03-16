@@ -587,7 +587,7 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let mut var_ty = ns.resolve_type(&decl.typ, errors)?;
+            let mut var_ty = ns.resolve_type(&decl.ty, errors)?;
 
             if let Some(storage) = &decl.storage {
                 if !var_ty.can_have_data_location() {

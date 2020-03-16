@@ -21,7 +21,7 @@ pub enum SourceUnitPart {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum PrimitiveType {
+pub enum Type {
     Address,
     Bool,
     String,
@@ -31,23 +31,23 @@ pub enum PrimitiveType {
     DynamicBytes,
 }
 
-impl fmt::Display for PrimitiveType {
+impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PrimitiveType::Address => write!(f, "address"),
-            PrimitiveType::Bool => write!(f, "bool"),
-            PrimitiveType::String => write!(f, "string"),
-            PrimitiveType::Int(n) => write!(f, "int{}", n),
-            PrimitiveType::Uint(n) => write!(f, "uint{}", n),
-            PrimitiveType::Bytes(n) => write!(f, "bytes{}", n),
-            PrimitiveType::DynamicBytes => write!(f, "bytes"),
+            Type::Address => write!(f, "address"),
+            Type::Bool => write!(f, "bool"),
+            Type::String => write!(f, "string"),
+            Type::Int(n) => write!(f, "int{}", n),
+            Type::Uint(n) => write!(f, "uint{}", n),
+            Type::Bytes(n) => write!(f, "bytes{}", n),
+            Type::DynamicBytes => write!(f, "bytes"),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Type {
-    Primitive(PrimitiveType, Vec<Option<Expression>>),
+pub enum ComplexType {
+    Primitive(Type, Vec<Option<Expression>>),
     Unresolved(Box<Expression>),
 }
 
@@ -80,7 +80,7 @@ impl fmt::Display for StorageLocation {
 
 #[derive(Debug, PartialEq)]
 pub struct VariableDeclaration {
-    pub typ: Type,
+    pub ty: ComplexType,
     pub storage: Option<StorageLocation>,
     pub name: Identifier,
 }
@@ -120,7 +120,7 @@ pub struct ContractDefinition {
 
 #[derive(Debug, PartialEq)]
 pub struct EventParameter {
-    pub typ: Type,
+    pub ty: ComplexType,
     pub indexed: bool,
     pub name: Option<Identifier>,
 }
@@ -150,7 +150,7 @@ pub enum VariableAttribute {
 pub struct ContractVariableDefinition {
     pub doc: Vec<String>,
     pub loc: Loc,
-    pub ty: Type,
+    pub ty: ComplexType,
     pub attrs: Vec<VariableAttribute>,
     pub name: Identifier,
     pub initializer: Option<Expression>,
@@ -178,11 +178,11 @@ pub struct NamedArgument {
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
-    New(Loc, Type, Vec<Expression>),
+    New(Loc, ComplexType, Vec<Expression>),
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
-    FunctionCall(Loc, Type, Vec<Expression>),
-    NamedFunctionCall(Loc, Type, Vec<NamedArgument>),
+    FunctionCall(Loc, ComplexType, Vec<Expression>),
+    NamedFunctionCall(Loc, ComplexType, Vec<NamedArgument>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),
     Delete(Loc, Box<Expression>),
@@ -291,7 +291,7 @@ impl Expression {
 
 #[derive(Debug, PartialEq)]
 pub struct Parameter {
-    pub typ: Type,
+    pub ty: ComplexType,
     pub storage: Option<StorageLocation>,
     pub name: Option<Identifier>,
 }

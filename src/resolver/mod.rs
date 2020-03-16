@@ -393,14 +393,14 @@ impl FunctionDecl {
     }
 }
 
-impl From<ast::PrimitiveType> for Type {
-    fn from(p: ast::PrimitiveType) -> Type {
+impl From<ast::Type> for Type {
+    fn from(p: ast::Type) -> Type {
         match p {
-            ast::PrimitiveType::Bool => Type::Bool,
-            ast::PrimitiveType::Address => Type::Address,
-            ast::PrimitiveType::Int(n) => Type::Int(n),
-            ast::PrimitiveType::Uint(n) => Type::Uint(n),
-            ast::PrimitiveType::Bytes(n) => Type::Bytes(n),
+            ast::Type::Bool => Type::Bool,
+            ast::Type::Address => Type::Address,
+            ast::Type::Int(n) => Type::Int(n),
+            ast::Type::Uint(n) => Type::Uint(n),
+            ast::Type::Bytes(n) => Type::Bytes(n),
             _ => unimplemented!(),
         }
     }
@@ -517,7 +517,11 @@ impl Contract {
     }
 
     /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
-    pub fn resolve_type(&self, id: &ast::Type, errors: &mut Vec<Output>) -> Result<Type, ()> {
+    pub fn resolve_type(
+        &self,
+        id: &ast::ComplexType,
+        errors: &mut Vec<Output>,
+    ) -> Result<Type, ()> {
         fn resolve_dimensions(
             ast_dimensions: &[Option<(ast::Loc, BigInt)>],
             errors: &mut Vec<Output>,
@@ -549,8 +553,10 @@ impl Contract {
         }
 
         match id {
-            ast::Type::Primitive(p, dimensions) if dimensions.is_empty() => Ok(Type::from(*p)),
-            ast::Type::Primitive(p, exprs) => {
+            ast::ComplexType::Primitive(p, dimensions) if dimensions.is_empty() => {
+                Ok(Type::from(*p))
+            }
+            ast::ComplexType::Primitive(p, exprs) => {
                 let mut dimensions = Vec::new();
 
                 for expr in exprs {
@@ -565,7 +571,7 @@ impl Contract {
                     resolve_dimensions(&dimensions, errors)?,
                 ))
             }
-            ast::Type::Unresolved(expr) => {
+            ast::ComplexType::Unresolved(expr) => {
                 let (id, dimensions) = self.expr_to_type(&expr, errors)?;
 
                 match self.symbols.get(&id.name) {

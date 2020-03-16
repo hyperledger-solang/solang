@@ -2112,7 +2112,7 @@ pub fn expression(
             }
 
             match ty {
-                ast::Type::Unresolved(expr) => {
+                ast::ComplexType::Unresolved(expr) => {
                     let (id, dimensions) = ns.expr_to_type(expr, errors)?;
                     if !dimensions.is_empty() {
                         errors.push(Output::error(*loc, "unexpected array type".to_string()));
@@ -2154,7 +2154,7 @@ pub fn expression(
             }
 
             match ty {
-                ast::Type::Unresolved(expr) => {
+                ast::ComplexType::Unresolved(expr) => {
                     if let ast::Expression::MemberAccess(_, member, func) = expr.as_ref() {
                         method_call(loc, member, func, args, cfg, ns, vartab, errors)
                     } else {
@@ -2472,7 +2472,7 @@ pub fn expression(
 /// Resolve an new expression
 fn new(
     loc: &ast::Loc,
-    ty: &ast::Type,
+    ty: &ast::ComplexType,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     ns: &resolver::Contract,
