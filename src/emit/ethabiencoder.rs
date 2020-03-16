@@ -93,6 +93,7 @@ impl EthAbiEncoder {
             resolver::Type::Ref(ty) => {
                 self.encode_ty(contract, function, ty, arg, data);
             }
+            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         };
     }
 
@@ -404,6 +405,7 @@ impl EthAbiEncoder {
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(r, contract),
             resolver::Type::StorageRef(r) => self.encoded_length(r, contract),
+            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         }
     }
 
@@ -680,6 +682,7 @@ impl EthAbiEncoder {
             resolver::Type::Ref(ty) => {
                 return self.decode_ty(contract, function, ty, to, data);
             }
+            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         };
 
         *data = unsafe {

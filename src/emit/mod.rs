@@ -2604,6 +2604,9 @@ impl<'a> Contract<'a> {
             resolver::Type::Enum(n) => {
                 BasicTypeEnum::IntType(self.ns.enums[*n].ty.llvm_type(self.context))
             }
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                self.module.get_type("struct.vector").unwrap()
+            }
             resolver::Type::Array(base_ty, dims) => {
                 let ty = self.llvm_var(base_ty);
 
@@ -2673,6 +2676,8 @@ impl resolver::Type {
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,
             resolver::Type::Array(_, _) => true,
+            resolver::Type::DynamicBytes => true,
+            resolver::Type::String => true,
             resolver::Type::Ref(r) => r.is_reference_type(),
             resolver::Type::StorageRef(r) => r.is_reference_type(),
             resolver::Type::Undef => unreachable!(),
@@ -2690,6 +2695,8 @@ impl resolver::Type {
             resolver::Type::Enum(_) => true,
             resolver::Type::Struct(_) => true,
             resolver::Type::Array(_, _) => true,
+            resolver::Type::DynamicBytes => true,
+            resolver::Type::String => true,
             resolver::Type::Ref(r) => r.needs_phi(),
             resolver::Type::StorageRef(_) => true,
             resolver::Type::Undef => unreachable!(),
@@ -2707,6 +2714,8 @@ impl resolver::Type {
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,
             resolver::Type::Array(_, _) => true,
+            resolver::Type::String => true,
+            resolver::Type::DynamicBytes => true,
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(_) => false,
             resolver::Type::StorageRef(r) => r.stack_based(),

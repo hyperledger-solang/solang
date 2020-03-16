@@ -1383,13 +1383,12 @@ impl resolver::Type {
                 Expression::BytesLiteral(ast::Loc(0, 0), l)
             }
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::Array(_, _) => unreachable!(),
             resolver::Type::Struct(_) => {
                 Expression::StructLiteral(ast::Loc(0, 0), self.clone(), Vec::new())
             }
             resolver::Type::Ref(_) => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
+            _ => unreachable!(),
         }
     }
 }

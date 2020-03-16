@@ -456,6 +456,7 @@ fn ty_to_abi(
                 display_name: vec![],
             }
         }
+        resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
     }
 }
 

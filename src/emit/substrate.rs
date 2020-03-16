@@ -472,6 +472,7 @@ impl SubstrateTarget {
 
                 to.into()
             }
+            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, data),
@@ -673,6 +674,7 @@ impl SubstrateTarget {
             resolver::Type::Ref(ty) => {
                 self.encode_ty(contract, function, ty, arg, data);
             }
+            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         };
     }
 
@@ -702,6 +704,7 @@ impl SubstrateTarget {
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(r, contract),
+            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         }
     }
 }
