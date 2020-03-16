@@ -752,7 +752,7 @@ fn statement(
                         &cond.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::bool(),
+                        &resolver::Type::Bool,
                         true,
                         ns,
                         errors,
@@ -794,7 +794,7 @@ fn statement(
                         &cond.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::bool(),
+                        &resolver::Type::Bool,
                         true,
                         ns,
                         errors,
@@ -900,7 +900,7 @@ fn statement(
                             &cond_expr.loc(),
                             expr,
                             &expr_ty,
-                            &resolver::Type::bool(),
+                            &resolver::Type::Bool,
                             true,
                             ns,
                             errors,
@@ -938,7 +938,7 @@ fn statement(
                         &cond_expr.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::bool(),
+                        &resolver::Type::Bool,
                         true,
                         ns,
                         errors,
@@ -1057,7 +1057,7 @@ fn statement(
                         &cond_expr.loc(),
                         expr,
                         &expr_ty,
-                        &resolver::Type::bool(),
+                        &resolver::Type::Bool,
                         true,
                         ns,
                         errors,
@@ -1370,8 +1370,19 @@ impl LoopScopes {
 impl resolver::Type {
     fn default(&self, ns: &resolver::Contract) -> Expression {
         match self {
-            resolver::Type::Primitive(e) => e.default(),
-            resolver::Type::Enum(e) => ns.enums[*e].ty.default(),
+            resolver::Type::Uint(b) | resolver::Type::Int(b) => {
+                Expression::NumberLiteral(ast::Loc(0, 0), *b, BigInt::from(0))
+            }
+            resolver::Type::Bool => Expression::BoolLiteral(ast::Loc(0, 0), false),
+            resolver::Type::Address => {
+                Expression::NumberLiteral(ast::Loc(0, 0), 160, BigInt::from(0))
+            }
+            resolver::Type::Bytes(n) => {
+                let mut l = Vec::new();
+                l.resize(*n as usize, 0);
+                Expression::BytesLiteral(ast::Loc(0, 0), l)
+            }
+            resolver::Type::Enum(e) => ns.enums[*e].ty.default(ns),
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Array(_, _) => unreachable!(),
             resolver::Type::Struct(_) => {
@@ -1379,27 +1390,6 @@ impl resolver::Type {
             }
             resolver::Type::Ref(_) => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
-        }
-    }
-}
-
-impl ast::PrimitiveType {
-    fn default(self) -> Expression {
-        match self {
-            ast::PrimitiveType::Uint(b) | ast::PrimitiveType::Int(b) => {
-                Expression::NumberLiteral(ast::Loc(0, 0), b, BigInt::from(0))
-            }
-            ast::PrimitiveType::Bool => Expression::BoolLiteral(ast::Loc(0, 0), false),
-            ast::PrimitiveType::Address => {
-                Expression::NumberLiteral(ast::Loc(0, 0), 160, BigInt::from(0))
-            }
-            ast::PrimitiveType::Bytes(n) => {
-                let mut l = Vec::new();
-                l.resize(n as usize, 0);
-                Expression::BytesLiteral(ast::Loc(0, 0), l)
-            }
-            ast::PrimitiveType::DynamicBytes => unimplemented!(),
-            ast::PrimitiveType::String => unimplemented!(),
         }
     }
 }

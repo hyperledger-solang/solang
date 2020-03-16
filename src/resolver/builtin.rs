@@ -6,7 +6,7 @@ use resolver;
 use super::{Contract, FunctionDecl, Parameter};
 
 pub fn add_builtin_function(ns: &mut Contract) {
-    let argty = resolver::Type::Primitive(ast::PrimitiveType::Bool);
+    let argty = resolver::Type::Bool;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "assert".to_owned(),
@@ -22,7 +22,7 @@ pub fn add_builtin_function(ns: &mut Contract) {
         ast::Visibility::Private(ast::Loc(0, 0)),
         vec![Parameter {
             name: "arg0".to_owned(),
-            ty: resolver::Type::Primitive(ast::PrimitiveType::Bool),
+            ty: resolver::Type::Bool,
         }],
         vec![],
         &ns,

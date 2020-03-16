@@ -357,11 +357,11 @@ fn signatures() {
         vec![
             Parameter {
                 name: "".to_string(),
-                ty: Type::Primitive(ast::PrimitiveType::Uint(8)),
+                ty: Type::Uint(8),
             },
             Parameter {
                 name: "".to_string(),
-                ty: Type::Primitive(ast::PrimitiveType::Address),
+                ty: Type::Address,
             },
         ],
         Vec::new(),

@@ -270,18 +270,9 @@ fn get_int_length(
     errors: &mut Vec<output::Output>,
 ) -> Result<(u16, bool), ()> {
     match l {
-        resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => Ok((*n, false)),
-        resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => Ok((*n, true)),
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) if allow_bytes => {
-            Ok((*n as u16 * 8, false))
-        }
-        resolver::Type::Primitive(t) => {
-            errors.push(Output::error(
-                *l_loc,
-                format!("expression of type {} not allowed", t.to_string()),
-            ));
-            Err(())
-        }
+        resolver::Type::Uint(n) => Ok((*n, false)),
+        resolver::Type::Int(n) => Ok((*n, true)),
+        resolver::Type::Bytes(n) if allow_bytes => Ok((*n as u16 * 8, false)),
         resolver::Type::Enum(n) => {
             errors.push(Output::error(
                 *l_loc,
@@ -311,6 +302,13 @@ fn get_int_length(
         resolver::Type::Undef => {
             unreachable!();
         }
+        _ => {
+            errors.push(Output::error(
+                *l_loc,
+                format!("expression of type {} not allowed", l.to_string(ns)),
+            ));
+            Err(())
+        }
     }
 }
 
@@ -335,12 +333,12 @@ fn coerce_int(
     };
 
     match (l, r) {
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(left_length)),
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(right_length)),
-        ) if allow_bytes => {
-            return Ok(resolver::Type::Primitive(ast::PrimitiveType::Bytes(
-                std::cmp::max(*left_length, *right_length),
+        (resolver::Type::Bytes(left_length), resolver::Type::Bytes(right_length))
+            if allow_bytes =>
+        {
+            return Ok(resolver::Type::Bytes(std::cmp::max(
+                *left_length,
+                *right_length,
             )));
         }
         _ => (),
@@ -350,18 +348,12 @@ fn coerce_int(
 
     let (right_len, right_signed) = get_int_length(r, r_loc, false, ns, errors)?;
 
-    Ok(resolver::Type::Primitive(
-        match (left_signed, right_signed) {
-            (true, true) => ast::PrimitiveType::Int(cmp::max(left_len, right_len)),
-            (false, false) => ast::PrimitiveType::Uint(cmp::max(left_len, right_len)),
-            (true, false) => {
-                ast::PrimitiveType::Int(cmp::max(left_len, cmp::min(right_len + 8, 256)))
-            }
-            (false, true) => {
-                ast::PrimitiveType::Int(cmp::max(cmp::min(left_len + 8, 256), right_len))
-            }
-        },
-    ))
+    Ok(match (left_signed, right_signed) {
+        (true, true) => resolver::Type::Int(cmp::max(left_len, right_len)),
+        (false, false) => resolver::Type::Uint(cmp::max(left_len, right_len)),
+        (true, false) => resolver::Type::Int(cmp::max(left_len, cmp::min(right_len + 8, 256))),
+        (false, true) => resolver::Type::Int(cmp::max(cmp::min(left_len + 8, 256), right_len)),
+    })
 }
 
 /// Try to convert a BigInt into a Expression::NumberLiteral. This checks for sign,
@@ -383,7 +375,7 @@ fn bigint_to_expression(
         } else {
             Ok((
                 Expression::NumberLiteral(*loc, int_size, n.clone()),
-                resolver::Type::Primitive(ast::PrimitiveType::Int(int_size)),
+                resolver::Type::Int(int_size),
             ))
         }
     } else if bits > 256 {
@@ -392,7 +384,7 @@ fn bigint_to_expression(
     } else {
         Ok((
             Expression::NumberLiteral(*loc, int_size, n.clone()),
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(int_size)),
+            resolver::Type::Uint(int_size),
         ))
     }
 }
@@ -447,13 +439,13 @@ pub fn cast(
             (from.clone(), to.clone())
         } else {
             let from_conv = if let resolver::Type::Enum(n) = from {
-                resolver::Type::Primitive(ns.enums[*n].ty)
+                ns.enums[*n].ty.clone()
             } else {
                 from.clone()
             };
 
             let to_conv = if let resolver::Type::Enum(n) = to {
-                resolver::Type::Primitive(ns.enums[*n].ty)
+                ns.enums[*n].ty.clone()
             } else {
                 to.clone()
             };
@@ -464,11 +456,9 @@ pub fn cast(
 
     // Special case: when converting literal sign can change if it fits
     match (&expr, &from_conv, &to_conv) {
-        (
-            &Expression::NumberLiteral(_, _, ref n),
-            &resolver::Type::Primitive(_),
-            &resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        ) => {
+        (&Expression::NumberLiteral(_, _, ref n), p, &resolver::Type::Uint(to_len))
+            if p.is_primitive() =>
+        {
             return if n.sign() == Sign::Minus {
                 errors.push(Output::type_error(
                     *loc,
@@ -494,11 +484,9 @@ pub fn cast(
                 Ok(Expression::NumberLiteral(*loc, to_len, n.clone()))
             }
         }
-        (
-            &Expression::NumberLiteral(_, _, ref n),
-            &resolver::Type::Primitive(_),
-            &resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) => {
+        (&Expression::NumberLiteral(_, _, ref n), p, &resolver::Type::Int(to_len))
+            if p.is_primitive() =>
+        {
             return if n.bits() >= to_len as usize {
                 errors.push(Output::type_error(
                     *loc,
@@ -515,11 +503,9 @@ pub fn cast(
             }
         }
         // Literal strings can be implicitly lengthened
-        (
-            &Expression::BytesLiteral(_, ref bs),
-            &resolver::Type::Primitive(_),
-            &resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        ) => {
+        (&Expression::BytesLiteral(_, ref bs), p, &resolver::Type::Bytes(to_len))
+            if p.is_primitive() =>
+        {
             return if bs.len() > to_len as usize {
                 errors.push(Output::type_error(
                     *loc,
@@ -545,32 +531,29 @@ pub fn cast(
 
     #[allow(clippy::comparison_chain)]
     match (from_conv, to_conv) {
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        ) => match from_len.cmp(&to_len) {
-            Ordering::Greater => {
-                if implicit {
-                    errors.push(Output::type_error(
-                        *loc,
-                        format!(
-                            "implicit conversion would truncate from {} to {}",
-                            from.to_string(ns),
-                            to.to_string(ns)
-                        ),
-                    ));
-                    Err(())
-                } else {
-                    Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
+        (resolver::Type::Uint(from_len), resolver::Type::Uint(to_len)) => {
+            match from_len.cmp(&to_len) {
+                Ordering::Greater => {
+                    if implicit {
+                        errors.push(Output::type_error(
+                            *loc,
+                            format!(
+                                "implicit conversion would truncate from {} to {}",
+                                from.to_string(ns),
+                                to.to_string(ns)
+                            ),
+                        ));
+                        Err(())
+                    } else {
+                        Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
+                    }
                 }
+                Ordering::Less => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
+                Ordering::Equal => Ok(expr),
             }
-            Ordering::Less => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
-            Ordering::Equal => Ok(expr),
-        },
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) => match from_len.cmp(&to_len) {
+        }
+        (resolver::Type::Int(from_len), resolver::Type::Int(to_len)) => match from_len.cmp(&to_len)
+        {
             Ordering::Greater => {
                 if implicit {
                     errors.push(Output::type_error(
@@ -589,14 +572,10 @@ pub fn cast(
             Ordering::Less => Ok(Expression::SignExt(*loc, to.clone(), Box::new(expr))),
             Ordering::Equal => Ok(expr),
         },
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) if to_len > from_len => Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr))),
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        ) => {
+        (resolver::Type::Uint(from_len), resolver::Type::Int(to_len)) if to_len > from_len => {
+            Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
+        }
+        (resolver::Type::Int(from_len), resolver::Type::Uint(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -615,10 +594,7 @@ pub fn cast(
                 Ok(expr)
             }
         }
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) => {
+        (resolver::Type::Uint(from_len), resolver::Type::Int(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -638,14 +614,8 @@ pub fn cast(
             }
         }
         // Casting int to address
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Address),
-        )
-        | (
-            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Address),
-        ) => {
+        (resolver::Type::Uint(from_len), resolver::Type::Address)
+        | (resolver::Type::Int(from_len), resolver::Type::Address) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -664,14 +634,8 @@ pub fn cast(
             }
         }
         // Casting int address to int
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Address),
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        )
-        | (
-            resolver::Type::Primitive(ast::PrimitiveType::Address),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) => {
+        (resolver::Type::Address, resolver::Type::Uint(to_len))
+        | (resolver::Type::Address, resolver::Type::Int(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -690,10 +654,7 @@ pub fn cast(
             }
         }
         // Lengthing or shorting a fixed bytes array
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        ) => {
+        (resolver::Type::Bytes(from_len), resolver::Type::Bytes(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -737,14 +698,8 @@ pub fn cast(
         }
         // Explicit conversion from bytesN to int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(to_len)),
-        )
-        | (
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Int(to_len)),
-        ) => {
+        (resolver::Type::Bytes(from_len), resolver::Type::Uint(to_len))
+        | (resolver::Type::Bytes(from_len), resolver::Type::Int(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -771,14 +726,8 @@ pub fn cast(
         }
         // Explicit conversion to bytesN from int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        )
-        | (
-            resolver::Type::Primitive(ast::PrimitiveType::Int(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        ) => {
+        (resolver::Type::Uint(from_len), resolver::Type::Bytes(to_len))
+        | (resolver::Type::Int(from_len), resolver::Type::Bytes(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -805,10 +754,7 @@ pub fn cast(
         }
         // Explicit conversion from bytesN to address only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(from_len)),
-            resolver::Type::Primitive(ast::PrimitiveType::Address),
-        ) => {
+        (resolver::Type::Bytes(from_len), resolver::Type::Address) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -835,10 +781,7 @@ pub fn cast(
         }
         // Explicit conversion to bytesN from int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Address),
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        ) => {
+        (resolver::Type::Address, resolver::Type::Bytes(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -864,14 +807,9 @@ pub fn cast(
             }
         }
         // string conversions
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(_)),
-            resolver::Type::Primitive(ast::PrimitiveType::String),
-        ) => Ok(expr),
-        (
-            resolver::Type::Primitive(ast::PrimitiveType::String),
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(to_len)),
-        ) => {
+        /*
+        (resolver::Type::Bytes(_), resolver::Type::String) => Ok(expr),
+        (resolver::Type::String, resolver::Type::Bytes(to_len)) => {
             if let Expression::BytesLiteral(_, from_str) = &expr {
                 if from_str.len() > to_len as usize {
                     errors.push(Output::type_error(
@@ -887,6 +825,7 @@ pub fn cast(
             }
             Ok(expr)
         }
+        */
         (resolver::Type::Undef, _) => {
             errors.push(Output::type_error(
                 *loc,
@@ -919,10 +858,9 @@ pub fn expression(
         ast::Expression::ArrayLiteral(loc, exprs) => {
             resolve_array_literal(loc, exprs, cfg, ns, vartab, errors)
         }
-        ast::Expression::BoolLiteral(loc, v) => Ok((
-            Expression::BoolLiteral(*loc, *v),
-            resolver::Type::Primitive(ast::PrimitiveType::Bool),
-        )),
+        ast::Expression::BoolLiteral(loc, v) => {
+            Ok((Expression::BoolLiteral(*loc, *v), resolver::Type::Bool))
+        }
         ast::Expression::StringLiteral(v) => {
             // Concatenate the strings
             let mut result = String::new();
@@ -954,7 +892,7 @@ pub fn expression(
 
             Ok((
                 Expression::BytesLiteral(loc, result.into_bytes()),
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
+                resolver::Type::Bytes(length as u8),
             ))
         }
         ast::Expression::HexLiteral(v) => {
@@ -981,7 +919,7 @@ pub fn expression(
 
             Ok((
                 Expression::BytesLiteral(loc, result),
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(length as u8)),
+                resolver::Type::Bytes(length as u8),
             ))
         }
         ast::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, errors),
@@ -993,7 +931,7 @@ pub fn expression(
 
                 Ok((
                     Expression::NumberLiteral(*loc, 160, BigInt::from_str_radix(&s, 16).unwrap()),
-                    resolver::Type::Primitive(ast::PrimitiveType::Address),
+                    resolver::Type::Address,
                 ))
             } else {
                 errors.push(Output::error(
@@ -1324,7 +1262,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             } else {
                 Ok((
@@ -1333,7 +1271,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             }
         }
@@ -1358,7 +1296,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             } else {
                 Ok((
@@ -1367,7 +1305,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             }
         }
@@ -1392,7 +1330,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             } else {
                 Ok((
@@ -1401,7 +1339,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             }
         }
@@ -1426,7 +1364,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             } else {
                 Ok((
@@ -1435,7 +1373,7 @@ pub fn expression(
                         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                     ),
-                    resolver::Type::bool(),
+                    resolver::Type::Bool,
                 ))
             }
         }
@@ -1451,7 +1389,7 @@ pub fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::Type::bool(),
+                resolver::Type::Bool,
             ))
         }
         ast::Expression::NotEqual(loc, l, r) => {
@@ -1466,7 +1404,7 @@ pub fn expression(
                     Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
                     Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
                 ),
-                resolver::Type::bool(),
+                resolver::Type::Bool,
             ))
         }
 
@@ -1481,13 +1419,13 @@ pub fn expression(
                         &loc,
                         expr,
                         &expr_type,
-                        &resolver::Type::bool(),
+                        &resolver::Type::Bool,
                         true,
                         ns,
                         errors,
                     )?),
                 ),
-                resolver::Type::bool(),
+                resolver::Type::Bool,
             ))
         }
         ast::Expression::Complement(loc, e) => {
@@ -1532,7 +1470,7 @@ pub fn expression(
                 &c.loc(),
                 cond,
                 &cond_type,
-                &resolver::Type::bool(),
+                &resolver::Type::Bool,
                 true,
                 ns,
                 errors,
@@ -1570,9 +1508,7 @@ pub fn expression(
             let v = vartab.find(id, ns, errors)?;
 
             match v.ty {
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(_))
-                | resolver::Type::Primitive(ast::PrimitiveType::Int(_))
-                | resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => (),
+                resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => (),
                 _ => {
                     errors.push(Output::error(
                         var.loc(),
@@ -1994,9 +1930,9 @@ pub fn expression(
                     let v = tab.find(id, ns, errors)?;
 
                     match v.ty {
-                        resolver::Type::Primitive(ast::PrimitiveType::Bytes(_))
-                        | resolver::Type::Primitive(ast::PrimitiveType::Int(_))
-                        | resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => (),
+                        resolver::Type::Bytes(_)
+                        | resolver::Type::Int(_)
+                        | resolver::Type::Uint(_) => (),
                         _ => {
                             errors.push(Output::error(
                                 var.loc(),
@@ -2079,9 +2015,9 @@ pub fn expression(
 
                     match var_ty {
                         resolver::Type::Ref(r_ty) => match *r_ty {
-                            resolver::Type::Primitive(ast::PrimitiveType::Bytes(_))
-                            | resolver::Type::Primitive(ast::PrimitiveType::Int(_))
-                            | resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => {
+                            resolver::Type::Bytes(_)
+                            | resolver::Type::Int(_)
+                            | resolver::Type::Uint(_) => {
                                 let set = op(var_expr.clone(), &*r_ty, errors)?;
 
                                 cfg.add(
@@ -2109,9 +2045,9 @@ pub fn expression(
                             }
                         },
                         resolver::Type::StorageRef(r_ty) => match *r_ty {
-                            resolver::Type::Primitive(ast::PrimitiveType::Bytes(_))
-                            | resolver::Type::Primitive(ast::PrimitiveType::Int(_))
-                            | resolver::Type::Primitive(ast::PrimitiveType::Uint(_)) => {
+                            resolver::Type::Bytes(_)
+                            | resolver::Type::Int(_)
+                            | resolver::Type::Uint(_) => {
                                 let set = op(
                                     Expression::StorageLoad(
                                         *loc,
@@ -2285,11 +2221,11 @@ pub fn expression(
             };
 
             match expr_ty {
-                resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+                resolver::Type::Bytes(n) => {
                     if id.name == "length" {
                         return Ok((
                             Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
-                            resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
+                            resolver::Type::Uint(8),
                         ));
                     }
                 }
@@ -2298,7 +2234,7 @@ pub fn expression(
                         return match dim.last().unwrap() {
                             None => Ok((
                                 Expression::DynamicArrayLength(*loc, Box::new(expr)),
-                                resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+                                resolver::Type::Uint(32),
                             )),
                             Some(d) => bigint_to_expression(loc, d, errors),
                         };
@@ -2332,11 +2268,11 @@ pub fn expression(
                         ));
                         return Err(());
                     }
-                    resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+                    resolver::Type::Bytes(n) => {
                         if id.name == "length" {
                             return Ok((
                                 Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
-                                resolver::Type::Primitive(ast::PrimitiveType::Uint(8)),
+                                resolver::Type::Uint(8),
                             ));
                         }
                     }
@@ -2345,9 +2281,7 @@ pub fn expression(
                             return match dim.last().unwrap() {
                                 None => Ok((
                                     expr,
-                                    resolver::Type::StorageRef(Box::new(
-                                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                                    )),
+                                    resolver::Type::StorageRef(Box::new(resolver::Type::Uint(256))),
                                 )),
                                 Some(d) => bigint_to_expression(loc, d, errors),
                             };
@@ -2385,7 +2319,7 @@ pub fn expression(
             Err(())
         }
         ast::Expression::Or(loc, left, right) => {
-            let boolty = resolver::Type::bool();
+            let boolty = resolver::Type::Bool;
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
             let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
 
@@ -2403,13 +2337,13 @@ pub fn expression(
                                 &loc,
                                 r,
                                 &r_type,
-                                &resolver::Type::bool(),
+                                &resolver::Type::Bool,
                                 true,
                                 ns,
                                 errors,
                             )?),
                         ),
-                        resolver::Type::bool(),
+                        resolver::Type::Bool,
                     ));
                 }
             };
@@ -2419,7 +2353,7 @@ pub fn expression(
                     name: "or".to_owned(),
                     loc: *loc,
                 },
-                &resolver::Type::bool(),
+                &resolver::Type::Bool,
             );
 
             let right_side = cfg.new_basic_block("or_right_side".to_string());
@@ -2443,7 +2377,7 @@ pub fn expression(
             cfg.set_basic_block(right_side);
 
             let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
-            let r = cast(&loc, r, &r_type, &resolver::Type::bool(), true, ns, errors)?;
+            let r = cast(&loc, r, &r_type, &resolver::Type::Bool, true, ns, errors)?;
 
             cfg.add(tab, Instr::Set { res: pos, expr: r });
 
@@ -2459,7 +2393,7 @@ pub fn expression(
             Ok((Expression::Variable(*loc, pos), boolty))
         }
         ast::Expression::And(loc, left, right) => {
-            let boolty = resolver::Type::bool();
+            let boolty = resolver::Type::Bool;
             let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
             let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
 
@@ -2477,13 +2411,13 @@ pub fn expression(
                                 &loc,
                                 r,
                                 &r_type,
-                                &resolver::Type::bool(),
+                                &resolver::Type::Bool,
                                 true,
                                 ns,
                                 errors,
                             )?),
                         ),
-                        resolver::Type::bool(),
+                        resolver::Type::Bool,
                     ));
                 }
             };
@@ -2493,7 +2427,7 @@ pub fn expression(
                     name: "and".to_owned(),
                     loc: *loc,
                 },
-                &resolver::Type::bool(),
+                &resolver::Type::Bool,
             );
 
             let right_side = cfg.new_basic_block("and_right_side".to_string());
@@ -2517,7 +2451,7 @@ pub fn expression(
             cfg.set_basic_block(right_side);
 
             let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
-            let r = cast(&loc, r, &r_type, &resolver::Type::bool(), true, ns, errors)?;
+            let r = cast(&loc, r, &r_type, &resolver::Type::Bool, true, ns, errors)?;
 
             cfg.add(tab, Instr::Set { res: pos, expr: r });
 
@@ -2582,7 +2516,7 @@ fn new(
     let (size_expr, size_ty) = expression(&args[0], cfg, ns, vartab, errors)?;
 
     let size_width = match size_ty {
-        resolver::Type::Primitive(ast::PrimitiveType::Uint(n)) => n,
+        resolver::Type::Uint(n) => n,
         _ => {
             errors.push(Output::error(
                 size_loc,
@@ -2598,16 +2532,12 @@ fn new(
     // TODO: should we check an upper bound? Large allocations will fail anyway,
     // and ethereum solidity does not check at compile time
     let size = match size_width.cmp(&32) {
-        Ordering::Greater => Expression::Trunc(
-            size_loc,
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
-            Box::new(size_expr),
-        ),
-        Ordering::Less => Expression::ZeroExt(
-            size_loc,
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
-            Box::new(size_expr),
-        ),
+        Ordering::Greater => {
+            Expression::Trunc(size_loc, resolver::Type::Uint(32), Box::new(size_expr))
+        }
+        Ordering::Less => {
+            Expression::ZeroExt(size_loc, resolver::Type::Uint(32), Box::new(size_expr))
+        }
         Ordering::Equal => size_expr,
     };
 
@@ -2630,28 +2560,23 @@ fn array_subscript(
     let (mut array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
     let (array_length, array_length_ty) = match array_ty.deref() {
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
-            bigint_to_expression(loc, &BigInt::from(*n), errors)?
-        }
+        resolver::Type::Bytes(n) => bigint_to_expression(loc, &BigInt::from(*n), errors)?,
         resolver::Type::Array(_, _) => match array_ty.array_length() {
             None => {
                 if let resolver::Type::StorageRef(_) = array_ty {
                     let array_length = Expression::StorageLoad(
                         *loc,
-                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                        resolver::Type::Uint(256),
                         Box::new(array_expr.clone()),
                     );
 
                     array_expr = Expression::Keccak256(*loc, Box::new(array_expr));
 
-                    (
-                        array_length,
-                        resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
-                    )
+                    (array_length, resolver::Type::Uint(256))
                 } else {
                     (
                         Expression::DynamicArrayLength(*loc, Box::new(array_expr.clone())),
-                        resolver::Type::Primitive(ast::PrimitiveType::Uint(32)),
+                        resolver::Type::Uint(32),
                     )
                 }
             }
@@ -2680,7 +2605,7 @@ fn array_subscript(
     };
 
     let index_width = match index_ty {
-        resolver::Type::Primitive(ast::PrimitiveType::Uint(w)) => w,
+        resolver::Type::Uint(w) => w,
         _ => {
             errors.push(Output::error(
                 *loc,
@@ -2695,7 +2620,7 @@ fn array_subscript(
 
     let array_width = array_length_ty.bits();
     let width = std::cmp::max(array_width, index_width);
-    let coerced_ty = resolver::Type::Primitive(ast::PrimitiveType::Uint(width));
+    let coerced_ty = resolver::Type::Uint(width);
 
     let pos = tab.temp(
         &ast::Identifier {
@@ -2767,14 +2692,14 @@ fn array_subscript(
                         Box::new(array_expr),
                         Box::new(Expression::ZeroExt(
                             *loc,
-                            resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                            resolver::Type::Uint(256),
                             Box::new(Expression::Multiply(
                                 *loc,
                                 Box::new(cast(
                                     &index.loc(),
                                     Expression::Variable(index.loc(), pos),
                                     &coerced_ty,
-                                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(64)),
+                                    &resolver::Type::Uint(64),
                                     false,
                                     ns,
                                     errors,
@@ -2796,7 +2721,7 @@ fn array_subscript(
                     &index.loc(),
                     Expression::Variable(index.loc(), pos),
                     &coerced_ty,
-                    &resolver::Type::Primitive(ast::PrimitiveType::Uint(256)),
+                    &resolver::Type::Uint(256),
                     false,
                     ns,
                     errors,
@@ -2808,8 +2733,8 @@ fn array_subscript(
         ))
     } else {
         match array_ty.deref() {
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(array_length)) => {
-                let res_ty = resolver::Type::Primitive(ast::PrimitiveType::Bytes(1));
+            resolver::Type::Bytes(array_length) => {
+                let res_ty = resolver::Type::Bytes(1);
 
                 Ok((
                     Expression::Trunc(

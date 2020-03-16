@@ -404,7 +404,7 @@ fn ty_to_abi(
             ty: registry.builtin_type("u8"),
             display_name: vec![registry.string("u8")],
         },
-        resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => {
+        resolver::Type::Bytes(n) => {
             let elem = registry.builtin_type("u8");
             ParamType {
                 ty: registry.builtin_array_type(elem, *n as usize),
@@ -430,8 +430,11 @@ fn ty_to_abi(
         }
         resolver::Type::StorageRef(ty) => ty_to_abi(ty, contract, registry),
         resolver::Type::Ref(ty) => ty_to_abi(ty, contract, registry),
-        resolver::Type::Primitive(p) => {
-            let scalety = primitive_to_string(*p);
+        resolver::Type::Bool
+        | resolver::Type::Uint(_)
+        | resolver::Type::Int(_)
+        | resolver::Type::Address => {
+            let scalety = primitive_to_string(ty.clone());
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
@@ -458,12 +461,12 @@ fn ty_to_abi(
 
 // For a given primitive, give the name as Substrate would like it (i.e. 64 bits
 // signed int is i64, not int64).
-fn primitive_to_string(ty: ast::PrimitiveType) -> String {
+fn primitive_to_string(ty: resolver::Type) -> String {
     match ty {
-        ast::PrimitiveType::Bool => "bool".into(),
-        ast::PrimitiveType::Uint(n) => format!("u{}", n),
-        ast::PrimitiveType::Int(n) => format!("i{}", n),
-        ast::PrimitiveType::Address => "address".into(),
+        resolver::Type::Bool => "bool".into(),
+        resolver::Type::Uint(n) => format!("u{}", n),
+        resolver::Type::Int(n) => format!("i{}", n),
+        resolver::Type::Address => "address".into(),
         _ => unreachable!(),
     }
 }

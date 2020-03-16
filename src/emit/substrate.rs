@@ -1,4 +1,3 @@
-use parser::ast;
 use resolver;
 
 use inkwell::context::Context;
@@ -261,12 +260,12 @@ impl SubstrateTarget {
     fn decode_primitive<'b>(
         &self,
         contract: &'b Contract,
-        ty: ast::PrimitiveType,
+        ty: &resolver::Type,
         to: Option<PointerValue<'b>>,
         src: PointerValue<'b>,
     ) -> (BasicValueEnum<'b>, u64) {
         match ty {
-            ast::PrimitiveType::Bool => {
+            resolver::Type::Bool => {
                 let val = contract.builder.build_int_compare(
                     IntPredicate::EQ,
                     contract
@@ -281,8 +280,8 @@ impl SubstrateTarget {
                 }
                 (val.into(), 1)
             }
-            ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
-                let int_type = contract.context.custom_width_int_type(n as u32);
+            resolver::Type::Uint(n) | resolver::Type::Int(n) => {
+                let int_type = contract.context.custom_width_int_type(*n as u32);
 
                 let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
 
@@ -295,9 +294,9 @@ impl SubstrateTarget {
                     "",
                 );
 
-                let len = n as u64 / 8;
+                let len = *n as u64 / 8;
 
-                if n <= 64 && to.is_none() {
+                if *n <= 64 && to.is_none() {
                     (val, len)
                 } else {
                     contract.builder.build_store(store, val);
@@ -305,8 +304,8 @@ impl SubstrateTarget {
                     (store.into(), len)
                 }
             }
-            ast::PrimitiveType::Bytes(len) => {
-                let int_type = contract.context.custom_width_int_type(len as u32 * 8);
+            resolver::Type::Bytes(len) => {
+                let int_type = contract.context.custom_width_int_type(*len as u32 * 8);
 
                 let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
 
@@ -326,22 +325,22 @@ impl SubstrateTarget {
                         contract
                             .context
                             .i32_type()
-                            .const_int(len as u64, false)
+                            .const_int(*len as u64, false)
                             .into(),
                     ],
                     "",
                 );
 
-                if len <= 8 && to.is_none() {
+                if *len <= 8 && to.is_none() {
                     (
                         contract.builder.build_load(store, &format!("bytes{}", len)),
-                        len as u64,
+                        *len as u64,
                     )
                 } else {
-                    (store.into(), len as u64)
+                    (store.into(), *len as u64)
                 }
             }
-            ast::PrimitiveType::Address => {
+            resolver::Type::Address => {
                 let int_type = contract.context.custom_width_int_type(160);
 
                 let store =
@@ -385,8 +384,12 @@ impl SubstrateTarget {
         data: &mut PointerValue<'b>,
     ) -> BasicValueEnum<'b> {
         match &ty {
-            resolver::Type::Primitive(e) => {
-                let (arg, arglen) = self.decode_primitive(contract, *e, to, *data);
+            resolver::Type::Bool
+            | resolver::Type::Address
+            | resolver::Type::Int(_)
+            | resolver::Type::Uint(_)
+            | resolver::Type::Bytes(_) => {
+                let (arg, arglen) = self.decode_primitive(contract, ty, to, *data);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -397,13 +400,9 @@ impl SubstrateTarget {
                 };
                 arg
             }
-            resolver::Type::Enum(n) => self.decode_ty(
-                contract,
-                function,
-                &resolver::Type::Primitive(contract.ns.enums[*n].ty),
-                to,
-                data,
-            ),
+            resolver::Type::Enum(n) => {
+                self.decode_ty(contract, function, &contract.ns.enums[*n].ty, to, data)
+            }
             resolver::Type::Struct(n) => {
                 let to =
                     to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
@@ -483,12 +482,12 @@ impl SubstrateTarget {
     fn encode_primitive(
         &self,
         contract: &Contract,
-        ty: ast::PrimitiveType,
+        ty: &resolver::Type,
         dest: PointerValue,
         val: BasicValueEnum,
     ) -> u64 {
         match ty {
-            ast::PrimitiveType::Bool => {
+            resolver::Type::Bool => {
                 let val = if val.is_pointer_value() {
                     contract.builder.build_load(val.into_pointer_value(), "")
                 } else {
@@ -505,7 +504,7 @@ impl SubstrateTarget {
                 );
                 1
             }
-            ast::PrimitiveType::Uint(n) | ast::PrimitiveType::Int(n) => {
+            resolver::Type::Uint(n) | resolver::Type::Int(n) => {
                 let val = if val.is_pointer_value() {
                     contract.builder.build_load(val.into_pointer_value(), "")
                 } else {
@@ -523,9 +522,9 @@ impl SubstrateTarget {
                     val.into_int_value(),
                 );
 
-                n as u64 / 8
+                *n as u64 / 8
             }
-            ast::PrimitiveType::Bytes(n) => {
+            resolver::Type::Bytes(n) => {
                 let val = if val.is_pointer_value() {
                     val.into_pointer_value()
                 } else {
@@ -554,15 +553,15 @@ impl SubstrateTarget {
                         contract
                             .context
                             .i32_type()
-                            .const_int(n as u64, false)
+                            .const_int(*n as u64, false)
                             .into(),
                     ],
                     "",
                 );
 
-                n as u64
+                *n as u64
             }
-            ast::PrimitiveType::Address => {
+            resolver::Type::Address => {
                 // byte order needs to be reversed
                 contract.builder.build_call(
                     contract.module.get_function("__leNtobeN").unwrap(),
@@ -602,8 +601,12 @@ impl SubstrateTarget {
         data: &mut PointerValue<'a>,
     ) {
         match &ty {
-            resolver::Type::Primitive(e) => {
-                let arglen = self.encode_primitive(contract, *e, *data, arg);
+            resolver::Type::Bool
+            | resolver::Type::Address
+            | resolver::Type::Int(_)
+            | resolver::Type::Uint(_)
+            | resolver::Type::Bytes(_) => {
+                let arglen = self.encode_primitive(contract, ty, *data, arg);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -614,7 +617,7 @@ impl SubstrateTarget {
                 };
             }
             resolver::Type::Enum(n) => {
-                self.encode_primitive(contract, contract.ns.enums[*n].ty, *data, arg);
+                self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
             }
             resolver::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
@@ -676,15 +679,11 @@ impl SubstrateTarget {
     /// Return the encoded length of the given type
     pub fn encoded_length(&self, ty: &resolver::Type, contract: &resolver::Contract) -> u64 {
         match ty {
-            resolver::Type::Primitive(ast::PrimitiveType::Bool) => 1,
-            resolver::Type::Primitive(ast::PrimitiveType::Uint(n))
-            | resolver::Type::Primitive(ast::PrimitiveType::Int(n)) => *n as u64 / 8,
-            resolver::Type::Primitive(ast::PrimitiveType::Bytes(n)) => *n as u64,
-            resolver::Type::Primitive(ast::PrimitiveType::Address) => ADDRESS_LENGTH,
-            resolver::Type::Primitive(_) => unreachable!(),
-            resolver::Type::Enum(n) => {
-                self.encoded_length(&resolver::Type::Primitive(contract.enums[*n].ty), contract)
-            }
+            resolver::Type::Bool => 1,
+            resolver::Type::Uint(n) | resolver::Type::Int(n) => *n as u64 / 8,
+            resolver::Type::Bytes(n) => *n as u64,
+            resolver::Type::Address => ADDRESS_LENGTH,
+            resolver::Type::Enum(n) => self.encoded_length(&contract.enums[*n].ty, contract),
             resolver::Type::Struct(n) => contract.structs[*n]
                 .fields
                 .iter()
