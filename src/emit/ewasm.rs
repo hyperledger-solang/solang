@@ -352,49 +352,80 @@ impl TargetRuntime for EwasmTarget {
         slot: PointerValue<'a>,
         dest: PointerValue<'a>,
     ) {
-        let value = contract
-            .builder
-            .build_alloca(contract.context.custom_width_int_type(256), "value");
-
-        let value8 = contract.builder.build_pointer_cast(
-            value,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "value8",
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
-            &[
-                value8.into(),
-                contract.context.i32_type().const_int(4, false).into(),
-            ],
-            "",
-        );
-
-        let val = contract.builder.build_load(dest, "value");
-
-        contract.builder.build_store(
-            contract
+        if dest
+            .get_type()
+            .get_element_type()
+            .into_int_type()
+            .get_bit_width()
+            == 256
+        {
+            contract.builder.build_call(
+                contract.module.get_function("storageStore").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            dest,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                ],
+                "",
+            );
+        } else {
+            let value = contract
                 .builder
-                .build_pointer_cast(value, dest.get_type(), ""),
-            val,
-        );
+                .build_alloca(contract.context.custom_width_int_type(256), "value");
 
-        contract.builder.build_call(
-            contract.module.get_function("storageStore").unwrap(),
-            &[
+            let value8 = contract.builder.build_pointer_cast(
+                value,
+                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                "value8",
+            );
+
+            contract.builder.build_call(
+                contract.module.get_function("__bzero8").unwrap(),
+                &[
+                    value8.into(),
+                    contract.context.i32_type().const_int(4, false).into(),
+                ],
+                "",
+            );
+
+            let val = contract.builder.build_load(dest, "value");
+
+            contract.builder.build_store(
                 contract
                     .builder
-                    .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                value8.into(),
-            ],
-            "",
-        );
+                    .build_pointer_cast(value, dest.get_type(), ""),
+                val,
+            );
+
+            contract.builder.build_call(
+                contract.module.get_function("storageStore").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    value8.into(),
+                ],
+                "",
+            );
+        }
     }
 
     fn get_storage<'a>(
@@ -404,42 +435,72 @@ impl TargetRuntime for EwasmTarget {
         slot: PointerValue<'a>,
         dest: PointerValue<'a>,
     ) {
-        // FIXME: no need to alloca for 256 bit value
-        let value = contract
-            .builder
-            .build_alloca(contract.context.custom_width_int_type(256), "value");
-
-        contract.builder.build_call(
-            contract.module.get_function("storageLoad").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        value,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
-        let val = contract.builder.build_load(
-            contract
+        if dest
+            .get_type()
+            .get_element_type()
+            .into_int_type()
+            .get_bit_width()
+            == 256
+        {
+            contract.builder.build_call(
+                contract.module.get_function("storageLoad").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            dest,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                ],
+                "",
+            );
+        } else {
+            let value = contract
                 .builder
-                .build_pointer_cast(value, dest.get_type(), ""),
-            "",
-        );
+                .build_alloca(contract.context.custom_width_int_type(256), "value");
 
-        contract.builder.build_store(dest, val);
+            contract.builder.build_call(
+                contract.module.get_function("storageLoad").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                ],
+                "",
+            );
+
+            let val = contract.builder.build_load(
+                contract
+                    .builder
+                    .build_pointer_cast(value, dest.get_type(), ""),
+                "",
+            );
+
+            contract.builder.build_store(dest, val);
+        }
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
