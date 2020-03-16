@@ -121,8 +121,13 @@ impl Externals for ContractStorage {
                     .get_into(key_ptr, &mut key)
                     .expect("copy key from wasm memory");
 
+                let res = if let Some(v) = self.store.get(&key) {
+                    v
+                } else {
+                    &[0u8; 32]
+                };
                 self.memory
-                    .set(data_ptr, &self.store[&key])
+                    .set(data_ptr, res)
                     .expect("copy key from wasm memory");
 
                 Ok(None)
@@ -142,7 +147,11 @@ impl Externals for ContractStorage {
                     .get_into(data_ptr, &mut data)
                     .expect("copy key from wasm memory");
 
-                self.store.insert(key, data);
+                if data.iter().any(|n| *n != 0) {
+                    self.store.insert(key, data);
+                } else {
+                    self.store.remove(&key);
+                }
                 Ok(None)
             }
             _ => panic!("external {} unknown", index),
@@ -1154,4 +1163,37 @@ fn struct_in_struct_encode() {
             ]),
         ])],
     );
+}
+
+#[test]
+fn array_push_delete() {
+    // ensure that structs and fixed arrays are wiped by delete
+    let (mut runtime, mut store) = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            uint32[] bar;
+
+            function setup() public {
+                for (uint32 i = 0; i < 105; i++) {
+                    bar.push(i + 0x8000);
+                }
+            }
+
+            function clear() public {
+                delete bar;
+            }
+        }"#,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    runtime.function(&mut store, "setup", &[]);
+
+    assert_eq!(store.store.len(), 106);
+
+    runtime.function(&mut store, "clear", &[]);
+
+    assert_eq!(store.store.len(), 0);
 }
