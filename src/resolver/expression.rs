@@ -2240,6 +2240,14 @@ pub fn expression(
                         };
                     }
                 }
+                resolver::Type::String | resolver::Type::DynamicBytes => {
+                    if id.name == "length" {
+                        return Ok((
+                            Expression::DynamicArrayLength(*loc, Box::new(expr)),
+                            resolver::Type::Uint(32),
+                        ));
+                    }
+                }
                 resolver::Type::StorageRef(r) => match *r {
                     resolver::Type::Struct(n) => {
                         let mut slot = BigInt::zero();
