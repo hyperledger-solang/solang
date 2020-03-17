@@ -1155,6 +1155,20 @@ impl<'a> Contract<'a> {
                     .left()
                     .unwrap()
             }
+            Expression::StringConcat(_, l, r) => {
+                let (left, left_len) = self.string_location(l, vartab, function, runtime);
+                let (right, right_len) = self.string_location(r, vartab, function, runtime);
+
+                self.builder
+                    .build_call(
+                        self.module.get_function("concat").unwrap(),
+                        &[left.into(), left_len.into(), right.into(), right_len.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
             Expression::Poison => unreachable!(),
         }
     }

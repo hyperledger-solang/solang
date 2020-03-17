@@ -435,3 +435,25 @@ __attribute__((visibility("hidden"))) bool memcmp(uint8_t *left, uint32_t left_l
 
 	return true;
 }
+
+__attribute__((visibility("hidden"))) struct vector *concat(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
+{
+	size_t size_array = left_len + right_len;
+	struct vector *v = __malloc(sizeof(*v) + size_array);
+	v->len = size_array;
+	v->size = size_array;
+
+	uint8_t *data = v->data;
+
+	while (left_len--)
+	{
+		*data++ = *left++;
+	}
+
+	while (right_len--)
+	{
+		*data++ = *right++;
+	}
+
+	return v;
+}
