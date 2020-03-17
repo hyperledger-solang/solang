@@ -113,11 +113,11 @@ fn more_tests() {
         r##"
         contract foo {
             function ref_test(bytes n) private {
-                    n[1] = 102;
+                n[1] = 102;
 
-                    n = new bytes(10);
-                    // new reference
-                    n[1] = 104;
+                n = new bytes(10);
+                // new reference
+                n[1] = 104;
             }
 
             function test() public {
@@ -132,6 +132,24 @@ fn more_tests() {
 
                 assert(s[0] == 0x41);
                 assert(s[1] == 102);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test() public {
+                bytes s = "ABCD";
+
+                assert(s.length == 4);
+
+                s[0] = 0x41;
+                s[1] = 0x42;
+                s[2] = 0x43;
+                s[3] = 0x44;
             }
         }"##,
     );

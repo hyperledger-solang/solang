@@ -242,16 +242,10 @@ impl EwasmTarget {
         // the deploy code should return the runtime wasm code
         let runtime_code = contract.emit_global_string("runtime_code", runtime, true);
 
-        let runtime_ptr = contract.builder.build_pointer_cast(
-            contract.globals[runtime_code].as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "runtime_code",
-        );
-
         contract.builder.build_call(
             contract.module.get_function("finish").unwrap(),
             &[
-                runtime_ptr.into(),
+                runtime_code.into(),
                 contract
                     .context
                     .i32_type()

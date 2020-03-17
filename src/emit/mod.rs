@@ -19,7 +19,7 @@ use inkwell::targets::{CodeModel, FileType, RelocMode, Target, TargetTriple};
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::{BasicType, IntType, StringRadix};
 use inkwell::values::{
-    ArrayValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
+    ArrayValue, BasicValueEnum, FunctionValue, IntValue, PhiValue, PointerValue,
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -104,7 +104,6 @@ pub struct Contract<'a> {
     ns: &'a resolver::Contract,
     constructors: Vec<FunctionValue<'a>>,
     functions: Vec<FunctionValue<'a>>,
-    globals: Vec<GlobalValue<'a>>,
 }
 
 impl<'a> Contract<'a> {
@@ -191,13 +190,12 @@ impl<'a> Contract<'a> {
             ns: contract,
             constructors: Vec::new(),
             functions: Vec::new(),
-            globals: Vec::new(),
         }
     }
 
     /// Creates global string in the llvm module with initializer
     ///
-    fn emit_global_string(&mut self, name: &str, data: &[u8], constant: bool) -> usize {
+    fn emit_global_string(&self, name: &str, data: &[u8], constant: bool) -> PointerValue<'a> {
         let ty = self.context.i8_type().array_type(data.len() as u32);
 
         let gv = self
@@ -212,11 +210,11 @@ impl<'a> Contract<'a> {
             gv.set_constant(true);
         }
 
-        let last = self.globals.len();
-
-        self.globals.push(gv);
-
-        last
+        self.builder.build_pointer_cast(
+            gv.as_pointer_value(),
+            self.context.i8_type().ptr_type(AddressSpace::Generic),
+            name,
+        )
     }
 
     /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
@@ -1052,7 +1050,7 @@ impl<'a> Contract<'a> {
 
                 array.into()
             }
-            Expression::AllocDynamicArray(_, ty, size) => {
+            Expression::AllocDynamicArray(_, ty, size, init) => {
                 let elem = ty.array_deref();
 
                 let size = self
@@ -1065,10 +1063,19 @@ impl<'a> Contract<'a> {
                     .unwrap()
                     .const_cast(self.context.i32_type(), false);
 
+                let init = match init {
+                    None => self
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .const_null(),
+                    Some(s) => self.emit_global_string("const_string", s, false),
+                };
+
                 self.builder
                     .build_call(
                         self.module.get_function("vector_new").unwrap(),
-                        &[size.into(), elem_size.into()],
+                        &[size.into(), elem_size.into(), init.into()],
                         "",
                     )
                     .try_as_basic_value()

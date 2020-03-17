@@ -248,6 +248,7 @@ impl Type {
         match self {
             Type::Array(_, _) => true,
             Type::Struct(_) => true,
+            Type::String | Type::DynamicBytes => true,
             _ => false,
         }
     }
