@@ -156,3 +156,53 @@ fn more_tests() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn string_compare() {
+    // compare literal to literal. This should be compile-time thing
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test() public {
+                assert(hex"414243" == "ABC");
+
+                assert(hex"414243" != "ABD");
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function lets_compare1(string s) private returns (bool) {
+                return s == "the quick brown fox jumps over the lazy dog";
+            }
+
+            function lets_compare2(string s) private returns (bool) {
+                return "the quick brown fox jumps over the lazy dog" == s;
+            }
+
+            function test() public {
+                string s1 = "the quick brown fox jumps over the lazy dog";
+
+                assert(lets_compare1(s1));
+                assert(lets_compare2(s1));
+
+                string s2 = "the quick brown dog jumps over the lazy fox";
+
+                assert(!lets_compare1(s2));
+                assert(!lets_compare2(s2));
+
+                assert(s1 != s2);
+
+                s1 = "the quick brown dog jumps over the lazy fox";
+
+                assert(s1 == s2);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

@@ -2,7 +2,7 @@ use hex;
 use parser::ast;
 use resolver;
 use resolver::cfg;
-use resolver::expression::Expression;
+use resolver::expression::{Expression, StringLocation};
 use std::path::Path;
 use std::str;
 
@@ -1141,7 +1141,77 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_load(dst, "keccak256_hash")
             }
+            Expression::StringCompare(_, l, r) => {
+                let (left, left_len) = self.string_location(l, vartab, function, runtime);
+                let (right, right_len) = self.string_location(r, vartab, function, runtime);
+
+                self.builder
+                    .build_call(
+                        self.module.get_function("memcmp").unwrap(),
+                        &[left.into(), left_len.into(), right.into(), right_len.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
             Expression::Poison => unreachable!(),
+        }
+    }
+
+    /// Load a string from expression or create global
+    fn string_location(
+        &self,
+        location: &StringLocation,
+        vartab: &[Variable<'a>],
+        function: FunctionValue<'a>,
+        runtime: &dyn TargetRuntime,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        match location {
+            StringLocation::CompileTime(literal) => (
+                self.emit_global_string("const_string", literal, false),
+                self.context
+                    .i32_type()
+                    .const_int(literal.len() as u64, false),
+            ),
+            StringLocation::RunTime(e) => {
+                let v = self
+                    .expression(e, vartab, function, runtime)
+                    .into_pointer_value();
+
+                let data = unsafe {
+                    self.builder.build_gep(
+                        v,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
+
+                let data_len = unsafe {
+                    self.builder.build_gep(
+                        v,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_zero(),
+                        ],
+                        "data_len",
+                    )
+                };
+
+                (
+                    self.builder.build_pointer_cast(
+                        data,
+                        self.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "data",
+                    ),
+                    self.builder
+                        .build_load(data_len, "data_len")
+                        .into_int_value(),
+                )
+            }
         }
     }
 
