@@ -206,3 +206,35 @@ fn string_compare() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn string_concat() {
+    // concat literal and literal. This should be compile-time thing
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test() public {
+                assert(hex"41424344" == "AB" + "CD");
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test() public {
+                string s1 = "x";
+                string s2 = "asdfasdf";
+
+                assert(s1 + " foo" == "x foo");
+                assert("bar " + s1 == "bar x");
+
+                assert(s1 + s2 == "xasdfasdf");
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

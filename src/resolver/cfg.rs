@@ -341,6 +341,11 @@ impl ControlFlowGraph {
                 self.location_to_string(ns, l),
                 self.location_to_string(ns, r)
             ),
+            Expression::StringConcat(_, l, r) => format!(
+                "(concat ({}) ({}))",
+                self.location_to_string(ns, l),
+                self.location_to_string(ns, r)
+            ),
             Expression::Keccak256(_, e) => format!("(keccak256 {})", self.expr_to_string(ns, e)),
         }
     }

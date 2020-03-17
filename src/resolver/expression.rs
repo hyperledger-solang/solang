@@ -74,6 +74,7 @@ pub enum Expression {
     DynamicArrayLength(Loc, Box<Expression>),
     DynamicArraySubscript(Loc, Box<Expression>, resolver::Type, Box<Expression>),
     StringCompare(Loc, StringLocation, StringLocation),
+    StringConcat(Loc, StringLocation, StringLocation),
 
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
@@ -139,6 +140,7 @@ impl Expression {
             | Expression::DynamicArrayLength(loc, _)
             | Expression::DynamicArraySubscript(loc, _, _, _)
             | Expression::StringCompare(loc, _, _)
+            | Expression::StringConcat(loc, _, _)
             | Expression::Keccak256(loc, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison => unreachable!(),
@@ -239,7 +241,7 @@ impl Expression {
             Expression::Keccak256(_, e) => e.reads_contract_storage(),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
-            Expression::StringCompare(_, l, r) => {
+            Expression::StringConcat(_, l, r) | Expression::StringCompare(_, l, r) => {
                 if let StringLocation::RunTime(e) = l {
                     if !e.reads_contract_storage() {
                         return false;
@@ -1006,29 +1008,7 @@ pub fn expression(
                 Err(())
             }
         }
-        ast::Expression::Add(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
-
-            let ty = coerce_int(
-                &left_type,
-                &l.loc(),
-                &right_type,
-                &r.loc(),
-                false,
-                ns,
-                errors,
-            )?;
-
-            Ok((
-                Expression::Add(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
-                ),
-                ty,
-            ))
-        }
+        ast::Expression::Add(loc, l, r) => addition(loc, l, r, cfg, ns, vartab, errors),
         ast::Expression::Subtract(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
@@ -2567,7 +2547,7 @@ fn new(
     ))
 }
 
-/// Resolve an array subscript expression
+/// Test for equality; first check string equality, then integer equality
 fn equal(
     loc: &ast::Loc,
     l: &ast::Expression,
@@ -2613,9 +2593,7 @@ fn equal(
     // compare string
     match (&left_type, &right_type) {
         (resolver::Type::String, resolver::Type::String)
-        | (resolver::Type::DynamicBytes, resolver::Type::DynamicBytes)
-        | (resolver::Type::String, resolver::Type::DynamicBytes)
-        | (resolver::Type::DynamicBytes, resolver::Type::String) => {
+        | (resolver::Type::DynamicBytes, resolver::Type::DynamicBytes) => {
             return Ok(Expression::StringCompare(
                 *loc,
                 StringLocation::RunTime(Box::new(left)),
@@ -2631,6 +2609,98 @@ fn equal(
         *loc,
         Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
         Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+    ))
+}
+
+/// Try string concatenation
+fn addition(
+    loc: &ast::Loc,
+    l: &ast::Expression,
+    r: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
+    let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+
+    // Concatenate stringliteral with stringliteral
+    if let (Expression::BytesLiteral(_, l), Expression::BytesLiteral(_, r)) = (&left, &right) {
+        let mut c = Vec::with_capacity(l.len() + r.len());
+        c.extend_from_slice(l);
+        c.extend_from_slice(r);
+        let length = c.len();
+        return Ok((
+            Expression::BytesLiteral(*loc, c),
+            resolver::Type::Bytes(length as u8),
+        ));
+    }
+
+    // compare string against literal
+    match (&left, &right_type) {
+        (Expression::BytesLiteral(_, l), resolver::Type::String)
+        | (Expression::BytesLiteral(_, l), resolver::Type::DynamicBytes) => {
+            return Ok((
+                Expression::StringConcat(
+                    *loc,
+                    StringLocation::CompileTime(l.clone()),
+                    StringLocation::RunTime(Box::new(right)),
+                ),
+                right_type,
+            ));
+        }
+        _ => {}
+    }
+
+    match (&right, &left_type) {
+        (Expression::BytesLiteral(_, l), resolver::Type::String)
+        | (Expression::BytesLiteral(_, l), resolver::Type::DynamicBytes) => {
+            return Ok((
+                Expression::StringConcat(
+                    *loc,
+                    StringLocation::RunTime(Box::new(left)),
+                    StringLocation::CompileTime(l.clone()),
+                ),
+                left_type,
+            ));
+        }
+        _ => {}
+    }
+
+    // compare string
+    match (&left_type, &right_type) {
+        (resolver::Type::String, resolver::Type::String)
+        | (resolver::Type::DynamicBytes, resolver::Type::DynamicBytes) => {
+            return Ok((
+                Expression::StringConcat(
+                    *loc,
+                    StringLocation::RunTime(Box::new(left)),
+                    StringLocation::RunTime(Box::new(right)),
+                ),
+                right_type,
+            ));
+        }
+        _ => {}
+    }
+
+    let ty = coerce_int(
+        &left_type,
+        &l.loc(),
+        &right_type,
+        &r.loc(),
+        false,
+        ns,
+        errors,
+    )?;
+
+    Ok((
+        Expression::Add(
+            *loc,
+            Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
+            Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+        ),
+        ty,
     ))
 }
 
