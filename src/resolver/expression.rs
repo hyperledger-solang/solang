@@ -2495,6 +2495,7 @@ fn new(
                 return Err(());
             }
         }
+        resolver::Type::String | resolver::Type::DynamicBytes => {}
         _ => {
             errors.push(Output::error(
                 *loc,
