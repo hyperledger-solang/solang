@@ -2591,6 +2591,18 @@ fn array_subscript(
             }
             Some(l) => bigint_to_expression(loc, l, errors)?,
         },
+        resolver::Type::String => {
+            errors.push(Output::error(
+                array.loc(),
+                "array subscript is not permitted on string".to_string(),
+            ));
+            return Err(());
+        }
+        resolver::Type::DynamicBytes => (
+            // FIXME does not handle bytes in storage
+            Expression::DynamicArrayLength(*loc, Box::new(array_expr.clone())),
+            resolver::Type::Uint(32),
+        ),
         _ => {
             errors.push(Output::error(
                 array.loc(),
@@ -2797,7 +2809,7 @@ fn array_subscript(
                 ),
                 array_ty.array_deref(),
             )),
-            resolver::Type::Array(_, _) => Ok((
+            resolver::Type::DynamicBytes | resolver::Type::Array(_, _) => Ok((
                 Expression::DynamicArraySubscript(
                     *loc,
                     Box::new(cast(
