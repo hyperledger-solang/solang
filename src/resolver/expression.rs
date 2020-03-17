@@ -806,6 +806,12 @@ pub fn cast(
                 Ok(expr)
             }
         }
+        (resolver::Type::String, resolver::Type::DynamicBytes)
+        | (resolver::Type::DynamicBytes, resolver::Type::String)
+            if !implicit =>
+        {
+            Ok(expr)
+        }
         // string conversions
         /*
         (resolver::Type::Bytes(_), resolver::Type::String) => Ok(expr),
