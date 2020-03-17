@@ -2,6 +2,7 @@ use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::LinkedList;
+use std::str;
 
 use hex;
 use output;
@@ -318,10 +319,19 @@ impl ControlFlowGraph {
             Expression::Complement(_, e) => format!("~{}", self.expr_to_string(ns, e)),
             Expression::UnaryMinus(_, e) => format!("-{}", self.expr_to_string(ns, e)),
             Expression::Poison => "☠".to_string(),
-            Expression::AllocDynamicArray(_, ty, size) => format!(
+            Expression::AllocDynamicArray(_, ty, size, None) => format!(
                 "(alloc {} len {})",
                 ty.to_string(ns),
                 self.expr_to_string(ns, size)
+            ),
+            Expression::AllocDynamicArray(_, ty, size, Some(init)) => format!(
+                "(alloc {} {} {})",
+                ty.to_string(ns),
+                self.expr_to_string(ns, size),
+                match str::from_utf8(init) {
+                    Ok(s) => format!("\"{}\"", s.to_owned()),
+                    Err(_) => format!("hex\"{}\"", hex::encode(init)),
+                }
             ),
             Expression::DynamicArrayLength(_, a) => {
                 format!("(array {} len)", self.expr_to_string(ns, a))

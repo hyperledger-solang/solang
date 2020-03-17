@@ -70,7 +70,7 @@ pub enum Expression {
     ArraySubscript(Loc, Box<Expression>, Box<Expression>),
     StructMember(Loc, Box<Expression>, usize),
 
-    AllocDynamicArray(Loc, resolver::Type, Box<Expression>),
+    AllocDynamicArray(Loc, resolver::Type, Box<Expression>, Option<Vec<u8>>),
     DynamicArrayLength(Loc, Box<Expression>),
     DynamicArraySubscript(Loc, Box<Expression>, resolver::Type, Box<Expression>),
 
@@ -128,7 +128,7 @@ impl Expression {
             | Expression::ArraySubscript(loc, _, _)
             | Expression::StructMember(loc, _, _)
             | Expression::Or(loc, _, _)
-            | Expression::AllocDynamicArray(loc, _, _)
+            | Expression::AllocDynamicArray(loc, _, _, _)
             | Expression::DynamicArrayLength(loc, _)
             | Expression::DynamicArraySubscript(loc, _, _, _)
             | Expression::Keccak256(loc, _)
@@ -225,7 +225,7 @@ impl Expression {
             Expression::DynamicArraySubscript(_, l, _, r) | Expression::ArraySubscript(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::AllocDynamicArray(_, _, s) => s.reads_contract_storage(),
+            Expression::AllocDynamicArray(_, _, s, _) => s.reads_contract_storage(),
             Expression::DynamicArrayLength(_, s) => s.reads_contract_storage(),
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
             Expression::Keccak256(_, e) => e.reads_contract_storage(),
@@ -525,6 +525,15 @@ pub fn cast(
 
                 Ok(Expression::BytesLiteral(*loc, bs))
             };
+        }
+        (&Expression::BytesLiteral(loc, ref init), _, &resolver::Type::DynamicBytes)
+        | (&Expression::BytesLiteral(loc, ref init), _, &resolver::Type::String) => {
+            return Ok(Expression::AllocDynamicArray(
+                loc,
+                to_conv,
+                Box::new(Expression::NumberLiteral(loc, 32, BigInt::from(init.len()))),
+                Some(init.clone()),
+            ));
         }
         _ => (),
     };
@@ -2557,7 +2566,7 @@ fn new(
     };
 
     Ok((
-        Expression::AllocDynamicArray(*loc, ty.clone(), Box::new(size)),
+        Expression::AllocDynamicArray(*loc, ty.clone(), Box::new(size), None),
         ty,
     ))
 }

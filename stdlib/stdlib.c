@@ -393,11 +393,31 @@ struct vector
 	uint8_t data[];
 };
 
-__attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members, uint32_t size)
+__attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
-	struct vector *v = __malloc(sizeof(*v) + members * size);
+	struct vector *v;
+	size_t size_array = members * size;
+
+	v = __malloc(sizeof(*v) + size_array);
 	v->len = members;
 	v->size = members;
+
+	uint8_t *data = v->data;
+
+	if (initial)
+	{
+		do
+		{
+			*data++ = *initial++;
+		} while (size_array--);
+	}
+	else
+	{
+		do
+		{
+			*data++ = 0;
+		} while (size_array--);
+	}
 
 	return v;
 }
