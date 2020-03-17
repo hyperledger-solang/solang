@@ -9,7 +9,7 @@ use output;
 use output::Output;
 use parser::ast;
 use resolver;
-use resolver::expression::{cast, expression, Expression};
+use resolver::expression::{cast, expression, Expression, StringLocation};
 
 pub enum Instr {
     FuncArg {
@@ -336,7 +336,22 @@ impl ControlFlowGraph {
             Expression::DynamicArrayLength(_, a) => {
                 format!("(array {} len)", self.expr_to_string(ns, a))
             }
+            Expression::StringCompare(_, l, r) => format!(
+                "(strcmp ({}) ({}))",
+                self.location_to_string(ns, l),
+                self.location_to_string(ns, r)
+            ),
             Expression::Keccak256(_, e) => format!("(keccak256 {})", self.expr_to_string(ns, e)),
+        }
+    }
+
+    fn location_to_string(&self, ns: &resolver::Contract, l: &StringLocation) -> String {
+        match l {
+            StringLocation::RunTime(e) => self.expr_to_string(ns, e),
+            StringLocation::CompileTime(literal) => match str::from_utf8(literal) {
+                Ok(s) => format!("\"{}\"", s.to_owned()),
+                Err(_) => format!("hex\"{}\"", hex::encode(literal)),
+            },
         }
     }
 

@@ -421,3 +421,17 @@ __attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members
 
 	return v;
 }
+
+__attribute__((visibility("hidden"))) bool memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
+{
+	if (left_len != right_len)
+		return false;
+
+	while (left_len--)
+	{
+		if (*left++ != *right++)
+			return false;
+	}
+
+	return true;
+}
