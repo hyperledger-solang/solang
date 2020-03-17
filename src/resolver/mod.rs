@@ -113,10 +113,10 @@ impl Type {
         }
     }
 
-    /// Give the type of an array after dereference. This can only be used on
-    /// array types and will cause a panic otherwise.
+    /// Give the type of an memory array after dereference.
     pub fn array_deref(&self) -> Self {
         match self {
+            Type::String | Type::DynamicBytes => Type::Uint(8),
             Type::Ref(t) => t.array_deref(),
             Type::Array(ty, dim) if dim.len() > 1 => {
                 Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())
