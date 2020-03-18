@@ -421,7 +421,21 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
                     resolver_contract,
                     &mut registry,
                 )),
-                _ => unreachable!(),
+                _ => {
+                    let fields = f
+                        .returns
+                        .iter()
+                        .map(|f| StructField {
+                            name: registry.string(&f.name),
+                            ty: ty_to_abi(&f.ty, resolver_contract, &mut registry).ty,
+                        })
+                        .collect();
+
+                    Some(ParamType {
+                        ty: registry.struct_type("", fields),
+                        display_name: vec![],
+                    })
+                }
             },
             selector: f.selector(),
             args: f

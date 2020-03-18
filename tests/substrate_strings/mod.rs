@@ -247,6 +247,9 @@ fn string_abi_encode() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val(String);
 
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret3([i8; 4], String, bool);
+
     let (runtime, mut store) = build_solidity(
         r##"
         contract foo {
@@ -259,4 +262,18 @@ fn string_abi_encode() {
     runtime.function(&mut store, "test", Vec::new());
 
     assert_eq!(store.scratch, Val("foobar".to_string()).encode());
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test() public returns (int8[4], string, bool) {
+                return ([ int8(120), 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.",
+                true);
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(store.scratch, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 }
