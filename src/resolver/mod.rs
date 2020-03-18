@@ -126,6 +126,17 @@ impl Type {
         }
     }
 
+    /// Given an array, return the type of its elements
+    pub fn array_elem(&self) -> Self {
+        match self {
+            Type::Array(ty, dim) if dim.len() > 1 => {
+                Type::Array(ty.clone(), dim[..dim.len() - 1].to_vec())
+            }
+            Type::Array(ty, dim) if dim.len() == 1 => *ty.clone(),
+            _ => panic!("not an array"),
+        }
+    }
+
     /// Give the type of an storage array after dereference. This can only be used on
     /// array types and will cause a panic otherwise.
     pub fn storage_deref(&self) -> Self {
@@ -238,6 +249,24 @@ impl Type {
                         .product::<BigInt>()
             }
             _ => BigInt::one(),
+        }
+    }
+
+    /// Does this type contain any types which are variable-length
+    pub fn is_dynamic(&self, ns: &Contract) -> bool {
+        match self {
+            Type::String | Type::DynamicBytes => true,
+            Type::Ref(r) => r.is_dynamic(ns),
+            Type::Array(ty, dim) => {
+                if dim.iter().any(|d| d.is_none()) {
+                    return true;
+                }
+
+                ty.is_dynamic(ns)
+            }
+            Type::Struct(n) => ns.structs[*n].fields.iter().any(|f| f.ty.is_dynamic(ns)),
+            Type::StorageRef(r) => r.is_dynamic(ns),
+            _ => false,
         }
     }
 

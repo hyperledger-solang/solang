@@ -43,8 +43,11 @@ impl EthAbiEncoder {
                 if let Some(d) = &dim[0] {
                     contract.emit_static_loop_with_pointer(
                         function,
-                        0,
-                        d.to_u64().unwrap(),
+                        contract.context.i64_type().const_zero(),
+                        contract
+                            .context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
                         data,
                         |index, data| {
                             let mut elem = unsafe {
@@ -613,8 +616,11 @@ impl EthAbiEncoder {
                 if let Some(d) = &dim[0] {
                     contract.emit_static_loop_with_pointer(
                         function,
-                        0,
-                        d.to_u64().unwrap(),
+                        contract.context.i64_type().const_zero(),
+                        contract
+                            .context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
                         data,
                         |index: IntValue<'b>, data: &mut PointerValue<'b>| {
                             let elem = unsafe {

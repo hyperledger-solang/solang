@@ -1,3 +1,6 @@
+use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec_derive::{Decode, Encode};
+
 use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
 
@@ -237,4 +240,23 @@ fn string_concat() {
     );
 
     runtime.function(&mut store, "test", Vec::new());
+}
+
+#[test]
+fn string_abi_encode() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(String);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test() public returns (string) {
+                return "foobar";
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(store.scratch, Val("foobar".to_string()).encode());
 }

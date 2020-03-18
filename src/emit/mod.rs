@@ -222,8 +222,8 @@ impl<'a> Contract<'a> {
     pub fn emit_static_loop_with_pointer<'b, F>(
         &'b self,
         function: FunctionValue,
-        from: u64,
-        to: u64,
+        from: IntValue<'b>,
+        to: IntValue<'b>,
         data_ref: &mut PointerValue<'b>,
         mut insert_body: F,
     ) where
@@ -236,7 +236,7 @@ impl<'a> Contract<'a> {
         self.builder.build_unconditional_branch(body);
         self.builder.position_at_end(body);
 
-        let loop_ty = self.context.i64_type();
+        let loop_ty = from.get_type();
         let loop_phi = self.builder.build_phi(loop_ty, "index");
         let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
         let mut data = data_phi.as_basic_value().into_pointer_value();
@@ -250,15 +250,12 @@ impl<'a> Contract<'a> {
             .builder
             .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
 
-        let comp = self.builder.build_int_compare(
-            IntPredicate::ULT,
-            next,
-            loop_ty.const_int(to, false),
-            "loop_cond",
-        );
+        let comp = self
+            .builder
+            .build_int_compare(IntPredicate::ULT, next, to, "loop_cond");
         self.builder.build_conditional_branch(comp, body, done);
 
-        loop_phi.add_incoming(&[(&loop_ty.const_int(from, false), entry), (&next, body)]);
+        loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
         data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
         self.builder.position_at_end(done);

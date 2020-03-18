@@ -457,3 +457,45 @@ __attribute__((visibility("hidden"))) struct vector *concat(uint8_t *left, uint3
 
 	return v;
 }
+
+// Encode an 32 bit integer as as scale compact integer
+// https://substrate.dev/docs/en/conceptual/core/codec#vectors-lists-series-sets
+uint8_t *compact_encode_u32(uint8_t *dest, uint32_t val)
+{
+	if (val < 64)
+	{
+		*dest++ = val << 2;
+	}
+	else if (val < 4000)
+	{
+		*((uint16_t *)dest) = (val << 2) | 1;
+		dest += 2;
+	}
+	else if (val < 0x40000000)
+	{
+		*((uint32_t *)dest) = (val << 2) | 2;
+		dest += 4;
+	}
+	else
+	{
+		*dest++ = 3;
+		*((uint32_t *)dest) = val;
+		dest += 4;
+	}
+
+	return dest;
+}
+
+uint8_t *scale_encode_string(uint8_t *dest, struct vector *s)
+{
+	uint32_t len = s->len;
+	uint8_t *data_dst = compact_encode_u32(dest, len);
+	uint8_t *data = s->data;
+
+	while (len--)
+	{
+		*data_dst++ = *data++;
+	}
+
+	return data_dst;
+}
