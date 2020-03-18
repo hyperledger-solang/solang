@@ -38,10 +38,18 @@ pub struct Array {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct Slice {
+    #[serde(rename = "slice.type")]
+    ty: usize,
+}
+
+#[derive(Deserialize, Serialize)]
 #[serde(untagged)]
 enum Type {
     Builtin { id: String, def: String },
     BuiltinArray { id: Array, def: String },
+    BuiltinSlice { id: Slice, def: String },
+    StructSimpleId { id: String, def: StructDef },
     Struct { id: CustomID, def: StructDef },
     Enum { id: CustomID, def: EnumDef },
 }
@@ -235,6 +243,43 @@ impl Registry {
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
+    fn builtin_slice_type(&mut self, elem: usize) -> usize {
+        for (i, s) in self.types.iter().enumerate() {
+            match s {
+                Type::BuiltinSlice {
+                    id: Slice { ty }, ..
+                } if *ty == elem => {
+                    return i + 1;
+                }
+                _ => (),
+            }
+        }
+
+        let length = self.types.len();
+
+        self.types.push(Type::BuiltinSlice {
+            id: Slice { ty: elem },
+            def: "builtin".to_owned(),
+        });
+
+        length + 1
+    }
+
+    /// Returns index to builtin type in registry. Type is added if not already present
+    fn string_type(&mut self) -> usize {
+        let ty_u8 = self.builtin_type("u8");
+
+        let elem_ty = self.builtin_slice_type(ty_u8);
+        let name = self.string("elems");
+
+        let elem_ty = self.struct_type("Vec", vec![StructField { name, ty: elem_ty }]);
+
+        let name = self.string("vec");
+
+        self.struct_simpleid_type("str".to_owned(), vec![StructField { name, ty: elem_ty }])
+    }
+
+    /// Returns index to builtin type in registry. Type is added if not already present
     #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &resolver::EnumDecl) -> usize {
         let length = self.types.len();
@@ -261,6 +306,7 @@ impl Registry {
 
         length + 1
     }
+
     /// Adds struct type to registry. Does not check for duplication (yet)
     fn struct_type(&mut self, name: &str, fields: Vec<StructField>) -> usize {
         let length = self.types.len();
@@ -272,6 +318,18 @@ impl Registry {
                 namespace: Vec::new(),
                 params: Vec::new(),
             },
+            def: StructDef { fields },
+        });
+
+        length + 1
+    }
+
+    /// Adds struct type to registry. Does not check for duplication (yet)
+    fn struct_simpleid_type(&mut self, name: String, fields: Vec<StructField>) -> usize {
+        let length = self.types.len();
+
+        self.types.push(Type::StructSimpleId {
+            id: name,
             def: StructDef { fields },
         });
 
@@ -456,7 +514,18 @@ fn ty_to_abi(
                 display_name: vec![],
             }
         }
-        resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
+        resolver::Type::DynamicBytes => {
+            let elem = registry.builtin_type("u8");
+
+            ParamType {
+                ty: registry.builtin_slice_type(elem),
+                display_name: vec![registry.string("Vec")],
+            }
+        }
+        resolver::Type::String => ParamType {
+            ty: registry.string_type(),
+            display_name: vec![registry.string("str")],
+        },
     }
 }
 
