@@ -604,6 +604,12 @@ impl SubstrateTarget {
         arg: BasicValueEnum<'a>,
         data: &mut PointerValue<'a>,
     ) {
+        let arg = if ty.is_reference_type() {
+            contract.builder.build_load(arg.into_pointer_value(), "")
+        } else {
+            arg
+        };
+
         match &ty {
             resolver::Type::Bool
             | resolver::Type::Address
@@ -634,7 +640,7 @@ impl SubstrateTarget {
                             .const_int(d.to_u64().unwrap(), false),
                         data,
                         |index, data| {
-                            let mut elem = unsafe {
+                            let elem = unsafe {
                                 contract.builder.build_gep(
                                     arg.into_pointer_value(),
                                     &[contract.context.i32_type().const_zero(), index],
@@ -644,11 +650,7 @@ impl SubstrateTarget {
 
                             let ty = ty.array_deref();
 
-                            if ty.is_reference_type() {
-                                elem = contract.builder.build_load(elem, "").into_pointer_value()
-                            }
-
-                            self.encode_ty(contract, function, &ty, elem.into(), data);
+                            self.encode_ty(contract, function, &ty.deref(), elem.into(), data);
                         },
                     );
                 } else {
@@ -657,7 +659,7 @@ impl SubstrateTarget {
             }
             resolver::Type::Struct(n) => {
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    let mut elem = unsafe {
+                    let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
                             &[
@@ -667,10 +669,6 @@ impl SubstrateTarget {
                             &field.name,
                         )
                     };
-
-                    if field.ty.is_reference_type() {
-                        elem = contract.builder.build_load(elem, "").into_pointer_value();
-                    }
 
                     self.encode_ty(contract, function, &field.ty, elem.into(), data);
                 }
@@ -1098,6 +1096,7 @@ impl TargetRuntime for SubstrateTarget {
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>) {
+        // first calculate how much memory we need to allocate
         let mut length = contract.context.i32_type().const_zero();
 
         for (i, field) in spec.returns.iter().enumerate() {
@@ -1128,18 +1127,11 @@ impl TargetRuntime for SubstrateTarget {
             .unwrap()
             .into_pointer_value();
 
+        // now encode each of the arguments
         let mut argsdata = data;
 
         for (i, arg) in spec.returns.iter().enumerate() {
-            let val = if arg.ty.is_reference_type() {
-                contract
-                    .builder
-                    .build_load(args[i].into_pointer_value(), "")
-            } else {
-                args[i]
-            };
-
-            self.encode_ty(contract, function, &arg.ty, val, &mut argsdata);
+            self.encode_ty(contract, function, &arg.ty, args[i], &mut argsdata);
         }
 
         let length = contract

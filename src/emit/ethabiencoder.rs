@@ -20,6 +20,12 @@ impl EthAbiEncoder {
         arg: BasicValueEnum,
         data: &mut PointerValue<'a>,
     ) {
+        let arg = if ty.is_reference_type() {
+            contract.builder.build_load(arg.into_pointer_value(), "")
+        } else {
+            arg
+        };
+
         match &ty {
             resolver::Type::Bool
             | resolver::Type::Address
@@ -50,7 +56,7 @@ impl EthAbiEncoder {
                             .const_int(d.to_u64().unwrap(), false),
                         data,
                         |index, data| {
-                            let mut elem = unsafe {
+                            let elem = unsafe {
                                 contract.builder.build_gep(
                                     arg.into_pointer_value(),
                                     &[contract.context.i32_type().const_zero(), index],
@@ -60,11 +66,7 @@ impl EthAbiEncoder {
 
                             let ty = ty.array_deref();
 
-                            if ty.is_reference_type() {
-                                elem = contract.builder.build_load(elem, "").into_pointer_value();
-                            }
-
-                            self.encode_ty(contract, function, &ty, elem.into(), data);
+                            self.encode_ty(contract, function, &ty.deref(), elem.into(), data);
                         },
                     );
                 } else {
@@ -73,7 +75,7 @@ impl EthAbiEncoder {
             }
             resolver::Type::Struct(n) => {
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    let mut elem = unsafe {
+                    let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
                             &[
@@ -83,10 +85,6 @@ impl EthAbiEncoder {
                             &field.name,
                         )
                     };
-
-                    if field.ty.is_reference_type() {
-                        elem = contract.builder.build_load(elem, "").into_pointer_value();
-                    }
 
                     self.encode_ty(contract, function, &field.ty, elem.into(), data);
                 }
