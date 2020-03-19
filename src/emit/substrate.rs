@@ -475,7 +475,33 @@ impl SubstrateTarget {
 
                 to.into()
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                let from = contract.builder.build_alloca(
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "from",
+                );
+
+                contract.builder.build_store(from, *data);
+
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("scale_decode_string").unwrap(),
+                        &[from.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                *data = contract
+                    .builder
+                    .build_load(from, "data")
+                    .into_pointer_value();
+
+                v.into()
+            }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, data),

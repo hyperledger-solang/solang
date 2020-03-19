@@ -90,7 +90,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
             Target::Substrate => imports.push(ImportEntry::new(
                 "env".into(),
                 "memory".into(),
-                elements::External::Memory(elements::MemoryType::new(2, Some(2))),
+                elements::External::Memory(elements::MemoryType::new(16, Some(16))),
             )),
             Target::Sabre => exports.push(ExportEntry::new("memory".into(), Internal::Memory(0))),
         }

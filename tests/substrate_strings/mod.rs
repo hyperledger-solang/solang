@@ -1,5 +1,6 @@
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
+use rand::Rng;
 
 use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
@@ -276,4 +277,68 @@ fn string_abi_encode() {
     runtime.function(&mut store, "test", Vec::new());
 
     assert_eq!(store.scratch, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
+}
+
+#[test]
+fn string_abi_decode() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(String);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct ValB(Vec<u8>);
+
+    // we should try lengths: 0 to 63, 64 to 0x800
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function test(string s) public returns (string){
+                return " " + s + " ";
+            }
+        }"##,
+    );
+
+    let moby_dick_first_para = "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.";
+
+    runtime.function(&mut store, "test", Val("foobar".to_string()).encode());
+    assert_eq!(store.scratch, Val(" foobar ".to_string()).encode());
+
+    runtime.function(
+        &mut store,
+        "test",
+        Val(moby_dick_first_para.to_string()).encode(),
+    );
+
+    assert_eq!(
+        store.scratch,
+        Val(format!(" {} ", moby_dick_first_para)).encode()
+    );
+
+    let mut rng = rand::thread_rng();
+
+    for len in 0x4000 - 10..0x4000 + 10 {
+        let mut s = Vec::new();
+
+        s.resize(len, 0);
+
+        rng.fill(&mut s[..]);
+
+        let (runtime, mut store) = build_solidity(
+            r##"
+            contract foo {
+                function test(bytes s) public returns (bytes){
+                    return hex"fe" + s;
+                }
+            }"##,
+        );
+
+        let arg = ValB(s.clone()).encode();
+
+        runtime.function(&mut store, "test", arg.clone());
+
+        s.insert(0, 0xfeu8);
+
+        let ret = ValB(s).encode();
+
+        assert_eq!(store.scratch, ret);
+    }
 }
