@@ -575,16 +575,8 @@ impl TargetRuntime for EwasmTarget {
         let mut data = encoded_data;
 
         for (i, arg) in spec.returns.iter().enumerate() {
-            let val = if arg.ty.is_reference_type() {
-                contract
-                    .builder
-                    .build_load(args[i].into_pointer_value(), "")
-            } else {
-                args[i]
-            };
-
             self.abi
-                .encode_ty(contract, function, &arg.ty, val, &mut data);
+                .encode_ty(contract, function, &arg.ty, args[i], &mut data);
         }
 
         (encoded_data, length)
