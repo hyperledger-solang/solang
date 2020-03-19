@@ -56,7 +56,7 @@ impl ContractStorage {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         ContractStorage {
-            memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
+            memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             scratch: Vec::new(),
             store: HashMap::new(),
         }

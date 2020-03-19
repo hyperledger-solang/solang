@@ -466,7 +466,7 @@ uint8_t *compact_encode_u32(uint8_t *dest, uint32_t val)
 	{
 		*dest++ = val << 2;
 	}
-	else if (val < 4000)
+	else if (val < 0x4000)
 	{
 		*((uint16_t *)dest) = (val << 2) | 1;
 		dest += 2;
@@ -498,4 +498,46 @@ uint8_t *scale_encode_string(uint8_t *dest, struct vector *s)
 	}
 
 	return data_dst;
+}
+
+struct vector *scale_decode_string(uint8_t **from)
+{
+	uint8_t *src = *from;
+	uint8_t upperbits = *src >> 2;
+	uint32_t size_array;
+
+	switch (*src & 0x03)
+	{
+	case 0:
+		size_array = upperbits;
+		src += 1;
+		break;
+	case 1:
+		size_array = *((uint16_t *)src) >> 2;
+		src += 2;
+		break;
+	case 2:
+		size_array = *((uint32_t *)src) >> 2;
+		src += 4;
+		break;
+	default:
+		// sizes of 2**30 (1GB) or larger are not allowed
+		__builtin_unreachable();
+	}
+
+	struct vector *v = __malloc(sizeof(*v) + size_array);
+
+	v->len = size_array;
+	v->size = size_array;
+
+	uint8_t *data = v->data;
+
+	while (size_array--)
+	{
+		*data++ = *src++;
+	}
+
+	*from = src;
+
+	return v;
 }
