@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
+[![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
 
 [<img align="right" width="640" src="docs/web3_foundation_grants_badge_black.svg" alt="Funded by the web3 foundation">](https://github.com/w3f/Web3-collaboration/blob/master/grants/accepted_grant_applications.md#wave-4)
 
