@@ -345,18 +345,30 @@ fn string_abi_decode() {
 
 #[test]
 fn string_storage() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(String);
+
     let (runtime, mut store) = build_solidity(
         r##"
         contract foo {
             string bar;
 
-            function test() public {
+            function set_bar() public {
                 bar = "foobar";
             }
+
+            function get_bar() public returns (string) {
+                return bar;
+            }
+
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function(&mut store, "set_bar", Vec::new());
 
     assert_eq!(store.store.get(&[0u8; 32]).unwrap(), b"foobar");
+
+    runtime.function(&mut store, "get_bar", Vec::new());
+
+    assert_eq!(store.scratch, Val("foobar".to_string()).encode());
 }

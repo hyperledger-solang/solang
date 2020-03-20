@@ -5,7 +5,7 @@ use std::str;
 use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
 use inkwell::module::Linkage;
-use inkwell::types::BasicTypeEnum;
+use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::OptimizationLevel;
@@ -77,7 +77,7 @@ impl EwasmTarget {
 
     fn main_prelude<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         function: FunctionValue,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
@@ -362,6 +362,15 @@ impl TargetRuntime for EwasmTarget {
         unimplemented!();
     }
 
+    fn get_storage_string<'a>(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue,
+    ) -> PointerValue<'a> {
+        unimplemented!();
+    }
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,
@@ -445,79 +454,51 @@ impl TargetRuntime for EwasmTarget {
         }
     }
 
-    fn get_storage<'a>(
+    fn get_storage_int<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
-    ) {
-        if dest
-            .get_type()
-            .get_element_type()
-            .into_int_type()
-            .get_bit_width()
-            == 256
-        {
-            contract.builder.build_call(
-                contract.module.get_function("storageLoad").unwrap(),
-                &[
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            dest,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                ],
-                "",
-            );
-        } else {
-            let value = contract
-                .builder
-                .build_alloca(contract.context.custom_width_int_type(256), "value");
+        slot: PointerValue,
+        ty: IntType<'a>,
+    ) -> IntValue<'a> {
+        let dest = contract.builder.build_array_alloca(
+            contract.context.i8_type(),
+            contract.context.i32_type().const_int(32, false),
+            "buf",
+        );
 
-            contract.builder.build_call(
-                contract.module.get_function("storageLoad").unwrap(),
-                &[
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            slot,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            value,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                ],
-                "",
-            );
-
-            let val = contract.builder.build_load(
+        contract.builder.build_call(
+            contract.module.get_function("storageLoad").unwrap(),
+            &[
                 contract
                     .builder
-                    .build_pointer_cast(value, dest.get_type(), ""),
-                "",
-            );
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
 
-            contract.builder.build_store(dest, val);
-        }
+        contract
+            .builder
+            .build_load(
+                contract
+                    .builder
+                    .build_pointer_cast(dest, ty.ptr_type(AddressSpace::Generic), ""),
+                "loaded_int",
+            )
+            .into_int_value()
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
@@ -570,7 +551,7 @@ impl TargetRuntime for EwasmTarget {
 
     fn abi_encode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
@@ -607,7 +588,7 @@ impl TargetRuntime for EwasmTarget {
 
     fn abi_decode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,

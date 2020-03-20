@@ -3,9 +3,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "stdlib.h"
+
 /*
  */
-__attribute__((visibility("hidden"))) void __memset8(void *_dest, uint64_t val, size_t length)
+void __memset8(void *_dest, uint64_t val, size_t length)
 {
 	uint64_t *dest = _dest;
 
@@ -15,7 +17,7 @@ __attribute__((visibility("hidden"))) void __memset8(void *_dest, uint64_t val, 
 	} while (--length);
 }
 
-__attribute__((visibility("hidden"))) void __memset(uint8_t *dest, uint8_t val, size_t length)
+void __memset(uint8_t *dest, uint8_t val, size_t length)
 {
 	do
 	{
@@ -26,7 +28,7 @@ __attribute__((visibility("hidden"))) void __memset(uint8_t *dest, uint8_t val, 
  * Our memcpy can only deal with multiples of 8 bytes. This is enough for
  * simple allocator below.
  */
-__attribute__((visibility("hidden"))) void __memcpy8(void *_dest, void *_src, size_t length)
+void __memcpy8(void *_dest, void *_src, size_t length)
 {
 	uint64_t *dest = _dest;
 	uint64_t *src = _src;
@@ -37,7 +39,7 @@ __attribute__((visibility("hidden"))) void __memcpy8(void *_dest, void *_src, si
 	} while (--length);
 }
 
-__attribute__((visibility("hidden"))) void __memcpy(uint8_t *dest, uint8_t *src, size_t length)
+void __memcpy(uint8_t *dest, uint8_t *src, size_t length)
 {
 	do
 	{
@@ -48,7 +50,7 @@ __attribute__((visibility("hidden"))) void __memcpy(uint8_t *dest, uint8_t *src,
 /*
  * Fast-ish clear, 8 bytes at a time.
  */
-__attribute__((visibility("hidden"))) void __bzero8(void *_dest, size_t length)
+void __bzero8(void *_dest, size_t length)
 {
 	uint64_t *dest = _dest;
 
@@ -60,7 +62,7 @@ __attribute__((visibility("hidden"))) void __bzero8(void *_dest, size_t length)
 /*
  * Fast-ish set, 8 bytes at a time.
  */
-__attribute__((visibility("hidden"))) void __bset8(void *_dest, size_t length)
+void __bset8(void *_dest, size_t length)
 {
 	int64_t *dest = _dest;
 
@@ -85,7 +87,7 @@ struct chunk
 	bool allocated;
 };
 
-__attribute__((visibility("hidden"))) void __init_heap()
+void __init_heap()
 {
 	struct chunk *first = (struct chunk *)0x10000;
 	first->next = first->prev = NULL;
@@ -94,7 +96,7 @@ __attribute__((visibility("hidden"))) void __init_heap()
 							 (size_t)first - sizeof(struct chunk));
 }
 
-__attribute__((visibility("hidden"))) void __attribute__((noinline)) __free(void *m)
+void __attribute__((noinline)) __free(void *m)
 {
 	struct chunk *cur = m;
 	cur--;
@@ -122,7 +124,7 @@ __attribute__((visibility("hidden"))) void __attribute__((noinline)) __free(void
 	}
 }
 
-__attribute__((visibility("hidden"))) static void shrink_chunk(struct chunk *cur, size_t size)
+static void shrink_chunk(struct chunk *cur, size_t size)
 {
 	// round up to nearest 8 bytes
 	size = (size + 7) & ~7;
@@ -142,7 +144,7 @@ __attribute__((visibility("hidden"))) static void shrink_chunk(struct chunk *cur
 	}
 }
 
-__attribute__((visibility("hidden"))) void *__attribute__((noinline)) __malloc(size_t size)
+void *__attribute__((noinline)) __malloc(size_t size)
 {
 	struct chunk *cur = (struct chunk *)0x10000;
 
@@ -162,7 +164,7 @@ __attribute__((visibility("hidden"))) void *__attribute__((noinline)) __malloc(s
 	}
 }
 
-__attribute__((visibility("hidden"))) void *__realloc(void *m, size_t size)
+void *__realloc(void *m, size_t size)
 {
 	struct chunk *cur = m;
 
@@ -193,7 +195,7 @@ __attribute__((visibility("hidden"))) void *__realloc(void *m, size_t size)
 // ABI encoding is big endian, and can have integers of 8 to 256 bits
 // (1 to 32 bytes). This function copies length bytes and reverses the
 // order since wasm is little endian.
-__attribute__((visibility("hidden"))) void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
+void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	from += 31;
 
@@ -203,7 +205,7 @@ __attribute__((visibility("hidden"))) void __be32toleN(uint8_t *from, uint8_t *t
 	} while (--length);
 }
 
-__attribute__((visibility("hidden"))) void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
+void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	from += length;
 
@@ -215,7 +217,7 @@ __attribute__((visibility("hidden"))) void __beNtoleN(uint8_t *from, uint8_t *to
 
 // This function is for used for abi encoding integers
 // ABI encoding is big endian.
-__attribute__((visibility("hidden"))) void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
+void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	to += 31;
 
@@ -225,7 +227,7 @@ __attribute__((visibility("hidden"))) void __leNtobe32(uint8_t *from, uint8_t *t
 	} while (--length);
 }
 
-__attribute__((visibility("hidden"))) void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
+void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
 {
 	to += length;
 
@@ -252,7 +254,7 @@ __attribute__((visibility("hidden"))) void __leNtobeN(uint8_t *from, uint8_t *to
 	r5*l4	r4*l4	r3*l4	r2*l4 	r1*l4	0		0 		0  +
     ------------------------------------------------------------
 */
-__attribute__((visibility("hidden"))) void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
+void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 {
 	uint64_t val1 = 0, carry = 0;
 
@@ -383,18 +385,8 @@ char *__u256ptohex(uint8_t *v, char *str)
 	return str;
 }
 
-/*
- * Vector is used for dynamic array
- */
-struct vector
-{
-	uint32_t len;
-	uint32_t size;
-	uint8_t data[];
-};
-
 // Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
-__attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
+struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
 	struct vector *v;
 	size_t size_array = members * size;
@@ -423,7 +415,7 @@ __attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members
 	return v;
 }
 
-__attribute__((visibility("hidden"))) bool memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
+bool memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
 {
 	if (left_len != right_len)
 		return false;
@@ -437,7 +429,7 @@ __attribute__((visibility("hidden"))) bool memcmp(uint8_t *left, uint32_t left_l
 	return true;
 }
 
-__attribute__((visibility("hidden"))) struct vector *concat(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
+struct vector *concat(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
 {
 	size_t size_array = left_len + right_len;
 	struct vector *v = __malloc(sizeof(*v) + size_array);

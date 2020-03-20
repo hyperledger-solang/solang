@@ -2,6 +2,7 @@ use resolver;
 
 use inkwell::context::Context;
 use inkwell::module::Linkage;
+use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -45,7 +46,7 @@ impl SubstrateTarget {
 
     fn public_function_prelude<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         function: FunctionValue,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
@@ -270,7 +271,7 @@ impl SubstrateTarget {
     /// ABI decode a single primitive
     fn decode_primitive<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         ty: &resolver::Type,
         to: Option<PointerValue<'b>>,
         src: PointerValue<'b>,
@@ -388,7 +389,7 @@ impl SubstrateTarget {
     /// recursively encode a single ty
     fn decode_ty<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         ty: &resolver::Type,
         to: Option<PointerValue<'b>>,
@@ -635,7 +636,7 @@ impl SubstrateTarget {
     /// and the pointer is updated point after the encoded data.
     pub fn encode_ty<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         function: FunctionValue,
         ty: &resolver::Type,
         arg: BasicValueEnum<'a>,
@@ -740,7 +741,7 @@ impl SubstrateTarget {
         arg: BasicValueEnum<'a>,
         ty: &resolver::Type,
         function: FunctionValue,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
     ) -> IntValue<'a> {
         match ty {
             resolver::Type::Bool => contract.context.i32_type().const_int(1, false),
@@ -1041,13 +1042,13 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Read from substrate storage
-    fn get_storage<'a>(
+    fn get_storage_int<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
-    ) {
+        slot: PointerValue,
+        ty: IntType<'a>,
+    ) -> IntValue<'a> {
         let exists = contract
             .builder
             .build_call(
@@ -1073,9 +1074,7 @@ impl TargetRuntime for SubstrateTarget {
             "storage_exists",
         );
 
-        let clear_block = contract
-            .context
-            .append_basic_block(function, "not_in_storage");
+        let entry = contract.builder.get_insert_block().unwrap();
         let retrieve_block = contract.context.append_basic_block(function, "in_storage");
         let done_storage = contract
             .context
@@ -1083,9 +1082,11 @@ impl TargetRuntime for SubstrateTarget {
 
         contract
             .builder
-            .build_conditional_branch(exists, retrieve_block, clear_block);
+            .build_conditional_branch(exists, retrieve_block, done_storage);
 
         contract.builder.position_at_end(retrieve_block);
+
+        let dest = contract.builder.build_alloca(ty, "int");
 
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
@@ -1099,31 +1100,54 @@ impl TargetRuntime for SubstrateTarget {
                     )
                     .into(),
                 contract.context.i32_type().const_zero().into(),
-                dest.get_type()
-                    .get_element_type()
-                    .into_int_type()
-                    .size_of()
+                ty.size_of()
                     .const_cast(contract.context.i32_type(), false)
                     .into(),
             ],
             "",
         );
 
-        contract.builder.build_unconditional_branch(done_storage);
-
-        contract.builder.position_at_end(clear_block);
-
-        contract.builder.build_store(
-            dest,
-            dest.get_type()
-                .get_element_type()
-                .into_int_type()
-                .const_zero(),
-        );
+        let loaded_int = contract.builder.build_load(dest, "int");
 
         contract.builder.build_unconditional_branch(done_storage);
 
         contract.builder.position_at_end(done_storage);
+
+        let res = contract.builder.build_phi(ty, "storage_res");
+
+        res.add_incoming(&[(&loaded_int, retrieve_block), (&ty.const_zero(), entry)]);
+
+        res.as_basic_value().into_int_value()
+    }
+
+    /// Read string from substrate storage
+    fn get_storage_string<'a>(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> PointerValue<'a> {
+        contract
+            .builder
+            .build_call(
+                contract
+                    .module
+                    .get_function("substrate_get_string")
+                    .unwrap(),
+                &[contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value()
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
@@ -1165,7 +1189,7 @@ impl TargetRuntime for SubstrateTarget {
 
     fn abi_decode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
@@ -1186,7 +1210,7 @@ impl TargetRuntime for SubstrateTarget {
     ///  ABI encode the return values for the function
     fn abi_encode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
