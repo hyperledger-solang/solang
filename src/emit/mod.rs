@@ -1061,11 +1061,11 @@ impl<'a> Contract<'a> {
                     .const_cast(self.context.i32_type(), false);
 
                 let init = match init {
-                    None => self
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .const_null(),
+                    None => self.builder.build_int_to_ptr(
+                        self.context.i32_type().const_all_ones(),
+                        self.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "invalid",
+                    ),
                     Some(s) => self.emit_global_string("const_string", s, false),
                 };
 

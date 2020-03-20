@@ -393,6 +393,7 @@ struct vector
 	uint8_t data[];
 };
 
+// Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
 __attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
 	struct vector *v;
@@ -404,7 +405,7 @@ __attribute__((visibility("hidden"))) struct vector *vector_new(uint32_t members
 
 	uint8_t *data = v->data;
 
-	if (initial)
+	if ((int)initial != -1)
 	{
 		do
 		{
