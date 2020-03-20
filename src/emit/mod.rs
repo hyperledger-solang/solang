@@ -7,6 +7,7 @@ use std::path::Path;
 use std::str;
 
 use num_bigint::BigInt;
+use num_traits::One;
 use num_traits::ToPrimitive;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -47,7 +48,7 @@ struct Variable<'a> {
 pub trait TargetRuntime {
     fn abi_decode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
@@ -56,7 +57,7 @@ pub trait TargetRuntime {
     );
     fn abi_encode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
@@ -77,13 +78,13 @@ pub trait TargetRuntime {
         slot: PointerValue<'a>,
         dest: PointerValue<'a>,
     );
-    fn get_storage<'a>(
+    fn get_storage_int<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
-    );
+        slot: PointerValue,
+        ty: IntType<'a>,
+    ) -> IntValue<'a>;
 
     // Bytes and string have special storage layout
     fn set_storage_string<'a>(
@@ -93,6 +94,12 @@ pub trait TargetRuntime {
         slot: PointerValue<'a>,
         dest: PointerValue<'a>,
     );
+    fn get_storage_string<'a>(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> PointerValue<'a>;
 
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
@@ -217,7 +224,7 @@ impl<'a> Contract<'a> {
         module.set_source_file_name(filename);
 
         // stdlib
-        let intr = load_stdlib(&context);
+        let intr = load_stdlib(&context, &contract.target);
         module.link_in_module(intr).unwrap();
 
         Contract {
@@ -259,15 +266,15 @@ impl<'a> Contract<'a> {
 
     /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
     /// gets the loop variable passed to it as an IntValue, and a userdata PointerValue
-    pub fn emit_static_loop_with_pointer<'b, F>(
-        &'b self,
+    pub fn emit_static_loop_with_pointer<F>(
+        &self,
         function: FunctionValue,
-        from: IntValue<'b>,
-        to: IntValue<'b>,
-        data_ref: &mut PointerValue<'b>,
+        from: IntValue<'a>,
+        to: IntValue<'a>,
+        data_ref: &mut PointerValue<'a>,
         mut insert_body: F,
     ) where
-        F: FnMut(IntValue<'b>, &mut PointerValue<'b>),
+        F: FnMut(IntValue<'a>, &mut PointerValue<'a>),
     {
         let body = self.context.append_basic_block(function, "body");
         let done = self.context.append_basic_block(function, "done");
@@ -305,15 +312,15 @@ impl<'a> Contract<'a> {
 
     /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
     /// gets the loop variable passed to it as an IntValue, and a userdata IntValue
-    pub fn emit_static_loop_with_int<'b, F>(
-        &'b self,
+    pub fn emit_static_loop_with_int<F>(
+        &self,
         function: FunctionValue,
-        from: IntValue<'b>,
-        to: IntValue<'b>,
-        data_ref: &mut IntValue<'b>,
+        from: IntValue<'a>,
+        to: IntValue<'a>,
+        data_ref: &mut IntValue<'a>,
         mut insert_body: F,
     ) where
-        F: FnMut(IntValue<'b>, &mut IntValue<'b>),
+        F: FnMut(IntValue<'a>, &mut IntValue<'a>),
     {
         let body = self.context.append_basic_block(function, "body");
         let done = self.context.append_basic_block(function, "done");
@@ -351,15 +358,15 @@ impl<'a> Contract<'a> {
     }
 
     /// Emit a loop from `from` to `to`, checking the condition _before_ the body.
-    pub fn emit_loop_cond_first_with_int<'b, F>(
-        &'b self,
+    pub fn emit_loop_cond_first_with_int<F>(
+        &self,
         function: FunctionValue,
-        from: IntValue<'b>,
-        to: IntValue<'b>,
-        data_ref: &mut IntValue<'b>,
+        from: IntValue<'a>,
+        to: IntValue<'a>,
+        data_ref: &mut IntValue<'a>,
         mut insert_body: F,
     ) where
-        F: FnMut(IntValue<'b>, &mut IntValue<'b>),
+        F: FnMut(IntValue<'a>, &mut IntValue<'a>),
     {
         let cond = self.context.append_basic_block(function, "cond");
         let body = self.context.append_basic_block(function, "body");
@@ -788,22 +795,13 @@ impl<'a> Contract<'a> {
                 self.builder.build_load(expr, "")
             }
             Expression::StorageLoad(_, ty, e) => {
-                let dest = self
-                    .builder
-                    .build_alloca(self.llvm_type(ty), "storage_load_temp");
                 // The storage slot is an i256 accessed through a pointer, so we need
                 // to store it
                 let mut slot = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
                 let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.storage_load(ty, &mut slot, slot_ptr, dest, function, runtime);
-
-                if ty.is_reference_type() {
-                    dest.into()
-                } else {
-                    self.builder.build_load(dest, "")
-                }
+                self.storage_load(ty, &mut slot, slot_ptr, function, runtime)
             }
             Expression::ZeroExt(_, t, e) => {
                 let e = self
@@ -1275,20 +1273,46 @@ impl<'a> Contract<'a> {
     }
 
     /// Recursively load a type from contract storage
-    fn storage_load<'b>(
-        &'b self,
+    fn storage_load(
+        &self,
         ty: &resolver::Type,
-        slot: &mut IntValue<'b>,
-        slot_ptr: PointerValue<'b>,
-        dest: PointerValue<'b>,
-        function: FunctionValue<'b>,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        function: FunctionValue,
         runtime: &dyn TargetRuntime,
-    ) {
+    ) -> BasicValueEnum<'a> {
         match ty {
+            resolver::Type::Ref(ty) => self.storage_load(ty, slot, slot_ptr, function, runtime),
             resolver::Type::Array(_, dim) => {
-                let ty = ty.array_deref();
-
                 if let Some(d) = &dim[0] {
+                    let llvm_ty = self.llvm_type(ty.deref());
+                    // LLVMSizeOf() produces an i64
+                    let size = self.builder.build_int_truncate(
+                        llvm_ty.size_of().unwrap(),
+                        self.context.i32_type(),
+                        "size_of",
+                    );
+
+                    let ty = ty.array_deref();
+
+                    let new = self
+                        .builder
+                        .build_call(
+                            self.module.get_function("__malloc").unwrap(),
+                            &[size.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    let dest = self.builder.build_pointer_cast(
+                        new,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        "dest",
+                    );
+
                     self.emit_static_loop_with_int(
                         function,
                         self.context.i64_type().const_zero(),
@@ -1296,7 +1320,7 @@ impl<'a> Contract<'a> {
                             .i64_type()
                             .const_int(d.to_u64().unwrap(), false),
                         slot,
-                        |index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                        |index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let elem = unsafe {
                                 self.builder.build_gep(
                                     dest,
@@ -1305,31 +1329,48 @@ impl<'a> Contract<'a> {
                                 )
                             };
 
-                            if ty.is_reference_type() {
-                                let ty = ty.deref();
-                                let val = self.builder.build_alloca(self.llvm_type(&ty), "");
-                                self.storage_load(&ty, slot, slot_ptr, val, function, runtime);
+                            let val = self.storage_load(&ty, slot, slot_ptr, function, runtime);
 
-                                self.builder.build_store(elem, val);
-                            } else {
-                                self.storage_load(&ty, slot, slot_ptr, elem, function, runtime);
-                            }
-
-                            if !ty.is_reference_type() {
-                                *slot = self.builder.build_int_add(
-                                    *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.ns)),
-                                    "",
-                                );
-                            }
+                            self.builder.build_store(elem, val);
                         },
                     );
+
+                    dest.into()
                 } else {
                     // FIXME: iterate over dynamic array
+                    unimplemented!();
                 }
             }
             resolver::Type::Struct(n) => {
+                let llvm_ty = self.llvm_type(ty.deref());
+                // LLVMSizeOf() produces an i64
+                let size = self.builder.build_int_truncate(
+                    llvm_ty.size_of().unwrap(),
+                    self.context.i32_type(),
+                    "size_of",
+                );
+
+                let new = self
+                    .builder
+                    .build_call(
+                        self.module.get_function("__malloc").unwrap(),
+                        &[size.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let dest = self.builder.build_pointer_cast(
+                    new,
+                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    "dest",
+                );
+
                 for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
+                    let val = self.storage_load(&field.ty, slot, slot_ptr, function, runtime);
+
                     let elem = unsafe {
                         self.builder.build_gep(
                             dest,
@@ -1341,46 +1382,53 @@ impl<'a> Contract<'a> {
                         )
                     };
 
-                    if field.ty.is_reference_type() {
-                        let val = self
-                            .builder
-                            .build_alloca(self.llvm_type(&field.ty.deref()), &field.name);
-
-                        self.storage_load(&field.ty, slot, slot_ptr, val, function, runtime);
-
-                        self.builder.build_store(elem, val);
-                    } else {
-                        self.storage_load(&field.ty, slot, slot_ptr, elem, function, runtime);
-                    }
-
-                    if !field.ty.is_reference_type() {
-                        *slot = self.builder.build_int_add(
-                            *slot,
-                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                            &field.name,
-                        );
-                    }
+                    self.builder.build_store(elem, val);
                 }
+
+                dest.into()
+            }
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                self.builder.build_store(slot_ptr, *slot);
+
+                let ret = runtime.get_storage_string(&self, function, slot_ptr);
+
+                *slot = self.builder.build_int_add(
+                    *slot,
+                    self.number_literal(256, &BigInt::one()),
+                    "string",
+                );
+
+                ret.into()
             }
             _ => {
                 self.builder.build_store(slot_ptr, *slot);
 
-                // TODO ewasm allocates 32 bytes here, even though we have just
-                // allocated test. This can be folded into one allocation, if llvm
-                // does not already fold it into one.
-                runtime.get_storage(&self, function, slot_ptr, dest);
+                let ret = runtime.get_storage_int(
+                    &self,
+                    function,
+                    slot_ptr,
+                    self.llvm_type(ty.deref()).into_int_type(),
+                );
+
+                *slot = self.builder.build_int_add(
+                    *slot,
+                    self.number_literal(256, &BigInt::one()),
+                    "int",
+                );
+
+                ret.into()
             }
         }
     }
 
     /// Recursively store a type to contract storage
-    fn storage_store<'b>(
-        &'b self,
+    fn storage_store(
+        &self,
         ty: &resolver::Type,
-        slot: &mut IntValue<'b>,
-        slot_ptr: PointerValue<'b>,
-        dest: BasicValueEnum<'b>,
-        function: FunctionValue<'b>,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
+        function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) {
         match ty.deref() {
@@ -1395,7 +1443,7 @@ impl<'a> Contract<'a> {
                             .i64_type()
                             .const_int(d.to_u64().unwrap(), false),
                         slot,
-                        |index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                        |index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let mut elem = unsafe {
                                 self.builder.build_gep(
                                     dest.into_pointer_value(),
@@ -1478,12 +1526,12 @@ impl<'a> Contract<'a> {
     }
 
     /// Recursively clear contract storage
-    fn storage_clear<'b>(
-        &'b self,
+    fn storage_clear(
+        &self,
         ty: &resolver::Type,
-        slot: &mut IntValue<'b>,
-        slot_ptr: PointerValue<'b>,
-        function: FunctionValue<'b>,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) {
         match ty.deref() {
@@ -1498,7 +1546,7 @@ impl<'a> Contract<'a> {
                             .i64_type()
                             .const_int(d.to_u64().unwrap(), false),
                         slot,
-                        |_index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                        |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             self.storage_clear(&ty, slot, slot_ptr, function, runtime);
 
                             if !ty.is_reference_type() {
@@ -1519,9 +1567,7 @@ impl<'a> Contract<'a> {
 
                     let buf = self.builder.build_alloca(slot_ty, "buf");
 
-                    runtime.get_storage(self, function, slot_ptr, buf);
-
-                    let length = self.builder.build_load(buf, "length").into_int_value();
+                    let length = runtime.get_storage_int(self, function, slot_ptr, slot_ty);
 
                     // we need to hash the length slot in order to get the slot of the first
                     // entry of the array
@@ -1560,7 +1606,7 @@ impl<'a> Contract<'a> {
                         length.get_type().const_zero(),
                         length,
                         &mut entry_slot,
-                        |_index: IntValue<'b>, slot: &mut IntValue<'b>| {
+                        |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
                             self.storage_clear(&ty, slot, slot_ptr, function, runtime);
 
                             if !ty.is_reference_type() {
@@ -1983,10 +2029,10 @@ impl<'a> Contract<'a> {
     pub fn emit_function_dispatch(
         &self,
         resolver_functions: &[resolver::FunctionDecl],
-        functions: &[FunctionValue],
-        argsdata: inkwell::values::PointerValue,
-        argslen: inkwell::values::IntValue,
-        function: inkwell::values::FunctionValue,
+        functions: &[FunctionValue<'a>],
+        argsdata: inkwell::values::PointerValue<'a>,
+        argslen: inkwell::values::IntValue<'a>,
+        function: inkwell::values::FunctionValue<'a>,
         fallback_block: inkwell::basic_block::BasicBlock,
         runtime: &dyn TargetRuntime,
     ) {
@@ -2856,10 +2902,11 @@ impl resolver::Type {
 
 static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
 static SHA3_IR: &[u8] = include_bytes!("../../stdlib/sha3.bc");
+static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/substrate.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
 /// the solang library
-fn load_stdlib(context: &Context) -> Module {
+fn load_stdlib<'a>(context: &'a Context, target: &crate::Target) -> Module<'a> {
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
 
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
@@ -2869,6 +2916,14 @@ fn load_stdlib(context: &Context) -> Module {
     module
         .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
         .unwrap();
+
+    if let super::Target::Substrate = target {
+        let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
+
+        module
+            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+            .unwrap();
+    }
 
     module
 }

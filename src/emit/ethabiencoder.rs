@@ -14,7 +14,7 @@ impl EthAbiEncoder {
     /// and the pointer is updated point after the encoded data.
     pub fn encode_ty<'a>(
         &self,
-        contract: &'a Contract,
+        contract: &Contract<'a>,
         function: FunctionValue,
         ty: &resolver::Type,
         arg: BasicValueEnum,
@@ -413,7 +413,7 @@ impl EthAbiEncoder {
     /// recursively encode a single ty
     fn decode_ty<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         ty: &resolver::Type,
         to: Option<PointerValue<'b>>,
@@ -703,7 +703,7 @@ impl EthAbiEncoder {
     /// abi decode the encoded data into the BasicValueEnums
     pub fn decode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,

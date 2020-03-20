@@ -3,6 +3,7 @@ use std::str;
 
 use inkwell::context::Context;
 use inkwell::module::Linkage;
+use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -354,13 +355,22 @@ impl TargetRuntime for SabreTarget {
         unimplemented!();
     }
 
-    fn get_storage<'a>(
+    fn get_storage_string<'a>(
         &self,
-        contract: &'a Contract,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+    ) -> PointerValue<'a> {
+        unimplemented!();
+    }
+
+    fn get_storage_int<'a>(
+        &self,
+        contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
-    ) {
+        slot: PointerValue,
+        ty: IntType<'a>,
+    ) -> IntValue<'a> {
         let address = contract
             .builder
             .build_call(
@@ -420,12 +430,7 @@ impl TargetRuntime for SabreTarget {
             .unwrap()
             .into_int_value();
 
-        let data_size = dest
-            .get_type()
-            .get_element_type()
-            .into_int_type()
-            .size_of()
-            .const_cast(contract.context.i32_type(), false);
+        let data_size = ty.size_of();
 
         let exists = contract.builder.build_int_compare(
             IntPredicate::EQ,
@@ -434,9 +439,8 @@ impl TargetRuntime for SabreTarget {
             "storage_exists",
         );
 
-        let clear_block = contract
-            .context
-            .append_basic_block(function, "not_in_storage");
+        let entry = contract.builder.get_insert_block().unwrap();
+
         let retrieve_block = contract.context.append_basic_block(function, "in_storage");
         let done_storage = contract
             .context
@@ -444,38 +448,24 @@ impl TargetRuntime for SabreTarget {
 
         contract
             .builder
-            .build_conditional_branch(exists, retrieve_block, clear_block);
+            .build_conditional_branch(exists, retrieve_block, done_storage);
 
         contract.builder.position_at_end(retrieve_block);
 
-        let dest = contract.builder.build_pointer_cast(
-            dest,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "dest",
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("__memcpy").unwrap(),
-            &[dest.into(), res.into(), data_size.into()],
-            "copy_from_storage",
+        let loaded_int = contract.builder.build_load(
+            contract
+                .builder
+                .build_pointer_cast(res, ty.ptr_type(AddressSpace::Generic), ""),
+            "loaded_int",
         );
 
         contract.builder.build_unconditional_branch(done_storage);
 
-        contract.builder.position_at_end(clear_block);
+        let res = contract.builder.build_phi(ty, "storage_res");
 
-        contract.builder.build_call(
-            contract.module.get_function("__memset").unwrap(),
-            &[
-                dest.into(),
-                contract.context.i8_type().const_zero().into(),
-                data_size.into(),
-            ],
-            "clear_storage",
-        );
-        contract.builder.build_unconditional_branch(done_storage);
+        res.add_incoming(&[(&loaded_int, retrieve_block), (&ty.const_zero(), entry)]);
 
-        contract.builder.position_at_end(done_storage);
+        res.as_basic_value().into_int_value()
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
@@ -499,7 +489,7 @@ impl TargetRuntime for SabreTarget {
 
     fn abi_encode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
@@ -536,7 +526,7 @@ impl TargetRuntime for SabreTarget {
 
     fn abi_decode<'b>(
         &self,
-        contract: &'b Contract,
+        contract: &Contract<'b>,
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
