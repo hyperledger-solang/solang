@@ -982,6 +982,64 @@ impl TargetRuntime for SubstrateTarget {
         );
     }
 
+    fn set_storage_string<'a>(
+        &self,
+        contract: &'a Contract,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
+    ) {
+        let len = unsafe {
+            contract.builder.build_gep(
+                dest,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_zero(),
+                ],
+                "ptr.string.len",
+            )
+        };
+
+        let len = contract.builder.build_load(len, "string.len");
+
+        let data = unsafe {
+            contract.builder.build_gep(
+                dest,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(2, false),
+                ],
+                "ptr.string.data",
+            )
+        };
+
+        // TODO: check for non-zero
+        contract.builder.build_call(
+            contract.module.get_function("ext_set_storage").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(1, false).into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        data,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                len,
+            ],
+            "",
+        );
+    }
+
     /// Read from substrate storage
     fn get_storage<'a>(
         &self,

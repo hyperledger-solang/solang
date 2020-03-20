@@ -342,3 +342,21 @@ fn string_abi_decode() {
         assert_eq!(store.scratch, ret);
     }
 }
+
+#[test]
+fn string_storage() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            string bar;
+
+            function test() public {
+                bar = "foobar";
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(store.store.get(&[0u8; 32]).unwrap(), b"foobar");
+}

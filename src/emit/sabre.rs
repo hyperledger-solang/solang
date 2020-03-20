@@ -344,6 +344,16 @@ impl TargetRuntime for SabreTarget {
         );
     }
 
+    fn set_storage_string<'a>(
+        &self,
+        _contract: &'a Contract,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+        _dest: PointerValue<'a>,
+    ) {
+        unimplemented!();
+    }
+
     fn get_storage<'a>(
         &self,
         contract: &'a Contract,
