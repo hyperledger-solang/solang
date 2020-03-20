@@ -21,6 +21,7 @@ mod storage;
 mod structs;
 mod variables;
 
+use inkwell::OptimizationLevel;
 use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
 use resolver::eval::eval_number_expression;
 use resolver::expression::{expression, Expression};
@@ -827,7 +828,7 @@ impl Contract {
         &'a self,
         context: &'a inkwell::context::Context,
         filename: &'a str,
-        opt: &str,
+        opt: OptimizationLevel,
     ) -> emit::Contract {
         emit::Contract::build(context, self, filename, opt)
     }

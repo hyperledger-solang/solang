@@ -8,6 +8,7 @@ use inkwell::module::Linkage;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
+use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime};
@@ -22,7 +23,7 @@ impl EwasmTarget {
         context: &'a Context,
         contract: &'a resolver::Contract,
         filename: &'a str,
-        opt: &str,
+        opt: OptimizationLevel,
     ) -> Contract<'a> {
         // first emit runtime code
         let mut runtime_code = Contract::new(context, contract, filename, None);

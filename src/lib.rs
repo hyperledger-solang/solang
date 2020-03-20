@@ -20,6 +20,7 @@ mod emit;
 mod parser;
 mod resolver;
 
+use inkwell::OptimizationLevel;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
@@ -53,7 +54,7 @@ impl fmt::Display for Target {
 pub fn compile(
     src: &str,
     filename: &str,
-    opt: &str,
+    opt: OptimizationLevel,
     target: &Target,
 ) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();

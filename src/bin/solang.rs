@@ -119,7 +119,13 @@ fn process_filename(
         Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
     };
     let verbose = matches.is_present("VERBOSE");
-    let opt = matches.value_of("OPT").unwrap();
+    let opt = match matches.value_of("OPT").unwrap() {
+        "none" => inkwell::OptimizationLevel::None,
+        "less" => inkwell::OptimizationLevel::Less,
+        "default" => inkwell::OptimizationLevel::Default,
+        "aggressive" => inkwell::OptimizationLevel::Aggressive,
+        _ => unreachable!(),
+    };
     let context = inkwell::context::Context::create();
 
     let mut json_contracts = HashMap::new();
@@ -159,7 +165,7 @@ fn process_filename(
             );
         }
 
-        let contract = resolved_contract.emit(&context, &filename, &opt);
+        let contract = resolved_contract.emit(&context, &filename, opt);
 
         if let Some("llvm") = matches.value_of("EMIT") {
             if let Some(runtime) = &contract.runtime {
@@ -247,7 +253,7 @@ fn process_filename(
             continue;
         }
 
-        let obj = match contract.wasm(&opt) {
+        let obj = match contract.wasm(opt) {
             Ok(o) => o,
             Err(s) => {
                 println!("error: {}", s);
