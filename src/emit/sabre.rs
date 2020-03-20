@@ -32,6 +32,17 @@ impl SabreTarget {
 
         b.emit_entrypoint(&mut c);
 
+        c.internalize(&[
+            "entrypoint",
+            "get_ptr_len",
+            "delete_state",
+            "get_state",
+            "set_state",
+            "create_collection",
+            "add_to_collection",
+            "alloc",
+        ]);
+
         c
     }
 

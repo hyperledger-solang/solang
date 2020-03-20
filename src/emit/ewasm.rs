@@ -39,6 +39,8 @@ impl EwasmTarget {
 
         b.emit_function_dispatch(&runtime_code);
 
+        runtime_code.internalize(&["main"]);
+
         let runtime_obj = runtime_code.wasm(opt).unwrap();
         let runtime_bs = link(&runtime_obj, &Target::Ewasm);
 
@@ -58,6 +60,16 @@ impl EwasmTarget {
         deploy_code.emit_functions(&b);
 
         b.emit_constructor_dispatch(&mut deploy_code, &runtime_bs);
+
+        deploy_code.internalize(&[
+            "main",
+            "getCallDataSize",
+            "callDataCopy",
+            "storageStore",
+            "storageLoad",
+            "finish",
+            "revert",
+        ]);
 
         deploy_code
     }
