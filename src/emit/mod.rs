@@ -112,7 +112,7 @@ impl<'a> Contract<'a> {
         context: &'a Context,
         contract: &'a resolver::Contract,
         filename: &'a str,
-        opt: &str,
+        opt: OptimizationLevel,
     ) -> Self {
         let res = match contract.target {
             super::Target::Substrate => {
@@ -123,7 +123,7 @@ impl<'a> Contract<'a> {
         };
 
         match opt {
-            "default" | "aggressive" => {
+            OptimizationLevel::Default | OptimizationLevel::Aggressive => {
                 let pass_manager = PassManager::create(());
 
                 pass_manager.add_promote_memory_to_register_pass();
@@ -138,15 +138,7 @@ impl<'a> Contract<'a> {
         res
     }
 
-    pub fn wasm(&self, opt: &str) -> Result<Vec<u8>, String> {
-        let opt = match opt {
-            "none" => OptimizationLevel::None,
-            "less" => OptimizationLevel::Less,
-            "default" => OptimizationLevel::Default,
-            "aggressive" => OptimizationLevel::Aggressive,
-            _ => unreachable!(),
-        };
-
+    pub fn wasm(&self, opt: OptimizationLevel) -> Result<Vec<u8>, String> {
         let target = Target::from_name("wasm32").unwrap();
 
         let target_machine = target

@@ -240,7 +240,12 @@ impl TestRuntime {
 }
 
 pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (mut res, errors) = compile(src, "test.sol", "default", &Target::Substrate);
+    let (mut res, errors) = compile(
+        src,
+        "test.sol",
+        inkwell::OptimizationLevel::Default,
+        &Target::Substrate,
+    );
 
     output::print_messages("test.sol", src, &errors, false);
 
