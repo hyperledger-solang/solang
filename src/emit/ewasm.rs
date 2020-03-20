@@ -352,6 +352,16 @@ impl TargetRuntime for EwasmTarget {
         );
     }
 
+    fn set_storage_string<'a>(
+        &self,
+        _contract: &'a Contract,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+        _dest: PointerValue<'a>,
+    ) {
+        unimplemented!();
+    }
+
     fn set_storage<'a>(
         &self,
         contract: &'a Contract,

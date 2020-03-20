@@ -85,6 +85,15 @@ pub trait TargetRuntime {
         dest: PointerValue<'a>,
     );
 
+    // Bytes and string have special storage layout
+    fn set_storage_string<'a>(
+        &self,
+        contract: &'a Contract,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+        dest: PointerValue<'a>,
+    );
+
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
 
@@ -1444,6 +1453,9 @@ impl<'a> Contract<'a> {
                         );
                     }
                 }
+            }
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                runtime.set_storage_string(&self, function, slot_ptr, dest.into_pointer_value());
             }
             _ => {
                 self.builder.build_store(slot_ptr, *slot);
