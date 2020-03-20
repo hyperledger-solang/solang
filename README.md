@@ -10,15 +10,27 @@ Welcome to Solang, a new Solidity compiler written in rust which uses
 llvm as the compiler backend. As a result, only the compiler front end
 needs to be written in rust.
 
-Solang targets Substrate and ewasm.
+Solang targets Substrate, ewasm, and Sawtooth.
 
 Solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at
 [our documentation](https://solang.readthedocs.io/en/latest/).
 
-## What works today
+## Solang Hyperledger Mentorship
 
-First build [solang](https://solang.readthedocs.io/en/latest/installing.html)
+Solang has been accepted in the
+[Hyperledger Mentorship Program](https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler).
+The Mentorship Program exists to encourage students to contribute to Hyperledger
+open source projects. Hyperledger projects provide mentors and the Hyperledger
+organization gives some money to participating students.
+
+If you would like mentorship, please apply before the 24th of April 2020.
+
+Looking forward to your applications!
+
+## Simple example
+
+First build [Solang](https://solang.readthedocs.io/en/latest/installing.html)
 or use the docker image, then write the following to flipper.sol:
 
 ```solidity

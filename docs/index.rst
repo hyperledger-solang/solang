@@ -22,6 +22,19 @@ Where differences exists, this is noted in the documentation.
 Many language features are not implemented yet. Anything which is documented
 is supported. The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_.
 
+Mentorship
+----------
+
+Solang has been accepted in the
+`Hyperledger Mentorship Program <https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler>`_.
+The Mentorship Program exists to encourage students to contribute to Hyperledger
+open source projects. Hyperledger projects provide mentors and the Hyperledger
+organization gives some money to participating students.
+
+If you would like mentorship, please apply before the 24th of April 2020.
+
+Looking forward to your applications!
+
 .. toctree::
    :maxdepth: 3
    :caption: Contents:

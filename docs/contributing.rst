@@ -4,6 +4,19 @@ Contributing
 Solang is in active development, so there are many ways in which you can
 contribute.
 
+Mentorship
+----------
+
+Solang has been accepted in the
+`Hyperledger Mentorship Program <https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler>`_.
+The Mentorship Program exists to encourage students to contribute to Hyperledger
+open source projects. Hyperledger projects provide mentors and the Hyperledger
+organization gives some money to participating students.
+
+If you would like mentorship, please apply before the 24th of April 2020.
+
+Looking forward to your applications!
+
 Target Specific Tests
 ---------------------
 
