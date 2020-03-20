@@ -1160,15 +1160,16 @@ impl TargetRuntime for SubstrateTarget {
             self.encode_ty(contract, function, &arg.ty, args[i], &mut argsdata);
         }
 
-        let length = contract
-            .builder
-            .build_ptr_diff(argsdata, data, "datalength");
-
-        (
-            data,
+        let length = contract.builder.build_int_sub(
             contract
                 .builder
-                .build_int_cast(length, contract.context.i32_type(), "datalength"),
-        )
+                .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
+            contract
+                .builder
+                .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
+            "datalength",
+        );
+
+        (data, length)
     }
 }
