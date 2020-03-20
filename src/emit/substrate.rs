@@ -29,6 +29,17 @@ impl SubstrateTarget {
         b.emit_deploy(&c);
         b.emit_call(&c);
 
+        c.internalize(&[
+            "deploy",
+            "call",
+            "ext_scratch_size",
+            "ext_scratch_read",
+            "ext_scratch_write",
+            "ext_set_storage",
+            "ext_get_storage",
+            "ext_return",
+        ]);
+
         c
     }
 
