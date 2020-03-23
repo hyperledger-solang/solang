@@ -350,3 +350,89 @@ pub fn array_pop(
 
     Ok((Expression::Variable(*loc, res_pos), elem_ty))
 }
+
+/// Push() method on dynamic bytes in storage
+pub fn bytes_push(
+    loc: &ast::Loc,
+    var_expr: Expression,
+    func: &ast::Identifier,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                format!("cannot call method ‘{}’ in constant expression", func.name),
+            ));
+            return Err(());
+        }
+    };
+
+    cfg.writes_contract_storage = true;
+
+    let val = match args.len() {
+        0 => Expression::NumberLiteral(*loc, 8, BigInt::zero()),
+        1 => {
+            let (val_expr, val_ty) = expression(&args[0], cfg, ns, &mut Some(tab), errors)?;
+
+            cast(
+                &args[0].loc(),
+                val_expr,
+                &val_ty,
+                &resolver::Type::Bytes(1),
+                true,
+                ns,
+                errors,
+            )?
+        }
+        _ => {
+            errors.push(Output::error(
+                func.loc,
+                "method ‘push()’ takes at most 1 argument".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    if args.is_empty() {
+        Ok((
+            Expression::StorageBytesPush(*loc, Box::new(var_expr), Box::new(val)),
+            resolver::Type::Bytes(1),
+        ))
+    } else {
+        Ok((
+            Expression::StorageBytesPush(*loc, Box::new(var_expr), Box::new(val)),
+            resolver::Type::Undef,
+        ))
+    }
+}
+
+/// Pop() method on dynamic bytes in storage
+pub fn bytes_pop(
+    loc: &ast::Loc,
+    var_expr: Expression,
+    func: &ast::Identifier,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    errors: &mut Vec<Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    cfg.writes_contract_storage = true;
+
+    if !args.is_empty() {
+        errors.push(Output::error(
+            func.loc,
+            "method ‘pop()’ does not take any arguments".to_string(),
+        ));
+        return Err(());
+    }
+
+    Ok((
+        Expression::StorageBytesPop(*loc, Box::new(var_expr)),
+        resolver::Type::Bytes(1),
+    ))
+}

@@ -372,3 +372,144 @@ fn string_storage() {
 
     assert_eq!(store.scratch, Val("foobar".to_string()).encode());
 }
+
+#[test]
+fn bytes_storage() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(Vec<u8>);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(u8);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Arg(u32);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Arg64(u64);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            bytes bar = hex"aabbccddeeff";
+
+            function get_index(uint32 index) public returns (bytes1) {
+                return bar[index];
+            }
+
+            function get_index64(uint64 index) public returns (bytes1) {
+                return bar[index];
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "get_index", Arg(1).encode());
+
+    assert_eq!(store.scratch, Ret(0xbb).encode());
+
+    for i in 0..6 {
+        runtime.function(&mut store, "get_index64", Arg64(i).encode());
+
+        let vals = [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
+
+        assert_eq!(store.scratch, [Ret(vals[i as usize])].encode());
+    }
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            bytes bar;
+
+            function push_test() public {
+                bytes1 x = bar.push();
+                assert(bar.length == 1);
+                assert(bar[0] == hex"00");
+                assert(x == hex"00");
+
+                bar.push("~");
+                assert(bar.length == 2);
+
+                assert(bar[1] == "~");
+
+                assert(bar == hex"007e");
+
+                assert(bar.pop() == "~");
+            }
+        }"##,
+    );
+
+    runtime.function(&mut store, "push_test", Vec::new());
+}
+
+#[test]
+fn bytes_storage_subscript() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Arg(u32, u8);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            bytes bar = hex"aabbccddeeff";
+
+            function set_index(uint32 index, bytes1 val) public {
+                bar[index] = val;
+            }
+
+            function get_bar() public returns (bytes) {
+                return bar;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "set_index", Arg(1, 0x33).encode());
+
+    assert_eq!(
+        store.store.get(&[0u8; 32]).unwrap(),
+        &vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
+    );
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            bytes bar = hex"deadcafe";
+
+            function or(uint32 index, bytes1 val) public {
+                bar[index] |= val;
+            }
+
+            function xor(uint32 index, bytes1 val) public {
+                bar[index] ^= val;
+            }
+
+            function and(uint32 index, bytes1 val) public {
+                bar[index] &= val;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "or", Arg(1, 0x50).encode());
+
+    assert_eq!(
+        store.store.get(&[0u8; 32]).unwrap(),
+        &vec!(0xde, 0xfd, 0xca, 0xfe)
+    );
+
+    runtime.function(&mut store, "and", Arg(3, 0x7f).encode());
+
+    assert_eq!(
+        store.store.get(&[0u8; 32]).unwrap(),
+        &vec!(0xde, 0xfd, 0xca, 0x7e)
+    );
+
+    runtime.function(&mut store, "xor", Arg(2, 0xff).encode());
+
+    assert_eq!(
+        store.store.get(&[0u8; 32]).unwrap(),
+        &vec!(0xde, 0xfd, 0x35, 0x7e)
+    );
+}

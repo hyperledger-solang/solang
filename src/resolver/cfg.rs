@@ -25,8 +25,16 @@ pub enum Instr {
         local: usize,
         storage: Expression,
     },
+    SetStorageBytes {
+        local: usize,
+        storage: Box<Expression>,
+        offset: Box<Expression>,
+    },
     Set {
         res: usize,
+        expr: Expression,
+    },
+    Eval {
         expr: Expression,
     },
     Constant {
@@ -94,7 +102,7 @@ impl ControlFlowGraph {
     pub fn reads_contract_storage(&self) -> bool {
         self.bb.iter().any(|bb| {
             bb.instr.iter().any(|instr| match instr {
-                Instr::Set { expr, .. } => expr.reads_contract_storage(),
+                Instr::Eval { expr } | Instr::Set { expr, .. } => expr.reads_contract_storage(),
                 Instr::Return { value } => value.iter().any(|e| e.reads_contract_storage()),
                 Instr::BranchCond { cond, .. } => cond.reads_contract_storage(),
                 Instr::Call { args, .. } => args.iter().any(|e| e.reads_contract_storage()),
@@ -296,6 +304,22 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, a),
                 self.expr_to_string(ns, i)
             ),
+            Expression::StorageBytesSubscript(_, a, i) => format!(
+                "(storage bytes index {}[{}])",
+                self.expr_to_string(ns, a),
+                self.expr_to_string(ns, i)
+            ),
+            Expression::StorageBytesPush(_, a, i) => format!(
+                "(storage bytes push {} {})",
+                self.expr_to_string(ns, a),
+                self.expr_to_string(ns, i)
+            ),
+            Expression::StorageBytesPop(_, a) => {
+                format!("(storage bytes pop {})", self.expr_to_string(ns, a),)
+            }
+            Expression::StorageBytesLength(_, a) => {
+                format!("(storage bytes length {})", self.expr_to_string(ns, a),)
+            }
             Expression::StructMember(_, a, f) => {
                 format!("(struct {} field {})", self.expr_to_string(ns, a), f)
             }
@@ -381,6 +405,7 @@ impl ControlFlowGraph {
                 self.vars[*res].id.name,
                 self.expr_to_string(ns, expr)
             ),
+            Instr::Eval { expr } => format!("_ = {}", self.expr_to_string(ns, expr)),
             Instr::Constant { res, constant } => format!(
                 "%{} = const {}",
                 self.vars[*res].id.name,
@@ -409,6 +434,16 @@ impl ControlFlowGraph {
                 "set storage slot({}) ty:{} = %{}",
                 self.expr_to_string(ns, storage),
                 ty.to_string(ns),
+                self.vars[*local].id.name
+            ),
+            Instr::SetStorageBytes {
+                local,
+                storage,
+                offset,
+            } => format!(
+                "set storage slot({}) offset:{} = %{}",
+                self.expr_to_string(ns, storage),
+                self.expr_to_string(ns, offset),
                 self.vars[*local].id.name
             ),
             Instr::AssertFailure {} => "assert-failure".to_string(),
@@ -765,107 +800,22 @@ fn statement(
             Ok(false)
         }
         ast::Statement::Expression(expr) => {
-            expression(expr, cfg, ns, &mut Some(vartab), errors)?;
+            let (expr, _) = expression(expr, cfg, ns, &mut Some(vartab), errors)?;
+
+            if let Expression::Poison = expr {
+                // ignore
+            } else {
+                cfg.add(vartab, Instr::Eval { expr });
+            }
 
             Ok(true)
         }
         ast::Statement::If(cond, then_stmt, None) => {
-            let (expr, expr_ty) = expression(cond, cfg, ns, &mut Some(vartab), errors)?;
-
-            let then = cfg.new_basic_block("then".to_string());
-            let endif = cfg.new_basic_block("endif".to_string());
-
-            cfg.add(
-                vartab,
-                Instr::BranchCond {
-                    cond: cast(
-                        &cond.loc(),
-                        expr,
-                        &expr_ty,
-                        &resolver::Type::Bool,
-                        true,
-                        ns,
-                        errors,
-                    )?,
-                    true_: then,
-                    false_: endif,
-                },
-            );
-
-            cfg.set_basic_block(then);
-
-            vartab.new_scope();
-            vartab.new_dirty_tracker();
-
-            let reachable = statement(then_stmt, f, cfg, ns, vartab, loops, errors)?;
-
-            if reachable {
-                cfg.add(vartab, Instr::Branch { bb: endif });
-            }
-
-            vartab.leave_scope();
-            cfg.set_phis(endif, vartab.pop_dirty_tracker());
-
-            cfg.set_basic_block(endif);
-
-            Ok(true)
+            if_then(cond, then_stmt, f, cfg, ns, vartab, loops, errors)
         }
-        ast::Statement::If(cond, then_stmt, Some(else_stmt)) => {
-            let (expr, expr_ty) = expression(cond, cfg, ns, &mut Some(vartab), errors)?;
-
-            let then = cfg.new_basic_block("then".to_string());
-            let else_ = cfg.new_basic_block("else".to_string());
-            let endif = cfg.new_basic_block("endif".to_string());
-
-            cfg.add(
-                vartab,
-                Instr::BranchCond {
-                    cond: cast(
-                        &cond.loc(),
-                        expr,
-                        &expr_ty,
-                        &resolver::Type::Bool,
-                        true,
-                        ns,
-                        errors,
-                    )?,
-                    true_: then,
-                    false_: else_,
-                },
-            );
-
-            // then
-            cfg.set_basic_block(then);
-
-            vartab.new_scope();
-            vartab.new_dirty_tracker();
-
-            let then_reachable = statement(then_stmt, f, cfg, ns, vartab, loops, errors)?;
-
-            if then_reachable {
-                cfg.add(vartab, Instr::Branch { bb: endif });
-            }
-
-            vartab.leave_scope();
-
-            // else
-            cfg.set_basic_block(else_);
-
-            vartab.new_scope();
-
-            let else_reachable = statement(else_stmt, f, cfg, ns, vartab, loops, errors)?;
-
-            if else_reachable {
-                cfg.add(vartab, Instr::Branch { bb: endif });
-            }
-
-            vartab.leave_scope();
-            cfg.set_phis(endif, vartab.pop_dirty_tracker());
-
-            cfg.set_basic_block(endif);
-
-            Ok(then_reachable || else_reachable)
-        }
+        ast::Statement::If(cond, then_stmt, Some(else_stmt)) => if_then_else(
+            cond, then_stmt, else_stmt, f, cfg, ns, vartab, loops, errors,
+        ),
         ast::Statement::Break => match loops.do_break() {
             Some(bb) => {
                 cfg.add(vartab, Instr::Branch { bb });
@@ -1152,6 +1102,126 @@ fn statement(
         }
         _ => panic!("not implemented"),
     }
+}
+
+/// Parse if-then-no-else
+fn if_then(
+    cond: &ast::Expression,
+    then_stmt: &ast::Statement,
+    f: &resolver::FunctionDecl,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+    errors: &mut Vec<output::Output>,
+) -> Result<bool, ()> {
+    let (expr, expr_ty) = expression(cond, cfg, ns, &mut Some(vartab), errors)?;
+
+    let then = cfg.new_basic_block("then".to_string());
+    let endif = cfg.new_basic_block("endif".to_string());
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: cast(
+                &cond.loc(),
+                expr,
+                &expr_ty,
+                &resolver::Type::Bool,
+                true,
+                ns,
+                errors,
+            )?,
+            true_: then,
+            false_: endif,
+        },
+    );
+
+    cfg.set_basic_block(then);
+
+    vartab.new_scope();
+    vartab.new_dirty_tracker();
+
+    let reachable = statement(then_stmt, f, cfg, ns, vartab, loops, errors)?;
+
+    if reachable {
+        cfg.add(vartab, Instr::Branch { bb: endif });
+    }
+
+    vartab.leave_scope();
+    cfg.set_phis(endif, vartab.pop_dirty_tracker());
+
+    cfg.set_basic_block(endif);
+
+    Ok(true)
+}
+
+/// Parse if-then-else
+fn if_then_else(
+    cond: &ast::Expression,
+    then_stmt: &ast::Statement,
+    else_stmt: &ast::Statement,
+    f: &resolver::FunctionDecl,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+    errors: &mut Vec<output::Output>,
+) -> Result<bool, ()> {
+    let (expr, expr_ty) = expression(cond, cfg, ns, &mut Some(vartab), errors)?;
+
+    let then = cfg.new_basic_block("then".to_string());
+    let else_ = cfg.new_basic_block("else".to_string());
+    let endif = cfg.new_basic_block("endif".to_string());
+
+    cfg.add(
+        vartab,
+        Instr::BranchCond {
+            cond: cast(
+                &cond.loc(),
+                expr,
+                &expr_ty,
+                &resolver::Type::Bool,
+                true,
+                ns,
+                errors,
+            )?,
+            true_: then,
+            false_: else_,
+        },
+    );
+
+    // then
+    cfg.set_basic_block(then);
+
+    vartab.new_scope();
+    vartab.new_dirty_tracker();
+
+    let then_reachable = statement(then_stmt, f, cfg, ns, vartab, loops, errors)?;
+
+    if then_reachable {
+        cfg.add(vartab, Instr::Branch { bb: endif });
+    }
+
+    vartab.leave_scope();
+
+    // else
+    cfg.set_basic_block(else_);
+
+    vartab.new_scope();
+
+    let else_reachable = statement(else_stmt, f, cfg, ns, vartab, loops, errors)?;
+
+    if else_reachable {
+        cfg.add(vartab, Instr::Branch { bb: endif });
+    }
+
+    vartab.leave_scope();
+    cfg.set_phis(endif, vartab.pop_dirty_tracker());
+
+    cfg.set_basic_block(endif);
+
+    Ok(then_reachable || else_reachable)
 }
 
 // Vartable

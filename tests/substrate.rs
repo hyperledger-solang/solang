@@ -82,7 +82,7 @@ impl Externals for ContractStorage {
                     dest,
                     &self.scratch[offset as usize..(offset + len) as usize],
                 ) {
-                    panic!("ext_set_storage: {}", e);
+                    panic!("ext_scratch_read: {}", e);
                 }
 
                 Ok(None)
@@ -94,7 +94,7 @@ impl Externals for ContractStorage {
                 self.scratch.resize(len as usize, 0u8);
 
                 if let Err(e) = self.memory.get_into(dest, &mut self.scratch) {
-                    panic!("ext_set_storage: {}", e);
+                    panic!("ext_scratch_write: {}", e);
                 }
 
                 Ok(None)
@@ -107,7 +107,7 @@ impl Externals for ContractStorage {
                 let mut key: StorageKey = [0; 32];
 
                 if let Err(e) = self.memory.get_into(key_ptr, &mut key) {
-                    panic!("ext_set_storage: {}", e);
+                    panic!("ext_get_storage: {}", e);
                 }
 
                 if self.store.contains_key(&key) {

@@ -1150,6 +1150,153 @@ impl TargetRuntime for SubstrateTarget {
             .into_pointer_value()
     }
 
+    /// Read string from substrate storage
+    fn get_storage_bytes_subscript<'a>(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        index: IntValue<'a>,
+    ) -> IntValue<'a> {
+        contract
+            .builder
+            .build_call(
+                contract
+                    .module
+                    .get_function("substrate_get_string_subscript")
+                    .unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    index.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value()
+    }
+
+    fn set_storage_bytes_subscript<'a>(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        index: IntValue<'a>,
+        val: IntValue<'a>,
+    ) {
+        contract.builder.build_call(
+            contract
+                .module
+                .get_function("substrate_set_string_subscript")
+                .unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                index.into(),
+                val.into(),
+            ],
+            "",
+        );
+    }
+
+    /// Push a byte onto a bytes string in storage
+    fn storage_bytes_push<'a>(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        val: IntValue<'a>,
+    ) {
+        contract.builder.build_call(
+            contract
+                .module
+                .get_function("substrate_bytes_push")
+                .unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                val.into(),
+            ],
+            "",
+        );
+    }
+
+    /// Pop a value from a bytes string
+    fn storage_bytes_pop<'a>(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> IntValue<'a> {
+        contract
+            .builder
+            .build_call(
+                contract.module.get_function("substrate_bytes_pop").unwrap(),
+                &[contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value()
+    }
+
+    /// Calculate length of storage dynamic bytes
+    fn storage_string_length<'a>(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> IntValue<'a> {
+        contract
+            .builder
+            .build_call(
+                contract
+                    .module
+                    .get_function("substrate_string_length")
+                    .unwrap(),
+                &[contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value()
+    }
     fn return_empty_abi(&self, contract: &Contract) {
         // This will clear the scratch buffer
         contract.builder.build_call(
