@@ -370,6 +370,50 @@ impl TargetRuntime for EwasmTarget {
     ) -> PointerValue<'a> {
         unimplemented!();
     }
+    fn get_storage_bytes_subscript<'a>(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+        _index: IntValue<'a>,
+    ) -> IntValue<'a> {
+        unimplemented!();
+    }
+    fn set_storage_bytes_subscript<'a>(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+        _index: IntValue<'a>,
+        _val: IntValue<'a>,
+    ) {
+        unimplemented!();
+    }
+    fn storage_bytes_push<'a>(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+        _val: IntValue<'a>,
+    ) {
+        unimplemented!();
+    }
+    fn storage_bytes_pop<'a>(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+    ) -> IntValue<'a> {
+        unimplemented!();
+    }
+    fn storage_string_length<'a>(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+    ) -> IntValue<'a> {
+        unimplemented!();
+    }
 
     fn set_storage<'a>(
         &self,

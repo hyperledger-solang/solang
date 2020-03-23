@@ -291,6 +291,17 @@ impl Type {
         }
     }
 
+    /// Is this a storage bytes string
+    pub fn is_storage_bytes(&self) -> bool {
+        if let Type::StorageRef(ty) = self {
+            if let Type::DynamicBytes = ty.as_ref() {
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// If the type is Ref or StorageRef, get the underlying type
     pub fn deref(&self) -> &Self {
         match self {

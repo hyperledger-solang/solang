@@ -100,6 +100,40 @@ pub trait TargetRuntime {
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a>;
+    fn get_storage_bytes_subscript<'a>(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+        index: IntValue<'a>,
+    ) -> IntValue<'a>;
+    fn set_storage_bytes_subscript<'a>(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+        index: IntValue<'a>,
+        value: IntValue<'a>,
+    );
+    fn storage_bytes_push<'a>(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+        val: IntValue<'a>,
+    );
+    fn storage_bytes_pop<'a>(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> IntValue<'a>;
+    fn storage_string_length<'a>(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> IntValue<'a>;
 
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
@@ -945,6 +979,50 @@ impl<'a> Contract<'a> {
                         )
                         .into()
                 }
+            }
+            Expression::StorageBytesSubscript(_, a, i) => {
+                let index = self
+                    .expression(i, vartab, function, runtime)
+                    .into_int_value();
+                let slot = self
+                    .expression(a, vartab, function, runtime)
+                    .into_int_value();
+                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                self.builder.build_store(slot_ptr, slot);
+                runtime
+                    .get_storage_bytes_subscript(&self, function, slot_ptr, index)
+                    .into()
+            }
+            Expression::StorageBytesPush(_, a, v) => {
+                let val = self
+                    .expression(v, vartab, function, runtime)
+                    .into_int_value();
+                let slot = self
+                    .expression(a, vartab, function, runtime)
+                    .into_int_value();
+                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                self.builder.build_store(slot_ptr, slot);
+                runtime.storage_bytes_push(&self, function, slot_ptr, val);
+
+                val.into()
+            }
+            Expression::StorageBytesPop(_, a) => {
+                let slot = self
+                    .expression(a, vartab, function, runtime)
+                    .into_int_value();
+                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                self.builder.build_store(slot_ptr, slot);
+                runtime.storage_bytes_pop(&self, function, slot_ptr).into()
+            }
+            Expression::StorageBytesLength(_, a) => {
+                let slot = self
+                    .expression(a, vartab, function, runtime)
+                    .into_int_value();
+                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                self.builder.build_store(slot_ptr, slot);
+                runtime
+                    .storage_string_length(&self, function, slot_ptr)
+                    .into()
             }
             Expression::DynamicArraySubscript(_, a, elem_ty, i) => {
                 let array = self
@@ -1847,6 +1925,9 @@ impl<'a> Contract<'a> {
                             w.vars[*res].value = value_ref;
                         }
                     }
+                    cfg::Instr::Eval { expr } => {
+                        self.expression(expr, &w.vars, function, runtime);
+                    }
                     cfg::Instr::Constant { res, constant } => {
                         let const_expr = &self.ns.constants[*constant];
                         let value_ref = self.expression(const_expr, &w.vars, function, runtime);
@@ -1960,6 +2041,29 @@ impl<'a> Contract<'a> {
                         let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
 
                         self.storage_store(ty, &mut slot, slot_ptr, value, function, runtime);
+                    }
+                    cfg::Instr::SetStorageBytes {
+                        local,
+                        storage,
+                        offset,
+                    } => {
+                        let value = w.vars[*local].value;
+
+                        let slot = self
+                            .expression(storage, &w.vars, function, runtime)
+                            .into_int_value();
+                        let offset = self
+                            .expression(offset, &w.vars, function, runtime)
+                            .into_int_value();
+                        let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+
+                        runtime.set_storage_bytes_subscript(
+                            self,
+                            function,
+                            slot_ptr,
+                            offset,
+                            value.into_int_value(),
+                        );
                     }
                     cfg::Instr::AssertFailure {} => {
                         runtime.assert_failure(self);

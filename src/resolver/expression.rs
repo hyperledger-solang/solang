@@ -21,7 +21,7 @@ use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
-use resolver::storage::{array_offset, array_pop, array_push, delete};
+use resolver::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push, delete};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -73,6 +73,10 @@ pub enum Expression {
     AllocDynamicArray(Loc, resolver::Type, Box<Expression>, Option<Vec<u8>>),
     DynamicArrayLength(Loc, Box<Expression>),
     DynamicArraySubscript(Loc, Box<Expression>, resolver::Type, Box<Expression>),
+    StorageBytesSubscript(Loc, Box<Expression>, Box<Expression>),
+    StorageBytesPush(Loc, Box<Expression>, Box<Expression>),
+    StorageBytesPop(Loc, Box<Expression>),
+    StorageBytesLength(Loc, Box<Expression>),
     StringCompare(Loc, StringLocation, StringLocation),
     StringConcat(Loc, StringLocation, StringLocation),
 
@@ -139,6 +143,10 @@ impl Expression {
             | Expression::AllocDynamicArray(loc, _, _, _)
             | Expression::DynamicArrayLength(loc, _)
             | Expression::DynamicArraySubscript(loc, _, _, _)
+            | Expression::StorageBytesSubscript(loc, _, _)
+            | Expression::StorageBytesPush(loc, _, _)
+            | Expression::StorageBytesPop(loc, _)
+            | Expression::StorageBytesLength(loc, _)
             | Expression::StringCompare(loc, _, _)
             | Expression::StringConcat(loc, _, _)
             | Expression::Keccak256(loc, _)
@@ -235,8 +243,13 @@ impl Expression {
             Expression::DynamicArraySubscript(_, l, _, r) | Expression::ArraySubscript(_, l, r) => {
                 l.reads_contract_storage() || r.reads_contract_storage()
             }
-            Expression::AllocDynamicArray(_, _, s, _) => s.reads_contract_storage(),
-            Expression::DynamicArrayLength(_, s) => s.reads_contract_storage(),
+            Expression::DynamicArrayLength(_, e) | Expression::AllocDynamicArray(_, _, e, _) => {
+                e.reads_contract_storage()
+            }
+            Expression::StorageBytesSubscript(_, _, _)
+            | Expression::StorageBytesPush(_, _, _)
+            | Expression::StorageBytesPop(_, _)
+            | Expression::StorageBytesLength(_, _) => true,
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
             Expression::Keccak256(_, e) => e.reads_contract_storage(),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
@@ -440,15 +453,19 @@ pub fn cast(
 
     // If it's a storage reference then load the value. The expr is the storage slot
     if let resolver::Type::StorageRef(r) = from {
-        return cast(
-            loc,
-            Expression::StorageLoad(*loc, *r.clone(), Box::new(expr)),
-            r,
-            to,
-            implicit,
-            ns,
-            errors,
-        );
+        if let Expression::StorageBytesSubscript(_, _, _) = expr {
+            return cast(loc, expr, r, to, implicit, ns, errors);
+        } else {
+            return cast(
+                loc,
+                Expression::StorageLoad(*loc, *r.clone(), Box::new(expr)),
+                r,
+                to,
+                implicit,
+                ns,
+                errors,
+            );
+        }
     }
 
     if from == to {
@@ -1681,149 +1698,7 @@ pub fn expression(
         }
 
         // assignment
-        ast::Expression::Assign(loc, var, e) => {
-            let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
-
-            match var.as_ref() {
-                ast::Expression::Variable(id) => {
-                    let vartab = match vartab {
-                        &mut Some(ref mut tab) => tab,
-                        None => {
-                            errors.push(Output::error(
-                                *loc,
-                                format!(
-                                    "cannot access variable ‘{}’ in constant expression",
-                                    id.name
-                                ),
-                            ));
-                            return Err(());
-                        }
-                    };
-                    let var = vartab.find(id, ns, errors)?;
-
-                    cfg.add(
-                        vartab,
-                        Instr::Set {
-                            res: var.pos,
-                            expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
-                        },
-                    );
-
-                    match &var.storage {
-                        Storage::Contract(n) => {
-                            cfg.writes_contract_storage = true;
-                            cfg.add(
-                                vartab,
-                                Instr::SetStorage {
-                                    ty: var.ty.clone(),
-                                    local: var.pos,
-                                    storage: Expression::NumberLiteral(*loc, 256, n.clone()),
-                                },
-                            );
-                        }
-                        Storage::Constant(_) => {
-                            errors.push(Output::error(
-                                *loc,
-                                format!("cannot assign to constant ‘{}’", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Storage::Local => {
-                            // nothing to do
-                        }
-                    }
-
-                    Ok((Expression::Variable(id.loc, var.pos), var.ty))
-                }
-                _ => {
-                    // for example: a[0] = 102
-                    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
-
-                    let vartab = match vartab {
-                        &mut Some(ref mut tab) => tab,
-                        None => {
-                            errors.push(Output::error(
-                                *loc,
-                                "cannot assign in constant expression".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    };
-
-                    let pos = vartab.temp_anonymous(&var_ty);
-
-                    match var_ty {
-                        resolver::Type::Ref(r_ty) => {
-                            // reference to memory (e.g. array)
-                            cfg.add(
-                                vartab,
-                                Instr::Set {
-                                    res: pos,
-                                    expr: cast(
-                                        &var.loc(),
-                                        expr,
-                                        &expr_type,
-                                        &r_ty,
-                                        true,
-                                        ns,
-                                        errors,
-                                    )?,
-                                },
-                            );
-
-                            // set the element in memory
-                            cfg.add(
-                                vartab,
-                                Instr::Store {
-                                    dest: var_expr,
-                                    pos,
-                                },
-                            );
-
-                            Ok((Expression::Variable(*loc, pos), *r_ty))
-                        }
-                        resolver::Type::StorageRef(r_ty) => {
-                            cfg.add(
-                                vartab,
-                                Instr::Set {
-                                    res: pos,
-                                    expr: cast(
-                                        &var.loc(),
-                                        expr,
-                                        &expr_type,
-                                        &r_ty,
-                                        true,
-                                        ns,
-                                        errors,
-                                    )?,
-                                },
-                            );
-
-                            // The value of the var_expr should be storage offset
-                            cfg.add(
-                                vartab,
-                                Instr::SetStorage {
-                                    ty: *r_ty.clone(),
-                                    local: pos,
-                                    storage: var_expr,
-                                },
-                            );
-
-                            cfg.writes_contract_storage = true;
-
-                            Ok((Expression::Variable(*loc, pos), *r_ty))
-                        }
-                        _ => {
-                            errors.push(Output::error(
-                                var.loc(),
-                                "expression is not assignable".to_string(),
-                            ));
-                            Err(())
-                        }
-                    }
-                }
-            }
-        }
+        ast::Expression::Assign(loc, var, e) => assign(loc, var, e, cfg, ns, vartab, errors),
 
         ast::Expression::AssignAdd(loc, var, e)
         | ast::Expression::AssignSubtract(loc, var, e)
@@ -1835,255 +1710,7 @@ pub fn expression(
         | ast::Expression::AssignXor(loc, var, e)
         | ast::Expression::AssignShiftLeft(loc, var, e)
         | ast::Expression::AssignShiftRight(loc, var, e) => {
-            let (set, set_type) = expression(e, cfg, ns, vartab, errors)?;
-
-            let op = |assign: Expression,
-                      ty: &resolver::Type,
-                      errors: &mut Vec<output::Output>|
-             -> Result<Expression, ()> {
-                let set = match expr {
-                    ast::Expression::AssignShiftLeft(_, _, _)
-                    | ast::Expression::AssignShiftRight(_, _, _) => {
-                        let left_length = get_int_length(&ty, &loc, true, ns, errors)?;
-                        let right_length = get_int_length(&set_type, &e.loc(), false, ns, errors)?;
-
-                        // TODO: does shifting by negative value need compiletime/runtime check?
-                        if left_length == right_length {
-                            set
-                        } else if right_length < left_length && set_type.signed() {
-                            Expression::SignExt(*loc, ty.clone(), Box::new(set))
-                        } else if right_length < left_length && !set_type.signed() {
-                            Expression::ZeroExt(*loc, ty.clone(), Box::new(set))
-                        } else {
-                            Expression::Trunc(*loc, ty.clone(), Box::new(set))
-                        }
-                    }
-                    _ => cast(&var.loc(), set, &set_type, &ty, true, ns, errors)?,
-                };
-
-                Ok(match expr {
-                    ast::Expression::AssignAdd(_, _, _) => {
-                        Expression::Add(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignSubtract(_, _, _) => {
-                        Expression::Subtract(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignMultiply(_, _, _) => {
-                        Expression::Multiply(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignOr(_, _, _) => {
-                        Expression::BitwiseOr(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignAnd(_, _, _) => {
-                        Expression::BitwiseAnd(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignXor(_, _, _) => {
-                        Expression::BitwiseXor(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignShiftLeft(_, _, _) => {
-                        Expression::ShiftLeft(*loc, Box::new(assign), Box::new(set))
-                    }
-                    ast::Expression::AssignShiftRight(_, _, _) => {
-                        Expression::ShiftRight(*loc, Box::new(assign), Box::new(set), ty.signed())
-                    }
-                    ast::Expression::AssignDivide(_, _, _) => {
-                        if ty.signed() {
-                            Expression::SDivide(*loc, Box::new(assign), Box::new(set))
-                        } else {
-                            Expression::UDivide(*loc, Box::new(assign), Box::new(set))
-                        }
-                    }
-                    ast::Expression::AssignModulo(_, _, _) => {
-                        if ty.signed() {
-                            Expression::SModulo(*loc, Box::new(assign), Box::new(set))
-                        } else {
-                            Expression::UModulo(*loc, Box::new(assign), Box::new(set))
-                        }
-                    }
-                    _ => unreachable!(),
-                })
-            };
-
-            // either it's a variable, or a reference to an array element
-            match var.as_ref() {
-                ast::Expression::Variable(id) => {
-                    let tab = match vartab {
-                        &mut Some(ref mut tab) => tab,
-                        None => {
-                            errors.push(Output::error(
-                                *loc,
-                                "cannot assign in constant expression".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    };
-
-                    let v = tab.find(id, ns, errors)?;
-
-                    match v.ty {
-                        resolver::Type::Bytes(_)
-                        | resolver::Type::Int(_)
-                        | resolver::Type::Uint(_) => (),
-                        _ => {
-                            errors.push(Output::error(
-                                var.loc(),
-                                format!(
-                                    "variable ‘{}’ of incorrect type {}",
-                                    id.name.to_string(),
-                                    v.ty.to_string(ns)
-                                ),
-                            ));
-                            return Err(());
-                        }
-                    };
-
-                    let lvalue = match &v.storage {
-                        Storage::Contract(n) => Expression::StorageLoad(
-                            *loc,
-                            v.ty.clone(),
-                            Box::new(Expression::NumberLiteral(*loc, 256, n.clone())),
-                        ),
-                        Storage::Constant(_) => {
-                            errors.push(Output::error(
-                                *loc,
-                                format!("cannot assign to constant ‘{}’", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Storage::Local => Expression::Variable(id.loc, v.pos),
-                    };
-
-                    let set = op(lvalue, &v.ty, errors)?;
-
-                    cfg.add(
-                        tab,
-                        Instr::Set {
-                            res: v.pos,
-                            expr: set,
-                        },
-                    );
-
-                    match &v.storage {
-                        Storage::Contract(n) => {
-                            cfg.writes_contract_storage = true;
-                            cfg.add(
-                                tab,
-                                Instr::SetStorage {
-                                    ty: v.ty.clone(),
-                                    local: v.pos,
-                                    storage: Expression::NumberLiteral(*loc, 256, n.clone()),
-                                },
-                            );
-                        }
-                        Storage::Constant(_) => {
-                            errors.push(Output::error(
-                                *loc,
-                                format!("cannot assign to constant ‘{}’", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Storage::Local => {
-                            // nothing to do
-                        }
-                    }
-
-                    Ok((Expression::Variable(id.loc, v.pos), v.ty))
-                }
-                _ => {
-                    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
-
-                    let tab = match vartab {
-                        &mut Some(ref mut tab) => tab,
-                        None => {
-                            errors.push(Output::error(
-                                *loc,
-                                "cannot assign in constant expression".to_string(),
-                            ));
-                            return Err(());
-                        }
-                    };
-                    let pos = tab.temp_anonymous(&var_ty);
-
-                    match var_ty {
-                        resolver::Type::Ref(r_ty) => match *r_ty {
-                            resolver::Type::Bytes(_)
-                            | resolver::Type::Int(_)
-                            | resolver::Type::Uint(_) => {
-                                let set = op(var_expr.clone(), &*r_ty, errors)?;
-
-                                cfg.add(
-                                    tab,
-                                    Instr::Set {
-                                        res: pos,
-                                        expr: set,
-                                    },
-                                );
-                                cfg.add(
-                                    tab,
-                                    Instr::Store {
-                                        dest: var_expr,
-                                        pos,
-                                    },
-                                );
-                                Ok((Expression::Variable(*loc, pos), *r_ty))
-                            }
-                            _ => {
-                                errors.push(Output::error(
-                                    var.loc(),
-                                    format!("assigning to incorrect type {}", r_ty.to_string(ns)),
-                                ));
-                                Err(())
-                            }
-                        },
-                        resolver::Type::StorageRef(r_ty) => match *r_ty {
-                            resolver::Type::Bytes(_)
-                            | resolver::Type::Int(_)
-                            | resolver::Type::Uint(_) => {
-                                let set = op(
-                                    Expression::StorageLoad(
-                                        *loc,
-                                        *r_ty.clone(),
-                                        Box::new(var_expr.clone()),
-                                    ),
-                                    &*r_ty,
-                                    errors,
-                                )?;
-
-                                cfg.add(
-                                    tab,
-                                    Instr::Set {
-                                        res: pos,
-                                        expr: set,
-                                    },
-                                );
-                                cfg.add(
-                                    tab,
-                                    Instr::SetStorage {
-                                        ty: *r_ty.clone(),
-                                        storage: var_expr,
-                                        local: pos,
-                                    },
-                                );
-                                Ok((Expression::Variable(*loc, pos), *r_ty))
-                            }
-                            _ => {
-                                errors.push(Output::error(
-                                    var.loc(),
-                                    format!("assigning to incorrect type {}", r_ty.to_string(ns)),
-                                ));
-                                Err(())
-                            }
-                        },
-                        _ => {
-                            errors.push(Output::error(
-                                var.loc(),
-                                "expression is not assignable".to_string(),
-                            ));
-                            Err(())
-                        }
-                    }
-                }
-            }
+            assign_expr(loc, var, expr, e, cfg, ns, vartab, errors)
         }
         ast::Expression::NamedFunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
@@ -2284,6 +1911,14 @@ pub fn expression(
                                 )),
                                 Some(d) => bigint_to_expression(loc, d, errors),
                             };
+                        }
+                    }
+                    resolver::Type::DynamicBytes => {
+                        if id.name == "length" {
+                            return Ok((
+                                Expression::StorageBytesLength(*loc, Box::new(expr)),
+                                resolver::Type::Uint(32),
+                            ));
                         }
                     }
                     _ => {}
@@ -2566,38 +2201,70 @@ fn equal(
     }
 
     // compare string against literal
-    match (&left, &right_type) {
+    match (&left, &right_type.deref()) {
         (Expression::BytesLiteral(_, l), resolver::Type::String)
         | (Expression::BytesLiteral(_, l), resolver::Type::DynamicBytes) => {
             return Ok(Expression::StringCompare(
                 *loc,
-                StringLocation::RunTime(Box::new(right)),
+                StringLocation::RunTime(Box::new(cast(
+                    &r.loc(),
+                    right,
+                    &right_type,
+                    &right_type.deref(),
+                    true,
+                    ns,
+                    errors,
+                )?)),
                 StringLocation::CompileTime(l.clone()),
             ));
         }
         _ => {}
     }
 
-    match (&right, &left_type) {
-        (Expression::BytesLiteral(_, l), resolver::Type::String)
-        | (Expression::BytesLiteral(_, l), resolver::Type::DynamicBytes) => {
+    match (&right, &left_type.deref()) {
+        (Expression::BytesLiteral(_, literal), resolver::Type::String)
+        | (Expression::BytesLiteral(_, literal), resolver::Type::DynamicBytes) => {
             return Ok(Expression::StringCompare(
                 *loc,
-                StringLocation::RunTime(Box::new(left)),
-                StringLocation::CompileTime(l.clone()),
+                StringLocation::RunTime(Box::new(cast(
+                    &l.loc(),
+                    left,
+                    &left_type,
+                    &left_type.deref(),
+                    true,
+                    ns,
+                    errors,
+                )?)),
+                StringLocation::CompileTime(literal.clone()),
             ));
         }
         _ => {}
     }
 
     // compare string
-    match (&left_type, &right_type) {
+    match (&left_type.deref(), &right_type.deref()) {
         (resolver::Type::String, resolver::Type::String)
         | (resolver::Type::DynamicBytes, resolver::Type::DynamicBytes) => {
             return Ok(Expression::StringCompare(
                 *loc,
-                StringLocation::RunTime(Box::new(left)),
-                StringLocation::RunTime(Box::new(right)),
+                StringLocation::RunTime(Box::new(cast(
+                    &l.loc(),
+                    left,
+                    &left_type,
+                    &left_type.deref(),
+                    true,
+                    ns,
+                    errors,
+                )?)),
+                StringLocation::RunTime(Box::new(cast(
+                    &r.loc(),
+                    right,
+                    &right_type,
+                    &right_type.deref(),
+                    true,
+                    ns,
+                    errors,
+                )?)),
             ));
         }
         _ => {}
@@ -2704,6 +2371,429 @@ fn addition(
     ))
 }
 
+/// Resolve an assignment
+fn assign(
+    loc: &ast::Loc,
+    var: &ast::Expression,
+    e: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+
+    match var {
+        ast::Expression::Variable(id) => {
+            let vartab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        *loc,
+                        format!(
+                            "cannot access variable ‘{}’ in constant expression",
+                            id.name
+                        ),
+                    ));
+                    return Err(());
+                }
+            };
+            let var = vartab.find(id, ns, errors)?;
+
+            cfg.add(
+                vartab,
+                Instr::Set {
+                    res: var.pos,
+                    expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
+                },
+            );
+
+            match &var.storage {
+                Storage::Contract(n) => {
+                    cfg.writes_contract_storage = true;
+                    cfg.add(
+                        vartab,
+                        Instr::SetStorage {
+                            ty: var.ty.clone(),
+                            local: var.pos,
+                            storage: Expression::NumberLiteral(*loc, 256, n.clone()),
+                        },
+                    );
+                }
+                Storage::Constant(_) => {
+                    errors.push(Output::error(
+                        *loc,
+                        format!("cannot assign to constant ‘{}’", id.name),
+                    ));
+                    return Err(());
+                }
+                Storage::Local => {
+                    // nothing to do
+                }
+            }
+
+            Ok((Expression::Variable(id.loc, var.pos), var.ty))
+        }
+        _ => {
+            // for example: a[0] = 102
+            let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+
+            let vartab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        *loc,
+                        "cannot assign in constant expression".to_string(),
+                    ));
+                    return Err(());
+                }
+            };
+
+            let pos = vartab.temp_anonymous(&var_ty);
+
+            match var_ty {
+                resolver::Type::Ref(r_ty) => {
+                    // reference to memory (e.g. array)
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            res: pos,
+                            expr: cast(&var.loc(), expr, &expr_type, &r_ty, true, ns, errors)?,
+                        },
+                    );
+
+                    // set the element in memory
+                    cfg.add(
+                        vartab,
+                        Instr::Store {
+                            dest: var_expr,
+                            pos,
+                        },
+                    );
+
+                    Ok((Expression::Variable(*loc, pos), *r_ty))
+                }
+                resolver::Type::StorageRef(r_ty) => {
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            res: pos,
+                            expr: cast(&var.loc(), expr, &expr_type, &r_ty, true, ns, errors)?,
+                        },
+                    );
+
+                    if let Expression::StorageBytesSubscript(_, array, index) = var_expr {
+                        // Set a byte in a byte array
+                        cfg.add(
+                            vartab,
+                            Instr::SetStorageBytes {
+                                local: pos,
+                                storage: array,
+                                offset: index,
+                            },
+                        );
+                    } else {
+                        // The value of the var_expr should be storage offset
+                        cfg.add(
+                            vartab,
+                            Instr::SetStorage {
+                                ty: *r_ty.clone(),
+                                local: pos,
+                                storage: var_expr,
+                            },
+                        );
+                    }
+                    cfg.writes_contract_storage = true;
+
+                    Ok((Expression::Variable(*loc, pos), *r_ty))
+                }
+                _ => {
+                    errors.push(Output::error(
+                        var.loc(),
+                        "expression is not assignable".to_string(),
+                    ));
+                    Err(())
+                }
+            }
+        }
+    }
+}
+
+/// Resolve an assignment
+fn assign_expr(
+    loc: &ast::Loc,
+    var: &ast::Expression,
+    expr: &ast::Expression,
+    e: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (set, set_type) = expression(e, cfg, ns, vartab, errors)?;
+
+    let op = |assign: Expression,
+              ty: &resolver::Type,
+              errors: &mut Vec<output::Output>|
+     -> Result<Expression, ()> {
+        let set = match expr {
+            ast::Expression::AssignShiftLeft(_, _, _)
+            | ast::Expression::AssignShiftRight(_, _, _) => {
+                let left_length = get_int_length(&ty, &loc, true, ns, errors)?;
+                let right_length = get_int_length(&set_type, &e.loc(), false, ns, errors)?;
+
+                // TODO: does shifting by negative value need compiletime/runtime check?
+                if left_length == right_length {
+                    set
+                } else if right_length < left_length && set_type.signed() {
+                    Expression::SignExt(*loc, ty.clone(), Box::new(set))
+                } else if right_length < left_length && !set_type.signed() {
+                    Expression::ZeroExt(*loc, ty.clone(), Box::new(set))
+                } else {
+                    Expression::Trunc(*loc, ty.clone(), Box::new(set))
+                }
+            }
+            _ => cast(&var.loc(), set, &set_type, &ty, true, ns, errors)?,
+        };
+
+        Ok(match expr {
+            ast::Expression::AssignAdd(_, _, _) => {
+                Expression::Add(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignSubtract(_, _, _) => {
+                Expression::Subtract(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignMultiply(_, _, _) => {
+                Expression::Multiply(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignOr(_, _, _) => {
+                Expression::BitwiseOr(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignAnd(_, _, _) => {
+                Expression::BitwiseAnd(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignXor(_, _, _) => {
+                Expression::BitwiseXor(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignShiftLeft(_, _, _) => {
+                Expression::ShiftLeft(*loc, Box::new(assign), Box::new(set))
+            }
+            ast::Expression::AssignShiftRight(_, _, _) => {
+                Expression::ShiftRight(*loc, Box::new(assign), Box::new(set), ty.signed())
+            }
+            ast::Expression::AssignDivide(_, _, _) => {
+                if ty.signed() {
+                    Expression::SDivide(*loc, Box::new(assign), Box::new(set))
+                } else {
+                    Expression::UDivide(*loc, Box::new(assign), Box::new(set))
+                }
+            }
+            ast::Expression::AssignModulo(_, _, _) => {
+                if ty.signed() {
+                    Expression::SModulo(*loc, Box::new(assign), Box::new(set))
+                } else {
+                    Expression::UModulo(*loc, Box::new(assign), Box::new(set))
+                }
+            }
+            _ => unreachable!(),
+        })
+    };
+
+    // either it's a variable, or a reference to an array element
+    match var {
+        ast::Expression::Variable(id) => {
+            let tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        *loc,
+                        "cannot assign in constant expression".to_string(),
+                    ));
+                    return Err(());
+                }
+            };
+
+            let v = tab.find(id, ns, errors)?;
+
+            match v.ty {
+                resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => (),
+                _ => {
+                    errors.push(Output::error(
+                        var.loc(),
+                        format!(
+                            "variable ‘{}’ of incorrect type {}",
+                            id.name.to_string(),
+                            v.ty.to_string(ns)
+                        ),
+                    ));
+                    return Err(());
+                }
+            };
+
+            let lvalue = match &v.storage {
+                Storage::Contract(n) => Expression::StorageLoad(
+                    *loc,
+                    v.ty.clone(),
+                    Box::new(Expression::NumberLiteral(*loc, 256, n.clone())),
+                ),
+                Storage::Constant(_) => {
+                    errors.push(Output::error(
+                        *loc,
+                        format!("cannot assign to constant ‘{}’", id.name),
+                    ));
+                    return Err(());
+                }
+                Storage::Local => Expression::Variable(id.loc, v.pos),
+            };
+
+            let set = op(lvalue, &v.ty, errors)?;
+
+            cfg.add(
+                tab,
+                Instr::Set {
+                    res: v.pos,
+                    expr: set,
+                },
+            );
+
+            match &v.storage {
+                Storage::Contract(n) => {
+                    cfg.writes_contract_storage = true;
+                    cfg.add(
+                        tab,
+                        Instr::SetStorage {
+                            ty: v.ty.clone(),
+                            local: v.pos,
+                            storage: Expression::NumberLiteral(*loc, 256, n.clone()),
+                        },
+                    );
+                }
+                Storage::Constant(_) => {
+                    errors.push(Output::error(
+                        *loc,
+                        format!("cannot assign to constant ‘{}’", id.name),
+                    ));
+                    return Err(());
+                }
+                Storage::Local => {
+                    // nothing to do
+                }
+            }
+
+            Ok((Expression::Variable(id.loc, v.pos), v.ty))
+        }
+        _ => {
+            let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+
+            let tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => {
+                    errors.push(Output::error(
+                        *loc,
+                        "cannot assign in constant expression".to_string(),
+                    ));
+                    return Err(());
+                }
+            };
+            let pos = tab.temp_anonymous(&var_ty);
+
+            match var_ty {
+                resolver::Type::Ref(r_ty) => match *r_ty {
+                    resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => {
+                        let set = op(var_expr.clone(), &*r_ty, errors)?;
+
+                        cfg.add(
+                            tab,
+                            Instr::Set {
+                                res: pos,
+                                expr: set,
+                            },
+                        );
+                        cfg.add(
+                            tab,
+                            Instr::Store {
+                                dest: var_expr,
+                                pos,
+                            },
+                        );
+                        Ok((Expression::Variable(*loc, pos), *r_ty))
+                    }
+                    _ => {
+                        errors.push(Output::error(
+                            var.loc(),
+                            format!("assigning to incorrect type {}", r_ty.to_string(ns)),
+                        ));
+                        Err(())
+                    }
+                },
+                resolver::Type::StorageRef(ref r_ty) => match r_ty.as_ref() {
+                    resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => {
+                        let set = op(
+                            cast(
+                                loc,
+                                var_expr.clone(),
+                                &var_ty,
+                                r_ty.as_ref(),
+                                true,
+                                ns,
+                                errors,
+                            )?,
+                            &*r_ty,
+                            errors,
+                        )?;
+
+                        cfg.add(
+                            tab,
+                            Instr::Set {
+                                res: pos,
+                                expr: set,
+                            },
+                        );
+
+                        if let Expression::StorageBytesSubscript(_, array, index) = var_expr {
+                            // Set a byte in a byte array
+                            cfg.add(
+                                tab,
+                                Instr::SetStorageBytes {
+                                    local: pos,
+                                    storage: array,
+                                    offset: index,
+                                },
+                            );
+                        } else {
+                            // The value of the var_expr should be storage offset
+                            cfg.add(
+                                tab,
+                                Instr::SetStorage {
+                                    ty: *r_ty.clone(),
+                                    local: pos,
+                                    storage: var_expr,
+                                },
+                            );
+                        }
+                        cfg.writes_contract_storage = true;
+                        Ok((Expression::Variable(*loc, pos), r_ty.as_ref().clone()))
+                    }
+                    _ => {
+                        errors.push(Output::error(
+                            var.loc(),
+                            format!("assigning to incorrect type {}", r_ty.to_string(ns)),
+                        ));
+                        Err(())
+                    }
+                },
+                _ => {
+                    errors.push(Output::error(
+                        var.loc(),
+                        "expression is not assignable".to_string(),
+                    ));
+                    Err(())
+                }
+            }
+        }
+    }
+}
+
 /// Resolve an array subscript expression
 fn array_subscript(
     loc: &ast::Loc,
@@ -2715,6 +2805,52 @@ fn array_subscript(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     let (mut array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
+
+    let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot read subscript in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let index_width = match index_ty {
+        resolver::Type::Uint(w) => w,
+        _ => {
+            errors.push(Output::error(
+                *loc,
+                format!(
+                    "array subscript must be an unsigned integer, not ‘{}’",
+                    index_ty.to_string(ns)
+                ),
+            ));
+            return Err(());
+        }
+    };
+
+    if array_ty.is_storage_bytes() {
+        return Ok((
+            Expression::StorageBytesSubscript(
+                *loc,
+                Box::new(array_expr),
+                Box::new(cast(
+                    &index.loc(),
+                    index_expr,
+                    &index_ty,
+                    &resolver::Type::Uint(32),
+                    false,
+                    ns,
+                    errors,
+                )?),
+            ),
+            resolver::Type::StorageRef(Box::new(resolver::Type::Bytes(1))),
+        ));
+    }
 
     let (array_length, array_length_ty) = match array_ty.deref() {
         resolver::Type::Bytes(n) => bigint_to_expression(loc, &BigInt::from(*n), errors)?,
@@ -2755,33 +2891,6 @@ fn array_subscript(
             errors.push(Output::error(
                 array.loc(),
                 "expression is not an array".to_string(),
-            ));
-            return Err(());
-        }
-    };
-
-    let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
-
-    let tab = match vartab {
-        &mut Some(ref mut tab) => tab,
-        None => {
-            errors.push(Output::error(
-                *loc,
-                "cannot read subscript in constant expression".to_string(),
-            ));
-            return Err(());
-        }
-    };
-
-    let index_width = match index_ty {
-        resolver::Type::Uint(w) => w,
-        _ => {
-            errors.push(Output::error(
-                *loc,
-                format!(
-                    "array subscript must be an unsigned integer, not ‘{}’",
-                    index_ty.to_string(ns)
-                ),
             ));
             return Err(());
         }
@@ -3375,29 +3484,41 @@ fn method_call(
     let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
-        if let resolver::Type::Array(_, dim) = ty.as_ref() {
-            if func.name == "push" {
-                return if dim.last().unwrap().is_some() {
-                    errors.push(Output::error(
-                        func.loc,
-                        "method ‘push()’ not allowed on fixed length array".to_string(),
-                    ));
-                    Err(())
-                } else {
-                    array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
-                };
+        match ty.as_ref() {
+            resolver::Type::Array(_, dim) => {
+                if func.name == "push" {
+                    return if dim.last().unwrap().is_some() {
+                        errors.push(Output::error(
+                            func.loc,
+                            "method ‘push()’ not allowed on fixed length array".to_string(),
+                        ));
+                        Err(())
+                    } else {
+                        array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                    };
+                }
+                if func.name == "pop" {
+                    return if dim.last().unwrap().is_some() {
+                        errors.push(Output::error(
+                            func.loc,
+                            "method ‘pop()’ not allowed on fixed length array".to_string(),
+                        ));
+                        Err(())
+                    } else {
+                        array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                    };
+                }
             }
-            if func.name == "pop" {
-                return if dim.last().unwrap().is_some() {
-                    errors.push(Output::error(
-                        func.loc,
-                        "method ‘pop()’ not allowed on fixed length array".to_string(),
-                    ));
-                    Err(())
-                } else {
-                    array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
-                };
-            }
+            resolver::Type::DynamicBytes => match func.name.as_str() {
+                "push" => {
+                    return bytes_push(loc, var_expr, func, args, cfg, ns, vartab, errors);
+                }
+                "pop" => {
+                    return bytes_pop(loc, var_expr, func, args, cfg, errors);
+                }
+                _ => {}
+            },
+            _ => {}
         }
     }
 
