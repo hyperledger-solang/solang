@@ -1365,3 +1365,33 @@ fn storage_delete() {
 
     assert_eq!(store.store.len(), 0);
 }
+
+#[test]
+fn storage_dynamic_load() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract c {
+            int32[] foo;
+        
+            constructor() public {
+                for (int32 i = 0; i <11; i++) {
+                    foo.push(i * 3);
+                }
+            }
+        
+            function test() view public {
+                int32[] memory bar = foo;
+        
+                assert(bar.length == 11);
+        
+                for (int32 i = 0; i <11; i++) {
+                    assert(bar[uint32(i)] == i * 3);
+                }
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.function(&mut store, "test", Vec::new());
+}
