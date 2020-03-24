@@ -442,6 +442,56 @@ impl<'a> Contract<'a> {
         *data_ref = data_phi.as_basic_value().into_int_value();
     }
 
+    /// Emit a loop from `from` to `to`, checking the condition _before_ the body.
+    pub fn emit_loop_cond_first_with_pointer<F>(
+        &self,
+        function: FunctionValue,
+        from: IntValue<'a>,
+        to: IntValue<'a>,
+        data_ref: &mut PointerValue<'a>,
+        mut insert_body: F,
+    ) where
+        F: FnMut(IntValue<'a>, &mut PointerValue<'a>),
+    {
+        let cond = self.context.append_basic_block(function, "cond");
+        let body = self.context.append_basic_block(function, "body");
+        let done = self.context.append_basic_block(function, "done");
+        let entry = self.builder.get_insert_block().unwrap();
+
+        self.builder.build_unconditional_branch(cond);
+        self.builder.position_at_end(cond);
+
+        let loop_ty = from.get_type();
+        let loop_phi = self.builder.build_phi(loop_ty, "index");
+        let data_phi = self.builder.build_phi(data_ref.get_type(), "data");
+        let mut data = data_phi.as_basic_value().into_pointer_value();
+
+        let loop_var = loop_phi.as_basic_value().into_int_value();
+
+        let next = self
+            .builder
+            .build_int_add(loop_var, loop_ty.const_int(1, false), "next_index");
+
+        let comp = self
+            .builder
+            .build_int_compare(IntPredicate::ULT, loop_var, to, "loop_cond");
+        self.builder.build_conditional_branch(comp, body, done);
+
+        self.builder.position_at_end(body);
+        // add loop body
+        insert_body(loop_var, &mut data);
+
+        let body = self.builder.get_insert_block().unwrap();
+
+        loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
+        data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
+
+        self.builder.build_unconditional_branch(cond);
+
+        self.builder.position_at_end(done);
+
+        *data_ref = data_phi.as_basic_value().into_pointer_value();
+    }
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
         for func in &self.ns.functions {
             let name = if func.name != "" {
@@ -1417,7 +1467,7 @@ impl<'a> Contract<'a> {
 
                     dest.into()
                 } else {
-                    // FIXME: iterate over dynamic array
+                    // iterate over dynamic array
                     let slot_ty = resolver::Type::Uint(256);
 
                     let size = self.builder.build_int_truncate(

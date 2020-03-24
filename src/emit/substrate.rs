@@ -481,11 +481,98 @@ impl SubstrateTarget {
                             }
                         },
                     );
-                } else {
-                    // FIXME
-                }
 
-                to.into()
+                    to.into()
+                } else {
+                    let len = contract
+                        .builder
+                        .build_alloca(contract.context.i32_type(), "length");
+
+                    *data = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("compact_decode_u32").unwrap(),
+                            &[(*data).into(), len.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    let len = contract
+                        .builder
+                        .build_load(len, "array.len")
+                        .into_int_value();
+
+                    // details about our array elements
+                    let elem_ty = contract.llvm_type(&ty.array_elem());
+                    let elem_size = contract.builder.build_int_truncate(
+                        elem_ty.size_of().unwrap(),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+
+                    let init = contract.builder.build_int_to_ptr(
+                        contract.context.i32_type().const_all_ones(),
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "invalid",
+                    );
+
+                    let v = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("vector_new").unwrap(),
+                            &[len.into(), elem_size.into(), init.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    contract.emit_loop_cond_first_with_pointer(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        len,
+                        data,
+                        |elem_no: IntValue<'b>, data: &mut PointerValue<'b>| {
+                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let element_start = unsafe {
+                                contract.builder.build_gep(
+                                    v,
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            let elem = contract.builder.build_pointer_cast(
+                                element_start,
+                                elem_ty.ptr_type(AddressSpace::Generic),
+                                "entry",
+                            );
+
+                            let ty = ty.array_deref();
+
+                            if ty.is_reference_type() {
+                                let val = contract
+                                    .builder
+                                    .build_alloca(contract.llvm_type(&ty.deref()), "");
+                                self.decode_ty(contract, function, &ty, Some(val), data);
+                                contract.builder.build_store(elem, val);
+                            } else {
+                                self.decode_ty(contract, function, &ty, Some(elem), data);
+                            }
+                        },
+                    );
+
+                    v.into()
+                }
             }
             resolver::Type::String | resolver::Type::DynamicBytes => {
                 let from = contract.builder.build_alloca(
