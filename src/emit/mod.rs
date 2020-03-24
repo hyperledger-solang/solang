@@ -430,6 +430,8 @@ impl<'a> Contract<'a> {
         // add loop body
         insert_body(loop_var, &mut data);
 
+        let body = self.builder.get_insert_block().unwrap();
+
         self.builder.build_unconditional_branch(cond);
 
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
@@ -1416,7 +1418,112 @@ impl<'a> Contract<'a> {
                     dest.into()
                 } else {
                     // FIXME: iterate over dynamic array
-                    unimplemented!();
+                    let slot_ty = resolver::Type::Uint(256);
+
+                    let size = self.builder.build_int_truncate(
+                        self.storage_load(&slot_ty, slot, slot_ptr, function, runtime)
+                            .into_int_value(),
+                        self.context.i32_type(),
+                        "size",
+                    );
+
+                    let elem_ty = self.llvm_type(&ty.array_elem());
+                    let elem_size = self.builder.build_int_truncate(
+                        elem_ty.size_of().unwrap(),
+                        self.context.i32_type(),
+                        "size_of",
+                    );
+                    let init = self.builder.build_int_to_ptr(
+                        self.context.i32_type().const_all_ones(),
+                        self.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "invalid",
+                    );
+
+                    let dest = self
+                        .builder
+                        .build_call(
+                            self.module.get_function("vector_new").unwrap(),
+                            &[size.into(), elem_size.into(), init.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    // get the slot for the elements
+                    // this hashes in-place
+                    self.builder.build_call(
+                        self.module.get_function("sha3").unwrap(),
+                        &[
+                            self.builder
+                                .build_pointer_cast(
+                                    slot_ptr,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "length_slot",
+                                )
+                                .into(),
+                            slot.get_type()
+                                .size_of()
+                                .const_cast(self.context.i32_type(), false)
+                                .into(),
+                            self.builder
+                                .build_pointer_cast(
+                                    slot_ptr,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "dst",
+                                )
+                                .into(),
+                            self.context.i32_type().const_int(32, false).into(),
+                        ],
+                        "",
+                    );
+
+                    let mut elem_slot = self
+                        .builder
+                        .build_load(slot_ptr, "elem_slot")
+                        .into_int_value();
+
+                    self.emit_loop_cond_first_with_int(
+                        function,
+                        self.context.i32_type().const_zero(),
+                        size,
+                        &mut elem_slot,
+                        |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            let index = self.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let entry = self.storage_load(
+                                &ty.array_elem(),
+                                slot,
+                                slot_ptr,
+                                function,
+                                runtime,
+                            );
+
+                            let data = unsafe {
+                                self.builder.build_gep(
+                                    dest,
+                                    &[
+                                        self.context.i32_type().const_zero(),
+                                        self.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            self.builder.build_store(
+                                self.builder.build_pointer_cast(
+                                    data,
+                                    elem_ty.ptr_type(AddressSpace::Generic),
+                                    "entry",
+                                ),
+                                entry,
+                            );
+                        },
+                    );
+                    // load
+                    dest.into()
                 }
             }
             resolver::Type::Struct(n) => {

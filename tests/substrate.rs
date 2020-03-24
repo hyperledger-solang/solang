@@ -112,9 +112,11 @@ impl Externals for ContractStorage {
 
                 if self.store.contains_key(&key) {
                     self.scratch = self.store[&key].clone();
+                    println!("ext_get_storage: {:?} = {:?}", key, self.scratch);
                     Ok(Some(RuntimeValue::I32(0)))
                 } else {
                     self.scratch.clear();
+                    println!("ext_get_storage: {:?} = nil", key);
                     Ok(Some(RuntimeValue::I32(1)))
                 }
             }
