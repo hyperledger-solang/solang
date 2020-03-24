@@ -1444,3 +1444,36 @@ fn abi_encode_dynamic_array() {
         Int32Array(vec!(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30)).encode()
     );
 }
+
+#[test]
+fn abi_decode_dynamic_array() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Int32Array(Vec<i32>);
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract c {
+            function decode(int32[] bar) pure public {
+                assert(bar.length == 11);
+
+                for (int32 i = 0; i <11; i++) {
+                    assert(bar[uint32(i)] == i * 3);
+                }
+            }
+
+            function decode_empty(int32[] bar) pure public {
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.function(
+        &mut store,
+        "decode",
+        Int32Array(vec![0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30]).encode(),
+    );
+
+    runtime.function(&mut store, "decode_empty", Int32Array(vec![]).encode());
+}
