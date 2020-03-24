@@ -1414,3 +1414,33 @@ fn storage_dynamic_copy() {
 
     assert_eq!(store.store.len(), 6);
 }
+
+#[test]
+fn abi_encode_dynamic_array() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Int32Array(Vec<i32>);
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract c {
+            function encode() pure public returns (int32[]) {
+                int32[] memory bar = new int32[](11);
+        
+                for (int32 i = 0; i <11; i++) {
+                    bar[uint32(i)] = i * 3;
+                }
+
+                return bar;
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.function(&mut store, "encode", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Int32Array(vec!(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30)).encode()
+    );
+}
