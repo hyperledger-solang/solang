@@ -1367,7 +1367,7 @@ fn storage_delete() {
 }
 
 #[test]
-fn storage_dynamic_load() {
+fn storage_dynamic_copy() {
     let (runtime, mut store) = build_solidity(
         r#"
         contract c {
@@ -1379,7 +1379,7 @@ fn storage_dynamic_load() {
                 }
             }
         
-            function test() view public {
+            function storage_to_memory() view public {
                 int32[] memory bar = foo;
         
                 assert(bar.length == 11);
@@ -1388,10 +1388,29 @@ fn storage_dynamic_load() {
                     assert(bar[uint32(i)] == i * 3);
                 }
             }
+
+            function memory_to_storage() public {
+                int32[] memory bar = new int32[](5);
+        
+                for (int32 i = 0; i < 5; i++) {
+                    bar[uint32(i)] = 5 * (i + 7);
+                }
+        
+                foo = bar;
+
+                assert(foo.length == 5);
+
+                for (int32 i = 0; i < 5; i++) {
+                    assert(foo[uint32(i)] == 5 * (i + 7));
+                }
+            }
         }
         "#,
     );
 
     runtime.constructor(&mut store, 0, Vec::new());
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function(&mut store, "storage_to_memory", Vec::new());
+    runtime.function(&mut store, "memory_to_storage", Vec::new());
+
+    assert_eq!(store.store.len(), 6);
 }

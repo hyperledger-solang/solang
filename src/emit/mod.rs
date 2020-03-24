@@ -432,14 +432,14 @@ impl<'a> Contract<'a> {
 
         let body = self.builder.get_insert_block().unwrap();
 
-        self.builder.build_unconditional_branch(cond);
-
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
         data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
+        self.builder.build_unconditional_branch(cond);
+
         self.builder.position_at_end(done);
 
-        *data_ref = data;
+        *data_ref = data_phi.as_basic_value().into_int_value();
     }
 
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
@@ -1618,9 +1618,9 @@ impl<'a> Contract<'a> {
     ) {
         match ty.deref() {
             resolver::Type::Array(_, dim) => {
-                let ty = ty.array_deref();
-
                 if let Some(d) = &dim[0] {
+                    let ty = ty.array_deref();
+
                     self.emit_static_loop_with_int(
                         function,
                         self.context.i64_type().const_zero(),
@@ -1653,7 +1653,153 @@ impl<'a> Contract<'a> {
                         },
                     );
                 } else {
-                    // FIMXE: iterate over dynamic array
+                    // get the lenght of the our in-memory array
+                    let len = self
+                        .builder
+                        .build_load(
+                            unsafe {
+                                self.builder.build_gep(
+                                    dest.into_pointer_value(),
+                                    &[
+                                        self.context.i32_type().const_zero(),
+                                        self.context.i32_type().const_zero(),
+                                    ],
+                                    "array_len",
+                                )
+                            },
+                            "array_len",
+                        )
+                        .into_int_value();
+
+                    let slot_ty = resolver::Type::Uint(256);
+
+                    // details about our array elements
+                    let elem_ty = self.llvm_type(&ty.array_elem());
+                    let elem_size = self.builder.build_int_truncate(
+                        elem_ty.size_of().unwrap(),
+                        self.context.i32_type(),
+                        "size_of",
+                    );
+
+                    // the previous length of the storage array
+                    // we need this to clear any elements
+                    let previous_size = self.builder.build_int_truncate(
+                        self.storage_load(&slot_ty, slot, slot_ptr, function, runtime)
+                            .into_int_value(),
+                        self.context.i32_type(),
+                        "previous_size",
+                    );
+
+                    let new_slot = self
+                        .builder
+                        .build_alloca(self.llvm_type(&slot_ty).into_int_type(), "new");
+
+                    // set new length
+                    self.builder.build_store(
+                        new_slot,
+                        self.builder.build_int_z_extend(
+                            len,
+                            self.llvm_type(&slot_ty).into_int_type(),
+                            "",
+                        ),
+                    );
+
+                    runtime.set_storage(self, function, slot_ptr, new_slot);
+
+                    self.builder.build_call(
+                        self.module.get_function("sha3").unwrap(),
+                        &[
+                            self.builder
+                                .build_pointer_cast(
+                                    slot_ptr,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "length_slot",
+                                )
+                                .into(),
+                            slot.get_type()
+                                .size_of()
+                                .const_cast(self.context.i32_type(), false)
+                                .into(),
+                            self.builder
+                                .build_pointer_cast(
+                                    new_slot,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "dst",
+                                )
+                                .into(),
+                            self.context.i32_type().const_int(32, false).into(),
+                        ],
+                        "",
+                    );
+
+                    let mut elem_slot = self
+                        .builder
+                        .build_load(new_slot, "elem_slot")
+                        .into_int_value();
+
+                    let ty = ty.array_deref();
+
+                    self.emit_loop_cond_first_with_int(
+                        function,
+                        self.context.i32_type().const_zero(),
+                        len,
+                        &mut elem_slot,
+                        |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            let index = self.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let data = unsafe {
+                                self.builder.build_gep(
+                                    dest.into_pointer_value(),
+                                    &[
+                                        self.context.i32_type().const_zero(),
+                                        self.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            let mut elem = self.builder.build_pointer_cast(
+                                data,
+                                elem_ty.ptr_type(AddressSpace::Generic),
+                                "entry",
+                            );
+
+                            if ty.is_reference_type() {
+                                elem = self.builder.build_load(elem, "").into_pointer_value();
+                            }
+
+                            self.storage_store(&ty, slot, slot_ptr, elem.into(), function, runtime);
+
+                            if !ty.is_reference_type() {
+                                *slot = self.builder.build_int_add(
+                                    *slot,
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+
+                    // we've populated the array with the new values; if the new array is shorter
+                    // than the previous, clear out the trailing elements
+                    self.emit_loop_cond_first_with_int(
+                        function,
+                        len,
+                        previous_size,
+                        &mut elem_slot,
+                        |_: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            self.storage_clear(&ty, slot, slot_ptr, function, runtime);
+
+                            if !ty.is_reference_type() {
+                                *slot = self.builder.build_int_add(
+                                    *slot,
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
                 }
             }
             resolver::Type::Struct(n) => {
