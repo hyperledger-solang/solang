@@ -2,7 +2,7 @@ use resolver;
 
 use inkwell::context::Context;
 use inkwell::module::Linkage;
-use inkwell::types::IntType;
+use inkwell::types::{BasicType, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -692,7 +692,73 @@ impl SubstrateTarget {
                         },
                     );
                 } else {
-                    // FIXME
+                    let len = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_zero(),
+                            ],
+                            "array.len",
+                        )
+                    };
+
+                    let len = contract
+                        .builder
+                        .build_load(len, "array.len")
+                        .into_int_value();
+
+                    *data = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("compact_encode_u32").unwrap(),
+                            &[(*data).into(), len.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    // details about our array elements
+                    let elem_ty = contract.llvm_type(&ty.array_elem());
+                    let elem_size = contract.builder.build_int_truncate(
+                        elem_ty.size_of().unwrap(),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+
+                    contract.emit_static_loop_with_pointer(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        len,
+                        data,
+                        |elem_no, data| {
+                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let element_start = unsafe {
+                                contract.builder.build_gep(
+                                    arg.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            let elem = contract.builder.build_pointer_cast(
+                                element_start,
+                                elem_ty.ptr_type(AddressSpace::Generic),
+                                "entry",
+                            );
+
+                            let ty = ty.array_deref();
+
+                            self.encode_ty(contract, function, &ty.deref(), elem.into(), data);
+                        },
+                    );
                 }
             }
             resolver::Type::Struct(n) => {
