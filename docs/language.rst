@@ -243,11 +243,6 @@ in the ABI.
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
 is numbered from 0, like in C and Rust.
 
-.. note::
-
-  The Ethereum Foundation Solidity compiler supports additional data types:
-  bytes and string. These will be implemented in Solang in early 2020.
-
 Struct Type
 ___________
 
@@ -435,6 +430,131 @@ those changes will be reflected in the current function. For example:
 
   In Substrate, the `SCALE <https://substrate.dev/docs/en/overview/low-level-data-format>`_
   encoding uses 32 bytes for both types.
+
+Dynamic Length Arrays
+_____________________
+
+Dynamic length arrays are useful for when you do not know in advance how long your arrays
+will need to be. They are declared by adding ``[]`` to your type. How they can be used depends
+on whether they are contract storage variables or stored in memory.
+
+Memory dynamic arrays must be allocated with ``new`` before they can be used. The ``new``
+expression requires a single unsigned integer argument. The length can be read using 
+``length`` member variable. Once created, the length of the array cannot be changed.
+
+.. code-block:: javascript
+
+    contract dynamicarray {
+        function test(uint32 size) public {
+            int64[] memory a = new int64[](size);
+
+            for (uint32 i = 0; i < size; i++) {
+                a[i] = 1 << i;
+            }
+
+            assert(a.length == size);
+        }
+    }
+
+Storage dynamic memory arrays do not have to be allocated. By default, the have a
+length of zero and elements can be added and removed using the ``push()`` and ``pop()``
+methods. 
+
+.. code-block:: javascript
+
+    contract s {
+        int64[] a;
+
+        function test() public {
+            // push takes a single argument with the item to be added
+            a.push(128);
+            // push with no arguments adds 0
+            a.push();
+            // now we have two elements in our array, 128 and 0
+            assert(a.length == 2);
+            a[0] |= 64;
+            // pop removes the last element
+            a.pop();
+            // you can assign the return value of pop 
+            int64 v = a.pop();
+            assert(v == 192);
+        }
+    }
+
+Calling the method ``pop()`` on an empty array is an error and contract execution will abort,
+just like when you access an element beyond the end of an array.
+
+``push()`` without any arguments return a storage reference. This is only available for types
+that support storage references (see below).
+
+.. code-block:: javascript
+
+    contract example {
+        struct user {
+            address who;
+            uint32 hitcount;
+        }
+        s[] foo;
+
+        function test() public {
+            // foo.push() creates an empty entry and returns a reference to it
+            user storage x = foo.push();
+
+            x.who = address(1);
+            x.hitcount = 1;
+        }
+    }
+
+Depending on the array element, ``pop()`` can be costly. It has to first copy the element to
+memory, and then clear storage.
+
+String
+______
+
+Strings can be initialized with a string literal or a hex literal. Strings can be
+concatenated and compared; no other operations are allowed on them.
+
+.. code-block:: javascript
+
+    contract example {
+        function test(string s) public returns (bool) {
+            string str = "Hello, " + s + "!";
+
+            return (str == "Hello, World!");
+        }
+    }
+
+Dynamic Length Bytes
+____________________
+
+The ``bytes`` datatype is a dynamic length array of bytes. It can be created with
+the ``new`` operator, or from an string or hex initializer.
+
+.. code-block:: javascript
+
+    contract b {
+        function test() public {
+            bytes a = hex"0000_00fa";
+            bytes b = new bytes(4);
+
+            b[3] = hex"fa";
+
+            assert(a == b);
+        }
+    }
+
+If the ``bytes`` variable is a storage variable, there is a ``push()`` and ``pop()``
+method available to add and remove bytes from the array. Array elements in a
+memory ``bytes`` can be modified, but no elements can be removed or added.
+
+A ``string`` type can be cast to ``bytes``. This way, the string can be modified or
+characters can be read. Note this will access the string by byte, not character, so
+any non-ascii characters will need special handling.
+
+An dynamic array of bytes can use the type ``bytes`` or ``byte[]``. The latter
+stores each byte in an individual storage slot, while the former stores the
+entire string in a single storage slot, when possible. Additionally a ``string``
+can be cast to ``bytes`` but not to ``byte[]``.
 
 Storage References
 __________________
@@ -678,6 +798,29 @@ calls on-chain. These are declared so:
 The ``counter`` is maintained for each deployed ``hitcount`` contract. When the contract is deployed,
 the contract storage is set to 1. The ``= 1`` initializer is not required; when it is not present, it
 is initialized to 0, or ``false`` if it is a ``bool``.
+
+How to clear Contract Storage
+_____________________________
+
+Any contract storage variable can have its underlying contract storage cleared with the ``delete``
+operator. This can be done on any type; a simple integer, an array element, or the entire
+array itself. Note this can be costly.
+
+.. code-block:: javascript
+
+    contract s {
+        struct user {
+            address f1;
+            int[] list;
+        }
+        user[1000] users;
+
+        function clear() public {
+            // delete has to iterate over 1000 users, and for each of those clear the
+            // f1 field, read the length of the list, and iterate over each of those
+            delete users;
+        }
+    }
 
 Constants
 ---------
