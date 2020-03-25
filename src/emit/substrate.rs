@@ -38,6 +38,7 @@ impl SubstrateTarget {
             "ext_scratch_write",
             "ext_set_storage",
             "ext_get_storage",
+            "ext_clear_storage",
             "ext_return",
         ]);
 
@@ -153,13 +154,27 @@ impl SubstrateTarget {
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // key_ptr
-                    contract.context.i32_type().into(), // value_non_null
                     contract
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // value_ptr
                     contract.context.i32_type().into(), // value_len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_clear_storage",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // key_ptr
                 ],
                 false,
             ),
@@ -1074,25 +1089,15 @@ impl TargetRuntime for SubstrateTarget {
         slot: PointerValue<'a>,
     ) {
         contract.builder.build_call(
-            contract.module.get_function("ext_set_storage").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract.context.i32_type().const_zero().into(), // value_not_null, 0 for remove
-                contract
-                    .context
-                    .i8_type()
-                    .ptr_type(AddressSpace::Generic)
-                    .const_null()
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-            ],
+            contract.module.get_function("ext_clear_storage").unwrap(),
+            &[contract
+                .builder
+                .build_pointer_cast(
+                    slot,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
             "",
         );
     }
@@ -1116,7 +1121,6 @@ impl TargetRuntime for SubstrateTarget {
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_int(1, false).into(),
                 contract
                     .builder
                     .build_pointer_cast(
@@ -1179,7 +1183,6 @@ impl TargetRuntime for SubstrateTarget {
                         "",
                     )
                     .into(),
-                contract.context.i32_type().const_int(1, false).into(),
                 contract
                     .builder
                     .build_pointer_cast(

@@ -42,6 +42,7 @@ enum SubstrateExternal {
     ext_scratch_read,
     ext_scratch_write,
     ext_set_storage,
+    ext_clear_storage,
     ext_get_storage,
     ext_return,
 }
@@ -120,13 +121,26 @@ impl Externals for ContractStorage {
                     Ok(Some(RuntimeValue::I32(1)))
                 }
             }
+            Some(SubstrateExternal::ext_clear_storage) => {
+                let key_ptr: u32 = args.nth_checked(0)?;
+
+                let mut key: StorageKey = [0; 32];
+
+                if let Err(e) = self.memory.get_into(key_ptr, &mut key) {
+                    panic!("ext_clear_storage: {}", e);
+                }
+
+                println!("ext_clear_storage: {:?}", key);
+                self.store.remove(&key);
+
+                Ok(None)
+            }
             Some(SubstrateExternal::ext_set_storage) => {
-                assert_eq!(args.len(), 4);
+                assert_eq!(args.len(), 3);
 
                 let key_ptr: u32 = args.nth_checked(0)?;
-                let value_non_null: u32 = args.nth_checked(1)?;
-                let data_ptr: u32 = args.nth_checked(2)?;
-                let len: u32 = args.nth_checked(3)?;
+                let data_ptr: u32 = args.nth_checked(1)?;
+                let len: u32 = args.nth_checked(2)?;
 
                 let mut key: StorageKey = [0; 32];
 
@@ -134,20 +148,15 @@ impl Externals for ContractStorage {
                     panic!("ext_set_storage: {}", e);
                 }
 
-                if value_non_null != 0 {
-                    let mut data = Vec::new();
-                    data.resize(len as usize, 0u8);
+                let mut data = Vec::new();
+                data.resize(len as usize, 0u8);
 
-                    if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
-                        panic!("ext_set_storage: {}", e);
-                    }
-                    println!("ext_set_storage: {:?} = {:?}", key, data);
-
-                    self.store.insert(key, data);
-                } else {
-                    println!("ext_set_storage: {:?} = removed", key);
-                    self.store.remove(&key);
+                if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
+                    panic!("ext_set_storage: {}", e);
                 }
+                println!("ext_set_storage: {:?} = {:?}", key, data);
+
+                self.store.insert(key, data);
 
                 Ok(None)
             }
@@ -176,6 +185,7 @@ impl ModuleImportResolver for ContractStorage {
             "ext_scratch_write" => SubstrateExternal::ext_scratch_write,
             "ext_get_storage" => SubstrateExternal::ext_get_storage,
             "ext_set_storage" => SubstrateExternal::ext_set_storage,
+            "ext_clear_storage" => SubstrateExternal::ext_clear_storage,
             "ext_return" => SubstrateExternal::ext_return,
             _ => {
                 panic!("{} not implemented", field_name);
