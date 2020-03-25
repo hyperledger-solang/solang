@@ -130,7 +130,17 @@ fn process_filename(
 
     let mut json_contracts = HashMap::new();
 
-    let mut f = File::open(&filename).expect("file not found");
+    let mut f = match File::open(&filename) {
+        Err(err_info) => {
+            eprintln!(
+                "error: cannot open {:?}: {}",
+                &filename,
+                err_info.to_string()
+            );
+            std::process::exit(1);
+        }
+        Ok(file) => file,
+    };
 
     let mut contents = String::new();
     f.read_to_string(&mut contents)
