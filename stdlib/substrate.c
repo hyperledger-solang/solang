@@ -4,7 +4,7 @@
 #include "stdlib.h"
 
 extern uint32_t ext_get_storage(uint8_t *);
-extern void ext_set_storage(uint8_t *, uint32_t value_non_null, uint8_t *, uint32_t);
+extern void ext_set_storage(uint8_t *, uint8_t *, uint32_t);
 extern uint32_t ext_scratch_size(void);
 extern void ext_scratch_read(uint8_t *dest, uint32_t offset, uint32_t size);
 
@@ -71,7 +71,7 @@ void substrate_set_string_subscript(uint8_t *slot, uint32_t index, int8_t val)
 
     data[index] = val;
 
-    ext_set_storage(slot, 1, data, size);
+    ext_set_storage(slot, data, size);
 }
 
 void substrate_bytes_push(uint8_t *slot, int8_t val)
@@ -90,7 +90,7 @@ void substrate_bytes_push(uint8_t *slot, int8_t val)
 
     data[size] = val;
 
-    ext_set_storage(slot, 1, data, size + 1);
+    ext_set_storage(slot, data, size + 1);
 }
 
 uint8_t substrate_bytes_pop(uint8_t *slot)
@@ -113,7 +113,7 @@ uint8_t substrate_bytes_pop(uint8_t *slot)
 
     ext_scratch_read(data, 0, size);
 
-    ext_set_storage(slot, 1, data, size - 1);
+    ext_set_storage(slot, data, size - 1);
 
     return data[size - 1];
 }
