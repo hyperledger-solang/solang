@@ -578,6 +578,8 @@ pub fn cast(
 
     #[allow(clippy::comparison_chain)]
     match (from_conv, to_conv) {
+        (resolver::Type::Bytes(1), resolver::Type::Uint(8)) => Ok(expr),
+        (resolver::Type::Uint(8), resolver::Type::Bytes(1)) => Ok(expr),
         (resolver::Type::Uint(from_len), resolver::Type::Uint(to_len)) => {
             match from_len.cmp(&to_len) {
                 Ordering::Greater => {
@@ -2698,9 +2700,21 @@ fn assign_expr(
             let pos = tab.temp_anonymous(&var_ty);
 
             match var_ty {
-                resolver::Type::Ref(r_ty) => match *r_ty {
+                resolver::Type::Ref(ref r_ty) => match r_ty.as_ref() {
                     resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => {
-                        let set = op(var_expr.clone(), &*r_ty, errors)?;
+                        let set = op(
+                            cast(
+                                loc,
+                                var_expr.clone(),
+                                &var_ty,
+                                r_ty.as_ref(),
+                                true,
+                                ns,
+                                errors,
+                            )?,
+                            &*r_ty,
+                            errors,
+                        )?;
 
                         cfg.add(
                             tab,
@@ -2716,7 +2730,7 @@ fn assign_expr(
                                 pos,
                             },
                         );
-                        Ok((Expression::Variable(*loc, pos), *r_ty))
+                        Ok((Expression::Variable(*loc, pos), r_ty.as_ref().clone()))
                     }
                     _ => {
                         errors.push(Output::error(

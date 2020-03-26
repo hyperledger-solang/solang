@@ -513,3 +513,77 @@ fn bytes_storage_subscript() {
         &vec!(0xde, 0xfd, 0x35, 0x7e)
     );
 }
+
+#[test]
+fn bytes_memory_subscript() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Arg(u32, u8);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(Vec<u8>);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function set_index(uint32 index, bytes1 val) public returns (bytes) {
+                bytes bar = hex"aabbccddeeff";
+
+                bar[index] = val;
+
+                return bar;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "set_index", Arg(1, 0x33).encode());
+
+    assert_eq!(
+        store.scratch,
+        Ret(vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)).encode()
+    );
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function or(uint32 index, bytes1 val) public returns (bytes) {
+                bytes bar = hex"deadcafe";
+
+                bar[index] |= val;
+
+                return bar;
+            }
+
+            function xor(uint32 index, bytes1 val) public returns (bytes) {
+                bytes bar = hex"deadcafe";
+
+                bar[index] ^= val;
+
+                return bar;
+            }
+
+            function and(uint32 index, bytes1 val) public returns (bytes) {
+                bytes bar = hex"deadcafe";
+
+                bar[index] &= val;
+
+                return bar;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "or", Arg(1, 0x50).encode());
+
+    assert_eq!(store.scratch, Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode());
+
+    runtime.function(&mut store, "and", Arg(3, 0x7f).encode());
+
+    assert_eq!(store.scratch, Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode());
+
+    runtime.function(&mut store, "xor", Arg(2, 0xff).encode());
+
+    assert_eq!(store.scratch, Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode());
+}
