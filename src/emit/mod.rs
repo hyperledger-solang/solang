@@ -135,6 +135,15 @@ pub trait TargetRuntime {
         slot: PointerValue<'a>,
     ) -> IntValue<'a>;
 
+    /// keccak256 hash
+    fn keccak256_hash(
+        &self,
+        contract: &Contract,
+        src: PointerValue,
+        length: IntValue,
+        dest: PointerValue,
+    );
+
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
 
@@ -1278,30 +1287,13 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_store(src, val);
 
-                self.builder.build_call(
-                    self.module.get_function("sha3").unwrap(),
-                    &[
-                        self.builder
-                            .build_pointer_cast(
-                                src,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "src",
-                            )
-                            .into(),
-                        val.get_type()
-                            .size_of()
-                            .const_cast(self.context.i32_type(), false)
-                            .into(),
-                        self.builder
-                            .build_pointer_cast(
-                                dst,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "dst",
-                            )
-                            .into(),
-                        self.context.i32_type().const_int(32, false).into(),
-                    ],
-                    "",
+                runtime.keccak256_hash(
+                    &self,
+                    src,
+                    val.get_type()
+                        .size_of()
+                        .const_cast(self.context.i32_type(), false),
+                    dst,
                 );
 
                 self.builder.build_load(dst, "keccak256_hash")
@@ -1503,30 +1495,13 @@ impl<'a> Contract<'a> {
 
                     // get the slot for the elements
                     // this hashes in-place
-                    self.builder.build_call(
-                        self.module.get_function("sha3").unwrap(),
-                        &[
-                            self.builder
-                                .build_pointer_cast(
-                                    slot_ptr,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "length_slot",
-                                )
-                                .into(),
-                            slot.get_type()
-                                .size_of()
-                                .const_cast(self.context.i32_type(), false)
-                                .into(),
-                            self.builder
-                                .build_pointer_cast(
-                                    slot_ptr,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "dst",
-                                )
-                                .into(),
-                            self.context.i32_type().const_int(32, false).into(),
-                        ],
-                        "",
+                    runtime.keccak256_hash(
+                        &self,
+                        slot_ptr,
+                        slot.get_type()
+                            .size_of()
+                            .const_cast(self.context.i32_type(), false),
+                        slot_ptr,
                     );
 
                     let mut elem_slot = self
@@ -1756,30 +1731,13 @@ impl<'a> Contract<'a> {
 
                     runtime.set_storage(self, function, slot_ptr, new_slot);
 
-                    self.builder.build_call(
-                        self.module.get_function("sha3").unwrap(),
-                        &[
-                            self.builder
-                                .build_pointer_cast(
-                                    slot_ptr,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "length_slot",
-                                )
-                                .into(),
-                            slot.get_type()
-                                .size_of()
-                                .const_cast(self.context.i32_type(), false)
-                                .into(),
-                            self.builder
-                                .build_pointer_cast(
-                                    new_slot,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "dst",
-                                )
-                                .into(),
-                            self.context.i32_type().const_int(32, false).into(),
-                        ],
-                        "",
+                    runtime.keccak256_hash(
+                        &self,
+                        slot_ptr,
+                        slot.get_type()
+                            .size_of()
+                            .const_cast(self.context.i32_type(), false),
+                        new_slot,
                     );
 
                     let mut elem_slot = self
@@ -1952,30 +1910,13 @@ impl<'a> Contract<'a> {
 
                     // we need to hash the length slot in order to get the slot of the first
                     // entry of the array
-                    self.builder.build_call(
-                        self.module.get_function("sha3").unwrap(),
-                        &[
-                            self.builder
-                                .build_pointer_cast(
-                                    slot_ptr,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "src",
-                                )
-                                .into(),
-                            slot.get_type()
-                                .size_of()
-                                .const_cast(self.context.i32_type(), false)
-                                .into(),
-                            self.builder
-                                .build_pointer_cast(
-                                    buf,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "dst",
-                                )
-                                .into(),
-                            self.context.i32_type().const_int(32, false).into(),
-                        ],
-                        "",
+                    runtime.keccak256_hash(
+                        &self,
+                        slot_ptr,
+                        slot.get_type()
+                            .size_of()
+                            .const_cast(self.context.i32_type(), false),
+                        buf,
                     );
 
                     let mut entry_slot =
@@ -3318,14 +3259,15 @@ fn load_stdlib<'a>(context: &'a Context, target: &crate::Target) -> Module<'a> {
 
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
-    let memory = MemoryBuffer::create_from_memory_range(SHA3_IR, "sha3");
-
-    module
-        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
-        .unwrap();
-
     if let super::Target::Substrate = target {
         let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
+
+        module
+            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+            .unwrap();
+    } else {
+        // Substrate provides a keccak256 (sha3) host function, others do not
+        let memory = MemoryBuffer::create_from_memory_range(SHA3_IR, "sha3");
 
         module
             .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
