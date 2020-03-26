@@ -9,11 +9,13 @@ extern crate parity_scale_codec_derive;
 extern crate rand;
 extern crate serde_derive;
 extern crate solang;
+extern crate tiny_keccak;
 extern crate wasmi;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
+use tiny_keccak::keccak256;
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
@@ -45,6 +47,7 @@ enum SubstrateExternal {
     ext_clear_storage,
     ext_get_storage,
     ext_return,
+    ext_hash_keccak_256,
 }
 
 pub struct ContractStorage {
@@ -160,6 +163,26 @@ impl Externals for ContractStorage {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_hash_keccak_256) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+                let out_ptr: u32 = args.nth_checked(2)?;
+
+                let mut data = Vec::new();
+
+                data.resize(len as usize, 0);
+
+                if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
+                    panic!("ext_hash_keccak_256: {}", e);
+                }
+                let hash = keccak256(&data);
+
+                if let Err(e) = self.memory.set(out_ptr, &hash) {
+                    panic!("ext_hash_keccak_256: {}", e);
+                }
+
+                Ok(None)
+            }
             Some(SubstrateExternal::ext_return) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
@@ -187,6 +210,7 @@ impl ModuleImportResolver for ContractStorage {
             "ext_set_storage" => SubstrateExternal::ext_set_storage,
             "ext_clear_storage" => SubstrateExternal::ext_clear_storage,
             "ext_return" => SubstrateExternal::ext_return,
+            "ext_hash_keccak_256" => SubstrateExternal::ext_hash_keccak_256,
             _ => {
                 panic!("{} not implemented", field_name);
             }

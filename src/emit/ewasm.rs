@@ -545,6 +545,40 @@ impl TargetRuntime for EwasmTarget {
             .into_int_value()
     }
 
+    /// ewasm has no keccak256 host function, so call our implementation
+    fn keccak256_hash(
+        &self,
+        contract: &Contract,
+        src: PointerValue,
+        length: IntValue,
+        dest: PointerValue,
+    ) {
+        contract.builder.build_call(
+            contract.module.get_function("sha3").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        src,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "src",
+                    )
+                    .into(),
+                length.into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "dest",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(32, false).into(),
+            ],
+            "",
+        );
+    }
+
     fn return_empty_abi(&self, contract: &Contract) {
         contract.builder.build_call(
             contract.module.get_function("finish").unwrap(),

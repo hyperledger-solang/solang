@@ -39,6 +39,7 @@ impl SubstrateTarget {
             "ext_set_storage",
             "ext_get_storage",
             "ext_clear_storage",
+            "ext_hash_keccak_256",
             "ext_return",
         ]);
 
@@ -123,6 +124,27 @@ impl SubstrateTarget {
                         .into(), // dest_ptr
                     contract.context.i32_type().into(), // offset
                     contract.context.i32_type().into(), // len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_hash_keccak_256",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // src_ptr
+                    contract.context.i32_type().into(), // len
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // dest_ptr
                 ],
                 false,
             ),
@@ -1472,6 +1494,39 @@ impl TargetRuntime for SubstrateTarget {
         contract
             .builder
             .build_return(Some(&contract.context.i32_type().const_zero()));
+    }
+
+    /// Call the  keccak256 host function
+    fn keccak256_hash(
+        &self,
+        contract: &Contract,
+        src: PointerValue,
+        length: IntValue,
+        dest: PointerValue,
+    ) {
+        contract.builder.build_call(
+            contract.module.get_function("ext_hash_keccak_256").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        src,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "src",
+                    )
+                    .into(),
+                length.into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "dest",
+                    )
+                    .into(),
+            ],
+            "",
+        );
     }
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
