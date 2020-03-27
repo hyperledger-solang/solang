@@ -353,7 +353,6 @@ impl SubstrateTarget {
         &self,
         contract: &Contract<'b>,
         ty: &resolver::Type,
-        to: Option<PointerValue<'b>>,
         src: PointerValue<'b>,
     ) -> (BasicValueEnum<'b>, u64) {
         match ty {
@@ -367,15 +366,10 @@ impl SubstrateTarget {
                     contract.context.i8_type().const_int(1, false),
                     "bool",
                 );
-                if let Some(p) = to {
-                    contract.builder.build_store(p, val);
-                }
                 (val.into(), 1)
             }
             resolver::Type::Uint(n) | resolver::Type::Int(n) => {
                 let int_type = contract.context.custom_width_int_type(*n as u32);
-
-                let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
 
                 let val = contract.builder.build_load(
                     contract.builder.build_pointer_cast(
@@ -388,18 +382,12 @@ impl SubstrateTarget {
 
                 let len = *n as u64 / 8;
 
-                if *n <= 64 && to.is_none() {
-                    (val, len)
-                } else {
-                    contract.builder.build_store(store, val);
-
-                    (store.into(), len)
-                }
+                (val, len)
             }
             resolver::Type::Bytes(len) => {
                 let int_type = contract.context.custom_width_int_type(*len as u32 * 8);
 
-                let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
+                let buf = contract.builder.build_alloca(int_type, "buf");
 
                 // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
                 contract.builder.build_call(
@@ -409,7 +397,7 @@ impl SubstrateTarget {
                         contract
                             .builder
                             .build_pointer_cast(
-                                store,
+                                buf,
                                 contract.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
@@ -423,20 +411,15 @@ impl SubstrateTarget {
                     "",
                 );
 
-                if *len <= 8 && to.is_none() {
-                    (
-                        contract.builder.build_load(store, &format!("bytes{}", len)),
-                        *len as u64,
-                    )
-                } else {
-                    (store.into(), *len as u64)
-                }
+                (
+                    contract.builder.build_load(buf, &format!("bytes{}", len)),
+                    *len as u64,
+                )
             }
             resolver::Type::Contract(_) | resolver::Type::Address => {
                 let int_type = contract.context.custom_width_int_type(160);
 
-                let store =
-                    to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "address"));
+                let buf = contract.builder.build_alloca(int_type, "address");
 
                 // byte order needs to be reversed
                 contract.builder.build_call(
@@ -446,7 +429,7 @@ impl SubstrateTarget {
                         contract
                             .builder
                             .build_pointer_cast(
-                                store,
+                                buf,
                                 contract.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
@@ -460,9 +443,9 @@ impl SubstrateTarget {
                     "",
                 );
 
-                (store.into(), ADDRESS_LENGTH)
+                (contract.builder.build_load(buf, "address"), ADDRESS_LENGTH)
             }
-            _ => unimplemented!(),
+            _ => unreachable!(),
         }
     }
 
@@ -472,7 +455,6 @@ impl SubstrateTarget {
         contract: &Contract<'b>,
         function: FunctionValue,
         ty: &resolver::Type,
-        to: Option<PointerValue<'b>>,
         data: &mut PointerValue<'b>,
     ) -> BasicValueEnum<'b> {
         match &ty {
@@ -482,7 +464,7 @@ impl SubstrateTarget {
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => {
-                let (arg, arglen) = self.decode_primitive(contract, ty, to, *data);
+                let (arg, arglen) = self.decode_primitive(contract, ty, *data);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -494,16 +476,38 @@ impl SubstrateTarget {
                 arg
             }
             resolver::Type::Enum(n) => {
-                self.decode_ty(contract, function, &contract.ns.enums[*n].ty, to, data)
+                self.decode_ty(contract, function, &contract.ns.enums[*n].ty, data)
             }
             resolver::Type::Struct(n) => {
-                let to =
-                    to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
+                let llvm_ty = contract.llvm_type(ty.deref());
+
+                let size = llvm_ty
+                    .size_of()
+                    .unwrap()
+                    .const_cast(contract.context.i32_type(), false);
+
+                let new = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[size.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let dest = contract.builder.build_pointer_cast(
+                    new,
+                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    "dest",
+                );
 
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
-                            to,
+                            dest,
                             &[
                                 contract.context.i32_type().const_zero(),
                                 contract.context.i32_type().const_int(i as u64, false),
@@ -512,26 +516,42 @@ impl SubstrateTarget {
                         )
                     };
 
-                    if field.ty.is_reference_type() {
-                        let val = contract
-                            .builder
-                            .build_alloca(contract.llvm_type(&field.ty), "");
+                    let val = self.decode_ty(contract, function, &field.ty, data);
 
-                        self.decode_ty(contract, function, &field.ty, Some(val), data);
-
-                        contract.builder.build_store(elem, val);
-                    } else {
-                        self.decode_ty(contract, function, &field.ty, Some(elem), data);
-                    }
+                    contract.builder.build_store(elem, val);
                 }
 
-                to.into()
+                dest.into()
             }
             resolver::Type::Array(_, dim) => {
-                let to =
-                    to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
-
                 if let Some(d) = &dim[0] {
+                    let llvm_ty = contract.llvm_type(ty.deref());
+
+                    let size = llvm_ty
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false);
+
+                    let ty = ty.array_deref();
+
+                    let new = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("__malloc").unwrap(),
+                            &[size.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    let dest = contract.builder.build_pointer_cast(
+                        new,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        "dest",
+                    );
+
                     contract.emit_static_loop_with_pointer(
                         function,
                         contract.context.i64_type().const_zero(),
@@ -543,27 +563,18 @@ impl SubstrateTarget {
                         |index: IntValue<'b>, data: &mut PointerValue<'b>| {
                             let elem = unsafe {
                                 contract.builder.build_gep(
-                                    to,
+                                    dest,
                                     &[contract.context.i32_type().const_zero(), index],
                                     "index_access",
                                 )
                             };
 
-                            let ty = ty.array_deref();
-
-                            if ty.is_reference_type() {
-                                let val = contract
-                                    .builder
-                                    .build_alloca(contract.llvm_type(&ty.deref()), "");
-                                self.decode_ty(contract, function, &ty, Some(val), data);
-                                contract.builder.build_store(elem, val);
-                            } else {
-                                self.decode_ty(contract, function, &ty, Some(elem), data);
-                            }
+                            let val = self.decode_ty(contract, function, &ty, data);
+                            contract.builder.build_store(elem, val);
                         },
                     );
 
-                    to.into()
+                    dest.into()
                 } else {
                     let len = contract
                         .builder
@@ -588,11 +599,10 @@ impl SubstrateTarget {
 
                     // details about our array elements
                     let elem_ty = contract.llvm_type(&ty.array_elem());
-                    let elem_size = contract.builder.build_int_truncate(
-                        elem_ty.size_of().unwrap(),
-                        contract.context.i32_type(),
-                        "size_of",
-                    );
+                    let elem_size = elem_ty
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false);
 
                     let init = contract.builder.build_int_to_ptr(
                         contract.context.i32_type().const_all_ones(),
@@ -640,15 +650,8 @@ impl SubstrateTarget {
 
                             let ty = ty.array_deref();
 
-                            if ty.is_reference_type() {
-                                let val = contract
-                                    .builder
-                                    .build_alloca(contract.llvm_type(&ty.deref()), "");
-                                self.decode_ty(contract, function, &ty, Some(val), data);
-                                contract.builder.build_store(elem, val);
-                            } else {
-                                self.decode_ty(contract, function, &ty, Some(elem), data);
-                            }
+                            let val = self.decode_ty(contract, function, &ty, data);
+                            contract.builder.build_store(elem, val);
                         },
                     );
 
@@ -685,7 +688,7 @@ impl SubstrateTarget {
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, data),
+            resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, data),
         }
     }
 
@@ -1708,7 +1711,17 @@ impl TargetRuntime for SubstrateTarget {
         );
 
         for param in &spec.params {
-            args.push(self.decode_ty(contract, function, &param.ty, None, &mut argsdata));
+            let v = self.decode_ty(contract, function, &param.ty, &mut argsdata);
+
+            args.push(if param.ty.stack_based() && !param.ty.is_reference_type() {
+                let s = contract.builder.build_alloca(v.get_type(), &param.name);
+
+                contract.builder.build_store(s, v);
+
+                s.into()
+            } else {
+                v
+            });
         }
     }
 
