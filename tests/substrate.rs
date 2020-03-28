@@ -31,6 +31,7 @@ mod substrate_expressions;
 mod substrate_arrays;
 mod substrate_first;
 mod substrate_functions;
+mod substrate_mappings;
 mod substrate_primitives;
 mod substrate_strings;
 mod substrate_structs;

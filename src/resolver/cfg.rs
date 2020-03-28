@@ -373,7 +373,14 @@ impl ControlFlowGraph {
                 self.location_to_string(ns, l),
                 self.location_to_string(ns, r)
             ),
-            Expression::Keccak256(_, e) => format!("(keccak256 {})", self.expr_to_string(ns, e)),
+            Expression::Keccak256(_, exprs) => format!(
+                "(keccak256 {})",
+                exprs
+                    .iter()
+                    .map(|e| self.expr_to_string(ns, &e.0))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
         }
     }
 
@@ -676,6 +683,14 @@ fn statement(
 
                 // Note we are completely ignoring memory or calldata data locations. Everything
                 // will be stored in memory.
+            }
+
+            if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
+                errors.push(Output::error(
+                    decl.ty.loc(),
+                    "mapping only allowed in storage".to_string(),
+                ));
+                return Err(());
             }
 
             if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {

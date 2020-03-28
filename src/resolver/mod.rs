@@ -40,6 +40,7 @@ pub enum Type {
     Array(Box<Type>, Vec<Option<BigInt>>),
     Enum(usize),
     Struct(usize),
+    Mapping(Box<Type>, Box<Type>),
     Ref(Box<Type>),
     StorageRef(Box<Type>),
     Undef,
@@ -67,6 +68,7 @@ impl Type {
                     })
                     .collect::<String>()
             ),
+            Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(ty) => format!("storage {}", ty.to_string(ns)),
             Type::Undef => "undefined".to_owned(),
@@ -110,6 +112,7 @@ impl Type {
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
             Type::Struct(_) => "tuple".to_owned(),
+            Type::Mapping(_, _) => unreachable!(),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -253,6 +256,26 @@ impl Type {
         }
     }
 
+    /// Is this type an reference type in the solidity language? (struct, array, mapping)
+    pub fn is_reference_type(&self) -> bool {
+        match self {
+            Type::Bool => false,
+            Type::Address => false,
+            Type::Int(_) => false,
+            Type::Uint(_) => false,
+            Type::Bytes(_) => false,
+            Type::Enum(_) => false,
+            Type::Struct(_) => true,
+            Type::Array(_, _) => true,
+            Type::DynamicBytes => true,
+            Type::String => true,
+            Type::Mapping(_, _) => true,
+            Type::Ref(r) => r.is_reference_type(),
+            Type::StorageRef(r) => r.is_reference_type(),
+            Type::Undef => unreachable!(),
+        }
+    }
+
     /// Does this type contain any types which are variable-length
     pub fn is_dynamic(&self, ns: &Contract) -> bool {
         match self {
@@ -276,9 +299,11 @@ impl Type {
     /// allowed be storage are welcome.
     pub fn can_have_data_location(&self) -> bool {
         match self {
-            Type::Array(_, _) => true,
-            Type::Struct(_) => true,
-            Type::String | Type::DynamicBytes => true,
+            Type::Array(_, _)
+            | Type::Struct(_)
+            | Type::Mapping(_, _)
+            | Type::String
+            | Type::DynamicBytes => true,
             _ => false,
         }
     }
@@ -300,6 +325,29 @@ impl Type {
         }
 
         false
+    }
+
+    /// Is this a mapping
+    pub fn is_mapping(&self) -> bool {
+        match self {
+            Type::Mapping(_, _) => true,
+            Type::StorageRef(ty) => ty.is_mapping(),
+            _ => false,
+        }
+    }
+
+    /// Does the type contain any mapping type
+    pub fn contains_mapping(&self, ns: &Contract) -> bool {
+        match self {
+            Type::Mapping(_, _) => true,
+            Type::Array(ty, _) => ty.contains_mapping(ns),
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .any(|f| f.ty.contains_mapping(ns)),
+            Type::StorageRef(r) | Type::Ref(r) => r.contains_mapping(ns),
+            _ => false,
+        }
     }
 
     /// If the type is Ref or StorageRef, get the underlying type
@@ -425,6 +473,11 @@ impl FunctionDecl {
                                     Some(r) => format!(":{}", r),
                                 })
                                 .collect::<String>()
+                        ),
+                        Type::Mapping(k, v) => format!(
+                            "mapping:{}:{}",
+                            type_to_wasm_name(k, ns),
+                            type_to_wasm_name(v, ns)
                         ),
                         Type::Undef => unreachable!(),
                         Type::Ref(r) => type_to_wasm_name(r, ns),
@@ -601,10 +654,10 @@ impl Contract {
         }
 
         match id {
-            ast::ComplexType::Primitive(p, dimensions) if dimensions.is_empty() => {
+            ast::ComplexType::Primitive(_, p, dimensions) if dimensions.is_empty() => {
                 Ok(Type::from(*p))
             }
-            ast::ComplexType::Primitive(p, exprs) => {
+            ast::ComplexType::Primitive(_, p, exprs) => {
                 let mut dimensions = Vec::new();
 
                 for expr in exprs {
@@ -618,6 +671,35 @@ impl Contract {
                     Box::new(Type::from(*p)),
                     resolve_dimensions(&dimensions, errors)?,
                 ))
+            }
+            ast::ComplexType::Mapping(_, k, v) => {
+                let key = self.resolve_type(k, errors)?;
+                let value = self.resolve_type(v, errors)?;
+
+                match key {
+                    Type::Mapping(_, _) => {
+                        errors.push(Output::decl_error(
+                            k.loc(),
+                            "key of mapping cannot be another mapping type".to_string(),
+                        ));
+                        Err(())
+                    }
+                    Type::Struct(_) => {
+                        errors.push(Output::decl_error(
+                            k.loc(),
+                            "key of mapping cannot be struct type".to_string(),
+                        ));
+                        Err(())
+                    }
+                    Type::Array(_, _) => {
+                        errors.push(Output::decl_error(
+                            k.loc(),
+                            "key of mapping cannot be array type".to_string(),
+                        ));
+                        Err(())
+                    }
+                    _ => Ok(Type::Mapping(Box::new(key), Box::new(value))),
+                }
             }
             ast::ComplexType::Unresolved(expr) => {
                 let (id, dimensions) = self.expr_to_type(&expr, errors)?;

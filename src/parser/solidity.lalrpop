@@ -47,8 +47,11 @@ ArrayDimension: Option<Expression> = {
 }
 
 ComplexType: ComplexType = {
-    <p:Type> => ComplexType::Primitive(p, Vec::new()),
-    <p:Type> <d:ArrayDimension+> => ComplexType::Primitive(p, d),
+    <l:@L> <p:Type> <r:@R> => ComplexType::Primitive(Loc(l, r), p, Vec::new()),
+    <l:@L> <p:Type> <d:ArrayDimension+> <r:@R>=> ComplexType::Primitive(Loc(l, r), p, d),
+    <l:@L> "mapping" "(" <k:ComplexType> "=>" <v:ComplexType> ")" <r:@R> => {
+        ComplexType::Mapping(Loc(l, r), Box::new(k), Box::new(v))
+    },
     Precedence0 => ComplexType::Unresolved(Box::new(<>)),
 }
 
@@ -527,6 +530,7 @@ extern {
         "constant" => Token::Constant,
         "=" => Token::Assign,
         "==" => Token::Equal,
+        "=>" => Token::Arrow,
         "|=" => Token::BitwiseOrAssign,
         "^=" => Token::BitwiseXorAssign,
         "&=" => Token::BitwiseAndAssign,
@@ -588,6 +592,7 @@ extern {
         "," => Token::Comma,
         "anonymous" => Token::Anonymous,
         "indexed" => Token::Indexed,
+        "mapping" => Token::Mapping,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

@@ -118,6 +118,13 @@ pub fn function_decl(
                         success = false;
                         ty
                     }
+                } else if ty.contains_mapping(ns) {
+                    errors.push(Output::error(
+                        p.ty.loc(),
+                        "parameter with mapping type must be of type ‘storage’".to_string(),
+                    ));
+                    success = false;
+                    ty
                 } else {
                     ty
                 };
@@ -172,7 +179,18 @@ pub fn function_decl(
                                 ty
                             }
                         }
-                        _ => ty,
+                        _ => {
+                            if ty.contains_mapping(ns) {
+                                errors.push(Output::error(
+                                    r.ty.loc(),
+                                    "return type containing mapping  must be of type ‘storage’"
+                                        .to_string(),
+                                ));
+                                success = false;
+                            }
+
+                            ty
+                        }
                     }
                 };
 
