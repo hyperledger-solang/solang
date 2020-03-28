@@ -48,6 +48,7 @@ enum SubstrateExternal {
     ext_get_storage,
     ext_return,
     ext_hash_keccak_256,
+    ext_print,
 }
 
 pub struct ContractStorage {
@@ -195,6 +196,21 @@ impl Externals for ContractStorage {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_print) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+
+                let mut buf = Vec::new();
+                buf.resize(len as usize, 0u8);
+
+                if let Err(e) = self.memory.get_into(data_ptr, &mut buf) {
+                    panic!("ext_print: {}", e);
+                }
+
+                println!("{}", String::from_utf8_lossy(&buf));
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -211,6 +227,7 @@ impl ModuleImportResolver for ContractStorage {
             "ext_clear_storage" => SubstrateExternal::ext_clear_storage,
             "ext_return" => SubstrateExternal::ext_return,
             "ext_hash_keccak_256" => SubstrateExternal::ext_hash_keccak_256,
+            "ext_print" => SubstrateExternal::ext_print,
             _ => {
                 panic!("{} not implemented", field_name);
             }

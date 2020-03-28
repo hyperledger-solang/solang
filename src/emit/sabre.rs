@@ -42,6 +42,7 @@ impl SabreTarget {
             "create_collection",
             "add_to_collection",
             "alloc",
+            "log_buffer",
         ]);
 
         c
@@ -82,6 +83,18 @@ impl SabreTarget {
         contract.module.add_function(
             "alloc",
             u8_ptr.fn_type(&[contract.context.i32_type().into()], false),
+            Some(Linkage::External),
+        );
+        contract.module.add_function(
+            "log_buffer",
+            contract.context.void_type().fn_type(
+                &[
+                    contract.context.i32_type().into(),
+                    u8_ptr.into(),
+                    contract.context.i32_type().into(),
+                ],
+                false,
+            ),
             Some(Linkage::External),
         );
     }
@@ -613,5 +626,17 @@ impl TargetRuntime for SabreTarget {
     ) {
         self.abi
             .decode(contract, function, args, data, length, spec);
+    }
+
+    fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
+        contract.builder.build_call(
+            contract.module.get_function("log_buffer").unwrap(),
+            &[
+                contract.context.i32_type().const_int(2, false).into(),
+                string_ptr.into(),
+                string_len.into(),
+            ],
+            "",
+        );
     }
 }

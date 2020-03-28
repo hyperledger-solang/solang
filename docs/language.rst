@@ -1175,3 +1175,43 @@ repeat infinitely (or until all gas is spent):
           }
       }
   }
+
+Builtin Functions
+-----------------
+
+assert()
+________
+
+Assert takes a boolean argument. If that evaluates to false, execution is aborted.
+
+
+.. code-block:: javascript
+
+    contract c {
+        constructor(int x) public {
+            assert(x > 0);
+        }
+    }
+
+print()
+_______
+
+print() takes a string argument.
+
+.. code-block:: javascript
+
+    contract c {
+        constructor() public {
+            print("Hello, world!");
+        }
+    }
+
+.. note:: 
+
+  print() is not available with the Ethereum Foundation Solidity compiler. 
+  
+  When using Substrate, this function is only available on development chains.
+  If you use this functio on a production chain, the contract will fail to load.
+
+  When using ewasm, the function is only available on hera when compiled with
+  debugging.

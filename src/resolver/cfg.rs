@@ -62,6 +62,9 @@ pub enum Instr {
         pos: usize,
     },
     AssertFailure {},
+    Print {
+        expr: Expression,
+    },
 }
 
 pub struct BasicBlock {
@@ -473,6 +476,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, dest),
                 self.vars[*pos].id.name
             ),
+            Instr::Print { expr } => format!("print {}", self.expr_to_string(ns, expr)),
         }
     }
 
