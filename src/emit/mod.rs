@@ -2003,24 +2003,18 @@ impl<'a> Contract<'a> {
             });
         }
 
-        let ftype = if f.wasm_return {
-            self.llvm_type(&f.returns[0].ty)
-                .into_int_type()
-                .fn_type(&args, false)
-        } else {
-            // add return values
-            for p in &f.returns {
-                args.push(if p.ty.is_reference_type() && !p.ty.is_contract_storage() {
-                    self.llvm_type(&p.ty)
-                        .ptr_type(AddressSpace::Generic)
-                        .ptr_type(AddressSpace::Generic)
-                        .into()
-                } else {
-                    self.llvm_type(&p.ty).ptr_type(AddressSpace::Generic).into()
-                });
-            }
-            self.context.void_type().fn_type(&args, false)
-        };
+        // add return values
+        for p in &f.returns {
+            args.push(if p.ty.is_reference_type() && !p.ty.is_contract_storage() {
+                self.llvm_type(&p.ty)
+                    .ptr_type(AddressSpace::Generic)
+                    .ptr_type(AddressSpace::Generic)
+                    .into()
+            } else {
+                self.llvm_type(&p.ty).ptr_type(AddressSpace::Generic).into()
+            });
+        }
+        let ftype = self.context.void_type().fn_type(&args, false);
 
         let function = self
             .module
@@ -2145,10 +2139,6 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Return { value } if value.is_empty() => {
                         self.builder.build_return(None);
-                    }
-                    cfg::Instr::Return { value } if resolver_function.unwrap().wasm_return => {
-                        let retval = self.expression(&value[0], &w.vars, function, runtime);
-                        self.builder.build_return(Some(&retval));
                     }
                     cfg::Instr::Return { value } => {
                         let returns_offset = resolver_function.unwrap().params.len();
@@ -2332,7 +2322,7 @@ impl<'a> Contract<'a> {
                             });
                         }
 
-                        if !res.is_empty() && !f.wasm_return {
+                        if !res.is_empty() {
                             for v in f.returns.iter() {
                                 parms.push(
                                     self.builder
@@ -2342,29 +2332,21 @@ impl<'a> Contract<'a> {
                             }
                         }
 
-                        let ret = self
-                            .builder
-                            .build_call(self.functions[*func], &parms, "")
-                            .try_as_basic_value()
-                            .left();
+                        self.builder.build_call(self.functions[*func], &parms, "");
 
                         if !res.is_empty() {
-                            if f.wasm_return {
-                                w.vars[res[0]].value = ret.unwrap();
-                            } else {
-                                for (i, v) in f.returns.iter().enumerate() {
-                                    let val = self.builder.build_load(
-                                        parms[f.params.len() + i].into_pointer_value(),
-                                        &v.name,
-                                    );
+                            for (i, v) in f.returns.iter().enumerate() {
+                                let val = self.builder.build_load(
+                                    parms[f.params.len() + i].into_pointer_value(),
+                                    &v.name,
+                                );
 
-                                    let dest = w.vars[res[i]].value;
+                                let dest = w.vars[res[i]].value;
 
-                                    if dest.is_pointer_value() && !v.ty.is_reference_type() {
-                                        self.builder.build_store(dest.into_pointer_value(), val);
-                                    } else {
-                                        w.vars[res[i]].value = val;
-                                    }
+                                if dest.is_pointer_value() && !v.ty.is_reference_type() {
+                                    self.builder.build_store(dest.into_pointer_value(), val);
+                                } else {
+                                    w.vars[res[i]].value = val;
                                 }
                             }
                         }
@@ -2444,7 +2426,7 @@ impl<'a> Contract<'a> {
             runtime.abi_decode(&self, function, &mut args, argsdata, argslen, f);
 
             // add return values as pointer arguments at the end
-            if !f.returns.is_empty() && !f.wasm_return {
+            if !f.returns.is_empty() {
                 for v in f.returns.iter() {
                     args.push(if !v.ty.is_reference_type() {
                         self.builder
@@ -2461,8 +2443,7 @@ impl<'a> Contract<'a> {
                 }
             }
 
-            let ret = self
-                .builder
+            self.builder
                 .build_call(functions[i], &args, "")
                 .try_as_basic_value()
                 .left();
@@ -2470,10 +2451,6 @@ impl<'a> Contract<'a> {
             if f.returns.is_empty() {
                 // return ABI of length 0
                 runtime.return_empty_abi(&self);
-            } else if f.wasm_return {
-                let (data, length) = runtime.abi_encode(&self, function, &[ret.unwrap()], &f);
-
-                runtime.return_abi(&self, data, length);
             } else {
                 let (data, length) =
                     runtime.abi_encode(&self, function, &args[f.params.len()..], &f);
