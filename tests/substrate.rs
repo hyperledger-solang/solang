@@ -245,9 +245,15 @@ impl TestRuntime {
             .chain(args)
             .collect();
 
-        self.module
+        if let Some(RuntimeValue::I32(ret)) = self
+            .module
             .invoke_export("deploy", &[], store)
-            .expect("failed to call function");
+            .expect("failed to call function")
+        {
+            if ret != 0 {
+                panic!("non zero return")
+            }
+        }
     }
 
     pub fn function(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
@@ -261,17 +267,43 @@ impl TestRuntime {
             .chain(args)
             .collect();
 
-        self.module
+        if let Some(RuntimeValue::I32(ret)) = self
+            .module
             .invoke_export("call", &[], store)
-            .expect("failed to call function");
+            .expect("failed to call function")
+        {
+            if ret != 0 {
+                panic!("non zero return")
+            }
+        }
     }
 
     pub fn raw_function(&self, store: &mut ContractStorage, input: Vec<u8>) {
         store.scratch = input;
 
-        self.module
+        if let Some(RuntimeValue::I32(ret)) = self
+            .module
             .invoke_export("call", &[], store)
-            .expect("failed to call function");
+            .expect("failed to call function")
+        {
+            if ret != 0 {
+                panic!("non zero return")
+            }
+        }
+    }
+
+    pub fn raw_constructor(&self, store: &mut ContractStorage, input: Vec<u8>) {
+        store.scratch = input;
+
+        if let Some(RuntimeValue::I32(ret)) = self
+            .module
+            .invoke_export("deploy", &[], store)
+            .expect("failed to call constructor")
+        {
+            if ret != 0 {
+                panic!("non zero return")
+            }
+        }
     }
 }
 

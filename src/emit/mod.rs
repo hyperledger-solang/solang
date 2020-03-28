@@ -2491,7 +2491,7 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(nomatch);
 
-        self.builder.build_unreachable();
+        runtime.assert_failure(&self);
     }
 
     // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which

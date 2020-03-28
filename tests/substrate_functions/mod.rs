@@ -61,6 +61,31 @@ fn constructors() {
 }
 
 #[test]
+#[should_panic]
+fn constructor_wrong_selector() {
+    let (runtime, mut store) = build_solidity(
+        "
+        contract test {
+            uint64 result;
+
+            constructor() public {
+                result = 1;
+            }
+
+            constructor(uint64 x) public {
+                result = x;
+            }
+
+            function get() public returns (uint64) {
+                return result;
+            }
+        }",
+    );
+
+    runtime.raw_constructor(&mut store, vec![0xaa, 0xbb, 0xcc, 0xdd]);
+}
+
+#[test]
 fn fallback() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val(u64);
@@ -85,6 +110,31 @@ fn fallback() {
     runtime.function(&mut store, "get", Vec::new());
 
     assert_eq!(store.scratch, Val(356).encode());
+}
+
+#[test]
+#[should_panic]
+fn function_wrong_selector() {
+    let (runtime, mut store) = build_solidity(
+        "
+        contract test {
+            uint64 result;
+
+            constructor() public {
+                result = 1;
+            }
+
+            constructor(uint64 x) public {
+                result = x;
+            }
+
+            function get() public returns (uint64) {
+                return result;
+            }
+        }",
+    );
+
+    runtime.raw_function(&mut store, vec![0xaa, 0xbb, 0xcc, 0xdd]);
 }
 
 #[test]

@@ -264,7 +264,9 @@ impl SubstrateTarget {
 
         // emit fallback code
         contract.builder.position_at_end(fallback_block);
-        contract.builder.build_unreachable();
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(2, false)));
     }
 
     fn emit_call(&self, contract: &Contract) {
@@ -301,7 +303,9 @@ impl SubstrateTarget {
                 .builder
                 .build_return(Some(&contract.context.i32_type().const_zero()));
         } else {
-            contract.builder.build_unreachable();
+            contract
+                .builder
+                .build_return(Some(&contract.context.i32_type().const_int(2, false)));
         }
     }
 
