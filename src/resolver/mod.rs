@@ -345,7 +345,6 @@ pub struct FunctionDecl {
     pub visibility: ast::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
-    pub wasm_return: bool,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
@@ -372,8 +371,6 @@ impl FunctionDecl {
                 .join(",")
         );
 
-        let wasm_return = returns.len() == 1 && !returns[0].ty.stack_based();
-
         FunctionDecl {
             doc,
             loc,
@@ -385,7 +382,6 @@ impl FunctionDecl {
             visibility,
             params,
             returns,
-            wasm_return,
             cfg: None,
         }
     }
