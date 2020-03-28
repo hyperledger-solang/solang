@@ -140,6 +140,9 @@ pub enum Token<'input> {
     Underscore,
     Complement,
     Question,
+
+    Mapping,
+    Arrow,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -243,6 +246,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::If => write!(f, "if"),
             Token::Constructor => write!(f, "constructor"),
             Token::Indexed => write!(f, "indexed"),
+            Token::Mapping => write!(f, "mapping"),
+            Token::Arrow => write!(f, "=>"),
         }
     }
 }
@@ -377,6 +382,7 @@ impl<'input> Lexer<'input> {
         keywords.insert(String::from("else"), Token::Else);
         keywords.insert(String::from("_"), Token::Underscore);
         keywords.insert(String::from("bytes"), Token::DynamicBytes);
+        keywords.insert(String::from("mapping"), Token::Mapping);
 
         Lexer {
             input,
@@ -617,14 +623,19 @@ impl<'input> Lexer<'input> {
                 Some((i, '{')) => return Some(Ok((i, Token::OpenCurlyBrace, i + 1))),
                 Some((i, '}')) => return Some(Ok((i, Token::CloseCurlyBrace, i + 1))),
                 Some((i, '~')) => return Some(Ok((i, Token::Complement, i + 1))),
-                Some((i, '=')) => {
-                    if let Some((_, '=')) = self.chars.peek() {
+                Some((i, '=')) => match self.chars.peek() {
+                    Some((_, '=')) => {
                         self.chars.next();
                         return Some(Ok((i, Token::Equal, i + 2)));
-                    } else {
+                    }
+                    Some((_, '>')) => {
+                        self.chars.next();
+                        return Some(Ok((i, Token::Arrow, i + 2)));
+                    }
+                    _ => {
                         return Some(Ok((i, Token::Assign, i + 1)));
                     }
-                }
+                },
                 Some((i, '!')) => {
                     if let Some((_, '=')) = self.chars.peek() {
                         self.chars.next();

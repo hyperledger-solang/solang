@@ -661,6 +661,7 @@ impl SubstrateTarget {
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
+            resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, data),
         }
     }
@@ -924,6 +925,7 @@ impl SubstrateTarget {
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
+            resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::Ref(ty) => {
                 self.encode_ty(contract, function, ty, arg, data);
             }
@@ -1095,6 +1097,7 @@ impl SubstrateTarget {
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
+            resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::Ref(r) => self.encoded_length(arg, r, function, contract),
             resolver::Type::String | resolver::Type::DynamicBytes => {
                 // A string or bytes type has to be encoded by: one compact integer for

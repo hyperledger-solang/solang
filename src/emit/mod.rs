@@ -1369,26 +1369,102 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_load(len, "array_len")
             }
-            Expression::Keccak256(_, a) => {
-                let val = self
-                    .expression(a, vartab, function, runtime)
-                    .into_int_value();
+            Expression::Keccak256(_, exprs) => {
+                let mut length = self.context.i32_type().const_zero();
+                let mut values: Vec<(BasicValueEnum, IntValue, resolver::Type)> = Vec::new();
 
-                let src = self.builder.build_alloca(val.get_type(), "keccak_src");
+                // first we need to calculate the length of the buffer and get the types/lengths
+                for e in exprs {
+                    let v = self.expression(&e.0, vartab, function, runtime);
+
+                    let len = match e.1 {
+                        resolver::Type::DynamicBytes | resolver::Type::String => {
+                            // field 0 is the length
+                            let array_len = unsafe {
+                                self.builder.build_gep(
+                                    v.into_pointer_value(),
+                                    &[
+                                        self.context.i32_type().const_zero(),
+                                        self.context.i32_type().const_zero(),
+                                    ],
+                                    "array_len",
+                                )
+                            };
+
+                            self.builder
+                                .build_load(array_len, "array_len")
+                                .into_int_value()
+                        }
+                        _ => v
+                            .get_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(self.context.i32_type(), false),
+                    };
+
+                    length = self.builder.build_int_add(length, len, "");
+
+                    values.push((v, len, e.1.clone()));
+                }
+
+                //  now allocate a buffer
+                let src =
+                    self.builder
+                        .build_array_alloca(self.context.i8_type(), length, "keccak_src");
+
+                // fill in all the fields
+                let mut offset = self.context.i32_type().const_zero();
+
+                for (v, len, ty) in values {
+                    let elem = unsafe { self.builder.build_gep(src, &[offset], "elem") };
+
+                    offset = self.builder.build_int_add(offset, len, "");
+
+                    match ty {
+                        resolver::Type::DynamicBytes | resolver::Type::String => {
+                            let data = unsafe {
+                                self.builder.build_gep(
+                                    v.into_pointer_value(),
+                                    &[
+                                        self.context.i32_type().const_zero(),
+                                        self.context.i32_type().const_int(2, false),
+                                    ],
+                                    "",
+                                )
+                            };
+
+                            self.builder.build_call(
+                                self.module.get_function("__memcpy").unwrap(),
+                                &[
+                                    elem.into(),
+                                    self.builder
+                                        .build_pointer_cast(
+                                            data,
+                                            self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                            "data",
+                                        )
+                                        .into(),
+                                    len.into(),
+                                ],
+                                "",
+                            );
+                        }
+                        _ => {
+                            let elem = self.builder.build_pointer_cast(
+                                elem,
+                                v.get_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            );
+
+                            self.builder.build_store(elem, v);
+                        }
+                    }
+                }
                 let dst = self
                     .builder
                     .build_alloca(self.context.custom_width_int_type(256), "keccak_dst");
 
-                self.builder.build_store(src, val);
-
-                runtime.keccak256_hash(
-                    &self,
-                    src,
-                    val.get_type()
-                        .size_of()
-                        .const_cast(self.context.i32_type(), false),
-                    dst,
-                );
+                runtime.keccak256_hash(&self, src, length, dst);
 
                 self.builder.build_load(dst, "keccak256_hash")
             }
@@ -2057,6 +2133,9 @@ impl<'a> Contract<'a> {
                         );
                     }
                 }
+            }
+            resolver::Type::Mapping(_, _) => {
+                // nothing to do, step over it
             }
             _ => {
                 self.builder.build_store(slot_ptr, *slot);
@@ -3362,6 +3441,7 @@ impl<'a> Contract<'a> {
                 )
                 .as_basic_type_enum(),
             resolver::Type::Undef => unreachable!(),
+            resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::Ref(r) => self
                 .llvm_type(r)
                 .ptr_type(AddressSpace::Generic)
@@ -3389,25 +3469,6 @@ impl resolver::Type {
         }
     }
 
-    /// Is this type an reference type in the solidity language? (struct, array, mapping)
-    pub fn is_reference_type(&self) -> bool {
-        match self {
-            resolver::Type::Bool => false,
-            resolver::Type::Address => false,
-            resolver::Type::Int(_) => false,
-            resolver::Type::Uint(_) => false,
-            resolver::Type::Bytes(_) => false,
-            resolver::Type::Enum(_) => false,
-            resolver::Type::Struct(_) => true,
-            resolver::Type::Array(_, _) => true,
-            resolver::Type::DynamicBytes => true,
-            resolver::Type::String => true,
-            resolver::Type::Ref(r) => r.is_reference_type(),
-            resolver::Type::StorageRef(r) => r.is_reference_type(),
-            resolver::Type::Undef => unreachable!(),
-        }
-    }
-
     /// Does this type need a phi node
     pub fn needs_phi(&self) -> bool {
         match self {
@@ -3421,6 +3482,7 @@ impl resolver::Type {
             resolver::Type::Array(_, _) => true,
             resolver::Type::DynamicBytes => true,
             resolver::Type::String => true,
+            resolver::Type::Mapping(_, _) => true,
             resolver::Type::Ref(r) => r.needs_phi(),
             resolver::Type::StorageRef(_) => true,
             resolver::Type::Undef => unreachable!(),
@@ -3440,6 +3502,7 @@ impl resolver::Type {
             resolver::Type::Array(_, _) => true,
             resolver::Type::String => true,
             resolver::Type::DynamicBytes => true,
+            resolver::Type::Mapping(_, _) => true,
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Ref(_) => false,
             resolver::Type::StorageRef(r) => r.stack_based(),

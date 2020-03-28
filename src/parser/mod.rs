@@ -97,7 +97,7 @@ mod test {
                         },
                         fields: vec![
                             VariableDeclaration {
-                                ty: ComplexType::Primitive(Type::Bool, Vec::new()),
+                                ty: ComplexType::Primitive(Loc(81, 85), Type::Bool, Vec::new()),
                                 storage: None,
                                 name: Identifier {
                                     loc: Loc(86, 92),
@@ -105,7 +105,11 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
-                                ty: ComplexType::Primitive(Type::Uint(256), Vec::new()),
+                                ty: ComplexType::Primitive(
+                                    Loc(118, 122),
+                                    Type::Uint(256),
+                                    Vec::new(),
+                                ),
                                 storage: None,
                                 name: Identifier {
                                     loc: Loc(123, 129),
@@ -113,7 +117,11 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
-                                ty: ComplexType::Primitive(Type::Bytes(2), Vec::new()),
+                                ty: ComplexType::Primitive(
+                                    Loc(155, 161),
+                                    Type::Bytes(2),
+                                    Vec::new(),
+                                ),
                                 storage: None,
                                 name: Identifier {
                                     loc: Loc(162, 169),
@@ -121,7 +129,11 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
-                                ty: ComplexType::Primitive(Type::Bytes(32), Vec::new()),
+                                ty: ComplexType::Primitive(
+                                    Loc(195, 202),
+                                    Type::Bytes(32),
+                                    Vec::new(),
+                                ),
                                 storage: None,
                                 name: Identifier {
                                     loc: Loc(203, 209),
@@ -133,7 +145,7 @@ mod test {
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
                             doc: vec![],
-                            ty: ComplexType::Primitive(Type::String, Vec::new()),
+                            ty: ComplexType::Primitive(Loc(253, 259), Type::String, Vec::new()),
                             attrs: vec![],
                             name: Identifier {
                                 loc: Loc(260, 268),
@@ -146,7 +158,7 @@ mod test {
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
                             doc: vec![],
-                            ty: ComplexType::Primitive(Type::Int(64), Vec::new()),
+                            ty: ComplexType::Primitive(Loc(290, 295), Type::Int(64), Vec::new()),
                             attrs: vec![],
                             name: Identifier {
                                 loc: Loc(296, 306),

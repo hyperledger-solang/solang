@@ -76,6 +76,14 @@ pub fn delete(
     };
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
+        if ty.is_mapping() {
+            errors.push(Output::error(
+                *loc,
+                "‘delete’ cannot be applied to mapping type".to_string(),
+            ));
+            return Err(());
+        }
+
         cfg.writes_contract_storage = true;
         cfg.add(
             tab,
@@ -149,7 +157,7 @@ pub fn array_push(
             res: entry_pos,
             expr: array_offset(
                 loc,
-                Expression::Keccak256(*loc, Box::new(var_expr.clone())),
+                Expression::Keccak256(*loc, vec![(var_expr.clone(), slot_ty.clone())]),
                 Expression::Variable(*loc, length_pos),
                 elem_ty.clone(),
                 ns,
@@ -308,7 +316,7 @@ pub fn array_pop(
             res: entry_pos,
             expr: array_offset(
                 loc,
-                Expression::Keccak256(*loc, Box::new(var_expr.clone())),
+                Expression::Keccak256(*loc, vec![(var_expr.clone(), slot_ty.clone())]),
                 Expression::Variable(*loc, new_length),
                 elem_ty.clone(),
                 ns,
@@ -435,4 +443,45 @@ pub fn bytes_pop(
         Expression::StorageBytesPop(*loc, Box::new(var_expr)),
         resolver::Type::Bytes(1),
     ))
+}
+
+/// Calculate storage subscript
+pub fn mapping_subscript(
+    loc: &ast::Loc,
+    mapping: Expression,
+    mapping_ty: &resolver::Type,
+    index: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Contract,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (key_ty, value_ty) = match mapping_ty.deref() {
+        resolver::Type::Mapping(k, v) => (k, v),
+        _ => unreachable!(),
+    };
+
+    let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
+
+    let index_expr = cast(
+        &index.loc(),
+        index_expr,
+        &index_ty,
+        key_ty,
+        true,
+        ns,
+        errors,
+    )?;
+
+    let slot_ty = resolver::Type::Uint(256);
+
+    let index_ty = if let resolver::Type::Enum(n) = index_ty {
+        ns.enums[n].ty.clone()
+    } else {
+        index_ty
+    };
+
+    let slot = Expression::Keccak256(*loc, vec![(mapping, slot_ty), (index_expr, index_ty)]);
+
+    Ok((slot, resolver::Type::StorageRef(value_ty.clone())))
 }

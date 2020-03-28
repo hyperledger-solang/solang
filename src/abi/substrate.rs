@@ -361,14 +361,18 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         .iter()
         .filter_map(|v| {
             if let resolver::ContractVariableType::Storage(storage) = &v.var {
-                Some(StorageLayout {
-                    name: registry.string(&v.name),
-                    layout: StorageFieldLayout::Field(LayoutField {
-                        offset: format!("0x{:064X}", storage),
-                        len: v.ty.storage_slots(resolver_contract).to_string(),
-                        ty: ty_to_abi(&v.ty, resolver_contract, &mut registry).ty,
-                    }),
-                })
+                if !v.ty.is_mapping() {
+                    Some(StorageLayout {
+                        name: registry.string(&v.name),
+                        layout: StorageFieldLayout::Field(LayoutField {
+                            offset: format!("0x{:064X}", storage),
+                            len: v.ty.storage_slots(resolver_contract).to_string(),
+                            ty: ty_to_abi(&v.ty, resolver_contract, &mut registry).ty,
+                        }),
+                    })
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -484,6 +488,7 @@ fn ty_to_abi(
             }
         }
         resolver::Type::Undef => unreachable!(),
+        resolver::Type::Mapping(_, _) => unreachable!(),
         resolver::Type::Array(ty, dims) => {
             let mut param_ty = ty_to_abi(ty, contract, registry);
 

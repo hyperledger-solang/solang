@@ -21,7 +21,9 @@ use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
-use resolver::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push, delete};
+use resolver::storage::{
+    array_offset, array_pop, array_push, bytes_pop, bytes_push, delete, mapping_subscript,
+};
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
@@ -83,7 +85,7 @@ pub enum Expression {
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
 
-    Keccak256(Loc, Box<Expression>),
+    Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
     Poison,
 }
@@ -251,7 +253,7 @@ impl Expression {
             | Expression::StorageBytesPop(_, _)
             | Expression::StorageBytesLength(_, _) => true,
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
-            Expression::Keccak256(_, e) => e.reads_contract_storage(),
+            Expression::Keccak256(_, e) => e.iter().any(|e| e.0.reads_contract_storage()),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::StringConcat(_, l, r) | Expression::StringCompare(_, l, r) => {
@@ -2820,6 +2822,10 @@ fn array_subscript(
 ) -> Result<(Expression, resolver::Type), ()> {
     let (mut array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
 
+    if array_ty.is_mapping() {
+        return mapping_subscript(loc, array_expr, &array_ty, index, cfg, ns, vartab, errors);
+    }
+
     let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
 
     let tab = match vartab {
@@ -2877,7 +2883,9 @@ fn array_subscript(
                         Box::new(array_expr.clone()),
                     );
 
-                    array_expr = Expression::Keccak256(*loc, Box::new(array_expr));
+                    let slot_ty = resolver::Type::Uint(256);
+
+                    array_expr = Expression::Keccak256(*loc, vec![(array_expr, slot_ty)]);
 
                     (array_length, resolver::Type::Uint(256))
                 } else {

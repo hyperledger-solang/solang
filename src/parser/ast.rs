@@ -47,8 +47,19 @@ impl fmt::Display for Type {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ComplexType {
-    Primitive(Type, Vec<Option<Expression>>),
+    Primitive(Loc, Type, Vec<Option<Expression>>),
+    Mapping(Loc, Box<ComplexType>, Box<ComplexType>),
     Unresolved(Box<Expression>),
+}
+
+impl ComplexType {
+    pub fn loc(&self) -> Loc {
+        match self {
+            ComplexType::Primitive(loc, _, _) => *loc,
+            ComplexType::Mapping(loc, _, _) => *loc,
+            ComplexType::Unresolved(e) => e.loc(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
