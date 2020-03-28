@@ -41,6 +41,7 @@ impl SubstrateTarget {
             "ext_clear_storage",
             "ext_hash_keccak_256",
             "ext_return",
+            "ext_print",
         ]);
 
         c
@@ -182,6 +183,22 @@ impl SubstrateTarget {
                         .ptr_type(AddressSpace::Generic)
                         .into(), // value_ptr
                     contract.context.i32_type().into(), // value_len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_print",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // string_ptr
+                    contract.context.i32_type().into(), // string_len
                 ],
                 false,
             ),
@@ -1628,5 +1645,13 @@ impl TargetRuntime for SubstrateTarget {
         );
 
         (data, length)
+    }
+
+    fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
+        contract.builder.build_call(
+            contract.module.get_function("ext_print").unwrap(),
+            &[string_ptr.into(), string_len.into()],
+            "",
+        );
     }
 }

@@ -650,3 +650,17 @@ fn positional_argument_call() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn print() {
+    let (runtime, mut store) = build_solidity(
+        r#"
+    contract foobar {
+        function test() public {
+            print("Hello, world");
+        }
+    }"#,
+    );
+
+    runtime.function(&mut store, "test", Vec::new());
+}

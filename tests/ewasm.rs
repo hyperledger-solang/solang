@@ -32,6 +32,7 @@ pub enum Extern {
     storageStore,
     finish,
     revert,
+    printMem,
 }
 
 impl ContractStorage {
@@ -154,6 +155,21 @@ impl Externals for ContractStorage {
                 }
                 Ok(None)
             }
+            Some(Extern::printMem) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+
+                let mut buf = Vec::new();
+                buf.resize(len as usize, 0u8);
+
+                if let Err(e) = self.memory.get_into(data_ptr, &mut buf) {
+                    panic!("ext_print: {}", e);
+                }
+
+                println!("{}", String::from_utf8_lossy(&buf));
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -168,6 +184,7 @@ impl ModuleImportResolver for ContractStorage {
             "revert" => Extern::revert,
             "storageStore" => Extern::storageStore,
             "storageLoad" => Extern::storageLoad,
+            "printMem" => Extern::printMem,
             _ => {
                 panic!("{} not implemented", field_name);
             }

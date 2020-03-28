@@ -70,6 +70,7 @@ impl EwasmTarget {
             "storageLoad",
             "finish",
             "revert",
+            "printMem",
         ]);
 
         deploy_code
@@ -175,6 +176,22 @@ impl EwasmTarget {
                         .into(), // resultOffset
                     contract.context.i32_type().into(), // dataOffset
                     contract.context.i32_type().into(), // length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "printMem",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // string_ptr
+                    contract.context.i32_type().into(), // string_length
                 ],
                 false,
             ),
@@ -681,5 +698,13 @@ impl TargetRuntime for EwasmTarget {
     ) {
         self.abi
             .decode(contract, function, args, data, length, spec);
+    }
+
+    fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
+        contract.builder.build_call(
+            contract.module.get_function("printMem").unwrap(),
+            &[string_ptr.into(), string_len.into()],
+            "",
+        );
     }
 }

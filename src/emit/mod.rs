@@ -144,6 +144,9 @@ pub trait TargetRuntime {
         dest: PointerValue,
     );
 
+    /// Prints a string
+    fn print(&self, contract: &Contract, string: PointerValue, length: IntValue);
+
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
 
@@ -2394,6 +2397,45 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::AssertFailure {} => {
                         runtime.assert_failure(self);
+                    }
+                    cfg::Instr::Print { expr } => {
+                        let v = self
+                            .expression(expr, &w.vars, function, runtime)
+                            .into_pointer_value();
+
+                        let data = unsafe {
+                            self.builder.build_gep(
+                                v,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(2, false),
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let data_len = unsafe {
+                            self.builder.build_gep(
+                                v,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_zero(),
+                                ],
+                                "data_len",
+                            )
+                        };
+
+                        runtime.print(
+                            &self,
+                            self.builder.build_pointer_cast(
+                                data,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "data",
+                            ),
+                            self.builder
+                                .build_load(data_len, "data_len")
+                                .into_int_value(),
+                        );
                     }
                     cfg::Instr::Call { res, func, args } => {
                         let mut parms: Vec<BasicValueEnum> = Vec::new();
