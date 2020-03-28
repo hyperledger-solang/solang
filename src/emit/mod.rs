@@ -664,12 +664,35 @@ impl<'a> Contract<'a> {
                     let rem = self
                         .builder
                         .build_alloca(left.into_int_value().get_type(), "");
+                    let quotient = self
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
 
-                    self.builder
-                        .build_call(f, &[left, right, rem.into()], "udiv")
+                    let ret = self
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
                         .try_as_basic_value()
                         .left()
-                        .unwrap()
+                        .unwrap();
+
+                    let success = self.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        self.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = self.context.append_basic_block(function, "success");
+                    let bail_block = self.context.append_basic_block(function, "bail");
+                    self.builder
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    self.builder.position_at_end(bail_block);
+
+                    self.builder.build_return(Some(&ret));
+                    self.builder.position_at_end(success_block);
+
+                    self.builder.build_load(quotient, "quotient")
                 } else {
                     self.builder
                         .build_int_unsigned_div(left.into_int_value(), right.into_int_value(), "")
@@ -686,12 +709,33 @@ impl<'a> Contract<'a> {
                     let f = self.sdivmod(bits, runtime);
 
                     let rem = self.builder.build_alloca(left.get_type(), "");
+                    let quotient = self.builder.build_alloca(left.get_type(), "");
 
-                    self.builder
-                        .build_call(f, &[left, right, rem.into()], "udiv")
+                    let ret = self
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
                         .try_as_basic_value()
                         .left()
-                        .unwrap()
+                        .unwrap();
+
+                    let success = self.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        self.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = self.context.append_basic_block(function, "success");
+                    let bail_block = self.context.append_basic_block(function, "bail");
+                    self.builder
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    self.builder.position_at_end(bail_block);
+
+                    self.builder.build_return(Some(&ret));
+                    self.builder.position_at_end(success_block);
+
+                    self.builder.build_load(quotient, "quotient")
                 } else {
                     self.builder
                         .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
@@ -707,10 +751,36 @@ impl<'a> Contract<'a> {
                 if bits > 64 {
                     let f = self.udivmod(bits, runtime);
 
-                    let rem = self.builder.build_alloca(left.get_type(), "");
+                    let rem = self
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
+                    let quotient = self
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
 
+                    let ret = self
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    let success = self.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        self.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = self.context.append_basic_block(function, "success");
+                    let bail_block = self.context.append_basic_block(function, "bail");
                     self.builder
-                        .build_call(f, &[left, right, rem.into()], "udiv");
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    self.builder.position_at_end(bail_block);
+
+                    self.builder.build_return(Some(&ret));
+                    self.builder.position_at_end(success_block);
 
                     self.builder.build_load(rem, "urem")
                 } else {
@@ -727,11 +797,32 @@ impl<'a> Contract<'a> {
 
                 if bits > 64 {
                     let f = self.sdivmod(bits, runtime);
-
                     let rem = self.builder.build_alloca(left.get_type(), "");
+                    let quotient = self.builder.build_alloca(left.get_type(), "");
 
+                    let ret = self
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "sdiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    let success = self.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        self.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = self.context.append_basic_block(function, "success");
+                    let bail_block = self.context.append_basic_block(function, "bail");
                     self.builder
-                        .build_call(f, &[left, right, rem.into()], "sdiv");
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    self.builder.position_at_end(bail_block);
+
+                    self.builder.build_return(Some(&ret));
+                    self.builder.position_at_end(success_block);
 
                     self.builder.build_load(rem, "srem")
                 } else {
@@ -1976,7 +2067,7 @@ impl<'a> Contract<'a> {
     fn emit_initializer(&self, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
         let function = self.module.add_function(
             "storage_initializers",
-            self.context.void_type().fn_type(&[], false),
+            self.context.i32_type().fn_type(&[], false),
             Some(Linkage::Internal),
         );
 
@@ -2014,7 +2105,7 @@ impl<'a> Contract<'a> {
                 self.llvm_type(&p.ty).ptr_type(AddressSpace::Generic).into()
             });
         }
-        let ftype = self.context.void_type().fn_type(&args, false);
+        let ftype = self.context.i32_type().fn_type(&args, false);
 
         let function = self
             .module
@@ -2138,7 +2229,8 @@ impl<'a> Contract<'a> {
                         w.vars[*res].value = function.get_nth_param(*arg as u32).unwrap();
                     }
                     cfg::Instr::Return { value } if value.is_empty() => {
-                        self.builder.build_return(None);
+                        self.builder
+                            .build_return(Some(&self.context.i32_type().const_zero()));
                     }
                     cfg::Instr::Return { value } => {
                         let returns_offset = resolver_function.unwrap().params.len();
@@ -2148,7 +2240,8 @@ impl<'a> Contract<'a> {
 
                             self.builder.build_store(arg.into_pointer_value(), retval);
                         }
-                        self.builder.build_return(None);
+                        self.builder
+                            .build_return(Some(&self.context.i32_type().const_zero()));
                     }
                     cfg::Instr::Set { res, expr } => {
                         let value_ref = self.expression(expr, &w.vars, function, runtime);
@@ -2332,7 +2425,29 @@ impl<'a> Contract<'a> {
                             }
                         }
 
-                        self.builder.build_call(self.functions[*func], &parms, "");
+                        let ret = self
+                            .builder
+                            .build_call(self.functions[*func], &parms, "")
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap();
+
+                        let success = self.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            ret.into_int_value(),
+                            self.context.i32_type().const_zero(),
+                            "success",
+                        );
+
+                        let success_block = self.context.append_basic_block(function, "success");
+                        let bail_block = self.context.append_basic_block(function, "bail");
+                        self.builder
+                            .build_conditional_branch(success, success_block, bail_block);
+
+                        self.builder.position_at_end(bail_block);
+
+                        self.builder.build_return(Some(&ret));
+                        self.builder.position_at_end(success_block);
 
                         if !res.is_empty() {
                             for (i, v) in f.returns.iter().enumerate() {
@@ -2443,10 +2558,27 @@ impl<'a> Contract<'a> {
                 }
             }
 
-            self.builder
+            let ret = self
+                .builder
                 .build_call(functions[i], &args, "")
                 .try_as_basic_value()
-                .left();
+                .left()
+                .unwrap();
+
+            let success = self.builder.build_int_compare(
+                IntPredicate::EQ,
+                ret.into_int_value(),
+                self.context.i32_type().const_zero(),
+                "success",
+            );
+
+            let success_block = self.context.append_basic_block(function, "success");
+            let bail_block = self.context.append_basic_block(function, "bail");
+
+            self.builder
+                .build_conditional_branch(success, success_block, bail_block);
+
+            self.builder.position_at_end(success_block);
 
             if f.returns.is_empty() {
                 // return ABI of length 0
@@ -2457,6 +2589,10 @@ impl<'a> Contract<'a> {
 
                 runtime.return_abi(&self, data, length);
             }
+
+            self.builder.position_at_end(bail_block);
+
+            self.builder.build_return(Some(&ret));
 
             cases.push((self.context.i32_type().const_int(id as u64, false), bb));
         }
@@ -2486,13 +2622,14 @@ impl<'a> Contract<'a> {
 
         let pos = self.builder.get_insert_block().unwrap();
 
-        // __udivmod256(dividend, divisor, *rem) -> quotient
+        // __udivmod256(dividend, divisor, *rem, *quotient) = error
         let function = self.module.add_function(
             &name,
-            ty.fn_type(
+            self.context.i32_type().fn_type(
                 &[
                     ty.into(),
                     ty.into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
                     ty.ptr_type(AddressSpace::Generic).into(),
                 ],
                 false,
@@ -2507,6 +2644,7 @@ impl<'a> Contract<'a> {
         let dividend = function.get_nth_param(0).unwrap().into_int_value();
         let divisor = function.get_nth_param(1).unwrap().into_int_value();
         let rem = function.get_nth_param(2).unwrap().into_pointer_value();
+        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
 
         let error = self.context.append_basic_block(function, "error");
         let next = self.context.append_basic_block(function, "next");
@@ -2537,7 +2675,9 @@ impl<'a> Contract<'a> {
         // return quotient: dividend, rem: 0
         self.builder.position_at_end(is_one_block);
         self.builder.build_store(rem, ty.const_zero());
-        self.builder.build_return(Some(&dividend));
+        self.builder.build_store(quotient_result, dividend);
+        self.builder
+            .build_return(Some(&self.context.i32_type().const_zero()));
 
         self.builder.position_at_end(next);
         let is_eq_block = self.context.append_basic_block(function, "is_eq_block");
@@ -2551,7 +2691,11 @@ impl<'a> Contract<'a> {
         // return rem: 0, quotient: 1
         self.builder.position_at_end(is_eq_block);
         self.builder.build_store(rem, ty.const_zero());
-        self.builder.build_return(Some(&ty.const_int(1, false)));
+        self.builder.build_store(rem, ty.const_zero());
+        self.builder
+            .build_store(quotient_result, ty.const_int(1, false));
+        self.builder
+            .build_return(Some(&self.context.i32_type().const_zero()));
 
         self.builder.position_at_end(next);
 
@@ -2579,7 +2723,9 @@ impl<'a> Contract<'a> {
         // return quotient: 0, rem: divisor
         self.builder.position_at_end(is_toobig_block);
         self.builder.build_store(rem, dividend);
-        self.builder.build_return(Some(&ty.const_zero()));
+        self.builder.build_store(quotient_result, ty.const_zero());
+        self.builder
+            .build_return(Some(&self.context.i32_type().const_zero()));
 
         self.builder.position_at_end(next);
 
@@ -2750,7 +2896,9 @@ impl<'a> Contract<'a> {
         self.builder
             .build_store(rem, remainder.as_basic_value().into_int_value());
         self.builder
-            .build_return(Some(&quotient.as_basic_value().into_int_value()));
+            .build_store(quotient_result, quotient.as_basic_value().into_int_value());
+        self.builder
+            .build_return(Some(&self.context.i32_type().const_zero()));
 
         self.builder.position_at_end(pos);
 
@@ -2767,13 +2915,14 @@ impl<'a> Contract<'a> {
 
         let pos = self.builder.get_insert_block().unwrap();
 
-        // __sdivmod256(dividend, divisor, *rem) -> quotient
+        // __sdivmod256(dividend, divisor, *rem, *quotient) -> error
         let function = self.module.add_function(
             &name,
-            ty.fn_type(
+            self.context.i32_type().fn_type(
                 &[
                     ty.into(),
                     ty.into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
                     ty.ptr_type(AddressSpace::Generic).into(),
                 ],
                 false,
@@ -2788,6 +2937,7 @@ impl<'a> Contract<'a> {
         let dividend = function.get_nth_param(0).unwrap().into_int_value();
         let divisor = function.get_nth_param(1).unwrap().into_int_value();
         let rem = function.get_nth_param(2).unwrap().into_pointer_value();
+        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
 
         let dividend_negative = self.builder.build_int_compare(
             IntPredicate::SLT,
@@ -2816,16 +2966,42 @@ impl<'a> Contract<'a> {
             "divisor_abs",
         );
 
-        let quotient = self
+        let ret = self
             .builder
             .build_call(
                 self.udivmod(bit, runtime),
-                &[dividend_abs, divisor_abs, rem.into()],
+                &[
+                    dividend_abs,
+                    divisor_abs,
+                    rem.into(),
+                    quotient_result.into(),
+                ],
                 "quotient",
             )
             .try_as_basic_value()
             .left()
-            .unwrap()
+            .unwrap();
+
+        let success = self.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret.into_int_value(),
+            self.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = self.context.append_basic_block(function, "success");
+        let bail_block = self.context.append_basic_block(function, "bail");
+        self.builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        self.builder.position_at_end(bail_block);
+
+        self.builder.build_return(Some(&ret));
+        self.builder.position_at_end(success_block);
+
+        let quotient = self
+            .builder
+            .build_load(quotient_result, "quotient")
             .into_int_value();
 
         let quotient = self.builder.build_select(
@@ -2848,7 +3024,9 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(posrem);
 
-        self.builder.build_return(Some(&quotient));
+        self.builder.build_store(quotient_result, quotient);
+        self.builder
+            .build_return(Some(&self.context.i32_type().const_zero()));
 
         self.builder.position_at_end(negrem);
 
@@ -2859,7 +3037,9 @@ impl<'a> Contract<'a> {
             self.builder.build_int_neg(remainder, "negative_remainder"),
         );
 
-        self.builder.build_return(Some(&quotient));
+        self.builder.build_store(quotient_result, quotient);
+        self.builder
+            .build_return(Some(&self.context.i32_type().const_zero()));
 
         self.builder.position_at_end(pos);
 

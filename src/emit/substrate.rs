@@ -1546,7 +1546,9 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract) {
-        contract.builder.build_unreachable();
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(1, false)));
     }
 
     fn abi_decode<'b>(

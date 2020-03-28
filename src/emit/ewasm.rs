@@ -300,7 +300,9 @@ impl EwasmTarget {
             Some(f) => {
                 contract.builder.build_call(contract.functions[f], &[], "");
 
-                contract.builder.build_return(None);
+                contract
+                    .builder
+                    .build_return(Some(&contract.context.i32_type().const_zero()));
             }
             None => {
                 contract.builder.build_unreachable();
@@ -594,7 +596,9 @@ impl TargetRuntime for EwasmTarget {
             "",
         );
 
-        contract.builder.build_return(None);
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
@@ -604,7 +608,9 @@ impl TargetRuntime for EwasmTarget {
             "",
         );
 
-        contract.builder.build_return(None);
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract) {
