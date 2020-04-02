@@ -41,10 +41,10 @@ void __memcpy8(void *_dest, void *_src, size_t length)
 
 void __memcpy(uint8_t *dest, uint8_t *src, size_t length)
 {
-	do
+	while (length--)
 	{
 		*dest++ = *src++;
-	} while (--length);
+	}
 }
 
 /*
