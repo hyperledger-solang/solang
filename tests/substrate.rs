@@ -255,13 +255,7 @@ impl TestRuntime {
     pub fn constructor(&self, store: &mut ContractStorage, index: usize, args: Vec<u8>) {
         let m = &self.abi.contract.constructors[index];
 
-        store.scratch = m
-            .selector
-            .to_le_bytes()
-            .to_vec()
-            .into_iter()
-            .chain(args)
-            .collect();
+        store.scratch = m.selector().into_iter().chain(args).collect();
 
         if let Some(RuntimeValue::I32(ret)) = self
             .module
@@ -277,13 +271,7 @@ impl TestRuntime {
     pub fn function(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
-        store.scratch = m
-            .selector
-            .to_le_bytes()
-            .to_vec()
-            .into_iter()
-            .chain(args)
-            .collect();
+        store.scratch = m.selector().into_iter().chain(args).collect();
 
         if let Some(RuntimeValue::I32(ret)) = self
             .module
