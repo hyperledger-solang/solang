@@ -105,19 +105,33 @@ struct StructField {
 #[derive(Deserialize, Serialize)]
 pub struct Constructor {
     pub name: usize,
-    pub selector: u32,
+    pub selector: String,
     pub docs: Vec<String>,
     args: Vec<Param>,
+}
+
+impl Constructor {
+    /// Build byte string from
+    pub fn selector(&self) -> Vec<u8> {
+        parse_selector(&self.selector)
+    }
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct Message {
     pub name: usize,
-    pub selector: u32,
+    pub selector: String,
     pub docs: Vec<String>,
     mutates: bool,
     args: Vec<Param>,
     return_type: Option<ParamType>,
+}
+
+impl Message {
+    /// Build byte string from
+    pub fn selector(&self) -> Vec<u8> {
+        parse_selector(&self.selector)
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -395,7 +409,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         .iter()
         .map(|f| Constructor {
             name: registry.string("new"),
-            selector: f.selector(),
+            selector: render_selector(f),
             args: f
                 .params
                 .iter()
@@ -441,7 +455,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
                     })
                 }
             },
-            selector: f.selector(),
+            selector: render_selector(f),
             args: f
                 .params
                 .iter()
@@ -569,4 +583,26 @@ fn parameter_to_abi(
         name: registry.string(&param.name),
         ty: ty_to_abi(&param.ty, contract, registry),
     }
+}
+
+/// Given an u32 selector, generate a byte string like: "[\"0xF8\",\"0x1E\",\"0x7E\",\"0x1A\"]"
+fn render_selector(f: &resolver::FunctionDecl) -> String {
+    format!(
+        "[{}]",
+        f.selector()
+            .to_le_bytes()
+            .iter()
+            .map(|b| format!("\"0x{:02X}\"", *b))
+            .collect::<Vec<String>>()
+            .join(",")
+    )
+}
+
+/// Given a selector like "[\"0xF8\",\"0x1E\",\"0x7E\",\"0x1A\"]", parse the bytes. This function
+/// does not validate the input.
+fn parse_selector(selector: &str) -> Vec<u8> {
+    selector[1..selector.len() - 2]
+        .split(',')
+        .map(|b_str| u8::from_str_radix(&b_str[3..5], 16).unwrap())
+        .collect()
 }
