@@ -559,7 +559,7 @@ can be cast to ``bytes`` but not to ``byte[]``.
 Mappings
 ________
 
-Mappings are a dictionary type, or a hashmap. Solidity mappings have a number of
+Mappings are a dictionary type, or a hashmap. Mappings have a number of
 limitations:
 
 - it has to have to be in contract storage, not memory
@@ -578,24 +578,42 @@ Mappings are declared with ``mapping(keytype => valuetype)``, for example:
         mapping(string => user) users;
 
         function add(string name, address addr) public {
-            user s = users[name];
+            // assigning to a storage variable creates a reference
+            user storage s = users[name];
 
             s.exists = true;
             s.addr = addr;
         }
 
-        function get(string name) public returns (bool, address) {
+        function get(string name) public view returns (bool, address) {
+            // assigning to a memory variable creates a copy
             user s = users[name];
 
-            return (s.exists, b.addr);
+            return (s.exists, s.addr);
         }
 
-        function delete(string name) public {
+        function rm(string name) public {
             delete users[name];
         }
     }
 
-If you access a non-existing field on mapping, all the fields will read as zero. So, it
+.. tip::
+
+  When assigning multiple members in a struct in a mapping, it is better to create
+  a storage variable as a reference to the struct, and then assign to the reference.
+  The add() function above could have been written as:
+
+  .. code-block:: javascript
+
+    function add(string name, address addr) public {
+        s[name].exists = true;
+        s[name].addr = addr;
+    }
+
+  Here the storage slot for struct is calculated twice, which includes an expensive
+  keccak256 calculation.
+
+If you access a non-existing field on a mapping, all the fields will read as zero. So, it
 is common practise to have a boolean field called ``exists``. Since mappings are not iterable,
 it is not possible to do a ``delete`` on an mapping, but an entry can be deleted.
 
@@ -603,13 +621,15 @@ it is not possible to do a ``delete`` on an mapping, but an entry can be deleted
 
   Solidity takes the keccak 256 hash of the key and the storage slot, and simply uses that
   to find the entry. There are no hash collision chains. This scheme is simple and avoids
-  attacks where the attacker chooses data which hashes to the same hash collision chain,
-  making the hash table very slow; it will behave like a linked list.
+  `"hash flooding" <https://www.securityweek.com/hash-table-collision-attacks-could-trigger-ddos-massive-scale>`_
+  attacks where the attacker chooses data which hashes to the same hash
+  collision chain, making the hash table very slow; it will behave like a linked list.
 
-  In order to implement collections in memory, a new scheme must be found which avoids this
-  problem. Usually this is done with `SipHash <https://en.wikipedia.org/wiki/SipHash>`_, but
-  this cannot be used on-chain since there is no place to store secrets. Collision chains
-  are needed since memory has a much smaller address space than the 256 bit storage slots.
+  In order to implement mappings in memory, a new scheme must be found which avoids this
+  attack. Usually this is done with `SipHash <https://en.wikipedia.org/wiki/SipHash>`_, but
+  this cannot be used in smart contracts since there is no place to store secrets. Collision
+  chains are needed since memory has a much smaller address space than the 256 bit storage
+  slots.
 
   Any suggestions for solving this are very welcome!
 
