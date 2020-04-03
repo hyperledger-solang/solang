@@ -411,7 +411,8 @@ impl ControlFlowGraph {
                 s
             }
             Instr::Set { res, expr } => format!(
-                "%{} = {}",
+                "ty:{} %{} = {}",
+                self.vars[*res].ty.to_string(ns),
                 self.vars[*res].id.name,
                 self.expr_to_string(ns, expr)
             ),

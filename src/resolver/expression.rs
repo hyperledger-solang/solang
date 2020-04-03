@@ -2453,10 +2453,10 @@ fn assign(
                 }
             };
 
-            let pos = vartab.temp_anonymous(&var_ty);
-
-            match var_ty {
+            match &var_ty {
                 resolver::Type::Ref(r_ty) => {
+                    let pos = vartab.temp_anonymous(&var_ty);
+
                     // reference to memory (e.g. array)
                     cfg.add(
                         vartab,
@@ -2475,9 +2475,11 @@ fn assign(
                         },
                     );
 
-                    Ok((Expression::Variable(*loc, pos), *r_ty))
+                    Ok((Expression::Variable(*loc, pos), r_ty.as_ref().clone()))
                 }
                 resolver::Type::StorageRef(r_ty) => {
+                    let pos = vartab.temp_anonymous(&r_ty);
+
                     cfg.add(
                         vartab,
                         Instr::Set {
@@ -2509,7 +2511,7 @@ fn assign(
                     }
                     cfg.writes_contract_storage = true;
 
-                    Ok((Expression::Variable(*loc, pos), *r_ty))
+                    Ok((Expression::Variable(*loc, pos), r_ty.as_ref().clone()))
                 }
                 _ => {
                     errors.push(Output::error(

@@ -308,3 +308,78 @@ fn test_string() {
         assert_eq!(store.scratch, Val(val.1).encode());
     }
 }
+
+#[test]
+fn test_user() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct AddArg(Vec<u8>, [u8; 20]);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct GetArg(Vec<u8>);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct GetRet(bool, [u8; 20]);
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract b {
+            struct user {
+                bool exists;
+                address addr;
+            }
+            mapping(string => user) users;
+        
+            function add(string name, address addr) public {
+                // assigning to a storage variable creates a reference
+                user storage s = users[name];
+        
+                s.exists = true;
+                s.addr = addr;
+            }
+        
+            function get(string name) public view returns (bool, address) {
+                // assigning to a memory variable creates a copy
+                user s = users[name];
+        
+                return (s.exists, s.addr);
+            }
+        
+            function rm(string name) public {
+                delete users[name];
+            }
+        }"##,
+    );
+
+    let mut rng = rand::thread_rng();
+
+    let mut vals = HashMap::new();
+
+    for _ in 0..100 {
+        let len = rng.gen::<usize>() % 256;
+        let mut index = Vec::new();
+        index.resize(len, 0u8);
+        rng.fill(&mut index[..]);
+        let mut val = [0u8; 20];
+        rng.fill(&mut val[..]);
+
+        runtime.function(&mut store, "add", AddArg(index.clone(), val).encode());
+
+        vals.insert(index, val);
+    }
+
+    for val in &vals {
+        runtime.function(&mut store, "get", GetArg(val.0.clone()).encode());
+
+        assert_eq!(store.scratch, GetRet(true, *val.1).encode());
+    }
+
+    // now delete them
+
+    for val in &vals {
+        runtime.function(&mut store, "rm", GetArg(val.0.clone()).encode());
+    }
+
+    for val in vals {
+        runtime.function(&mut store, "get", GetArg(val.0).encode());
+
+        assert_eq!(store.scratch, GetRet(false, [0u8; 20]).encode());
+    }
+}
