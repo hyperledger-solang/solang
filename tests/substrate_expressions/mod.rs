@@ -1347,3 +1347,52 @@ fn unaryminus_and_subtract() {
 
     runtime.function(&mut store, "test", Vec::new());
 }
+
+#[test]
+fn div() {
+    // The minus sign can be a unary negative or subtract.
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract c {
+            function test1() public {
+                // see https://solidity.readthedocs.io/en/latest/types.html#modulo
+                assert(int256(5) % int256(2) == int256(1));
+                assert(int256(5) % int256(-2) == int256(1));
+                assert(int256(-5) % int256(2) == int256(-1));
+                assert(int256(-5) % int256(-2) == int256(-1));
+
+                assert(int64(5) % int64(2) == int64(1));
+                assert(int64(5) % int64(-2) == int64(1));
+                assert(int64(-5) % int64(2) == int64(-1));
+                assert(int64(-5) % int64(-2) == int64(-1));
+            }
+
+            function test2() public {
+                // see https://github.com/hyperledger/burrow/pull/1367#issue-399914366
+                assert(int256(7) / int256(3) == int256(2));
+                assert(int256(7) / int256(-3) == int256(-2));
+                assert(int256(-7) / int256(3) == int256(-2));
+                assert(int256(-7) / int256(-3) == int256(2));
+
+                assert(int256(7) % int256(3) == int256(1));
+                assert(int256(7) % int256(-3) == int256(1));
+                assert(int256(-7) % int256(3) == int256(-1));
+                assert(int256(-7) % int256(-3) == int256(-1));
+
+                assert(int64(7) / int64(3) == int64(2));
+                assert(int64(7) / int64(-3) == int64(-2));
+                assert(int64(-7) / int64(3) == int64(-2));
+                assert(int64(-7) / int64(-3) == int64(2));
+
+                assert(int64(7) % int64(3) == int64(1));
+                assert(int64(7) % int64(-3) == int64(1));
+                assert(int64(-7) % int64(3) == int64(-1));
+                assert(int64(-7) % int64(-3) == int64(-1));
+            }
+        }"#,
+    );
+
+    runtime.function(&mut store, "test1", Vec::new());
+
+    runtime.function(&mut store, "test2", Vec::new());
+}
