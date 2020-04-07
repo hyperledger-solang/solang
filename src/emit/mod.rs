@@ -511,30 +511,37 @@ impl<'a> Contract<'a> {
 
         *data_ref = data_phi.as_basic_value().into_pointer_value();
     }
+
+    /// Emit all functions and constructors. First emit the functions, then the bodies
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
-        for func in &self.ns.functions {
-            let name = if func.name != "" {
-                format!("sol::function::{}", func.wasm_symbol(&self.ns))
+        let mut defines = Vec::new();
+
+        for resolver_func in &self.ns.functions {
+            let name = if resolver_func.name != "" {
+                format!("sol::function::{}", resolver_func.wasm_symbol(&self.ns))
             } else {
                 "sol::fallback".to_owned()
             };
 
-            let f = self.emit_func(&name, func, runtime);
-            self.functions.push(f);
+            let func_decl = self.declare_function(&name, resolver_func);
+            self.functions.push(func_decl);
+
+            defines.push((func_decl, resolver_func));
         }
 
-        self.constructors = self
-            .ns
-            .constructors
-            .iter()
-            .map(|func| {
-                self.emit_func(
-                    &format!("sol::constructor{}", func.wasm_symbol(&self.ns)),
-                    func,
-                    runtime,
-                )
-            })
-            .collect();
+        for resolver_func in &self.ns.constructors {
+            let func_decl = self.declare_function(
+                &format!("sol::constructor{}", resolver_func.wasm_symbol(&self.ns)),
+                resolver_func,
+            );
+
+            self.constructors.push(func_decl);
+            defines.push((func_decl, resolver_func));
+        }
+
+        for (func_decl, resolver_func) in defines {
+            self.define_function(resolver_func, func_decl, runtime);
+        }
     }
 
     /// The expression function recursively emits code for expressions. The BasicEnumValue it
@@ -2165,12 +2172,8 @@ impl<'a> Contract<'a> {
         function
     }
 
-    fn emit_func(
-        &self,
-        fname: &str,
-        f: &resolver::FunctionDecl,
-        runtime: &dyn TargetRuntime,
-    ) -> FunctionValue<'a> {
+    /// Emit function prototype
+    fn declare_function(&self, fname: &str, f: &resolver::FunctionDecl) -> FunctionValue<'a> {
         let mut args: Vec<BasicTypeEnum> = Vec::new();
 
         for p in &f.params {
@@ -2196,18 +2199,23 @@ impl<'a> Contract<'a> {
         }
         let ftype = self.context.i32_type().fn_type(&args, false);
 
-        let function = self
-            .module
-            .add_function(&fname, ftype, Some(Linkage::Internal));
+        self.module
+            .add_function(&fname, ftype, Some(Linkage::Internal))
+    }
 
-        let cfg = match f.cfg {
+    /// Emit function body
+    fn define_function(
+        &self,
+        resolver_func: &resolver::FunctionDecl,
+        function: FunctionValue<'a>,
+        runtime: &dyn TargetRuntime,
+    ) {
+        let cfg = match resolver_func.cfg {
             Some(ref cfg) => cfg,
             None => panic!(),
         };
 
-        self.emit_cfg(cfg, Some(f), function, runtime);
-
-        function
+        self.emit_cfg(cfg, Some(resolver_func), function, runtime);
     }
 
     #[allow(clippy::cognitive_complexity)]
