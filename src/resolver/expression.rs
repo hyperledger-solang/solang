@@ -2975,7 +2975,7 @@ fn array_subscript(
     );
 
     cfg.set_basic_block(out_of_bounds);
-    cfg.add(tab, Instr::AssertFailure {});
+    cfg.add(tab, Instr::AssertFailure { expr: None });
 
     cfg.set_basic_block(in_bounds);
 

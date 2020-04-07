@@ -1565,7 +1565,13 @@ impl TargetRuntime for SubstrateTarget {
             .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Contract) {
+    fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue) {
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_write").unwrap(),
+            &[data.into(), length.into()],
+            "",
+        );
+
         contract
             .builder
             .build_return(Some(&contract.context.i32_type().const_int(1, false)));
@@ -1589,6 +1595,78 @@ impl TargetRuntime for SubstrateTarget {
         for param in &spec.params {
             args.push(self.decode_ty(contract, function, &param.ty, None, &mut argsdata));
         }
+    }
+
+    /// Error encode
+    fn error_encode<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        arg: BasicValueEnum<'b>,
+    ) -> (PointerValue<'b>, IntValue<'b>) {
+        // first calculate how much memory we need to allocate
+        let length = contract.builder.build_int_add(
+            contract.context.i32_type().const_int(4, false),
+            self.encoded_length(arg, &resolver::Type::String, function, contract),
+            "length",
+        );
+
+        let data = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        contract.builder.build_store(
+            contract.builder.build_pointer_cast(
+                data,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            contract.context.i32_type().const_int(0x08c3_79a0, false),
+        );
+
+        let mut argsdata = contract.builder.build_pointer_cast(
+            unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[contract.context.i32_type().const_int(4, false)],
+                    "",
+                )
+            },
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
+
+        argsdata = contract
+            .builder
+            .build_call(
+                contract.module.get_function("scale_encode_string").unwrap(),
+                &[argsdata.into(), arg],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let length = contract.builder.build_int_sub(
+            contract
+                .builder
+                .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
+            contract
+                .builder
+                .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
+            "datalength",
+        );
+
+        (data, length)
     }
 
     ///  ABI encode the return values for the function

@@ -574,7 +574,16 @@ impl TargetRuntime for SabreTarget {
             .build_return(Some(&contract.context.i32_type().const_int(1, false)));
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Contract) {
+    fn error_encode<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _function: FunctionValue,
+        _arg: BasicValueEnum<'b>,
+    ) -> (PointerValue<'b>, IntValue<'b>) {
+        panic!("sabre cannot return error strings")
+    }
+
+    fn assert_failure<'b>(&self, contract: &'b Contract, _data: PointerValue, _length: IntValue) {
         contract.builder.build_unreachable();
     }
 
