@@ -61,7 +61,9 @@ pub enum Instr {
         dest: Expression,
         pos: usize,
     },
-    AssertFailure {},
+    AssertFailure {
+        expr: Option<Expression>,
+    },
     Print {
         expr: Expression,
     },
@@ -457,7 +459,10 @@ impl ControlFlowGraph {
                 self.expr_to_string(ns, offset),
                 self.vars[*local].id.name
             ),
-            Instr::AssertFailure {} => "assert-failure".to_string(),
+            Instr::AssertFailure { expr: None } => "assert-failure".to_string(),
+            Instr::AssertFailure { expr: Some(expr) } => {
+                format!("assert-failure:{}", self.expr_to_string(ns, expr))
+            }
             Instr::Call { res, func, args } => format!(
                 "{} = call {} {} {}",
                 {

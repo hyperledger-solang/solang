@@ -288,7 +288,7 @@ pub fn array_pop(
     );
 
     cfg.set_basic_block(empty_array);
-    cfg.add(tab, Instr::AssertFailure {});
+    cfg.add(tab, Instr::AssertFailure { expr: None });
 
     cfg.set_basic_block(has_elements);
     let new_length = tab.temp_anonymous(&slot_ty);

@@ -62,6 +62,13 @@ pub trait TargetRuntime {
         args: &[BasicValueEnum<'b>],
         spec: &resolver::FunctionDecl,
     ) -> (PointerValue<'b>, IntValue<'b>);
+    /// Error encode
+    fn error_encode<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        arg: BasicValueEnum<'b>,
+    ) -> (PointerValue<'b>, IntValue<'b>);
 
     // Access storage
     fn clear_storage<'a>(
@@ -154,7 +161,7 @@ pub trait TargetRuntime {
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue);
 
     /// Return failure without any result
-    fn assert_failure<'b>(&self, contract: &'b Contract);
+    fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue);
 }
 
 pub struct Contract<'a> {
@@ -2474,8 +2481,22 @@ impl<'a> Contract<'a> {
                             value.into_int_value(),
                         );
                     }
-                    cfg::Instr::AssertFailure {} => {
-                        runtime.assert_failure(self);
+                    cfg::Instr::AssertFailure { expr: None } => {
+                        runtime.assert_failure(
+                            self,
+                            self.context
+                                .i8_type()
+                                .ptr_type(AddressSpace::Generic)
+                                .const_null(),
+                            self.context.i32_type().const_zero(),
+                        );
+                    }
+                    cfg::Instr::AssertFailure { expr: Some(expr) } => {
+                        let v = self.expression(expr, &w.vars, function, runtime);
+
+                        let (data, len) = runtime.error_encode(self, function, v);
+
+                        runtime.assert_failure(self, data, len);
                     }
                     cfg::Instr::Print { expr } => {
                         let v = self
@@ -2725,7 +2746,14 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(nomatch);
 
-        runtime.assert_failure(&self);
+        runtime.assert_failure(
+            &self,
+            self.context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            self.context.i32_type().const_zero(),
+        );
     }
 
     // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which
@@ -2779,7 +2807,14 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(error);
         // throw division by zero error should be an assert
-        runtime.assert_failure(self);
+        runtime.assert_failure(
+            self,
+            self.context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            self.context.i32_type().const_zero(),
+        );
 
         self.builder.position_at_end(next);
         let is_one_block = self.context.append_basic_block(function, "is_one_block");

@@ -630,24 +630,82 @@ impl TargetRuntime for EwasmTarget {
             .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
-    fn assert_failure<'b>(&self, contract: &'b Contract) {
+    fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, len: IntValue) {
         contract.builder.build_call(
             contract.module.get_function("revert").unwrap(),
-            &[
-                contract
-                    .context
-                    .i8_type()
-                    .ptr_type(AddressSpace::Generic)
-                    .const_zero()
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-            ],
+            &[data.into(), len.into()],
             "",
         );
 
         // since revert is marked noreturn, this should be optimized away
         // however it is needed to create valid LLVM IR
         contract.builder.build_unreachable();
+    }
+
+    /// Error encode
+    fn error_encode<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        arg: BasicValueEnum<'b>,
+    ) -> (PointerValue<'b>, IntValue<'b>) {
+        // first calculate how much memory we need to allocate
+        let length = contract.builder.build_int_add(
+            contract.context.i32_type().const_int(4, false),
+            contract.context.i32_type().const_int(
+                self.abi
+                    .encoded_length(&resolver::Type::String, contract.ns),
+                false,
+            ),
+            "length",
+        );
+
+        let data = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        contract.builder.build_store(
+            contract.builder.build_pointer_cast(
+                data,
+                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            contract.context.i32_type().const_int(0x08c3_79a0, false),
+        );
+
+        let mut argsdata = unsafe {
+            contract
+                .builder
+                .build_gep(data, &[contract.context.i32_type().const_int(4, false)], "")
+        };
+
+        self.abi.encode_ty(
+            contract,
+            function,
+            &resolver::Type::String,
+            arg,
+            &mut argsdata,
+        );
+
+        let length = contract.builder.build_int_sub(
+            contract
+                .builder
+                .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
+            contract
+                .builder
+                .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
+            "datalength",
+        );
+
+        (data, length)
     }
 
     fn abi_encode<'b>(

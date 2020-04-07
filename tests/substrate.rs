@@ -29,6 +29,7 @@ mod substrate_enums;
 mod substrate_expressions;
 
 mod substrate_arrays;
+mod substrate_calls;
 mod substrate_first;
 mod substrate_functions;
 mod substrate_mappings;
@@ -280,6 +281,22 @@ impl TestRuntime {
         {
             if ret != 0 {
                 panic!("non zero return")
+            }
+        }
+    }
+
+    pub fn function_expect_revert(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
+        let m = self.abi.get_function(name).unwrap();
+
+        store.scratch = m.selector().into_iter().chain(args).collect();
+
+        if let Some(RuntimeValue::I32(ret)) = self
+            .module
+            .invoke_export("call", &[], store)
+            .expect("failed to call function")
+        {
+            if ret != 1 {
+                panic!("non one return")
             }
         }
     }
