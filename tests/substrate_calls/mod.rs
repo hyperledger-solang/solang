@@ -14,6 +14,22 @@ fn revert() {
             function test() public {
                 revert("yo!");
             }
+
+            function a() public {
+                b();
+            }
+
+            function b() public {
+                c();
+            }
+
+            function c() public {
+                d();
+            }
+
+            function d() public {
+                revert("revert value has to be passed down the stack");
+            }
         }"##,
     );
 
@@ -22,6 +38,17 @@ fn revert() {
     assert_eq!(
         store.scratch,
         RevertReturn(0x08c3_79a0, "yo!".to_string()).encode()
+    );
+
+    runtime.function_expect_revert(&mut store, "a", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        RevertReturn(
+            0x08c3_79a0,
+            "revert value has to be passed down the stack".to_string()
+        )
+        .encode()
     );
 
     let (runtime, mut store) = build_solidity(
