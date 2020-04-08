@@ -170,7 +170,7 @@ impl SabreTarget {
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
 
-        if let Some(con) = contract.ns.constructors.get(0) {
+        if let Some(con) = contract.contract.constructors.get(0) {
             let mut args = Vec::new();
 
             // insert abi decode
@@ -192,7 +192,7 @@ impl SabreTarget {
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(
-            &contract.ns.functions,
+            &contract.contract.functions,
             &contract.functions,
             argsdata,
             argslen,
@@ -204,7 +204,7 @@ impl SabreTarget {
         // emit fallback code
         contract.builder.position_at_end(fallback_block);
 
-        match contract.ns.fallback_function() {
+        match contract.contract.fallback_function() {
             Some(f) => {
                 contract.builder.build_call(contract.functions[f], &[], "");
 
@@ -598,7 +598,7 @@ impl TargetRuntime for SabreTarget {
         let length = contract.context.i32_type().const_int(
             spec.returns
                 .iter()
-                .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
+                .map(|arg| self.abi.encoded_length(&arg.ty, contract.contract))
                 .sum(),
             false,
         );

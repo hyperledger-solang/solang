@@ -6,7 +6,6 @@ use num_traits::{One, Zero};
 use output::{Note, Output};
 use parser::ast;
 use std::collections::HashMap;
-use std::fmt;
 use std::ops::Mul;
 use tiny_keccak::keccak256;
 use Target;
@@ -47,7 +46,7 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn to_string(&self, ns: &Contract) -> String {
+    pub fn to_string(&self, contract: &Contract, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Address => "address".to_string(),
@@ -56,11 +55,11 @@ impl Type {
             Type::Bytes(n) => format!("bytes{}", n),
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
-            Type::Enum(n) => format!("enum {}.{}", ns.name, ns.enums[*n].name),
-            Type::Struct(n) => format!("struct {}.{}", ns.name, ns.structs[*n].name),
+            Type::Enum(n) => format!("enum {}", ns.enums[*n].print_to_string()),
+            Type::Struct(n) => format!("struct {}.{}", contract.name, contract.structs[*n].name),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_string(ns),
+                ty.to_string(contract, ns),
                 len.iter()
                     .map(|l| match l {
                         None => "[]".to_string(),
@@ -68,9 +67,13 @@ impl Type {
                     })
                     .collect::<String>()
             ),
-            Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
-            Type::Ref(r) => r.to_string(ns),
-            Type::StorageRef(ty) => format!("storage {}", ty.to_string(ns)),
+            Type::Mapping(k, v) => format!(
+                "mapping({} => {})",
+                k.to_string(contract, ns),
+                v.to_string(contract, ns)
+            ),
+            Type::Ref(r) => r.to_string(contract, ns),
+            Type::StorageRef(ty) => format!("storage {}", ty.to_string(contract, ns)),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -89,7 +92,7 @@ impl Type {
         }
     }
 
-    pub fn to_signature_string(&self, ns: &Contract) -> String {
+    pub fn to_signature_string(&self, contract: &Contract, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Address => "address".to_string(),
@@ -98,10 +101,10 @@ impl Type {
             Type::Bytes(n) => format!("bytes{}", n),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
-            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(ns),
+            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(contract, ns),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_signature_string(ns),
+                ty.to_signature_string(contract, ns),
                 len.iter()
                     .map(|l| match l {
                         None => "[]".to_string(),
@@ -109,8 +112,8 @@ impl Type {
                     })
                     .collect::<String>()
             ),
-            Type::Ref(r) => r.to_string(ns),
-            Type::StorageRef(r) => r.to_string(ns),
+            Type::Ref(r) => r.to_string(contract, ns),
+            Type::StorageRef(r) => r.to_string(contract, ns),
             Type::Struct(_) => "tuple".to_owned(),
             Type::Mapping(_, _) => unreachable!(),
             Type::Undef => "undefined".to_owned(),
@@ -373,8 +376,20 @@ pub struct StructDecl {
 
 pub struct EnumDecl {
     pub name: String,
+    pub contract: Option<String>,
     pub ty: Type,
     pub values: HashMap<String, (ast::Loc, usize)>,
+}
+
+impl EnumDecl {
+    /// Make the enum name into a string for printing. The enum can be declared either
+    /// inside or outside a contract.
+    pub fn print_to_string(&self) -> String {
+        match &self.contract {
+            Some(c) => format!("{}.{}", c, self.name),
+            None => self.name.to_owned(),
+        }
+    }
 }
 
 pub struct Parameter {
@@ -407,14 +422,15 @@ impl FunctionDecl {
         visibility: ast::Visibility,
         params: Vec<Parameter>,
         returns: Vec<Parameter>,
-        ns: &Contract,
+        contract: &Contract,
+        ns: &Namespace,
     ) -> Self {
         let signature = format!(
             "{}({})",
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_signature_string(ns))
+                .map(|p| p.ty.to_signature_string(contract, ns))
                 .collect::<Vec<String>>()
                 .join(",")
         );
@@ -442,7 +458,7 @@ impl FunctionDecl {
     }
 
     /// Return a unique string for this function which is a valid wasm symbol
-    pub fn wasm_symbol(&self, ns: &Contract) -> String {
+    pub fn wasm_symbol(&self, contract: &Contract, ns: &Namespace) -> String {
         let mut sig = self.name.to_owned();
 
         if !self.params.is_empty() {
@@ -453,7 +469,7 @@ impl FunctionDecl {
                     sig.push('_');
                 }
 
-                fn type_to_wasm_name(ty: &Type, ns: &Contract) -> String {
+                fn type_to_wasm_name(ty: &Type, contract: &Contract, ns: &Namespace) -> String {
                     match ty {
                         Type::Bool => "bool".to_string(),
                         Type::Address => "address".to_string(),
@@ -462,11 +478,11 @@ impl FunctionDecl {
                         Type::Bytes(n) => format!("bytes{}", n),
                         Type::DynamicBytes => "bytes".to_string(),
                         Type::String => "string".to_string(),
-                        Type::Enum(i) => ns.enums[*i].name.to_owned(),
-                        Type::Struct(i) => ns.structs[*i].name.to_owned(),
+                        Type::Enum(i) => ns.enums[*i].print_to_string(),
+                        Type::Struct(i) => contract.structs[*i].name.to_owned(),
                         Type::Array(ty, len) => format!(
                             "{}{}",
-                            ty.to_string(ns),
+                            ty.to_string(contract, ns),
                             len.iter()
                                 .map(|r| match r {
                                     None => ":".to_string(),
@@ -476,16 +492,16 @@ impl FunctionDecl {
                         ),
                         Type::Mapping(k, v) => format!(
                             "mapping:{}:{}",
-                            type_to_wasm_name(k, ns),
-                            type_to_wasm_name(v, ns)
+                            type_to_wasm_name(k, contract, ns),
+                            type_to_wasm_name(v, contract, ns)
                         ),
                         Type::Undef => unreachable!(),
-                        Type::Ref(r) => type_to_wasm_name(r, ns),
-                        Type::StorageRef(r) => type_to_wasm_name(r, ns),
+                        Type::Ref(r) => type_to_wasm_name(r, contract, ns),
+                        Type::StorageRef(r) => type_to_wasm_name(r, contract, ns),
                     }
                 }
 
-                sig.push_str(&type_to_wasm_name(&p.ty, ns));
+                sig.push_str(&type_to_wasm_name(&p.ty, contract, ns));
             }
         }
 
@@ -541,6 +557,7 @@ pub enum Symbol {
 /// When resolving a Solidity file, this holds all the resolved items
 pub struct Namespace {
     pub target: Target,
+    pub enums: Vec<EnumDecl>,
     pub contracts: Vec<Contract>,
     symbols: HashMap<String, Symbol>,
 }
@@ -549,6 +566,7 @@ impl Namespace {
     pub fn new(target: Target) -> Self {
         Namespace {
             target,
+            enums: Vec::new(),
             contracts: Vec::new(),
             symbols: HashMap::new(),
         }
@@ -588,7 +606,6 @@ impl Namespace {
 pub struct Contract {
     pub doc: Vec<String>,
     pub name: String,
-    pub enums: Vec<EnumDecl>,
     // events
     pub structs: Vec<StructDecl>,
     pub constructors: Vec<FunctionDecl>,
@@ -1016,8 +1033,8 @@ impl Contract {
         None
     }
 
-    pub fn abi(&self, target: Target, verbose: bool) -> (String, &'static str) {
-        abi::generate_abi(self, target, verbose)
+    pub fn abi(&self, ns: &Namespace, verbose: bool) -> (String, &'static str) {
+        abi::generate_abi(self, ns, verbose)
     }
 
     pub fn emit<'a>(
@@ -1029,36 +1046,35 @@ impl Contract {
     ) -> emit::Contract {
         emit::Contract::build(context, self, ns, filename, opt)
     }
-}
 
-impl fmt::Display for Contract {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "#\n# Contract: {}\n#\n\n", self.name)?;
+    /// Print the entire contract; storage initializers, constructors and functions and their CFGs
+    pub fn print_to_string(&self, ns: &Namespace) -> String {
+        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
 
-        writeln!(f, "# storage initializer")?;
-        writeln!(f, "{}", &self.initializer.to_string(self))?;
+        out += "# storage initializer\n";
+        out += &self.initializer.to_string(self, ns);
 
         for func in &self.constructors {
-            writeln!(f, "# constructor {}", func.signature)?;
+            out += &format!("# constructor {}\n", func.signature);
 
             if let Some(ref cfg) = func.cfg {
-                write!(f, "{}", &cfg.to_string(self))?;
+                out += &cfg.to_string(self, ns);
             }
         }
 
         for (i, func) in self.functions.iter().enumerate() {
             if func.name != "" {
-                writeln!(f, "# function({}) {}", i, func.signature)?;
+                out += &format!("# function({}) {}", i, func.signature);
             } else {
-                writeln!(f, "# fallback({})", i)?;
+                out += &format!("# fallback({})", i);
             }
 
             if let Some(ref cfg) = func.cfg {
-                writeln!(f, "{}", &cfg.to_string(self))?;
+                out += &cfg.to_string(self, ns);
             }
         }
 
-        Ok(())
+        out
     }
 }
 
@@ -1105,7 +1121,6 @@ fn resolve_contract(
     let mut contract = Contract {
         name: def.name.name.to_string(),
         doc: def.doc.clone(),
-        enums: Vec::new(),
         structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
@@ -1188,6 +1203,7 @@ fn resolve_contract(
             Vec::new(),
             Vec::new(),
             &contract,
+            ns,
         );
 
         let mut vartab = Vartable::new();
@@ -1323,13 +1339,14 @@ fn enum_decl(
 
     let decl = EnumDecl {
         name: enum_.name.name.to_string(),
+        contract: Some(contract.name.to_owned()),
         ty: Type::Uint(bits as u16),
         values: entries,
     };
 
-    let pos = contract.enums.len();
+    let pos = ns.enums.len();
 
-    contract.enums.push(decl);
+    ns.enums.push(decl);
 
     if !contract.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), ns, errors) {
         valid = false;
@@ -1354,7 +1371,6 @@ fn enum_256values_is_uint8() {
     let mut contract = Contract {
         name: "foo".to_string(),
         doc: Vec::new(),
-        enums: Vec::new(),
         structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
@@ -1371,7 +1387,7 @@ fn enum_256values_is_uint8() {
     });
 
     assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
-    assert_eq!(contract.enums.last().unwrap().ty, Type::Uint(8));
+    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
         e.values.push(ast::Identifier {
@@ -1384,7 +1400,7 @@ fn enum_256values_is_uint8() {
 
     e.name.name = "foo2".to_owned();
     assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
-    assert_eq!(contract.enums.last().unwrap().ty, Type::Uint(8));
+    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -1393,5 +1409,5 @@ fn enum_256values_is_uint8() {
 
     e.name.name = "foo3".to_owned();
     assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
-    assert_eq!(contract.enums.last().unwrap().ty, Type::Uint(16));
+    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }

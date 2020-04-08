@@ -271,7 +271,7 @@ impl SubstrateTarget {
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(
-            &contract.ns.constructors,
+            &contract.contract.constructors,
             &contract.constructors,
             deploy_args,
             deploy_args_length,
@@ -300,7 +300,7 @@ impl SubstrateTarget {
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(
-            &contract.ns.functions,
+            &contract.contract.functions,
             &contract.functions,
             call_args,
             call_args_length,
@@ -312,7 +312,7 @@ impl SubstrateTarget {
         // emit fallback code
         contract.builder.position_at_end(fallback_block);
 
-        if let Some(fallback) = contract.ns.fallback_function() {
+        if let Some(fallback) = contract.contract.fallback_function() {
             contract
                 .builder
                 .build_call(contract.functions[fallback], &[], "");
@@ -478,7 +478,7 @@ impl SubstrateTarget {
                 let to =
                     to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
                             to,
@@ -909,7 +909,7 @@ impl SubstrateTarget {
                 }
             }
             resolver::Type::Struct(n) => {
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
@@ -970,7 +970,7 @@ impl SubstrateTarget {
             resolver::Type::Struct(n) => {
                 let mut sum = contract.context.i32_type().const_zero();
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
                     let mut elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
@@ -1023,7 +1023,7 @@ impl SubstrateTarget {
                 let elem_ty = ty.array_elem();
                 let llvm_elem_ty = contract.llvm_var(&elem_ty);
 
-                if elem_ty.is_dynamic(contract.ns) {
+                if elem_ty.is_dynamic(contract.contract) {
                     let mut sum = contract.context.i32_type().const_zero();
 
                     contract.emit_static_loop_with_int(

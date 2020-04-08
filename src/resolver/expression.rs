@@ -277,7 +277,8 @@ fn coerce(
     l_loc: &ast::Loc,
     r: &resolver::Type,
     r_loc: &ast::Loc,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<resolver::Type, ()> {
     let l = match l {
@@ -295,14 +296,15 @@ fn coerce(
         return Ok(l.clone());
     }
 
-    coerce_int(l, l_loc, r, r_loc, true, ns, errors)
+    coerce_int(l, l_loc, r, r_loc, true, contract, ns, errors)
 }
 
 fn get_int_length(
     l: &resolver::Type,
     l_loc: &ast::Loc,
     allow_bytes: bool,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<(u16, bool), ()> {
     match l {
@@ -312,7 +314,7 @@ fn get_int_length(
         resolver::Type::Enum(n) => {
             errors.push(Output::error(
                 *l_loc,
-                format!("type enum {}.{} not allowed", ns.name, ns.enums[*n].name),
+                format!("type enum {} not allowed", ns.enums[*n].print_to_string(),),
             ));
             Err(())
         }
@@ -321,7 +323,7 @@ fn get_int_length(
                 *l_loc,
                 format!(
                     "type struct {}.{} not allowed",
-                    ns.name, ns.structs[*n].name
+                    contract.name, contract.structs[*n].name
                 ),
             ));
             Err(())
@@ -329,19 +331,24 @@ fn get_int_length(
         resolver::Type::Array(_, _) => {
             errors.push(Output::error(
                 *l_loc,
-                format!("type array {} not allowed", l.to_string(ns)),
+                format!("type array {} not allowed", l.to_string(contract, ns)),
             ));
             Err(())
         }
-        resolver::Type::Ref(n) => get_int_length(n, l_loc, allow_bytes, ns, errors),
-        resolver::Type::StorageRef(n) => get_int_length(n, l_loc, allow_bytes, ns, errors),
+        resolver::Type::Ref(n) => get_int_length(n, l_loc, allow_bytes, contract, ns, errors),
+        resolver::Type::StorageRef(n) => {
+            get_int_length(n, l_loc, allow_bytes, contract, ns, errors)
+        }
         resolver::Type::Undef => {
             unreachable!();
         }
         _ => {
             errors.push(Output::error(
                 *l_loc,
-                format!("expression of type {} not allowed", l.to_string(ns)),
+                format!(
+                    "expression of type {} not allowed",
+                    l.to_string(contract, ns)
+                ),
             ));
             Err(())
         }
@@ -354,7 +361,8 @@ fn coerce_int(
     r: &resolver::Type,
     r_loc: &ast::Loc,
     allow_bytes: bool,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<resolver::Type, ()> {
     let l = match l {
@@ -380,9 +388,9 @@ fn coerce_int(
         _ => (),
     }
 
-    let (left_len, left_signed) = get_int_length(l, l_loc, false, ns, errors)?;
+    let (left_len, left_signed) = get_int_length(l, l_loc, false, contract, ns, errors)?;
 
-    let (right_len, right_signed) = get_int_length(r, r_loc, false, ns, errors)?;
+    let (right_len, right_signed) = get_int_length(r, r_loc, false, contract, ns, errors)?;
 
     Ok(match (left_signed, right_signed) {
         (true, true) => resolver::Type::Int(cmp::max(left_len, right_len)),
@@ -433,7 +441,8 @@ pub fn cast(
     from: &resolver::Type,
     to: &resolver::Type,
     implicit: bool,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<Expression, ()> {
     if from == to {
@@ -448,6 +457,7 @@ pub fn cast(
             r,
             to,
             implicit,
+            contract,
             ns,
             errors,
         );
@@ -456,7 +466,7 @@ pub fn cast(
     // If it's a storage reference then load the value. The expr is the storage slot
     if let resolver::Type::StorageRef(r) = from {
         if let Expression::StorageBytesSubscript(_, _, _) = expr {
-            return cast(loc, expr, r, to, implicit, ns, errors);
+            return cast(loc, expr, r, to, implicit, contract, ns, errors);
         } else {
             return cast(
                 loc,
@@ -464,6 +474,7 @@ pub fn cast(
                 r,
                 to,
                 implicit,
+                contract,
                 ns,
                 errors,
             );
@@ -504,7 +515,7 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion cannot change negative number to {}",
-                        to.to_string(ns)
+                        to.to_string(contract, ns)
                     ),
                 ));
 
@@ -514,8 +525,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion would truncate from {} to {}",
-                        from.to_string(ns),
-                        to.to_string(ns)
+                        from.to_string(contract, ns),
+                        to.to_string(contract, ns)
                     ),
                 ));
 
@@ -532,8 +543,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion would truncate from {} to {}",
-                        from.to_string(ns),
-                        to.to_string(ns)
+                        from.to_string(contract, ns),
+                        to.to_string(contract, ns)
                     ),
                 ));
 
@@ -551,8 +562,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion would truncate from {} to {}",
-                        from.to_string(ns),
-                        to.to_string(ns)
+                        from.to_string(contract, ns),
+                        to.to_string(contract, ns)
                     ),
                 ));
 
@@ -590,8 +601,8 @@ pub fn cast(
                             *loc,
                             format!(
                                 "implicit conversion would truncate from {} to {}",
-                                from.to_string(ns),
-                                to.to_string(ns)
+                                from.to_string(contract, ns),
+                                to.to_string(contract, ns)
                             ),
                         ));
                         Err(())
@@ -611,8 +622,8 @@ pub fn cast(
                         *loc,
                         format!(
                             "implicit conversion would truncate from {} to {}",
-                            from.to_string(ns),
-                            to.to_string(ns)
+                            from.to_string(contract, ns),
+                            to.to_string(contract, ns)
                         ),
                     ));
                     Err(())
@@ -632,8 +643,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion would change sign from {} to {}",
-                        from.to_string(ns),
-                        to.to_string(ns)
+                        from.to_string(contract, ns),
+                        to.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -651,8 +662,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion would change sign from {} to {}",
-                        from.to_string(ns),
-                        to.to_string(ns)
+                        from.to_string(contract, ns),
+                        to.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -672,7 +683,7 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion from {} to address not allowed",
-                        from.to_string(ns)
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -692,7 +703,7 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from address not allowed",
-                        from.to_string(ns)
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -711,8 +722,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion would truncate from {} to {}",
-                        from.to_string(ns),
-                        to.to_string(ns)
+                        from.to_string(contract, ns),
+                        to.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -756,8 +767,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -766,8 +777,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -784,8 +795,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -794,8 +805,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -811,8 +822,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -821,8 +832,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -838,8 +849,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "implicit conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -848,8 +859,8 @@ pub fn cast(
                     *loc,
                     format!(
                         "conversion to {} from {} not allowed",
-                        to.to_string(ns),
-                        from.to_string(ns)
+                        to.to_string(contract, ns),
+                        from.to_string(contract, ns)
                     ),
                 ));
                 Err(())
@@ -895,8 +906,8 @@ pub fn cast(
                 *loc,
                 format!(
                     "conversion from {} to {} not possible",
-                    from.to_string(ns),
-                    to.to_string(ns)
+                    from.to_string(contract, ns),
+                    to.to_string(contract, ns)
                 ),
             ));
             Err(())
@@ -1042,6 +1053,7 @@ pub fn expression(
                 &r.loc(),
                 false,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1055,6 +1067,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     Box::new(cast(
@@ -1064,6 +1077,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                 ),
@@ -1081,6 +1095,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1094,6 +1109,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     Box::new(cast(
@@ -1103,6 +1119,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                 ),
@@ -1120,6 +1137,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1133,6 +1151,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     Box::new(cast(
@@ -1142,6 +1161,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                 ),
@@ -1159,6 +1179,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1172,6 +1193,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     Box::new(cast(
@@ -1181,6 +1203,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                 ),
@@ -1193,8 +1216,9 @@ pub fn expression(
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
-            let _ = get_int_length(&left_type, &l.loc(), true, contract, errors)?;
-            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, contract, errors)?;
+            let _ = get_int_length(&left_type, &l.loc(), true, contract, ns, errors)?;
+            let (right_length, _) =
+                get_int_length(&right_type, &r.loc(), false, contract, ns, errors)?;
 
             Ok((
                 Expression::ShiftLeft(
@@ -1211,8 +1235,9 @@ pub fn expression(
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
-            let _ = get_int_length(&left_type, &l.loc(), true, contract, errors)?;
-            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, contract, errors)?;
+            let _ = get_int_length(&left_type, &l.loc(), true, contract, ns, errors)?;
+            let (right_length, _) =
+                get_int_length(&right_type, &r.loc(), false, contract, ns, errors)?;
 
             Ok((
                 Expression::ShiftRight(
@@ -1235,6 +1260,7 @@ pub fn expression(
                 &r.loc(),
                 false,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1248,6 +1274,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     Box::new(cast(
@@ -1257,6 +1284,7 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                 ),
@@ -1274,6 +1302,7 @@ pub fn expression(
                 &r.loc(),
                 false,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1288,6 +1317,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1297,6 +1327,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1313,6 +1344,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1322,6 +1354,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1340,6 +1373,7 @@ pub fn expression(
                 &r.loc(),
                 false,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1354,6 +1388,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1363,6 +1398,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1379,6 +1415,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1388,6 +1425,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1415,6 +1453,7 @@ pub fn expression(
                 &e.loc(),
                 false,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1428,9 +1467,19 @@ pub fn expression(
                         &ty,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
-                    Box::new(cast(&e.loc(), exp, &exp_type, &ty, true, contract, errors)?),
+                    Box::new(cast(
+                        &e.loc(),
+                        exp,
+                        &exp_type,
+                        &ty,
+                        true,
+                        contract,
+                        ns,
+                        errors,
+                    )?),
                 ),
                 ty,
             ))
@@ -1448,6 +1497,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1462,6 +1512,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1471,6 +1522,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1487,6 +1539,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1496,6 +1549,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1514,6 +1568,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1528,6 +1583,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1537,6 +1593,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1553,6 +1610,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1562,6 +1620,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1580,6 +1639,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1594,6 +1654,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1603,6 +1664,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1619,6 +1681,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1628,6 +1691,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1646,6 +1710,7 @@ pub fn expression(
                 &r.loc(),
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1660,6 +1725,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1669,6 +1735,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1685,6 +1752,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                         Box::new(cast(
@@ -1694,6 +1762,7 @@ pub fn expression(
                             &ty,
                             true,
                             contract,
+                            ns,
                             errors,
                         )?),
                     ),
@@ -1726,6 +1795,7 @@ pub fn expression(
                         &resolver::Type::Bool,
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                 ),
@@ -1735,7 +1805,7 @@ pub fn expression(
         ast::Expression::Complement(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, true, contract, errors)?;
+            get_int_length(&expr_type, loc, true, contract, ns, errors)?;
 
             Ok((Expression::Complement(*loc, Box::new(expr)), expr_type))
         }
@@ -1753,7 +1823,7 @@ pub fn expression(
             } else {
                 let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
-                get_int_length(&expr_type, loc, false, contract, errors)?;
+                get_int_length(&expr_type, loc, false, contract, ns, errors)?;
 
                 Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
             }
@@ -1761,7 +1831,7 @@ pub fn expression(
         ast::Expression::UnaryPlus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, false, contract, errors)?;
+            get_int_length(&expr_type, loc, false, contract, ns, errors)?;
 
             Ok((expr, expr_type))
         }
@@ -1778,6 +1848,7 @@ pub fn expression(
                 &resolver::Type::Bool,
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1787,6 +1858,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -1827,7 +1899,7 @@ pub fn expression(
                         format!(
                             "variable ‘{}’ of incorrect type {}",
                             id.name.to_string(),
-                            v.ty.to_string(contract)
+                            v.ty.to_string(contract, ns)
                         ),
                     ));
                     return Err(());
@@ -1850,7 +1922,7 @@ pub fn expression(
                 Storage::Local => Expression::Variable(id.loc, v.pos),
             };
 
-            get_int_length(&v.ty, loc, false, contract, errors)?;
+            get_int_length(&v.ty, loc, false, contract, ns, errors)?;
 
             match expr {
                 ast::Expression::PostIncrement(_, _) => {
@@ -2077,7 +2149,7 @@ pub fn expression(
                             expression(&args[0], cfg, contract, ns, vartab, errors)?;
 
                         Ok((
-                            cast(loc, expr, &expr_type, &to, false, contract, errors)?,
+                            cast(loc, expr, &expr_type, &to, false, contract, ns, errors)?,
                             to,
                         ))
                     };
@@ -2119,11 +2191,11 @@ pub fn expression(
         ast::Expression::MemberAccess(loc, e, id) => {
             if let ast::Expression::Variable(namespace) = e.as_ref() {
                 if let Some(e) = contract.resolve_enum(namespace) {
-                    return match contract.enums[e].values.get(&id.name) {
+                    return match ns.enums[e].values.get(&id.name) {
                         Some((_, val)) => Ok((
                             Expression::NumberLiteral(
                                 *loc,
-                                contract.enums[e].ty.bits(),
+                                ns.enums[e].ty.bits(),
                                 BigInt::from_usize(*val).unwrap(),
                             ),
                             resolver::Type::Enum(e),
@@ -2133,7 +2205,8 @@ pub fn expression(
                                 id.loc,
                                 format!(
                                     "enum {} does not have value {}",
-                                    contract.enums[e].name, id.name
+                                    ns.enums[e].print_to_string(),
+                                    id.name
                                 ),
                             ));
                             Err(())
@@ -2269,7 +2342,7 @@ pub fn expression(
         ast::Expression::Or(loc, left, right) => {
             let boolty = resolver::Type::Bool;
             let (l, l_type) = expression(left, cfg, contract, ns, vartab, errors)?;
-            let l = cast(&loc, l, &l_type, &boolty, true, contract, errors)?;
+            let l = cast(&loc, l, &l_type, &boolty, true, contract, ns, errors)?;
 
             let mut tab = match vartab {
                 &mut Some(ref mut tab) => tab,
@@ -2288,6 +2361,7 @@ pub fn expression(
                                 &resolver::Type::Bool,
                                 true,
                                 contract,
+                                ns,
                                 errors,
                             )?),
                         ),
@@ -2332,6 +2406,7 @@ pub fn expression(
                 &resolver::Type::Bool,
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -2351,7 +2426,7 @@ pub fn expression(
         ast::Expression::And(loc, left, right) => {
             let boolty = resolver::Type::Bool;
             let (l, l_type) = expression(left, cfg, contract, ns, vartab, errors)?;
-            let l = cast(&loc, l, &l_type, &boolty, true, contract, errors)?;
+            let l = cast(&loc, l, &l_type, &boolty, true, contract, ns, errors)?;
 
             let mut tab = match vartab {
                 &mut Some(ref mut tab) => tab,
@@ -2370,6 +2445,7 @@ pub fn expression(
                                 &resolver::Type::Bool,
                                 true,
                                 contract,
+                                ns,
                                 errors,
                             )?),
                         ),
@@ -2414,6 +2490,7 @@ pub fn expression(
                 &resolver::Type::Bool,
                 true,
                 contract,
+                ns,
                 errors,
             )?;
 
@@ -2454,7 +2531,7 @@ fn new(
                     *loc,
                     format!(
                         "new cannot allocate fixed array type ‘{}’",
-                        ty.to_string(contract)
+                        ty.to_string(contract, ns)
                     ),
                 ));
                 return Err(());
@@ -2464,7 +2541,7 @@ fn new(
         _ => {
             errors.push(Output::error(
                 *loc,
-                format!("new cannot allocate type ‘{}’", ty.to_string(contract)),
+                format!("new cannot allocate type ‘{}’", ty.to_string(contract, ns)),
             ));
             return Err(());
         }
@@ -2488,7 +2565,7 @@ fn new(
                 size_loc,
                 format!(
                     "new size argument must be unsigned integer, not ‘{}’",
-                    size_ty.to_string(contract)
+                    size_ty.to_string(contract, ns)
                 ),
             ));
             return Err(());
@@ -2545,6 +2622,7 @@ fn equal(
                     &right_type.deref(),
                     true,
                     contract,
+                    ns,
                     errors,
                 )?)),
                 StringLocation::CompileTime(l.clone()),
@@ -2565,6 +2643,7 @@ fn equal(
                     &left_type.deref(),
                     true,
                     contract,
+                    ns,
                     errors,
                 )?)),
                 StringLocation::CompileTime(literal.clone()),
@@ -2586,6 +2665,7 @@ fn equal(
                     &left_type.deref(),
                     true,
                     contract,
+                    ns,
                     errors,
                 )?)),
                 StringLocation::RunTime(Box::new(cast(
@@ -2595,6 +2675,7 @@ fn equal(
                     &right_type.deref(),
                     true,
                     contract,
+                    ns,
                     errors,
                 )?)),
             ));
@@ -2608,6 +2689,7 @@ fn equal(
         &right_type,
         &r.loc(),
         contract,
+        ns,
         errors,
     )?;
 
@@ -2620,6 +2702,7 @@ fn equal(
             &ty,
             true,
             contract,
+            ns,
             errors,
         )?),
         Box::new(cast(
@@ -2629,6 +2712,7 @@ fn equal(
             &ty,
             true,
             contract,
+            ns,
             errors,
         )?),
     ))
@@ -2714,6 +2798,7 @@ fn addition(
         &r.loc(),
         false,
         contract,
+        ns,
         errors,
     )?;
 
@@ -2727,6 +2812,7 @@ fn addition(
                 &ty,
                 true,
                 contract,
+                ns,
                 errors,
             )?),
             Box::new(cast(
@@ -2736,6 +2822,7 @@ fn addition(
                 &ty,
                 true,
                 contract,
+                ns,
                 errors,
             )?),
         ),
@@ -2777,7 +2864,9 @@ fn assign(
                 vartab,
                 Instr::Set {
                     res: var.pos,
-                    expr: cast(&id.loc, expr, &expr_type, &var.ty, true, contract, errors)?,
+                    expr: cast(
+                        &id.loc, expr, &expr_type, &var.ty, true, contract, ns, errors,
+                    )?,
                 },
             );
 
@@ -2838,6 +2927,7 @@ fn assign(
                                 &r_ty,
                                 true,
                                 contract,
+                                ns,
                                 errors,
                             )?,
                         },
@@ -2868,6 +2958,7 @@ fn assign(
                                 &r_ty,
                                 true,
                                 contract,
+                                ns,
                                 errors,
                             )?,
                         },
@@ -2931,8 +3022,9 @@ fn assign_expr(
         let set = match expr {
             ast::Expression::AssignShiftLeft(_, _, _)
             | ast::Expression::AssignShiftRight(_, _, _) => {
-                let left_length = get_int_length(&ty, &loc, true, contract, errors)?;
-                let right_length = get_int_length(&set_type, &e.loc(), false, contract, errors)?;
+                let left_length = get_int_length(&ty, &loc, true, contract, ns, errors)?;
+                let right_length =
+                    get_int_length(&set_type, &e.loc(), false, contract, ns, errors)?;
 
                 // TODO: does shifting by negative value need compiletime/runtime check?
                 if left_length == right_length {
@@ -2945,7 +3037,7 @@ fn assign_expr(
                     Expression::Trunc(*loc, ty.clone(), Box::new(set))
                 }
             }
-            _ => cast(&var.loc(), set, &set_type, &ty, true, contract, errors)?,
+            _ => cast(&var.loc(), set, &set_type, &ty, true, contract, ns, errors)?,
         };
 
         Ok(match expr {
@@ -3015,7 +3107,7 @@ fn assign_expr(
                         format!(
                             "variable ‘{}’ of incorrect type {}",
                             id.name.to_string(),
-                            v.ty.to_string(contract)
+                            v.ty.to_string(contract, ns)
                         ),
                     ));
                     return Err(());
@@ -3100,6 +3192,7 @@ fn assign_expr(
                                 r_ty.as_ref(),
                                 true,
                                 contract,
+                                ns,
                                 errors,
                             )?,
                             &*r_ty,
@@ -3125,7 +3218,10 @@ fn assign_expr(
                     _ => {
                         errors.push(Output::error(
                             var.loc(),
-                            format!("assigning to incorrect type {}", r_ty.to_string(contract)),
+                            format!(
+                                "assigning to incorrect type {}",
+                                r_ty.to_string(contract, ns)
+                            ),
                         ));
                         Err(())
                     }
@@ -3140,6 +3236,7 @@ fn assign_expr(
                                 r_ty.as_ref(),
                                 true,
                                 contract,
+                                ns,
                                 errors,
                             )?,
                             &*r_ty,
@@ -3181,7 +3278,10 @@ fn assign_expr(
                     _ => {
                         errors.push(Output::error(
                             var.loc(),
-                            format!("assigning to incorrect type {}", r_ty.to_string(contract)),
+                            format!(
+                                "assigning to incorrect type {}",
+                                r_ty.to_string(contract, ns)
+                            ),
                         ));
                         Err(())
                     }
@@ -3237,7 +3337,7 @@ fn array_subscript(
                 *loc,
                 format!(
                     "array subscript must be an unsigned integer, not ‘{}’",
-                    index_ty.to_string(contract)
+                    index_ty.to_string(contract, ns)
                 ),
             ));
             return Err(());
@@ -3256,6 +3356,7 @@ fn array_subscript(
                     &resolver::Type::Uint(32),
                     false,
                     contract,
+                    ns,
                     errors,
                 )?),
             ),
@@ -3332,6 +3433,7 @@ fn array_subscript(
                 &coerced_ty,
                 false,
                 contract,
+                ns,
                 errors,
             )?,
         },
@@ -3355,6 +3457,7 @@ fn array_subscript(
                     &coerced_ty,
                     false,
                     contract,
+                    ns,
                     errors,
                 )?),
             ),
@@ -3393,6 +3496,7 @@ fn array_subscript(
                                     &resolver::Type::Uint(64),
                                     false,
                                     contract,
+                                    ns,
                                     errors,
                                 )?),
                                 Box::new(Expression::NumberLiteral(*loc, 64, elem_size)),
@@ -3415,6 +3519,7 @@ fn array_subscript(
                     &resolver::Type::Uint(256),
                     false,
                     contract,
+                    ns,
                     errors,
                 )?,
                 elem_ty.clone(),
@@ -3473,6 +3578,7 @@ fn array_subscript(
                         &array_ty.deref(),
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     Box::new(Expression::Variable(index.loc(), pos)),
@@ -3489,6 +3595,7 @@ fn array_subscript(
                         &array_ty.deref(),
                         true,
                         contract,
+                        ns,
                         errors,
                     )?),
                     array_ty.array_deref(),
@@ -3541,6 +3648,7 @@ fn struct_literal(
                 &struct_def.fields[i].ty,
                 true,
                 contract,
+                ns,
                 errors,
             )?);
         }
@@ -3618,6 +3726,7 @@ fn function_call_with_positional_arguments(
                 &param.ty,
                 true,
                 contract,
+                ns,
                 &mut temp_errors,
             ) {
                 Ok(expr) => cast_args.push(expr),
@@ -3764,6 +3873,7 @@ fn function_call_with_named_arguments(
                 &param.ty,
                 true,
                 contract,
+                ns,
                 &mut temp_errors,
             ) {
                 Ok(expr) => cast_args.push(expr),
@@ -3868,7 +3978,7 @@ fn named_struct_literal(
                 Some((i, f)) => {
                     let (expr, expr_type) = expression(&a.expr, cfg, contract, ns, vartab, errors)?;
 
-                    fields[i] = cast(loc, expr, &expr_type, &f.ty, true, contract, errors)?;
+                    fields[i] = cast(loc, expr, &expr_type, &f.ty, true, contract, ns, errors)?;
                 }
                 None => {
                     errors.push(Output::error(
@@ -4011,7 +4121,7 @@ fn resolve_array_literal(
         let (mut other, oty) = expression(e, cfg, contract, ns, vartab, errors)?;
 
         if oty != ty {
-            other = cast(&e.loc(), other, &oty, &ty, true, contract, errors)?;
+            other = cast(&e.loc(), other, &oty, &ty, true, contract, ns, errors)?;
         }
 
         exprs.push(other);

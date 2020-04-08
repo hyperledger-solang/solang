@@ -73,7 +73,7 @@ pub fn compile(
         .contracts
         .iter()
         .map(|c| {
-            let (abistr, _) = abi::generate_abi(c, target, false);
+            let (abistr, _) = abi::generate_abi(c, &ns, false);
 
             // codegen
             let contract = emit::Contract::build(&ctx, c, &ns, filename, opt);

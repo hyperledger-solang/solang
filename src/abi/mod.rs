@@ -1,11 +1,11 @@
-use resolver::Contract;
+use resolver::{Contract, Namespace};
 use Target;
 
 pub mod ethereum;
 pub mod substrate;
 
-pub fn generate_abi(contract: &Contract, target: Target, verbose: bool) -> (String, &'static str) {
-    match target {
+pub fn generate_abi(contract: &Contract, ns: &Namespace, verbose: bool) -> (String, &'static str) {
+    match ns.target {
         Target::Ewasm | Target::Sabre => {
             if verbose {
                 eprintln!(
@@ -14,7 +14,7 @@ pub fn generate_abi(contract: &Contract, target: Target, verbose: bool) -> (Stri
                 );
             }
 
-            let abi = ethereum::gen_abi(contract);
+            let abi = ethereum::gen_abi(contract, ns);
 
             (serde_json::to_string(&abi).unwrap(), "abi")
         }

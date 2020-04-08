@@ -183,6 +183,7 @@ pub fn array_push(
                     &elem_ty.deref(),
                     true,
                     contract,
+                    ns,
                     errors,
                 )?,
             },
@@ -399,6 +400,7 @@ pub fn bytes_push(
                 &resolver::Type::Bytes(1),
                 true,
                 contract,
+                ns,
                 errors,
             )?
         }
@@ -475,13 +477,14 @@ pub fn mapping_subscript(
         key_ty,
         true,
         contract,
+        ns,
         errors,
     )?;
 
     let slot_ty = resolver::Type::Uint(256);
 
     let index_ty = if let resolver::Type::Enum(n) = index_ty {
-        contract.enums[n].ty.clone()
+        ns.enums[n].ty.clone()
     } else {
         index_ty
     };
