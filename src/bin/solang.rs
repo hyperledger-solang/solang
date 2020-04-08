@@ -147,7 +147,7 @@ fn process_filename(
         .expect("something went wrong reading the file");
 
     // resolve phase
-    let (ns, errors) = solang::parse_and_resolve(&contents, &target);
+    let (ns, errors) = solang::parse_and_resolve(&contents, target);
 
     if matches.is_present("STD-JSON") {
         let mut out = output::message_as_json(filename, &contents, &errors);
@@ -287,7 +287,7 @@ fn process_filename(
             continue;
         }
 
-        let wasm = link::link(&obj, &target);
+        let wasm = link::link(&obj, target);
 
         if matches.is_present("STD-JSON") {
             json_contracts.insert(
@@ -313,7 +313,7 @@ fn process_filename(
             let mut file = File::create(wasm_filename).unwrap();
             file.write_all(&wasm).unwrap();
 
-            let (abi_bytes, abi_ext) = resolved_contract.abi(&ns.target, verbose);
+            let (abi_bytes, abi_ext) = resolved_contract.abi(ns.target, verbose);
             let abi_filename = output_file(&contract.name, abi_ext);
 
             if verbose {

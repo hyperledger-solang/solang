@@ -20,7 +20,7 @@ fn parse_structs() {
                 uint a;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -36,7 +36,7 @@ fn parse_structs() {
                 uint storage b;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -52,7 +52,7 @@ fn parse_structs() {
                 uint calldata b;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -68,7 +68,7 @@ fn parse_structs() {
                 uint calldata b;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -82,7 +82,7 @@ fn parse_structs() {
             struct Foo {
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -97,7 +97,7 @@ fn parse_structs() {
                 boolean x;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "type ‘boolean’ not found");
@@ -111,7 +111,7 @@ fn parse_structs() {
                 Foo y;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "type ‘Foo’ not found");
@@ -129,7 +129,7 @@ fn parse_structs() {
                 Foo a = Foo();
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 0");
@@ -147,7 +147,7 @@ fn parse_structs() {
                 Foo a = Foo(true, true, true);
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 3");
@@ -165,7 +165,7 @@ fn parse_structs() {
                 Foo a = Foo({ });
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 0");
@@ -183,7 +183,7 @@ fn parse_structs() {
                 Foo a = Foo({ x: true, y: 1, z: 2 });
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 3");
@@ -201,7 +201,7 @@ fn parse_structs() {
                 Foo a = Foo({ x: true, z: 1 });
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "struct ‘Foo’ has no field ‘z’");

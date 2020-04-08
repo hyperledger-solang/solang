@@ -249,7 +249,7 @@ fn test_cast_errors() {
                 bool is_nonzero = bar;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -263,7 +263,7 @@ fn test_cast_errors() {
                 return (foo < bar);
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -278,7 +278,7 @@ fn test_cast_errors() {
                 return false;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);
@@ -291,7 +291,7 @@ fn test_cast_errors() {
                 return false;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -328,7 +328,7 @@ fn test_cast_errors() {
                 set_x(uint32(b));
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);
@@ -962,7 +962,7 @@ fn power() {
                 return base ** exp;
             }
        }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -976,7 +976,7 @@ fn power() {
                 return base ** exp;
             }
        }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -990,7 +990,7 @@ fn power() {
                 return base ** exp;
             }
        }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(

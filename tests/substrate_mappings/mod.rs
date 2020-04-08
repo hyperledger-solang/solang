@@ -22,7 +22,7 @@ fn bad_mapping_declares() {
                 x.data[1] = address(1);
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "mapping only allowed in storage");
@@ -32,7 +32,7 @@ fn bad_mapping_declares() {
         contract c {
             mapping(uint[] => address) data;
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "key of mapping cannot be array type");
@@ -45,7 +45,7 @@ fn bad_mapping_declares() {
             }
             mapping(foo => address) data;
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "key of mapping cannot be struct type");
@@ -56,7 +56,7 @@ fn bad_mapping_declares() {
             mapping(int => address) data;
             mapping(data => address) data2;
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "‘data’ is a contract variable");
@@ -68,7 +68,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -83,7 +83,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -98,7 +98,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -113,7 +113,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -129,7 +129,7 @@ fn bad_mapping_declares() {
                 //
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -145,7 +145,7 @@ fn bad_mapping_declares() {
                 delete data;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(

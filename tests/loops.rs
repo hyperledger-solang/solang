@@ -23,7 +23,7 @@ fn test_infinite_loop() {
                 return 0;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "unreachable statement");
