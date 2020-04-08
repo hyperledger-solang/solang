@@ -18,6 +18,7 @@ pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
     PragmaDirective(Identifier, StringLiteral),
     ImportDirective(StringLiteral),
+    EnumDefinition(Box<EnumDefinition>),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

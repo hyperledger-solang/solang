@@ -12,9 +12,9 @@ fn weekdays() {
     // parse
     let (runtime, mut store) = build_solidity(
         "
-        contract enum_example {
-            enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
+        enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
 
+        contract enum_example {
             function is_weekend(Weekday day) public pure returns (bool) {
                 return (day == Weekday.Saturday || day == Weekday.Sunday);
             }

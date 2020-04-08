@@ -2190,7 +2190,7 @@ pub fn expression(
         }
         ast::Expression::MemberAccess(loc, e, id) => {
             if let ast::Expression::Variable(namespace) = e.as_ref() {
-                if let Some(e) = contract.resolve_enum(namespace) {
+                if let Some(e) = contract.resolve_enum(namespace, ns) {
                     return match ns.enums[e].values.get(&id.name) {
                         Some((_, val)) => Ok((
                             Expression::NumberLiteral(

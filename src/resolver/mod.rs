@@ -787,7 +787,13 @@ impl Contract {
             ast::ComplexType::Unresolved(expr) => {
                 let (id, dimensions) = self.expr_to_type(&expr, ns, errors)?;
 
-                match self.symbols.get(&id.name) {
+                let mut s = self.symbols.get(&id.name);
+
+                if s.is_none() {
+                    s = ns.symbols.get(&id.name);
+                }
+
+                match s {
                     None => {
                         errors.push(Output::decl_error(
                             id.loc,
@@ -889,11 +895,16 @@ impl Contract {
         Ok(Some(eval_number_expression(&size_expr, errors)?))
     }
 
-    pub fn resolve_enum(&self, id: &ast::Identifier) -> Option<usize> {
-        match self.symbols.get(&id.name) {
-            Some(Symbol::Enum(_, n)) => Some(*n),
-            _ => None,
+    pub fn resolve_enum(&self, id: &ast::Identifier, ns: &Namespace) -> Option<usize> {
+        if let Some(Symbol::Enum(_, n)) = self.symbols.get(&id.name) {
+            return Some(*n);
         }
+
+        if let Some(Symbol::Enum(_, n)) = ns.symbols.get(&id.name) {
+            return Some(*n);
+        }
+
+        None
     }
 
     pub fn resolve_func(
@@ -1087,6 +1098,9 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
             ast::SourceUnitPart::ContractDefinition(def) => {
                 resolve_contract(def, target, &mut errors, &mut ns);
             }
+            ast::SourceUnitPart::EnumDefinition(def) => {
+                let _ = enum_decl(&def, None, &mut ns, &mut errors);
+            }
             ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
@@ -1147,7 +1161,7 @@ fn resolve_contract(
     // first resolve enums
     for parts in &def.parts {
         if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            if !enum_decl(e, &mut contract, ns, errors) {
+            if !enum_decl(e, Some(&mut contract), ns, errors) {
                 broken = true;
             }
         }
@@ -1292,7 +1306,7 @@ fn resolve_contract(
 /// so that we can continue parsing, with errors recorded.
 fn enum_decl(
     enum_: &ast::EnumDefinition,
-    contract: &mut Contract,
+    mut contract: Option<&mut Contract>,
     ns: &mut Namespace,
     errors: &mut Vec<Output>,
 ) -> bool {
@@ -1339,7 +1353,10 @@ fn enum_decl(
 
     let decl = EnumDecl {
         name: enum_.name.name.to_string(),
-        contract: Some(contract.name.to_owned()),
+        contract: match contract {
+            Some(ref c) => Some(c.name.to_owned()),
+            None => None,
+        },
         ty: Type::Uint(bits as u16),
         values: entries,
     };
@@ -1348,7 +1365,12 @@ fn enum_decl(
 
     ns.enums.push(decl);
 
-    if !contract.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), ns, errors) {
+    if !(match contract {
+        Some(ref mut contract) => {
+            contract.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), ns, errors)
+        }
+        None => ns.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), errors),
+    }) {
         valid = false;
     }
 
@@ -1386,7 +1408,7 @@ fn enum_256values_is_uint8() {
         name: "first".into(),
     });
 
-    assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
+    assert!(enum_decl(&e, Some(&mut contract), &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
@@ -1399,7 +1421,7 @@ fn enum_256values_is_uint8() {
     assert_eq!(e.values.len(), 256);
 
     e.name.name = "foo2".to_owned();
-    assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
+    assert!(enum_decl(&e, Some(&mut contract), &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     e.values.push(ast::Identifier {
@@ -1408,6 +1430,6 @@ fn enum_256values_is_uint8() {
     });
 
     e.name.name = "foo3".to_owned();
-    assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
+    assert!(enum_decl(&e, Some(&mut contract), &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }
