@@ -36,6 +36,7 @@ fn add_assert(contract: &mut Contract, ns: &Namespace) {
         }],
         vec![],
         &contract,
+        ns,
     );
 
     let mut errors = Vec::new();
@@ -109,6 +110,7 @@ fn add_print(contract: &mut Contract, ns: &Namespace) {
         }],
         vec![],
         &contract,
+        ns,
     );
 
     let mut errors = Vec::new();
@@ -177,6 +179,7 @@ fn add_require(contract: &mut Contract, ns: &Namespace) {
         ],
         vec![],
         &contract,
+        ns,
     );
 
     let mut errors = Vec::new();
@@ -267,6 +270,7 @@ fn add_revert(contract: &mut Contract, ns: &Namespace) {
         }],
         vec![],
         &contract,
+        ns,
     );
 
     let mut errors = Vec::new();
@@ -313,6 +317,7 @@ fn add_revert(contract: &mut Contract, ns: &Namespace) {
         vec![],
         vec![],
         &contract,
+        ns,
     );
 
     let mut errors = Vec::new();

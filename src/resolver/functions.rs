@@ -227,6 +227,7 @@ pub fn function_decl(
         params,
         returns,
         &contract,
+        ns,
     );
 
     if f.constructor {
@@ -350,10 +351,10 @@ pub fn function_decl(
 fn signatures() {
     use super::*;
 
-    let ns = Contract {
+    let ns = Namespace::new(Target::Ewasm);
+    let contract = Contract {
         doc: vec![],
         name: String::from("foo"),
-        enums: Vec::new(),
         structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
@@ -383,6 +384,7 @@ fn signatures() {
             },
         ],
         Vec::new(),
+        &contract,
         &ns,
     );
 

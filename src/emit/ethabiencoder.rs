@@ -74,7 +74,7 @@ impl EthAbiEncoder {
                 }
             }
             resolver::Type::Struct(n) => {
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
@@ -654,7 +654,7 @@ impl EthAbiEncoder {
                 let to =
                     to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
 
-                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
                             to,
@@ -716,7 +716,7 @@ impl EthAbiEncoder {
         let expected_length = spec
             .params
             .iter()
-            .map(|arg| self.encoded_length(&arg.ty, contract.ns))
+            .map(|arg| self.encoded_length(&arg.ty, contract.contract))
             .sum();
         let mut data = data;
         let decode_block = contract.context.append_basic_block(function, "abi_decode");

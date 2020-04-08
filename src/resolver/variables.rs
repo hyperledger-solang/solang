@@ -110,7 +110,7 @@ fn var_decl(
         };
 
         // implicityly conversion to correct ty
-        let res = match cast(&s.loc, res, &resty, &ty, true, &contract, errors) {
+        let res = match cast(&s.loc, res, &resty, &ty, true, &contract, ns, errors) {
             Ok(res) => res,
             Err(_) => return false,
         };
