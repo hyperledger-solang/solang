@@ -24,7 +24,7 @@ use inkwell::OptimizationLevel;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Target {
     /// Parity Substrate, see https://substrate.dev/
     Substrate,
@@ -67,15 +67,16 @@ pub fn compile(
     };
 
     // resolve
-    let (contracts, errors) = resolver::resolver(ast, target);
+    let (ns, errors) = resolver::resolver(ast, target);
 
-    let results = contracts
+    let results = ns
+        .contracts
         .iter()
         .map(|c| {
-            let (abistr, _) = abi::generate_abi(c, false);
+            let (abistr, _) = abi::generate_abi(c, target, false);
 
             // codegen
-            let contract = emit::Contract::build(&ctx, c, filename, opt);
+            let contract = emit::Contract::build(&ctx, c, &ns, filename, opt);
 
             let obj = contract.wasm(opt).expect("llvm wasm emit should work");
 
@@ -93,14 +94,11 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(
-    src: &str,
-    target: &Target,
-) -> (Vec<resolver::Contract>, Vec<output::Output>) {
+pub fn parse_and_resolve(src: &str, target: &Target) -> (resolver::Namespace, Vec<output::Output>) {
     let ast = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {
-            return (Vec::new(), errors);
+            return (resolver::Namespace::new(*target), errors);
         }
     };
 

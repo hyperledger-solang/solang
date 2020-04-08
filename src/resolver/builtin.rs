@@ -1,17 +1,17 @@
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::Expression;
-use super::{Contract, FunctionDecl, Parameter};
+use super::{Contract, FunctionDecl, Namespace, Parameter};
 use parser::ast;
 use resolver;
 use Target;
 
-pub fn add_builtin_function(ns: &mut Contract) {
-    add_assert(ns);
-    add_print(ns);
+pub fn add_builtin_function(contract: &mut Contract, ns: &Namespace) {
+    add_assert(contract);
+    add_print(contract);
     // FIXME: ewasm has no string encoder yet
     if ns.target == Target::Substrate {
-        add_revert(ns);
-        add_require(ns);
+        add_revert(contract);
+        add_require(contract);
     }
 }
 

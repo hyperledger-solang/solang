@@ -180,15 +180,16 @@ impl<'a> Contract<'a> {
     pub fn build(
         context: &'a Context,
         contract: &'a resolver::Contract,
+        ns: &'a resolver::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Self {
-        let res = match contract.target {
+        let res = match ns.target {
             super::Target::Substrate => {
-                substrate::SubstrateTarget::build(context, contract, filename)
+                substrate::SubstrateTarget::build(context, contract, ns, filename)
             }
-            super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, filename, opt),
-            super::Target::Sabre => sabre::SabreTarget::build(context, contract, filename),
+            super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
+            super::Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename),
         };
 
         match opt {
@@ -265,6 +266,7 @@ impl<'a> Contract<'a> {
     pub fn new(
         context: &'a Context,
         contract: &'a resolver::Contract,
+        ns: &'a resolver::Namespace,
         filename: &'a str,
         runtime: Option<Box<Contract<'a>>>,
     ) -> Self {
@@ -277,7 +279,7 @@ impl<'a> Contract<'a> {
         module.set_source_file_name(filename);
 
         // stdlib
-        let intr = load_stdlib(&context, &contract.target);
+        let intr = load_stdlib(&context, &ns.target);
         module.link_in_module(intr).unwrap();
 
         Contract {

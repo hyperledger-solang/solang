@@ -18,9 +18,10 @@ impl SubstrateTarget {
     pub fn build<'a>(
         context: &'a Context,
         contract: &'a resolver::Contract,
+        ns: &'a resolver::Namespace,
         filename: &'a str,
     ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, filename, None);
+        let mut c = Contract::new(context, contract, ns, filename, None);
         let b = SubstrateTarget {};
 
         b.declare_externals(&c);

@@ -537,6 +537,23 @@ pub enum Symbol {
     Struct(ast::Loc, usize),
 }
 
+/// When resolving a Solidity file, this holds all the resolved items
+pub struct Namespace {
+    pub target: Target,
+    pub contracts: Vec<Contract>,
+    symbols: HashMap<String, Symbol>,
+}
+
+impl Namespace {
+    pub fn new(target: Target) -> Self {
+        Namespace {
+            target,
+            contracts: Vec::new(),
+            symbols: HashMap::new(),
+        }
+    }
+}
+
 pub struct Contract {
     pub doc: Vec<String>,
     pub name: String,
@@ -548,7 +565,6 @@ pub struct Contract {
     pub variables: Vec<ContractVariable>,
     pub constants: Vec<Expression>,
     pub initializer: cfg::ControlFlowGraph,
-    pub target: Target,
     top_of_contract_storage: BigInt,
     symbols: HashMap<String, Symbol>,
 }
@@ -909,17 +925,18 @@ impl Contract {
         None
     }
 
-    pub fn abi(&self, verbose: bool) -> (String, &'static str) {
-        abi::generate_abi(self, verbose)
+    pub fn abi(&self, target: &Target, verbose: bool) -> (String, &'static str) {
+        abi::generate_abi(self, target, verbose)
     }
 
     pub fn emit<'a>(
         &'a self,
+        ns: &'a Namespace,
         context: &'a inkwell::context::Context,
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> emit::Contract {
-        emit::Contract::build(context, self, filename, opt)
+        emit::Contract::build(context, self, ns, filename, opt)
     }
 }
 
@@ -954,16 +971,14 @@ impl fmt::Display for Contract {
     }
 }
 
-pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Output>) {
-    let mut contracts = Vec::new();
+pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Namespace, Vec<Output>) {
     let mut errors = Vec::new();
+    let mut ns = Namespace::new(*target);
 
     for part in s.0 {
         match part {
             ast::SourceUnitPart::ContractDefinition(def) => {
-                if let Some(c) = resolve_contract(def, &target, &mut errors) {
-                    contracts.push(c)
-                }
+                resolve_contract(def, &target, &mut errors, &mut ns);
             }
             ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
@@ -987,15 +1002,16 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Vec<Contract>, Vec<Outp
         }
     }
 
-    (contracts, errors)
+    (ns, errors)
 }
 
 fn resolve_contract(
     def: Box<ast::ContractDefinition>,
     target: &Target,
     errors: &mut Vec<Output>,
-) -> Option<Contract> {
-    let mut ns = Contract {
+    ns: &mut Namespace,
+) {
+    let mut contract = Contract {
         name: def.name.name.to_string(),
         doc: def.doc.clone(),
         enums: Vec::new(),
@@ -1005,7 +1021,6 @@ fn resolve_contract(
         variables: Vec::new(),
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
-        target: target.clone(),
         top_of_contract_storage: BigInt::zero(),
         symbols: HashMap::new(),
     };
@@ -1015,14 +1030,14 @@ fn resolve_contract(
         format!("found contract {}", def.name.name),
     ));
 
-    builtin::add_builtin_function(&mut ns);
+    builtin::add_builtin_function(&mut contract, ns);
 
     let mut broken = false;
 
     // first resolve enums
     for parts in &def.parts {
         if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            if !enum_decl(e, &mut ns, errors) {
+            if !enum_decl(e, &mut contract, errors) {
                 broken = true;
             }
         }
@@ -1033,7 +1048,7 @@ fn resolve_contract(
     // resolve struct definitions
     for parts in &def.parts {
         if let ast::ContractPart::StructDefinition(ref s) = parts {
-            if !structs::struct_decl(s, &mut ns, errors) {
+            if !structs::struct_decl(s, &mut contract, errors) {
                 broken = true;
             }
         }
@@ -1042,23 +1057,23 @@ fn resolve_contract(
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {
         if let ast::ContractPart::FunctionDefinition(ref f) = parts {
-            if !functions::function_decl(f, i, &mut ns, errors) {
+            if !functions::function_decl(f, i, &mut contract, ns, errors) {
                 broken = true;
             }
         }
     }
 
     // resolve state variables
-    if variables::contract_variables(&def, &mut ns, errors) {
+    if variables::contract_variables(&def, &mut contract, errors) {
         broken = true;
     }
 
     // resolve constructor bodies
-    for f in 0..ns.constructors.len() {
-        if let Some(ast_index) = ns.constructors[f].ast_index {
+    for f in 0..contract.constructors.len() {
+        if let Some(ast_index) = contract.constructors[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(ast_f, &ns.constructors[f], &ns, errors) {
-                    Ok(c) => ns.constructors[f].cfg = Some(c),
+                match cfg::generate_cfg(ast_f, &contract.constructors[f], &contract, errors) {
+                    Ok(c) => contract.constructors[f].cfg = Some(c),
                     Err(_) => broken = true,
                 }
             }
@@ -1066,7 +1081,7 @@ fn resolve_contract(
     }
 
     // Substrate requires one constructor
-    if ns.constructors.is_empty() && target == &Target::Substrate {
+    if contract.constructors.is_empty() && target == &Target::Substrate {
         let mut fdecl = FunctionDecl::new(
             ast::Loc(0, 0),
             "".to_owned(),
@@ -1077,7 +1092,7 @@ fn resolve_contract(
             ast::Visibility::Public(ast::Loc(0, 0)),
             Vec::new(),
             Vec::new(),
-            &ns,
+            &contract,
         );
 
         let mut vartab = Vartable::new();
@@ -1088,16 +1103,16 @@ fn resolve_contract(
 
         fdecl.cfg = Some(Box::new(cfg));
 
-        ns.constructors.push(fdecl);
+        contract.constructors.push(fdecl);
     }
 
     // resolve function bodies
-    for f in 0..ns.functions.len() {
-        if let Some(ast_index) = ns.functions[f].ast_index {
+    for f in 0..contract.functions.len() {
+        if let Some(ast_index) = contract.functions[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(ast_f, &ns.functions[f], &ns, errors) {
+                match cfg::generate_cfg(ast_f, &contract.functions[f], &contract, errors) {
                     Ok(c) => {
-                        match &ns.functions[f].mutability {
+                        match &contract.functions[f].mutability {
                             Some(ast::StateMutability::Pure(loc)) => {
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
@@ -1134,7 +1149,7 @@ fn resolve_contract(
                                 unimplemented!();
                             }
                             None => {
-                                let loc = &ns.functions[f].loc;
+                                let loc = &contract.functions[f].loc;
 
                                 if !c.writes_contract_storage && !c.reads_contract_storage() {
                                     errors.push(Output::warning(
@@ -1149,7 +1164,7 @@ fn resolve_contract(
                                 }
                             }
                         }
-                        ns.functions[f].cfg = Some(c);
+                        contract.functions[f].cfg = Some(c);
                     }
                     Err(_) => broken = true,
                 }
@@ -1158,9 +1173,7 @@ fn resolve_contract(
     }
 
     if !broken {
-        Some(ns)
-    } else {
-        None
+        let pos = ns.contracts.push(contract);
     }
 }
 
@@ -1235,6 +1248,7 @@ fn enum_256values_is_uint8() {
         },
         values: Vec::new(),
     };
+
     let mut ns = Contract {
         name: "foo".to_string(),
         doc: Vec::new(),
@@ -1245,7 +1259,6 @@ fn enum_256values_is_uint8() {
         variables: Vec::new(),
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
-        target: Target::Ewasm,
         top_of_contract_storage: BigInt::zero(),
         symbols: HashMap::new(),
     };
