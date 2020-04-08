@@ -58,11 +58,12 @@ pub fn delete(
     loc: &ast::Loc,
     var: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+    let (var_expr, var_ty) = expression(var, cfg, contract, ns, vartab, errors)?;
 
     let tab = match vartab {
         &mut Some(ref mut tab) => tab,
@@ -111,7 +112,8 @@ pub fn array_push(
     ty: &resolver::Type,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
@@ -160,13 +162,13 @@ pub fn array_push(
                 Expression::Keccak256(*loc, vec![(var_expr.clone(), slot_ty.clone())]),
                 Expression::Variable(*loc, length_pos),
                 elem_ty.clone(),
-                ns,
+                contract,
             ),
         },
     );
 
     if args.len() == 1 {
-        let (val_expr, val_ty) = expression(&args[0], cfg, ns, &mut Some(tab), errors)?;
+        let (val_expr, val_ty) = expression(&args[0], cfg, contract, ns, &mut Some(tab), errors)?;
 
         let pos = tab.temp_anonymous(&elem_ty);
 
@@ -180,7 +182,7 @@ pub fn array_push(
                     &val_ty,
                     &elem_ty.deref(),
                     true,
-                    ns,
+                    contract,
                     errors,
                 )?,
             },
@@ -366,7 +368,8 @@ pub fn bytes_push(
     func: &ast::Identifier,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
@@ -386,7 +389,8 @@ pub fn bytes_push(
     let val = match args.len() {
         0 => Expression::NumberLiteral(*loc, 8, BigInt::zero()),
         1 => {
-            let (val_expr, val_ty) = expression(&args[0], cfg, ns, &mut Some(tab), errors)?;
+            let (val_expr, val_ty) =
+                expression(&args[0], cfg, contract, ns, &mut Some(tab), errors)?;
 
             cast(
                 &args[0].loc(),
@@ -394,7 +398,7 @@ pub fn bytes_push(
                 &val_ty,
                 &resolver::Type::Bytes(1),
                 true,
-                ns,
+                contract,
                 errors,
             )?
         }
@@ -452,7 +456,8 @@ pub fn mapping_subscript(
     mapping_ty: &resolver::Type,
     index: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
@@ -461,7 +466,7 @@ pub fn mapping_subscript(
         _ => unreachable!(),
     };
 
-    let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
+    let (index_expr, index_ty) = expression(index, cfg, contract, ns, vartab, errors)?;
 
     let index_expr = cast(
         &index.loc(),
@@ -469,14 +474,14 @@ pub fn mapping_subscript(
         &index_ty,
         key_ty,
         true,
-        ns,
+        contract,
         errors,
     )?;
 
     let slot_ty = resolver::Type::Uint(256);
 
     let index_ty = if let resolver::Type::Enum(n) = index_ty {
-        ns.enums[n].ty.clone()
+        contract.enums[n].ty.clone()
     } else {
         index_ty
     };

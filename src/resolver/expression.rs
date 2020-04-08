@@ -907,13 +907,14 @@ pub fn cast(
 pub fn expression(
     expr: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     match expr {
         ast::Expression::ArrayLiteral(loc, exprs) => {
-            resolve_array_literal(loc, exprs, cfg, ns, vartab, errors)
+            resolve_array_literal(loc, exprs, cfg, contract, ns, vartab, errors)
         }
         ast::Expression::BoolLiteral(loc, v) => {
             Ok((Expression::BoolLiteral(*loc, *v), resolver::Type::Bool))
@@ -1003,7 +1004,7 @@ pub fn expression(
         }
         ast::Expression::Variable(id) => {
             if let Some(ref mut tab) = *vartab {
-                let v = tab.find(id, ns, errors)?;
+                let v = tab.find(id, contract, ns, errors)?;
                 match &v.storage {
                     Storage::Contract(n) => Ok((
                         Expression::NumberLiteral(id.loc, 256, n.clone()),
@@ -1029,10 +1030,10 @@ pub fn expression(
                 Err(())
             }
         }
-        ast::Expression::Add(loc, l, r) => addition(loc, l, r, cfg, ns, vartab, errors),
+        ast::Expression::Add(loc, l, r) => addition(loc, l, r, cfg, contract, ns, vartab, errors),
         ast::Expression::Subtract(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1040,22 +1041,38 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 false,
-                ns,
+                contract,
                 errors,
             )?;
 
             Ok((
                 Expression::Subtract(
                     *loc,
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    Box::new(cast(
+                        &l.loc(),
+                        left,
+                        &left_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
+                    Box::new(cast(
+                        &r.loc(),
+                        right,
+                        &right_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
                 ),
                 ty,
             ))
         }
         ast::Expression::BitwiseOr(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1063,22 +1080,38 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
             Ok((
                 Expression::BitwiseOr(
                     *loc,
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    Box::new(cast(
+                        &l.loc(),
+                        left,
+                        &left_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
+                    Box::new(cast(
+                        &r.loc(),
+                        right,
+                        &right_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
                 ),
                 ty,
             ))
         }
         ast::Expression::BitwiseAnd(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1086,22 +1119,38 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
             Ok((
                 Expression::BitwiseAnd(
                     *loc,
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    Box::new(cast(
+                        &l.loc(),
+                        left,
+                        &left_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
+                    Box::new(cast(
+                        &r.loc(),
+                        right,
+                        &right_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
                 ),
                 ty,
             ))
         }
         ast::Expression::BitwiseXor(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1109,27 +1158,43 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
             Ok((
                 Expression::BitwiseXor(
                     *loc,
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    Box::new(cast(
+                        &l.loc(),
+                        left,
+                        &left_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
+                    Box::new(cast(
+                        &r.loc(),
+                        right,
+                        &right_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
                 ),
                 ty,
             ))
         }
         ast::Expression::ShiftLeft(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
-            let _ = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
-            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
+            let _ = get_int_length(&left_type, &l.loc(), true, contract, errors)?;
+            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, contract, errors)?;
 
             Ok((
                 Expression::ShiftLeft(
@@ -1141,13 +1206,13 @@ pub fn expression(
             ))
         }
         ast::Expression::ShiftRight(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
-            let _ = get_int_length(&left_type, &l.loc(), true, ns, errors)?;
-            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, ns, errors)?;
+            let _ = get_int_length(&left_type, &l.loc(), true, contract, errors)?;
+            let (right_length, _) = get_int_length(&right_type, &r.loc(), false, contract, errors)?;
 
             Ok((
                 Expression::ShiftRight(
@@ -1160,8 +1225,8 @@ pub fn expression(
             ))
         }
         ast::Expression::Multiply(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1169,22 +1234,38 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 false,
-                ns,
+                contract,
                 errors,
             )?;
 
             Ok((
                 Expression::Multiply(
                     *loc,
-                    Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                    Box::new(cast(
+                        &l.loc(),
+                        left,
+                        &left_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
+                    Box::new(cast(
+                        &r.loc(),
+                        right,
+                        &right_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
                 ),
                 ty,
             ))
         }
         ast::Expression::Divide(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1192,7 +1273,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 false,
-                ns,
+                contract,
                 errors,
             )?;
 
@@ -1200,8 +1281,24 @@ pub fn expression(
                 Ok((
                     Expression::SDivide(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     ty,
                 ))
@@ -1209,16 +1306,32 @@ pub fn expression(
                 Ok((
                     Expression::UDivide(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     ty,
                 ))
             }
         }
         ast::Expression::Modulo(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1226,7 +1339,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 false,
-                ns,
+                contract,
                 errors,
             )?;
 
@@ -1234,8 +1347,24 @@ pub fn expression(
                 Ok((
                     Expression::SModulo(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     ty,
                 ))
@@ -1243,16 +1372,32 @@ pub fn expression(
                 Ok((
                     Expression::UModulo(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     ty,
                 ))
             }
         }
         ast::Expression::Power(loc, b, e) => {
-            let (base, base_type) = expression(b, cfg, ns, vartab, errors)?;
-            let (exp, exp_type) = expression(e, cfg, ns, vartab, errors)?;
+            let (base, base_type) = expression(b, cfg, contract, ns, vartab, errors)?;
+            let (exp, exp_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
             // solc-0.5.13 does not allow either base or exp to be signed
             if base_type.signed() || exp_type.signed() {
@@ -1263,13 +1408,29 @@ pub fn expression(
                 return Err(());
             }
 
-            let ty = coerce_int(&base_type, &b.loc(), &exp_type, &e.loc(), false, ns, errors)?;
+            let ty = coerce_int(
+                &base_type,
+                &b.loc(),
+                &exp_type,
+                &e.loc(),
+                false,
+                contract,
+                errors,
+            )?;
 
             Ok((
                 Expression::Power(
                     *loc,
-                    Box::new(cast(&b.loc(), base, &base_type, &ty, true, ns, errors)?),
-                    Box::new(cast(&e.loc(), exp, &exp_type, &ty, true, ns, errors)?),
+                    Box::new(cast(
+                        &b.loc(),
+                        base,
+                        &base_type,
+                        &ty,
+                        true,
+                        contract,
+                        errors,
+                    )?),
+                    Box::new(cast(&e.loc(), exp, &exp_type, &ty, true, contract, errors)?),
                 ),
                 ty,
             ))
@@ -1277,8 +1438,8 @@ pub fn expression(
 
         // compare
         ast::Expression::More(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1286,7 +1447,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
@@ -1294,8 +1455,24 @@ pub fn expression(
                 Ok((
                     Expression::SMore(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
@@ -1303,16 +1480,32 @@ pub fn expression(
                 Ok((
                     Expression::UMore(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
             }
         }
         ast::Expression::Less(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1320,7 +1513,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
@@ -1328,8 +1521,24 @@ pub fn expression(
                 Ok((
                     Expression::SLess(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
@@ -1337,16 +1546,32 @@ pub fn expression(
                 Ok((
                     Expression::ULess(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
             }
         }
         ast::Expression::MoreEqual(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1354,7 +1579,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
@@ -1362,8 +1587,24 @@ pub fn expression(
                 Ok((
                     Expression::SMoreEqual(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
@@ -1371,16 +1612,32 @@ pub fn expression(
                 Ok((
                     Expression::UMoreEqual(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
             }
         }
         ast::Expression::LessEqual(loc, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
             let ty = coerce_int(
                 &left_type,
@@ -1388,7 +1645,7 @@ pub fn expression(
                 &right_type,
                 &r.loc(),
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
@@ -1396,8 +1653,24 @@ pub fn expression(
                 Ok((
                     Expression::SLessEqual(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
@@ -1405,24 +1678,43 @@ pub fn expression(
                 Ok((
                     Expression::ULessEqual(
                         *loc,
-                        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-                        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+                        Box::new(cast(
+                            &l.loc(),
+                            left,
+                            &left_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
+                        Box::new(cast(
+                            &r.loc(),
+                            right,
+                            &right_type,
+                            &ty,
+                            true,
+                            contract,
+                            errors,
+                        )?),
                     ),
                     resolver::Type::Bool,
                 ))
             }
         }
         ast::Expression::Equal(loc, l, r) => Ok((
-            equal(loc, l, r, cfg, ns, vartab, errors)?,
+            equal(loc, l, r, cfg, contract, ns, vartab, errors)?,
             resolver::Type::Bool,
         )),
         ast::Expression::NotEqual(loc, l, r) => Ok((
-            Expression::Not(*loc, Box::new(equal(loc, l, r, cfg, ns, vartab, errors)?)),
+            Expression::Not(
+                *loc,
+                Box::new(equal(loc, l, r, cfg, contract, ns, vartab, errors)?),
+            ),
             resolver::Type::Bool,
         )),
         // unary expressions
         ast::Expression::Not(loc, e) => {
-            let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+            let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
             Ok((
                 Expression::Not(
@@ -1433,7 +1725,7 @@ pub fn expression(
                         &expr_type,
                         &resolver::Type::Bool,
                         true,
-                        ns,
+                        contract,
                         errors,
                     )?),
                 ),
@@ -1441,9 +1733,9 @@ pub fn expression(
             ))
         }
         ast::Expression::Complement(loc, e) => {
-            let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+            let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, true, ns, errors)?;
+            get_int_length(&expr_type, loc, true, contract, errors)?;
 
             Ok((Expression::Complement(*loc, Box::new(expr)), expr_type))
         }
@@ -1453,30 +1745,31 @@ pub fn expression(
                 expression(
                     &ast::Expression::NumberLiteral(*loc, -n),
                     cfg,
+                    contract,
                     ns,
                     vartab,
                     errors,
                 )
             } else {
-                let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+                let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
-                get_int_length(&expr_type, loc, false, ns, errors)?;
+                get_int_length(&expr_type, loc, false, contract, errors)?;
 
                 Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
             }
         }
         ast::Expression::UnaryPlus(loc, e) => {
-            let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+            let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
-            get_int_length(&expr_type, loc, false, ns, errors)?;
+            get_int_length(&expr_type, loc, false, contract, errors)?;
 
             Ok((expr, expr_type))
         }
 
         ast::Expression::Ternary(loc, c, l, r) => {
-            let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-            let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
-            let (cond, cond_type) = expression(c, cfg, ns, vartab, errors)?;
+            let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+            let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
+            let (cond, cond_type) = expression(c, cfg, contract, ns, vartab, errors)?;
 
             let cond = cast(
                 &c.loc(),
@@ -1484,11 +1777,18 @@ pub fn expression(
                 &cond_type,
                 &resolver::Type::Bool,
                 true,
-                ns,
+                contract,
                 errors,
             )?;
 
-            let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+            let ty = coerce(
+                &left_type,
+                &l.loc(),
+                &right_type,
+                &r.loc(),
+                contract,
+                errors,
+            )?;
 
             Ok((
                 Expression::Ternary(*loc, Box::new(cond), Box::new(left), Box::new(right)),
@@ -1517,7 +1817,7 @@ pub fn expression(
                 }
             };
 
-            let v = vartab.find(id, ns, errors)?;
+            let v = vartab.find(id, contract, ns, errors)?;
 
             match v.ty {
                 resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => (),
@@ -1527,7 +1827,7 @@ pub fn expression(
                         format!(
                             "variable ‘{}’ of incorrect type {}",
                             id.name.to_string(),
-                            v.ty.to_string(ns)
+                            v.ty.to_string(contract)
                         ),
                     ));
                     return Err(());
@@ -1550,7 +1850,7 @@ pub fn expression(
                 Storage::Local => Expression::Variable(id.loc, v.pos),
             };
 
-            get_int_length(&v.ty, loc, false, ns, errors)?;
+            get_int_length(&v.ty, loc, false, contract, errors)?;
 
             match expr {
                 ast::Expression::PostIncrement(_, _) => {
@@ -1702,7 +2002,9 @@ pub fn expression(
         }
 
         // assignment
-        ast::Expression::Assign(loc, var, e) => assign(loc, var, e, cfg, ns, vartab, errors),
+        ast::Expression::Assign(loc, var, e) => {
+            assign(loc, var, e, cfg, contract, ns, vartab, errors)
+        }
 
         ast::Expression::AssignAdd(loc, var, e)
         | ast::Expression::AssignSubtract(loc, var, e)
@@ -1714,14 +2016,14 @@ pub fn expression(
         | ast::Expression::AssignXor(loc, var, e)
         | ast::Expression::AssignShiftLeft(loc, var, e)
         | ast::Expression::AssignShiftRight(loc, var, e) => {
-            assign_expr(loc, var, expr, e, cfg, ns, vartab, errors)
+            assign_expr(loc, var, expr, e, cfg, contract, ns, vartab, errors)
         }
         ast::Expression::NamedFunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
 
-            match ns.resolve_type(ty, &mut blackhole) {
+            match contract.resolve_type(ty, ns, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
-                    return named_struct_literal(loc, n, args, cfg, ns, vartab, errors);
+                    return named_struct_literal(loc, n, args, cfg, contract, ns, vartab, errors);
                 }
                 Ok(_) => {
                     errors.push(Output::error(
@@ -1735,25 +2037,29 @@ pub fn expression(
 
             match ty {
                 ast::ComplexType::Unresolved(expr) => {
-                    let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+                    let (id, dimensions) = contract.expr_to_type(expr, ns, errors)?;
                     if !dimensions.is_empty() {
                         errors.push(Output::error(*loc, "unexpected array type".to_string()));
                         return Err(());
                     }
 
-                    function_call_with_named_arguments(loc, &id, args, cfg, ns, vartab, errors)
+                    function_call_with_named_arguments(
+                        loc, &id, args, cfg, contract, ns, vartab, errors,
+                    )
                 }
                 _ => unreachable!(),
             }
         }
-        ast::Expression::New(loc, ty, args) => new(loc, ty, args, cfg, ns, vartab, errors),
-        ast::Expression::Delete(loc, var) => delete(loc, var, cfg, ns, vartab, errors),
+        ast::Expression::New(loc, ty, args) => {
+            new(loc, ty, args, cfg, contract, ns, vartab, errors)
+        }
+        ast::Expression::Delete(loc, var) => delete(loc, var, cfg, contract, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
 
-            match ns.resolve_type(ty, &mut blackhole) {
+            match contract.resolve_type(ty, ns, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
-                    return struct_literal(loc, n, args, cfg, ns, vartab, errors);
+                    return struct_literal(loc, n, args, cfg, contract, ns, vartab, errors);
                 }
                 Ok(to) => {
                     // Cast
@@ -1767,9 +2073,13 @@ pub fn expression(
                         ));
                         Err(())
                     } else {
-                        let (expr, expr_type) = expression(&args[0], cfg, ns, vartab, errors)?;
+                        let (expr, expr_type) =
+                            expression(&args[0], cfg, contract, ns, vartab, errors)?;
 
-                        Ok((cast(loc, expr, &expr_type, &to, false, ns, errors)?, to))
+                        Ok((
+                            cast(loc, expr, &expr_type, &to, false, contract, errors)?,
+                            to,
+                        ))
                     };
                 }
                 Err(_) => {}
@@ -1778,9 +2088,9 @@ pub fn expression(
             match ty {
                 ast::ComplexType::Unresolved(expr) => {
                     if let ast::Expression::MemberAccess(_, member, func) = expr.as_ref() {
-                        method_call(loc, member, func, args, cfg, ns, vartab, errors)
+                        method_call(loc, member, func, args, cfg, contract, ns, vartab, errors)
                     } else {
-                        let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+                        let (id, dimensions) = contract.expr_to_type(expr, ns, errors)?;
 
                         if !dimensions.is_empty() {
                             errors.push(Output::error(*loc, "unexpected array type".to_string()));
@@ -1788,7 +2098,7 @@ pub fn expression(
                         }
 
                         function_call_with_positional_arguments(
-                            loc, &id, args, cfg, ns, vartab, errors,
+                            loc, &id, args, cfg, contract, ns, vartab, errors,
                         )
                     }
                 }
@@ -1804,16 +2114,16 @@ pub fn expression(
             Err(())
         }
         ast::Expression::ArraySubscript(loc, array, Some(index)) => {
-            array_subscript(loc, array, index, cfg, ns, vartab, errors)
+            array_subscript(loc, array, index, cfg, contract, ns, vartab, errors)
         }
         ast::Expression::MemberAccess(loc, e, id) => {
             if let ast::Expression::Variable(namespace) = e.as_ref() {
-                if let Some(e) = ns.resolve_enum(namespace) {
-                    return match ns.enums[e].values.get(&id.name) {
+                if let Some(e) = contract.resolve_enum(namespace) {
+                    return match contract.enums[e].values.get(&id.name) {
                         Some((_, val)) => Ok((
                             Expression::NumberLiteral(
                                 *loc,
-                                ns.enums[e].ty.bits(),
+                                contract.enums[e].ty.bits(),
                                 BigInt::from_usize(*val).unwrap(),
                             ),
                             resolver::Type::Enum(e),
@@ -1823,7 +2133,7 @@ pub fn expression(
                                 id.loc,
                                 format!(
                                     "enum {} does not have value {}",
-                                    ns.enums[e].name, id.name
+                                    contract.enums[e].name, id.name
                                 ),
                             ));
                             Err(())
@@ -1832,7 +2142,7 @@ pub fn expression(
                 }
             }
 
-            let (expr, expr_ty) = expression(e, cfg, ns, vartab, errors)?;
+            let (expr, expr_ty) = expression(e, cfg, contract, ns, vartab, errors)?;
 
             // Dereference if need to. This could be struct-in-struct for
             // example.
@@ -1874,7 +2184,7 @@ pub fn expression(
                     resolver::Type::Struct(n) => {
                         let mut slot = BigInt::zero();
 
-                        for field in &ns.structs[n].fields {
+                        for field in &contract.structs[n].fields {
                             if id.name == field.name {
                                 return Ok((
                                     Expression::Add(
@@ -1886,14 +2196,14 @@ pub fn expression(
                                 ));
                             }
 
-                            slot += field.ty.storage_slots(ns);
+                            slot += field.ty.storage_slots(contract);
                         }
 
                         errors.push(Output::error(
                             id.loc,
                             format!(
                                 "struct ‘{}’ does not have a field called ‘{}’",
-                                ns.structs[n].name, id.name
+                                contract.structs[n].name, id.name
                             ),
                         ));
                         return Err(());
@@ -1928,7 +2238,7 @@ pub fn expression(
                     _ => {}
                 },
                 resolver::Type::Struct(n) => {
-                    if let Some((i, f)) = ns.structs[n]
+                    if let Some((i, f)) = contract.structs[n]
                         .fields
                         .iter()
                         .enumerate()
@@ -1943,7 +2253,7 @@ pub fn expression(
                             id.loc,
                             format!(
                                 "struct ‘{}’ does not have a field called ‘{}’",
-                                ns.structs[n].name, id.name
+                                contract.structs[n].name, id.name
                             ),
                         ));
                         return Err(());
@@ -1958,14 +2268,14 @@ pub fn expression(
         }
         ast::Expression::Or(loc, left, right) => {
             let boolty = resolver::Type::Bool;
-            let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
-            let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
+            let (l, l_type) = expression(left, cfg, contract, ns, vartab, errors)?;
+            let l = cast(&loc, l, &l_type, &boolty, true, contract, errors)?;
 
             let mut tab = match vartab {
                 &mut Some(ref mut tab) => tab,
                 None => {
                     // In constant context, no side effects so short-circut not necessary
-                    let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+                    let (r, r_type) = expression(right, cfg, contract, ns, vartab, errors)?;
 
                     return Ok((
                         Expression::Or(
@@ -1977,7 +2287,7 @@ pub fn expression(
                                 &r_type,
                                 &resolver::Type::Bool,
                                 true,
-                                ns,
+                                contract,
                                 errors,
                             )?),
                         ),
@@ -2014,8 +2324,16 @@ pub fn expression(
             );
             cfg.set_basic_block(right_side);
 
-            let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
-            let r = cast(&loc, r, &r_type, &resolver::Type::Bool, true, ns, errors)?;
+            let (r, r_type) = expression(right, cfg, contract, ns, &mut Some(&mut tab), errors)?;
+            let r = cast(
+                &loc,
+                r,
+                &r_type,
+                &resolver::Type::Bool,
+                true,
+                contract,
+                errors,
+            )?;
 
             cfg.add(tab, Instr::Set { res: pos, expr: r });
 
@@ -2032,14 +2350,14 @@ pub fn expression(
         }
         ast::Expression::And(loc, left, right) => {
             let boolty = resolver::Type::Bool;
-            let (l, l_type) = expression(left, cfg, ns, vartab, errors)?;
-            let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
+            let (l, l_type) = expression(left, cfg, contract, ns, vartab, errors)?;
+            let l = cast(&loc, l, &l_type, &boolty, true, contract, errors)?;
 
             let mut tab = match vartab {
                 &mut Some(ref mut tab) => tab,
                 None => {
                     // In constant context, no side effects so short-circut not necessary
-                    let (r, r_type) = expression(right, cfg, ns, vartab, errors)?;
+                    let (r, r_type) = expression(right, cfg, contract, ns, vartab, errors)?;
 
                     return Ok((
                         Expression::And(
@@ -2051,7 +2369,7 @@ pub fn expression(
                                 &r_type,
                                 &resolver::Type::Bool,
                                 true,
-                                ns,
+                                contract,
                                 errors,
                             )?),
                         ),
@@ -2088,8 +2406,16 @@ pub fn expression(
             );
             cfg.set_basic_block(right_side);
 
-            let (r, r_type) = expression(right, cfg, ns, &mut Some(&mut tab), errors)?;
-            let r = cast(&loc, r, &r_type, &resolver::Type::Bool, true, ns, errors)?;
+            let (r, r_type) = expression(right, cfg, contract, ns, &mut Some(&mut tab), errors)?;
+            let r = cast(
+                &loc,
+                r,
+                &r_type,
+                &resolver::Type::Bool,
+                true,
+                contract,
+                errors,
+            )?;
 
             cfg.add(tab, Instr::Set { res: pos, expr: r });
 
@@ -2113,12 +2439,13 @@ fn new(
     ty: &ast::ComplexType,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // TODO: new can also be used for creating contracts
-    let ty = ns.resolve_type(ty, errors)?;
+    let ty = contract.resolve_type(ty, ns, errors)?;
 
     match &ty {
         resolver::Type::Array(_, dim) => {
@@ -2127,7 +2454,7 @@ fn new(
                     *loc,
                     format!(
                         "new cannot allocate fixed array type ‘{}’",
-                        ty.to_string(ns)
+                        ty.to_string(contract)
                     ),
                 ));
                 return Err(());
@@ -2137,7 +2464,7 @@ fn new(
         _ => {
             errors.push(Output::error(
                 *loc,
-                format!("new cannot allocate type ‘{}’", ty.to_string(ns)),
+                format!("new cannot allocate type ‘{}’", ty.to_string(contract)),
             ));
             return Err(());
         }
@@ -2152,7 +2479,7 @@ fn new(
     }
     let size_loc = args[0].loc();
 
-    let (size_expr, size_ty) = expression(&args[0], cfg, ns, vartab, errors)?;
+    let (size_expr, size_ty) = expression(&args[0], cfg, contract, ns, vartab, errors)?;
 
     let size_width = match size_ty {
         resolver::Type::Uint(n) => n,
@@ -2161,7 +2488,7 @@ fn new(
                 size_loc,
                 format!(
                     "new size argument must be unsigned integer, not ‘{}’",
-                    size_ty.to_string(ns)
+                    size_ty.to_string(contract)
                 ),
             ));
             return Err(());
@@ -2192,12 +2519,13 @@ fn equal(
     l: &ast::Expression,
     r: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<Expression, ()> {
-    let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-    let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+    let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+    let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
     // Comparing stringliteral against stringliteral
     if let (Expression::BytesLiteral(_, l), Expression::BytesLiteral(_, r)) = (&left, &right) {
@@ -2216,7 +2544,7 @@ fn equal(
                     &right_type,
                     &right_type.deref(),
                     true,
-                    ns,
+                    contract,
                     errors,
                 )?)),
                 StringLocation::CompileTime(l.clone()),
@@ -2236,7 +2564,7 @@ fn equal(
                     &left_type,
                     &left_type.deref(),
                     true,
-                    ns,
+                    contract,
                     errors,
                 )?)),
                 StringLocation::CompileTime(literal.clone()),
@@ -2257,7 +2585,7 @@ fn equal(
                     &left_type,
                     &left_type.deref(),
                     true,
-                    ns,
+                    contract,
                     errors,
                 )?)),
                 StringLocation::RunTime(Box::new(cast(
@@ -2266,7 +2594,7 @@ fn equal(
                     &right_type,
                     &right_type.deref(),
                     true,
-                    ns,
+                    contract,
                     errors,
                 )?)),
             ));
@@ -2274,12 +2602,35 @@ fn equal(
         _ => {}
     }
 
-    let ty = coerce(&left_type, &l.loc(), &right_type, &r.loc(), ns, errors)?;
+    let ty = coerce(
+        &left_type,
+        &l.loc(),
+        &right_type,
+        &r.loc(),
+        contract,
+        errors,
+    )?;
 
     Ok(Expression::Equal(
         *loc,
-        Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-        Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+        Box::new(cast(
+            &l.loc(),
+            left,
+            &left_type,
+            &ty,
+            true,
+            contract,
+            errors,
+        )?),
+        Box::new(cast(
+            &r.loc(),
+            right,
+            &right_type,
+            &ty,
+            true,
+            contract,
+            errors,
+        )?),
     ))
 }
 
@@ -2289,12 +2640,13 @@ fn addition(
     l: &ast::Expression,
     r: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (left, left_type) = expression(l, cfg, ns, vartab, errors)?;
-    let (right, right_type) = expression(r, cfg, ns, vartab, errors)?;
+    let (left, left_type) = expression(l, cfg, contract, ns, vartab, errors)?;
+    let (right, right_type) = expression(r, cfg, contract, ns, vartab, errors)?;
 
     // Concatenate stringliteral with stringliteral
     if let (Expression::BytesLiteral(_, l), Expression::BytesLiteral(_, r)) = (&left, &right) {
@@ -2361,15 +2713,31 @@ fn addition(
         &right_type,
         &r.loc(),
         false,
-        ns,
+        contract,
         errors,
     )?;
 
     Ok((
         Expression::Add(
             *loc,
-            Box::new(cast(&l.loc(), left, &left_type, &ty, true, ns, errors)?),
-            Box::new(cast(&r.loc(), right, &right_type, &ty, true, ns, errors)?),
+            Box::new(cast(
+                &l.loc(),
+                left,
+                &left_type,
+                &ty,
+                true,
+                contract,
+                errors,
+            )?),
+            Box::new(cast(
+                &r.loc(),
+                right,
+                &right_type,
+                &ty,
+                true,
+                contract,
+                errors,
+            )?),
         ),
         ty,
     ))
@@ -2381,11 +2749,12 @@ fn assign(
     var: &ast::Expression,
     e: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (expr, expr_type) = expression(e, cfg, ns, vartab, errors)?;
+    let (expr, expr_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
     match var {
         ast::Expression::Variable(id) => {
@@ -2402,13 +2771,13 @@ fn assign(
                     return Err(());
                 }
             };
-            let var = vartab.find(id, ns, errors)?;
+            let var = vartab.find(id, contract, ns, errors)?;
 
             cfg.add(
                 vartab,
                 Instr::Set {
                     res: var.pos,
-                    expr: cast(&id.loc, expr, &expr_type, &var.ty, true, ns, errors)?,
+                    expr: cast(&id.loc, expr, &expr_type, &var.ty, true, contract, errors)?,
                 },
             );
 
@@ -2440,7 +2809,7 @@ fn assign(
         }
         _ => {
             // for example: a[0] = 102
-            let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+            let (var_expr, var_ty) = expression(var, cfg, contract, ns, vartab, errors)?;
 
             let vartab = match vartab {
                 &mut Some(ref mut tab) => tab,
@@ -2462,7 +2831,15 @@ fn assign(
                         vartab,
                         Instr::Set {
                             res: pos,
-                            expr: cast(&var.loc(), expr, &expr_type, &r_ty, true, ns, errors)?,
+                            expr: cast(
+                                &var.loc(),
+                                expr,
+                                &expr_type,
+                                &r_ty,
+                                true,
+                                contract,
+                                errors,
+                            )?,
                         },
                     );
 
@@ -2484,7 +2861,15 @@ fn assign(
                         vartab,
                         Instr::Set {
                             res: pos,
-                            expr: cast(&var.loc(), expr, &expr_type, &r_ty, true, ns, errors)?,
+                            expr: cast(
+                                &var.loc(),
+                                expr,
+                                &expr_type,
+                                &r_ty,
+                                true,
+                                contract,
+                                errors,
+                            )?,
                         },
                     );
 
@@ -2532,11 +2917,12 @@ fn assign_expr(
     expr: &ast::Expression,
     e: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (set, set_type) = expression(e, cfg, ns, vartab, errors)?;
+    let (set, set_type) = expression(e, cfg, contract, ns, vartab, errors)?;
 
     let op = |assign: Expression,
               ty: &resolver::Type,
@@ -2545,8 +2931,8 @@ fn assign_expr(
         let set = match expr {
             ast::Expression::AssignShiftLeft(_, _, _)
             | ast::Expression::AssignShiftRight(_, _, _) => {
-                let left_length = get_int_length(&ty, &loc, true, ns, errors)?;
-                let right_length = get_int_length(&set_type, &e.loc(), false, ns, errors)?;
+                let left_length = get_int_length(&ty, &loc, true, contract, errors)?;
+                let right_length = get_int_length(&set_type, &e.loc(), false, contract, errors)?;
 
                 // TODO: does shifting by negative value need compiletime/runtime check?
                 if left_length == right_length {
@@ -2559,7 +2945,7 @@ fn assign_expr(
                     Expression::Trunc(*loc, ty.clone(), Box::new(set))
                 }
             }
-            _ => cast(&var.loc(), set, &set_type, &ty, true, ns, errors)?,
+            _ => cast(&var.loc(), set, &set_type, &ty, true, contract, errors)?,
         };
 
         Ok(match expr {
@@ -2619,7 +3005,7 @@ fn assign_expr(
                 }
             };
 
-            let v = tab.find(id, ns, errors)?;
+            let v = tab.find(id, contract, ns, errors)?;
 
             match v.ty {
                 resolver::Type::Bytes(_) | resolver::Type::Int(_) | resolver::Type::Uint(_) => (),
@@ -2629,7 +3015,7 @@ fn assign_expr(
                         format!(
                             "variable ‘{}’ of incorrect type {}",
                             id.name.to_string(),
-                            v.ty.to_string(ns)
+                            v.ty.to_string(contract)
                         ),
                     ));
                     return Err(());
@@ -2689,7 +3075,7 @@ fn assign_expr(
             Ok((Expression::Variable(id.loc, v.pos), v.ty))
         }
         _ => {
-            let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+            let (var_expr, var_ty) = expression(var, cfg, contract, ns, vartab, errors)?;
 
             let tab = match vartab {
                 &mut Some(ref mut tab) => tab,
@@ -2713,7 +3099,7 @@ fn assign_expr(
                                 &var_ty,
                                 r_ty.as_ref(),
                                 true,
-                                ns,
+                                contract,
                                 errors,
                             )?,
                             &*r_ty,
@@ -2739,7 +3125,7 @@ fn assign_expr(
                     _ => {
                         errors.push(Output::error(
                             var.loc(),
-                            format!("assigning to incorrect type {}", r_ty.to_string(ns)),
+                            format!("assigning to incorrect type {}", r_ty.to_string(contract)),
                         ));
                         Err(())
                     }
@@ -2753,7 +3139,7 @@ fn assign_expr(
                                 &var_ty,
                                 r_ty.as_ref(),
                                 true,
-                                ns,
+                                contract,
                                 errors,
                             )?,
                             &*r_ty,
@@ -2795,7 +3181,7 @@ fn assign_expr(
                     _ => {
                         errors.push(Output::error(
                             var.loc(),
-                            format!("assigning to incorrect type {}", r_ty.to_string(ns)),
+                            format!("assigning to incorrect type {}", r_ty.to_string(contract)),
                         ));
                         Err(())
                     }
@@ -2818,17 +3204,20 @@ fn array_subscript(
     array: &ast::Expression,
     index: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (mut array_expr, array_ty) = expression(array, cfg, ns, vartab, errors)?;
+    let (mut array_expr, array_ty) = expression(array, cfg, contract, ns, vartab, errors)?;
 
     if array_ty.is_mapping() {
-        return mapping_subscript(loc, array_expr, &array_ty, index, cfg, ns, vartab, errors);
+        return mapping_subscript(
+            loc, array_expr, &array_ty, index, cfg, contract, ns, vartab, errors,
+        );
     }
 
-    let (index_expr, index_ty) = expression(index, cfg, ns, vartab, errors)?;
+    let (index_expr, index_ty) = expression(index, cfg, contract, ns, vartab, errors)?;
 
     let tab = match vartab {
         &mut Some(ref mut tab) => tab,
@@ -2848,7 +3237,7 @@ fn array_subscript(
                 *loc,
                 format!(
                     "array subscript must be an unsigned integer, not ‘{}’",
-                    index_ty.to_string(ns)
+                    index_ty.to_string(contract)
                 ),
             ));
             return Err(());
@@ -2866,7 +3255,7 @@ fn array_subscript(
                     &index_ty,
                     &resolver::Type::Uint(32),
                     false,
-                    ns,
+                    contract,
                     errors,
                 )?),
             ),
@@ -2942,7 +3331,7 @@ fn array_subscript(
                 &index_ty,
                 &coerced_ty,
                 false,
-                ns,
+                contract,
                 errors,
             )?,
         },
@@ -2965,7 +3354,7 @@ fn array_subscript(
                     &array_length_ty,
                     &coerced_ty,
                     false,
-                    ns,
+                    contract,
                     errors,
                 )?),
             ),
@@ -2981,7 +3370,7 @@ fn array_subscript(
 
     if let resolver::Type::StorageRef(ty) = array_ty {
         let elem_ty = ty.storage_deref();
-        let elem_size = elem_ty.storage_slots(ns);
+        let elem_size = elem_ty.storage_slots(contract);
         let mut nullsink = Vec::new();
 
         if let Ok(array_length) = eval_number_expression(&array_length, &mut nullsink) {
@@ -3003,7 +3392,7 @@ fn array_subscript(
                                     &coerced_ty,
                                     &resolver::Type::Uint(64),
                                     false,
-                                    ns,
+                                    contract,
                                     errors,
                                 )?),
                                 Box::new(Expression::NumberLiteral(*loc, 64, elem_size)),
@@ -3025,11 +3414,11 @@ fn array_subscript(
                     &coerced_ty,
                     &resolver::Type::Uint(256),
                     false,
-                    ns,
+                    contract,
                     errors,
                 )?,
                 elem_ty.clone(),
-                ns,
+                contract,
             ),
             elem_ty,
         ))
@@ -3083,7 +3472,7 @@ fn array_subscript(
                         &array_ty,
                         &array_ty.deref(),
                         true,
-                        ns,
+                        contract,
                         errors,
                     )?),
                     Box::new(Expression::Variable(index.loc(), pos)),
@@ -3099,7 +3488,7 @@ fn array_subscript(
                         &array_ty,
                         &array_ty.deref(),
                         true,
-                        ns,
+                        contract,
                         errors,
                     )?),
                     array_ty.array_deref(),
@@ -3121,11 +3510,12 @@ fn struct_literal(
     struct_no: usize,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let struct_def = &ns.structs[struct_no];
+    let struct_def = &contract.structs[struct_no];
 
     if args.len() != struct_def.fields.len() {
         errors.push(Output::error(
@@ -3142,7 +3532,7 @@ fn struct_literal(
         let mut fields = Vec::new();
 
         for (i, a) in args.iter().enumerate() {
-            let (expr, expr_type) = expression(&a, cfg, ns, vartab, errors)?;
+            let (expr, expr_type) = expression(&a, cfg, contract, ns, vartab, errors)?;
 
             fields.push(cast(
                 loc,
@@ -3150,7 +3540,7 @@ fn struct_literal(
                 &expr_type,
                 &struct_def.fields[i].ty,
                 true,
-                ns,
+                contract,
                 errors,
             )?);
         }
@@ -3167,18 +3557,19 @@ fn function_call_with_positional_arguments(
     id: &ast::Identifier,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
-    let funcs = ns.resolve_func(&id, errors)?;
+    let funcs = contract.resolve_func(&id, errors)?;
 
     let mut resolved_args = Vec::new();
     let mut resolved_types = Vec::new();
 
     for arg in args {
-        let (expr, expr_type) = expression(arg, cfg, ns, vartab, errors)?;
+        let (expr, expr_type) = expression(arg, cfg, contract, ns, vartab, errors)?;
 
         resolved_args.push(Box::new(expr));
         resolved_types.push(expr_type);
@@ -3199,7 +3590,7 @@ fn function_call_with_positional_arguments(
 
     // function call
     for f in funcs {
-        let func = &ns.functions[f.1];
+        let func = &contract.functions[f.1];
 
         if func.params.len() != args.len() {
             temp_errors.push(Output::error(
@@ -3226,7 +3617,7 @@ fn function_call_with_positional_arguments(
                 &resolved_types[i],
                 &param.ty,
                 true,
-                ns,
+                contract,
                 &mut temp_errors,
             ) {
                 Ok(expr) => cast_args.push(expr),
@@ -3300,19 +3691,20 @@ fn function_call_with_named_arguments(
     id: &ast::Identifier,
     args: &[ast::NamedArgument],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
-    let funcs = ns.resolve_func(&id, errors)?;
+    let funcs = contract.resolve_func(&id, errors)?;
 
     let mut arguments = HashMap::new();
 
     for arg in args {
         arguments.insert(
             arg.name.name.to_string(),
-            expression(&arg.expr, cfg, ns, vartab, errors)?,
+            expression(&arg.expr, cfg, contract, ns, vartab, errors)?,
         );
     }
 
@@ -3331,7 +3723,7 @@ fn function_call_with_named_arguments(
 
     // function call
     for f in funcs {
-        let func = &ns.functions[f.1];
+        let func = &contract.functions[f.1];
 
         if func.params.len() != args.len() {
             temp_errors.push(Output::error(
@@ -3371,7 +3763,7 @@ fn function_call_with_named_arguments(
                 &arg.1,
                 &param.ty,
                 true,
-                ns,
+                contract,
                 &mut temp_errors,
             ) {
                 Ok(expr) => cast_args.push(expr),
@@ -3445,11 +3837,12 @@ fn named_struct_literal(
     struct_no: usize,
     args: &[ast::NamedArgument],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let struct_def = &ns.structs[struct_no];
+    let struct_def = &contract.structs[struct_no];
 
     if args.len() != struct_def.fields.len() {
         errors.push(Output::error(
@@ -3473,9 +3866,9 @@ fn named_struct_literal(
                 .find(|(_, f)| f.name == a.name.name)
             {
                 Some((i, f)) => {
-                    let (expr, expr_type) = expression(&a.expr, cfg, ns, vartab, errors)?;
+                    let (expr, expr_type) = expression(&a.expr, cfg, contract, ns, vartab, errors)?;
 
-                    fields[i] = cast(loc, expr, &expr_type, &f.ty, true, ns, errors)?;
+                    fields[i] = cast(loc, expr, &expr_type, &f.ty, true, contract, errors)?;
                 }
                 None => {
                     errors.push(Output::error(
@@ -3501,11 +3894,12 @@ fn method_call(
     func: &ast::Identifier,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (var_expr, var_ty) = expression(var, cfg, ns, vartab, errors)?;
+    let (var_expr, var_ty) = expression(var, cfg, contract, ns, vartab, errors)?;
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
         match ty.as_ref() {
@@ -3518,7 +3912,9 @@ fn method_call(
                         ));
                         Err(())
                     } else {
-                        array_push(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                        array_push(
+                            loc, var_expr, func, ty, args, cfg, contract, ns, vartab, errors,
+                        )
                     };
                 }
                 if func.name == "pop" {
@@ -3529,13 +3925,15 @@ fn method_call(
                         ));
                         Err(())
                     } else {
-                        array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
+                        array_pop(loc, var_expr, func, ty, args, cfg, contract, vartab, errors)
                     };
                 }
             }
             resolver::Type::DynamicBytes => match func.name.as_str() {
                 "push" => {
-                    return bytes_push(loc, var_expr, func, args, cfg, ns, vartab, errors);
+                    return bytes_push(
+                        loc, var_expr, func, args, cfg, contract, ns, vartab, errors,
+                    );
                 }
                 "pop" => {
                     return bytes_pop(loc, var_expr, func, args, cfg, errors);
@@ -3583,7 +3981,8 @@ fn resolve_array_literal(
     loc: &ast::Loc,
     exprs: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
@@ -3604,15 +4003,15 @@ fn resolve_array_literal(
 
     // We follow the solidity scheme were everthing gets implicitly converted to the
     // type of the first element
-    let (first, ty) = expression(flattened.next().unwrap(), cfg, ns, vartab, errors)?;
+    let (first, ty) = expression(flattened.next().unwrap(), cfg, contract, ns, vartab, errors)?;
 
     let mut exprs = vec![first];
 
     for e in flattened {
-        let (mut other, oty) = expression(e, cfg, ns, vartab, errors)?;
+        let (mut other, oty) = expression(e, cfg, contract, ns, vartab, errors)?;
 
         if oty != ty {
-            other = cast(&e.loc(), other, &oty, &ty, true, ns, errors)?;
+            other = cast(&e.loc(), other, &oty, &ty, true, contract, errors)?;
         }
 
         exprs.push(other);

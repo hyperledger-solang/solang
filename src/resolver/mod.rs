@@ -686,6 +686,7 @@ impl Contract {
     pub fn resolve_type(
         &self,
         id: &ast::ComplexType,
+        ns: &Namespace,
         errors: &mut Vec<Output>,
     ) -> Result<Type, ()> {
         fn resolve_dimensions(
@@ -727,7 +728,7 @@ impl Contract {
 
                 for expr in exprs {
                     dimensions.push(match expr {
-                        Some(e) => self.resolve_array_dimension(e, errors)?,
+                        Some(e) => self.resolve_array_dimension(e, ns, errors)?,
                         None => None,
                     });
                 }
@@ -738,8 +739,8 @@ impl Contract {
                 ))
             }
             ast::ComplexType::Mapping(_, k, v) => {
-                let key = self.resolve_type(k, errors)?;
-                let value = self.resolve_type(v, errors)?;
+                let key = self.resolve_type(k, ns, errors)?;
+                let value = self.resolve_type(v, ns, errors)?;
 
                 match key {
                     Type::Mapping(_, _) => {
@@ -767,7 +768,7 @@ impl Contract {
                 }
             }
             ast::ComplexType::Unresolved(expr) => {
-                let (id, dimensions) = self.expr_to_type(&expr, errors)?;
+                let (id, dimensions) = self.expr_to_type(&expr, ns, errors)?;
 
                 match self.symbols.get(&id.name) {
                     None => {
@@ -819,6 +820,7 @@ impl Contract {
     pub fn expr_to_type(
         &self,
         expr: &ast::Expression,
+        ns: &Namespace,
         errors: &mut Vec<Output>,
     ) -> Result<(ast::Identifier, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
@@ -832,7 +834,7 @@ impl Contract {
                     &*r
                 }
                 ast::Expression::ArraySubscript(_, r, Some(index)) => {
-                    dimensions.push(self.resolve_array_dimension(index, errors)?);
+                    dimensions.push(self.resolve_array_dimension(index, ns, errors)?);
 
                     &*r
                 }
@@ -852,10 +854,11 @@ impl Contract {
     pub fn resolve_array_dimension(
         &self,
         expr: &ast::Expression,
+        ns: &Namespace,
         errors: &mut Vec<Output>,
     ) -> Result<ArrayDimension, ()> {
         let mut cfg = ControlFlowGraph::new();
-        let (size_expr, size_ty) = expression(&expr, &mut cfg, &self, &mut None, errors)?;
+        let (size_expr, size_ty) = expression(&expr, &mut cfg, &self, ns, &mut None, errors)?;
         match size_ty {
             Type::Uint(_) | Type::Int(_) => {}
             _ => {
@@ -894,8 +897,19 @@ impl Contract {
         }
     }
 
-    pub fn resolve_var(&self, id: &ast::Identifier, errors: &mut Vec<Output>) -> Result<usize, ()> {
-        match self.symbols.get(&id.name) {
+    pub fn resolve_var(
+        &self,
+        id: &ast::Identifier,
+        ns: &Namespace,
+        errors: &mut Vec<Output>,
+    ) -> Result<usize, ()> {
+        let mut s = self.symbols.get(&id.name);
+
+        if s.is_none() {
+            s = ns.symbols.get(&id.name);
+        }
+
+        match s {
             None => {
                 errors.push(Output::decl_error(
                     id.loc,
@@ -935,8 +949,14 @@ impl Contract {
         }
     }
 
-    pub fn check_shadowing(&self, id: &ast::Identifier, errors: &mut Vec<Output>) {
-        match self.symbols.get(&id.name) {
+    pub fn check_shadowing(&self, id: &ast::Identifier, ns: &Namespace, errors: &mut Vec<Output>) {
+        let mut s = self.symbols.get(&id.name);
+
+        if s.is_none() {
+            s = ns.symbols.get(&id.name);
+        }
+
+        match s {
             Some(Symbol::Enum(loc, _)) => {
                 errors.push(Output::warning_with_note(
                     id.loc,
@@ -1147,7 +1167,7 @@ fn resolve_contract(
     for f in 0..contract.constructors.len() {
         if let Some(ast_index) = contract.constructors[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(ast_f, &contract.constructors[f], &contract, errors) {
+                match cfg::generate_cfg(ast_f, &contract.constructors[f], &contract, &ns, errors) {
                     Ok(c) => contract.constructors[f].cfg = Some(c),
                     Err(_) => broken = true,
                 }
@@ -1185,7 +1205,7 @@ fn resolve_contract(
     for f in 0..contract.functions.len() {
         if let Some(ast_index) = contract.functions[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(ast_f, &contract.functions[f], &contract, errors) {
+                match cfg::generate_cfg(ast_f, &contract.functions[f], &contract, &ns, errors) {
                     Ok(c) => {
                         match &contract.functions[f].mutability {
                             Some(ast::StateMutability::Pure(loc)) => {
