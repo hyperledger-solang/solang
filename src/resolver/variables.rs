@@ -1,4 +1,4 @@
-use super::{Contract, ContractVariable, Symbol};
+use super::{Contract, ContractVariable, Namespace, Symbol};
 use output::Output;
 use parser::ast;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
@@ -7,7 +7,8 @@ use resolver::ContractVariableType;
 
 pub fn contract_variables(
     def: &ast::ContractDefinition,
-    ns: &mut Contract,
+    contract: &mut Contract,
+    ns: &Namespace,
     errors: &mut Vec<Output>,
 ) -> bool {
     let mut broken = false;
@@ -16,7 +17,7 @@ pub fn contract_variables(
 
     for parts in &def.parts {
         if let ast::ContractPart::ContractVariableDefinition(ref s) = parts {
-            if !var_decl(s, ns, &mut cfg, &mut vartab, errors) {
+            if !var_decl(s, contract, ns, &mut cfg, &mut vartab, errors) {
                 broken = true;
             }
         }
@@ -26,19 +27,20 @@ pub fn contract_variables(
 
     cfg.vars = vartab.drain();
 
-    ns.initializer = cfg;
+    contract.initializer = cfg;
 
     broken
 }
 
 fn var_decl(
     s: &ast::ContractVariableDefinition,
-    ns: &mut Contract,
+    contract: &mut Contract,
+    ns: &Namespace,
     cfg: &mut ControlFlowGraph,
     vartab: &mut Vartable,
     errors: &mut Vec<Output>,
 ) -> bool {
-    let ty = match ns.resolve_type(&s.ty, errors) {
+    let ty = match contract.resolve_type(&s.ty, errors) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -88,18 +90,18 @@ fn var_decl(
     };
 
     let var = if !is_constant {
-        let storage = ns.top_of_contract_storage.clone();
-        ns.top_of_contract_storage += ty.storage_slots(ns);
+        let storage = contract.top_of_contract_storage.clone();
+        contract.top_of_contract_storage += ty.storage_slots(contract);
         ContractVariableType::Storage(storage)
     } else {
-        ContractVariableType::Constant(ns.constants.len())
+        ContractVariableType::Constant(contract.constants.len())
     };
 
     let initializer = if let Some(initializer) = &s.initializer {
         let expr = if is_constant {
-            expression(&initializer, cfg, &ns, &mut None, errors)
+            expression(&initializer, cfg, &contract, &mut None, errors)
         } else {
-            expression(&initializer, cfg, &ns, &mut Some(vartab), errors)
+            expression(&initializer, cfg, &contract, &mut Some(vartab), errors)
         };
 
         let (res, resty) = match expr {
@@ -108,7 +110,7 @@ fn var_decl(
         };
 
         // implicityly conversion to correct ty
-        let res = match cast(&s.loc, res, &resty, &ty, true, &ns, errors) {
+        let res = match cast(&s.loc, res, &resty, &ty, true, &contract, errors) {
             Ok(res) => res,
             Err(_) => return false,
         };
@@ -134,19 +136,19 @@ fn var_decl(
         var,
     };
 
-    let pos = ns.variables.len();
+    let pos = contract.variables.len();
 
-    ns.variables.push(sdecl);
+    contract.variables.push(sdecl);
 
-    if !ns.add_symbol(&s.name, Symbol::Variable(s.loc, pos), errors) {
+    if !contract.add_symbol(&s.name, Symbol::Variable(s.loc, pos), ns, errors) {
         return false;
     }
 
     if let Some(res) = initializer {
         if is_constant {
-            ns.constants.push(res);
+            contract.constants.push(res);
         } else {
-            let var = vartab.find(&s.name, ns, errors).unwrap();
+            let var = vartab.find(&s.name, contract, errors).unwrap();
             let loc = res.loc();
 
             cfg.add(

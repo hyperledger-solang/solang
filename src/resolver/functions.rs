@@ -315,7 +315,7 @@ pub fn function_decl(
 
         contract.functions.push(fdecl);
 
-        contract.add_symbol(id, Symbol::Function(vec![(id.loc, pos)]), errors)
+        contract.add_symbol(id, Symbol::Function(vec![(id.loc, pos)]), ns, errors)
     } else {
         // fallback function
         if let Some(i) = contract.fallback_function() {

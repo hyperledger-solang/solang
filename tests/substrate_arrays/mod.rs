@@ -15,7 +15,7 @@ struct Val8(u8);
 fn missing_array_index() {
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public returns (uint) {
                     uint8[4] memory bar = [ 1, 2, 3, 4 ];
 
@@ -29,7 +29,7 @@ fn missing_array_index() {
 
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public returns (uint8) {
                     uint8[4] memory bar = [ 1, 2, 3, 4, 5 ];
 

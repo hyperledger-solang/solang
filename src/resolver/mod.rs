@@ -605,9 +605,16 @@ impl Contract {
         &mut self,
         id: &ast::Identifier,
         symbol: Symbol,
+        ns: &Namespace,
         errors: &mut Vec<Output>,
     ) -> bool {
-        if let Some(prev) = self.symbols.get(&id.name) {
+        let mut s = self.symbols.get(&id.name);
+
+        if s.is_none() {
+            s = ns.symbols.get(&id.name);
+        }
+
+        if let Some(prev) = s {
             match prev {
                 Symbol::Enum(e, _) => {
                     errors.push(Output::error_with_note(
@@ -658,7 +665,10 @@ impl Contract {
                 Symbol::Contract(e, _) => {
                     errors.push(Output::error_with_note(
                         id.loc,
-                        format!("{} is already defined as a contract", id.name.to_string()),
+                        format!(
+                            "{} is already defined as a contract name",
+                            id.name.to_string()
+                        ),
                         *e,
                         "location of previous definition".to_string(),
                     ));
@@ -1102,7 +1112,7 @@ fn resolve_contract(
     // first resolve enums
     for parts in &def.parts {
         if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            if !enum_decl(e, &mut contract, errors) {
+            if !enum_decl(e, &mut contract, ns, errors) {
                 broken = true;
             }
         }
@@ -1113,7 +1123,7 @@ fn resolve_contract(
     // resolve struct definitions
     for parts in &def.parts {
         if let ast::ContractPart::StructDefinition(ref s) = parts {
-            if !structs::struct_decl(s, &mut contract, errors) {
+            if !structs::struct_decl(s, &mut contract, ns, errors) {
                 broken = true;
             }
         }
@@ -1129,7 +1139,7 @@ fn resolve_contract(
     }
 
     // resolve state variables
-    if variables::contract_variables(&def, &mut contract, errors) {
+    if variables::contract_variables(&def, &mut contract, ns, errors) {
         broken = true;
     }
 
@@ -1244,7 +1254,12 @@ fn resolve_contract(
 
 /// Parse enum declaration. If the declaration is invalid, it is still generated
 /// so that we can continue parsing, with errors recorded.
-fn enum_decl(enum_: &ast::EnumDefinition, ns: &mut Contract, errors: &mut Vec<Output>) -> bool {
+fn enum_decl(
+    enum_: &ast::EnumDefinition,
+    contract: &mut Contract,
+    ns: &mut Namespace,
+    errors: &mut Vec<Output>,
+) -> bool {
     let mut valid = true;
 
     let mut bits = if enum_.values.is_empty() {
@@ -1292,11 +1307,11 @@ fn enum_decl(enum_: &ast::EnumDefinition, ns: &mut Contract, errors: &mut Vec<Ou
         values: entries,
     };
 
-    let pos = ns.enums.len();
+    let pos = contract.enums.len();
 
-    ns.enums.push(decl);
+    contract.enums.push(decl);
 
-    if !ns.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), errors) {
+    if !contract.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), ns, errors) {
         valid = false;
     }
 
@@ -1314,7 +1329,9 @@ fn enum_256values_is_uint8() {
         values: Vec::new(),
     };
 
-    let mut ns = Contract {
+    let mut ns = Namespace::new(Target::Ewasm);
+
+    let mut contract = Contract {
         name: "foo".to_string(),
         doc: Vec::new(),
         enums: Vec::new(),
@@ -1333,8 +1350,8 @@ fn enum_256values_is_uint8() {
         name: "first".into(),
     });
 
-    assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
+    assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
+    assert_eq!(contract.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
         e.values.push(ast::Identifier {
@@ -1346,8 +1363,8 @@ fn enum_256values_is_uint8() {
     assert_eq!(e.values.len(), 256);
 
     e.name.name = "foo2".to_owned();
-    assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
+    assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
+    assert_eq!(contract.enums.last().unwrap().ty, Type::Uint(8));
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -1355,6 +1372,6 @@ fn enum_256values_is_uint8() {
     });
 
     e.name.name = "foo3".to_owned();
-    assert!(enum_decl(&e, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
+    assert!(enum_decl(&e, &mut contract, &mut ns, &mut Vec::new()));
+    assert_eq!(contract.enums.last().unwrap().ty, Type::Uint(16));
 }
