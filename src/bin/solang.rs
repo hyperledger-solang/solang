@@ -101,7 +101,7 @@ fn main() {
     }
 
     for filename in matches.values_of("INPUT").unwrap() {
-        process_filename(filename, &target, &matches, &mut json);
+        process_filename(filename, target, &matches, &mut json);
     }
 
     if matches.is_present("STD-JSON") {
@@ -111,7 +111,7 @@ fn main() {
 
 fn process_filename(
     filename: &str,
-    target: &solang::Target,
+    target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,
 ) {
@@ -147,7 +147,7 @@ fn process_filename(
         .expect("something went wrong reading the file");
 
     // resolve phase
-    let (contracts, errors) = solang::parse_and_resolve(&contents, &target);
+    let (ns, errors) = solang::parse_and_resolve(&contents, &target);
 
     if matches.is_present("STD-JSON") {
         let mut out = output::message_as_json(filename, &contents, &errors);
@@ -156,13 +156,13 @@ fn process_filename(
         output::print_messages(filename, &contents, &errors, verbose);
     }
 
-    if contracts.is_empty() {
+    if ns.contracts.is_empty() {
         eprintln!("{}: error: no contracts found", filename);
         std::process::exit(1);
     }
 
     // emit phase
-    for resolved_contract in &contracts {
+    for resolved_contract in &ns.contracts {
         if let Some("cfg") = matches.value_of("EMIT") {
             println!("{}", resolved_contract.to_string());
             continue;
@@ -171,11 +171,11 @@ fn process_filename(
         if verbose {
             eprintln!(
                 "info: Generating LLVM IR for contract {} with target {}",
-                resolved_contract.name, resolved_contract.target
+                resolved_contract.name, ns.target
             );
         }
 
-        let contract = resolved_contract.emit(&context, &filename, opt);
+        let contract = resolved_contract.emit(&ns, &context, &filename, opt);
 
         if let Some("llvm") = matches.value_of("EMIT") {
             if let Some(runtime) = &contract.runtime {
@@ -313,7 +313,7 @@ fn process_filename(
             let mut file = File::create(wasm_filename).unwrap();
             file.write_all(&wasm).unwrap();
 
-            let (abi_bytes, abi_ext) = resolved_contract.abi(verbose);
+            let (abi_bytes, abi_ext) = resolved_contract.abi(&ns.target, verbose);
             let abi_filename = output_file(&contract.name, abi_ext);
 
             if verbose {

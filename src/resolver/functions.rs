@@ -1,4 +1,4 @@
-use super::{Contract, FunctionDecl, Parameter, Symbol, Type};
+use super::{Contract, FunctionDecl, Namespace, Parameter, Symbol, Type};
 use output::Output;
 use parser::ast;
 use Target;
@@ -6,7 +6,8 @@ use Target;
 pub fn function_decl(
     f: &ast::FunctionDefinition,
     i: usize,
-    ns: &mut Contract,
+    contract: &mut Contract,
+    ns: &Namespace,
     errors: &mut Vec<Output>,
 ) -> bool {
     let mut params = Vec::new();
@@ -93,7 +94,7 @@ pub fn function_decl(
     };
 
     for p in &f.params {
-        match ns.resolve_type(&p.ty, errors) {
+        match contract.resolve_type(&p.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
@@ -118,7 +119,7 @@ pub fn function_decl(
                         success = false;
                         ty
                     }
-                } else if ty.contains_mapping(ns) {
+                } else if ty.contains_mapping(contract) {
                     errors.push(Output::error(
                         p.ty.loc(),
                         "parameter with mapping type must be of type ‘storage’".to_string(),
@@ -142,7 +143,7 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
-        match ns.resolve_type(&r.ty, errors) {
+        match contract.resolve_type(&r.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
@@ -180,7 +181,7 @@ pub fn function_decl(
                             }
                         }
                         _ => {
-                            if ty.contains_mapping(ns) {
+                            if ty.contains_mapping(contract) {
                                 errors.push(Output::error(
                                     r.ty.loc(),
                                     "return type containing mapping  must be of type ‘storage’"
@@ -225,13 +226,13 @@ pub fn function_decl(
         visibility,
         params,
         returns,
-        &ns,
+        &contract,
     );
 
     if f.constructor {
         // In the eth solidity, only one constructor is allowed
-        if ns.target == Target::Ewasm && !ns.constructors.is_empty() {
-            let prev = &ns.constructors[i];
+        if ns.target == Target::Ewasm && !contract.constructors.is_empty() {
+            let prev = &contract.constructors[i];
             errors.push(Output::error_with_note(
                 f.loc,
                 "constructor already defined".to_string(),
@@ -271,7 +272,7 @@ pub fn function_decl(
             _ => (),
         }
 
-        for v in ns.constructors.iter() {
+        for v in contract.constructors.iter() {
             if v.signature == fdecl.signature {
                 errors.push(Output::error_with_note(
                     f.loc,
@@ -284,14 +285,14 @@ pub fn function_decl(
             }
         }
 
-        ns.constructors.push(fdecl);
+        contract.constructors.push(fdecl);
 
         true
     } else if let Some(ref id) = f.name {
-        if let Some(Symbol::Function(ref mut v)) = ns.symbols.get_mut(&id.name) {
+        if let Some(Symbol::Function(ref mut v)) = contract.symbols.get_mut(&id.name) {
             // check if signature already present
             for o in v.iter() {
-                if ns.functions[o.1].signature == fdecl.signature {
+                if contract.functions[o.1].signature == fdecl.signature {
                     errors.push(Output::error_with_note(
                         f.loc,
                         "overloaded function with this signature already exist".to_string(),
@@ -302,23 +303,23 @@ pub fn function_decl(
                 }
             }
 
-            let pos = ns.functions.len();
+            let pos = contract.functions.len();
 
-            ns.functions.push(fdecl);
+            contract.functions.push(fdecl);
 
             v.push((f.loc, pos));
             return true;
         }
 
-        let pos = ns.functions.len();
+        let pos = contract.functions.len();
 
-        ns.functions.push(fdecl);
+        contract.functions.push(fdecl);
 
-        ns.add_symbol(id, Symbol::Function(vec![(id.loc, pos)]), errors)
+        contract.add_symbol(id, Symbol::Function(vec![(id.loc, pos)]), errors)
     } else {
         // fallback function
-        if let Some(i) = ns.fallback_function() {
-            let prev = &ns.functions[i];
+        if let Some(i) = contract.fallback_function() {
+            let prev = &contract.functions[i];
 
             errors.push(Output::error_with_note(
                 f.loc,
@@ -339,7 +340,7 @@ pub fn function_decl(
             return false;
         }
 
-        ns.functions.push(fdecl);
+        contract.functions.push(fdecl);
 
         true
     }
@@ -359,7 +360,6 @@ fn signatures() {
         variables: Vec::new(),
         constants: Vec::new(),
         initializer: cfg::ControlFlowGraph::new(),
-        target: crate::Target::Ewasm,
         top_of_contract_storage: BigInt::zero(),
         symbols: HashMap::new(),
     };
