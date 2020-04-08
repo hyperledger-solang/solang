@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, first_warning};
+use super::{build_solidity, first_error, first_warning, no_errors};
 use solang::{parse_and_resolve, Target};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -183,4 +183,29 @@ fn require() {
     runtime.function(&mut store, "test2", Vec::new());
 
     assert_eq!(store.scratch.len(), 0);
+}
+
+#[test]
+fn contract_type() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract printer {
+            function test() public {
+                print("In f.test()");
+            }
+        }
+
+        contract test {
+            function test1(printer x) public {
+                address y = x;
+            }
+
+            function test2(address x) public {
+                printer y = x;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    no_errors(errors);
 }

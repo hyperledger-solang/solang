@@ -40,6 +40,7 @@ pub enum Type {
     Enum(usize),
     Struct(usize),
     Mapping(Box<Type>, Box<Type>),
+    Contract(usize),
     Ref(Box<Type>),
     StorageRef(Box<Type>),
     Undef,
@@ -72,6 +73,7 @@ impl Type {
                 k.to_string(contract, ns),
                 v.to_string(contract, ns)
             ),
+            Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
             Type::Ref(r) => r.to_string(contract, ns),
             Type::StorageRef(ty) => format!("storage {}", ty.to_string(contract, ns)),
             Type::Undef => "undefined".to_owned(),
@@ -95,7 +97,7 @@ impl Type {
     pub fn to_signature_string(&self, contract: &Contract, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
-            Type::Address => "address".to_string(),
+            Type::Contract(_) | Type::Address => "address".to_string(),
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
             Type::Bytes(n) => format!("bytes{}", n),
@@ -175,7 +177,7 @@ impl Type {
         match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
-            Type::Address => BigInt::from(20),
+            Type::Contract(_) | Type::Address => BigInt::from(20),
             Type::Bytes(n) => BigInt::from(*n),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Array(ty, dims) => {
@@ -273,6 +275,7 @@ impl Type {
             Type::DynamicBytes => true,
             Type::String => true,
             Type::Mapping(_, _) => true,
+            Type::Contract(_) => false,
             Type::Ref(r) => r.is_reference_type(),
             Type::StorageRef(r) => r.is_reference_type(),
             Type::Undef => unreachable!(),
@@ -507,6 +510,7 @@ impl FunctionDecl {
                             type_to_wasm_name(k, ns),
                             type_to_wasm_name(v, ns)
                         ),
+                        Type::Contract(i) => ns.contracts[*i].name.to_owned(),
                         Type::Undef => unreachable!(),
                         Type::Ref(r) => type_to_wasm_name(r, ns),
                         Type::StorageRef(r) => type_to_wasm_name(r, ns),
@@ -854,6 +858,11 @@ impl Contract {
                         Box::new(Type::Struct(*n)),
                         resolve_dimensions(&dimensions, errors)?,
                     )),
+                    Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
+                    Some(Symbol::Contract(_, n)) => Ok(Type::Array(
+                        Box::new(Type::Contract(*n)),
+                        resolve_dimensions(&dimensions, errors)?,
+                    )),
                     Some(Symbol::Function(_)) => {
                         errors.push(Output::decl_error(
                             id.loc,
@@ -865,13 +874,6 @@ impl Contract {
                         errors.push(Output::decl_error(
                             id.loc,
                             format!("‘{}’ is a contract variable", id.name),
-                        ));
-                        Err(())
-                    }
-                    Some(Symbol::Contract(_, _)) => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("‘{}’ is a contract", id.name),
                         ));
                         Err(())
                     }

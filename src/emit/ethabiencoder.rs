@@ -29,6 +29,7 @@ impl EthAbiEncoder {
         match &ty {
             resolver::Type::Bool
             | resolver::Type::Address
+            | resolver::Type::Contract(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => {
@@ -382,6 +383,7 @@ impl EthAbiEncoder {
     pub fn encoded_length(&self, ty: &resolver::Type, ns: &resolver::Namespace) -> u64 {
         match ty {
             resolver::Type::Bool
+            | resolver::Type::Contract(_)
             | resolver::Type::Address
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
@@ -477,7 +479,7 @@ impl EthAbiEncoder {
 
                 val
             }
-            resolver::Type::Address => {
+            resolver::Type::Address | resolver::Type::Contract(_) => {
                 let int_type = contract.context.custom_width_int_type(160);
                 let type_size = int_type.size_of();
 

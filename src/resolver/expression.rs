@@ -841,6 +841,9 @@ pub fn cast(
                 Ok(expr)
             }
         }
+        // Implicit conversion between address and contract is allowed
+        (resolver::Type::Address, resolver::Type::Contract(_))
+        | (resolver::Type::Contract(_), resolver::Type::Address) => Ok(expr),
         // Explicit conversion to bytesN from int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
         (resolver::Type::Address, resolver::Type::Bytes(to_len)) => {
