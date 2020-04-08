@@ -3445,7 +3445,7 @@ impl<'a> Contract<'a> {
             resolver::Type::Int(n) | resolver::Type::Uint(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
             }
-            resolver::Type::Address => {
+            resolver::Type::Contract(_) | resolver::Type::Address => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(20 * 8))
             }
             resolver::Type::Bytes(n) => {
@@ -3530,6 +3530,7 @@ impl resolver::Type {
             resolver::Type::DynamicBytes => true,
             resolver::Type::String => true,
             resolver::Type::Mapping(_, _) => true,
+            resolver::Type::Contract(_) => true,
             resolver::Type::Ref(r) => r.needs_phi(),
             resolver::Type::StorageRef(_) => true,
             resolver::Type::Undef => unreachable!(),
@@ -3542,7 +3543,7 @@ impl resolver::Type {
             resolver::Type::Bool => false,
             resolver::Type::Int(n) => *n > 64,
             resolver::Type::Uint(n) => *n > 64,
-            resolver::Type::Address => true,
+            resolver::Type::Contract(_) | resolver::Type::Address => true,
             resolver::Type::Bytes(n) => *n > 8,
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,

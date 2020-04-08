@@ -411,7 +411,7 @@ impl SubstrateTarget {
                     (store.into(), *len as u64)
                 }
             }
-            resolver::Type::Address => {
+            resolver::Type::Contract(_) | resolver::Type::Address => {
                 let int_type = contract.context.custom_width_int_type(160);
 
                 let store =
@@ -457,6 +457,7 @@ impl SubstrateTarget {
         match &ty {
             resolver::Type::Bool
             | resolver::Type::Address
+            | resolver::Type::Contract(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => {
@@ -798,6 +799,7 @@ impl SubstrateTarget {
         match &ty {
             resolver::Type::Bool
             | resolver::Type::Address
+            | resolver::Type::Contract(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => {
@@ -963,7 +965,9 @@ impl SubstrateTarget {
                 contract.context.i32_type().const_int(*n as u64 / 8, false)
             }
             resolver::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
-            resolver::Type::Address => contract.context.i32_type().const_int(ADDRESS_LENGTH, false),
+            resolver::Type::Address | resolver::Type::Contract(_) => {
+                contract.context.i32_type().const_int(ADDRESS_LENGTH, false)
+            }
             resolver::Type::Enum(n) => {
                 self.encoded_length(arg, &contract.ns.enums[*n].ty, function, contract)
             }
