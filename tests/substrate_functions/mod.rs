@@ -201,7 +201,7 @@ fn mutability() {
                 return foo;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -217,7 +217,7 @@ fn mutability() {
                 foo = 102;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -248,7 +248,7 @@ fn shadowing() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
         first_warning(errors),
@@ -288,7 +288,7 @@ fn scopes() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "`a\' is not declared");
 
@@ -302,7 +302,7 @@ fn scopes() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "`i\' is not declared");
 }
@@ -319,7 +319,7 @@ fn for_forever() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "unreachable statement");
 }
@@ -445,7 +445,7 @@ fn args_and_returns() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "arg1 is already declared");
 
@@ -455,7 +455,7 @@ fn args_and_returns() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "arg2 is already declared");
 
@@ -465,7 +465,7 @@ fn args_and_returns() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "missing return statement");
 
@@ -504,7 +504,7 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
         first_error(errors),
@@ -521,7 +521,7 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "unexpected array type");
 
@@ -535,7 +535,7 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
         first_error(errors),
@@ -552,7 +552,7 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
         first_error(errors),
@@ -592,7 +592,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
         first_error(errors),
@@ -609,7 +609,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(first_error(errors), "unexpected array type");
 
@@ -623,7 +623,7 @@ fn positional_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, &Target::Substrate);
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
         first_error(errors),

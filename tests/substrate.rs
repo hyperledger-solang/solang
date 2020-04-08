@@ -335,7 +335,7 @@ pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
         src,
         "test.sol",
         inkwell::OptimizationLevel::Default,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     output::print_messages("test.sol", src, &errors, false);

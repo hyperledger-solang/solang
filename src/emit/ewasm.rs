@@ -44,7 +44,7 @@ impl EwasmTarget {
         runtime_code.internalize(&["main"]);
 
         let runtime_obj = runtime_code.wasm(opt).unwrap();
-        let runtime_bs = link(&runtime_obj, &Target::Ewasm);
+        let runtime_bs = link(&runtime_obj, Target::Ewasm);
 
         // Now we have the runtime code, create the deployer
         let mut deploy_code = Contract::new(

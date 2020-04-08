@@ -16,7 +16,7 @@ fn basic_tests() {
                     f[0] = 102;
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -31,7 +31,7 @@ fn basic_tests() {
                     bytes f = new string(2);
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -46,7 +46,7 @@ fn basic_tests() {
                     string f = new bytes(2);
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -61,7 +61,7 @@ fn basic_tests() {
                     string f = string(new bytes(2));
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);
@@ -73,7 +73,7 @@ fn basic_tests() {
                     bytes f = bytes(new string(2));
             }
         }"#,
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);

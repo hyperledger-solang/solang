@@ -61,7 +61,7 @@ fn test_cast_errors() {
                 return state.foo;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -76,7 +76,7 @@ fn test_cast_errors() {
                 return state.foo;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "enum ‘state’ is missing fields");
@@ -88,7 +88,7 @@ fn test_cast_errors() {
                 return uint8(state.foo);
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);

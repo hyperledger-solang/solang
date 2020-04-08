@@ -55,7 +55,7 @@ pub fn compile(
     src: &str,
     filename: &str,
     opt: OptimizationLevel,
-    target: &Target,
+    target: Target,
 ) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();
 
@@ -94,11 +94,11 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(src: &str, target: &Target) -> (resolver::Namespace, Vec<output::Output>) {
+pub fn parse_and_resolve(src: &str, target: Target) -> (resolver::Namespace, Vec<output::Output>) {
     let ast = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {
-            return (resolver::Namespace::new(*target), errors);
+            return (resolver::Namespace::new(target), errors);
         }
     };
 

@@ -17,7 +17,7 @@ pub const FLAG_MASK_VISIBILITY: u32 = 0x04;
 #[allow(dead_code)]
 pub const FLAG_MASK_BINDING: u32 = 0x03;
 
-pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
+pub fn link(input: &[u8], target: Target) -> Vec<u8> {
     let mut module: Module =
         parity_wasm::deserialize_buffer(input).expect("cannot deserialize llvm wasm");
 
@@ -100,7 +100,7 @@ pub fn link(input: &[u8], target: &Target) -> Vec<u8> {
 
     let mut linked = builder::module().with_module(module);
 
-    if &Target::Sabre == target {
+    if Target::Sabre == target {
         linked.push_memory(Default::default());
     }
 

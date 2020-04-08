@@ -22,7 +22,7 @@ fn test_variable_errors() {
                 return a * b;
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "`b' is not declared");
@@ -36,7 +36,7 @@ fn test_variable_initializer_errors() {
             uint x = 102;
             uint constant y = x + 5;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -52,7 +52,7 @@ fn test_variable_initializer_errors() {
             }
             uint constant y = foo() + 5;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -66,7 +66,7 @@ fn test_variable_initializer_errors() {
             uint x = y + 102;
             uint y = 102;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "`y' is not declared");
@@ -77,7 +77,7 @@ fn test_variable_initializer_errors() {
             uint x = y + 102;
             uint constant y = 102;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "`y' is not declared");
@@ -87,7 +87,7 @@ fn test_variable_initializer_errors() {
         "contract test {
             uint x = x + 102;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "`x' is not declared");

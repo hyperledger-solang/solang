@@ -60,7 +60,7 @@ fn test_literal_overflow() {
         "contract test {
             uint8 foo = 300;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -72,7 +72,7 @@ fn test_literal_overflow() {
         "contract test {
             uint16 foo = 0x10000;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -84,7 +84,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = 0x8_0;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -96,7 +96,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = 127;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);
@@ -105,7 +105,7 @@ fn test_literal_overflow() {
         "contract test {
             int8 foo = -128;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);
@@ -114,7 +114,7 @@ fn test_literal_overflow() {
         "contract test {
             uint8 foo = 255;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     no_errors(errors);
@@ -123,7 +123,7 @@ fn test_literal_overflow() {
         "contract test {
             uint8 foo = -1_30;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -135,7 +135,7 @@ fn test_literal_overflow() {
         "contract test {
             int64 foo = 1844674_4073709551616;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -235,7 +235,7 @@ fn address() {
         "contract test {
             address  foo = 0x1844674_4073709551616;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -247,7 +247,7 @@ fn address() {
         "contract test {
             address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070d;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(first_error(errors), "address literal has incorrect checksum, expected ‘0x8617E340B3D01FA5F11F306F4090FD50E238070D’");
@@ -256,7 +256,7 @@ fn address() {
         "contract test {
             uint160 foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -272,7 +272,7 @@ fn address() {
                 return foo > address(0);
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -288,7 +288,7 @@ fn address() {
                 return foo + address(1);
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(
@@ -304,7 +304,7 @@ fn address() {
                 return foo | address(1);
             }
         }",
-        &Target::Substrate,
+        Target::Substrate,
     );
 
     assert_eq!(

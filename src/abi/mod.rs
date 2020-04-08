@@ -4,7 +4,7 @@ use Target;
 pub mod ethereum;
 pub mod substrate;
 
-pub fn generate_abi(contract: &Contract, target: &Target, verbose: bool) -> (String, &'static str) {
+pub fn generate_abi(contract: &Contract, target: Target, verbose: bool) -> (String, &'static str) {
     match target {
         Target::Ewasm | Target::Sabre => {
             if verbose {

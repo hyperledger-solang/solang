@@ -535,6 +535,7 @@ pub enum Symbol {
     Function(Vec<(ast::Loc, usize)>),
     Variable(ast::Loc, usize),
     Struct(ast::Loc, usize),
+    Contract(ast::Loc, usize),
 }
 
 /// When resolving a Solidity file, this holds all the resolved items
@@ -550,6 +551,36 @@ impl Namespace {
             target,
             contracts: Vec::new(),
             symbols: HashMap::new(),
+        }
+    }
+
+    pub fn add_symbol(
+        &mut self,
+        id: &ast::Identifier,
+        symbol: Symbol,
+        errors: &mut Vec<Output>,
+    ) -> bool {
+        if let Some(prev) = self.symbols.get(&id.name) {
+            match prev {
+                Symbol::Contract(c, _) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!(
+                            "{} is already defined as contract name",
+                            id.name.to_string()
+                        ),
+                        *c,
+                        "location of previous definition".to_string(),
+                    ));
+                }
+                _ => unimplemented!(),
+            }
+
+            false
+        } else {
+            self.symbols.insert(id.name.to_string(), symbol);
+
+            true
         }
     }
 }
@@ -620,6 +651,14 @@ impl Contract {
                             "{} is already defined as struct definition",
                             id.name.to_string()
                         ),
+                        *e,
+                        "location of previous definition".to_string(),
+                    ));
+                }
+                Symbol::Contract(e, _) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as a contract", id.name.to_string()),
                         *e,
                         "location of previous definition".to_string(),
                     ));
@@ -752,6 +791,13 @@ impl Contract {
                         ));
                         Err(())
                     }
+                    Some(Symbol::Contract(_, _)) => {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is a contract", id.name),
+                        ));
+                        Err(())
+                    }
                 }
             }
         }
@@ -868,6 +914,13 @@ impl Contract {
                 ));
                 Err(())
             }
+            Some(Symbol::Contract(_, _)) => {
+                errors.push(Output::decl_error(
+                    id.loc,
+                    format!("`{}' is a contract", id.name),
+                ));
+                Err(())
+            }
             Some(Symbol::Variable(_, n)) => Ok(*n),
         }
     }
@@ -912,6 +965,14 @@ impl Contract {
                     "previous declaration of state variable".to_string(),
                 ));
             }
+            Some(Symbol::Contract(loc, _)) => {
+                errors.push(Output::warning_with_note(
+                    id.loc,
+                    format!("declaration of `{}' shadows contract name", id.name),
+                    *loc,
+                    "previous declaration of contract name".to_string(),
+                ));
+            }
             None => {}
         }
     }
@@ -925,7 +986,7 @@ impl Contract {
         None
     }
 
-    pub fn abi(&self, target: &Target, verbose: bool) -> (String, &'static str) {
+    pub fn abi(&self, target: Target, verbose: bool) -> (String, &'static str) {
         abi::generate_abi(self, target, verbose)
     }
 
@@ -971,14 +1032,14 @@ impl fmt::Display for Contract {
     }
 }
 
-pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Namespace, Vec<Output>) {
+pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) {
     let mut errors = Vec::new();
-    let mut ns = Namespace::new(*target);
+    let mut ns = Namespace::new(target);
 
     for part in s.0 {
         match part {
             ast::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(def, &target, &mut errors, &mut ns);
+                resolve_contract(def, target, &mut errors, &mut ns);
             }
             ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
@@ -1007,7 +1068,7 @@ pub fn resolver(s: ast::SourceUnit, target: &Target) -> (Namespace, Vec<Output>)
 
 fn resolve_contract(
     def: Box<ast::ContractDefinition>,
-    target: &Target,
+    target: Target,
     errors: &mut Vec<Output>,
     ns: &mut Namespace,
 ) {
@@ -1030,9 +1091,13 @@ fn resolve_contract(
         format!("found contract {}", def.name.name),
     ));
 
-    builtin::add_builtin_function(&mut contract, ns);
+    let mut broken = !ns.add_symbol(
+        &def.name,
+        Symbol::Contract(def.loc, ns.contracts.len()),
+        errors,
+    );
 
-    let mut broken = false;
+    builtin::add_builtin_function(&mut contract, ns);
 
     // first resolve enums
     for parts in &def.parts {
@@ -1081,7 +1146,7 @@ fn resolve_contract(
     }
 
     // Substrate requires one constructor
-    if contract.constructors.is_empty() && target == &Target::Substrate {
+    if contract.constructors.is_empty() && target == Target::Substrate {
         let mut fdecl = FunctionDecl::new(
             ast::Loc(0, 0),
             "".to_owned(),
@@ -1173,7 +1238,7 @@ fn resolve_contract(
     }
 
     if !broken {
-        let pos = ns.contracts.push(contract);
+        ns.contracts.push(contract);
     }
 }
 
