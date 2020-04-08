@@ -16,7 +16,7 @@ pub fn struct_decl(
     let mut fields: Vec<StructField> = Vec::new();
 
     for field in &def.fields {
-        let ty = match contract.resolve_type(&field.ty, errors) {
+        let ty = match contract.resolve_type(&field.ty, ns, errors) {
             Ok(s) => s,
             Err(()) => {
                 valid = false;

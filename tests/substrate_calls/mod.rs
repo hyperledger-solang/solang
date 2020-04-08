@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error};
+use super::{build_solidity, first_error, first_warning};
 use solang::{parse_and_resolve, Target};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -55,6 +55,47 @@ fn contract_name() {
     assert_eq!(
         first_error(errors),
         "test is already defined as a contract name"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function f() public {
+                int test;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(errors),
+        "declaration of `test\' shadows contract name"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function f(int test) public {
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(errors),
+        "declaration of `test\' shadows contract name"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function f() public returns (int test) {
+                return 0;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(errors),
+        "declaration of `test\' shadows contract name"
     );
 }
 

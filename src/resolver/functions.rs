@@ -94,7 +94,7 @@ pub fn function_decl(
     };
 
     for p in &f.params {
-        match contract.resolve_type(&p.ty, errors) {
+        match contract.resolve_type(&p.ty, ns, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
@@ -143,7 +143,7 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
-        match contract.resolve_type(&r.ty, errors) {
+        match contract.resolve_type(&r.ty, ns, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {

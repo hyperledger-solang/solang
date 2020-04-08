@@ -40,7 +40,7 @@ fn var_decl(
     vartab: &mut Vartable,
     errors: &mut Vec<Output>,
 ) -> bool {
-    let ty = match contract.resolve_type(&s.ty, errors) {
+    let ty = match contract.resolve_type(&s.ty, ns, errors) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -99,9 +99,9 @@ fn var_decl(
 
     let initializer = if let Some(initializer) = &s.initializer {
         let expr = if is_constant {
-            expression(&initializer, cfg, &contract, &mut None, errors)
+            expression(&initializer, cfg, &contract, ns, &mut None, errors)
         } else {
-            expression(&initializer, cfg, &contract, &mut Some(vartab), errors)
+            expression(&initializer, cfg, &contract, ns, &mut Some(vartab), errors)
         };
 
         let (res, resty) = match expr {
@@ -148,7 +148,7 @@ fn var_decl(
         if is_constant {
             contract.constants.push(res);
         } else {
-            let var = vartab.find(&s.name, contract, errors).unwrap();
+            let var = vartab.find(&s.name, contract, ns, errors).unwrap();
             let loc = res.loc();
 
             cfg.add(
