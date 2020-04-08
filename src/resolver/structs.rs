@@ -1,4 +1,4 @@
-use super::{Contract, StructDecl, StructField, Symbol};
+use super::{Contract, Namespace, StructDecl, StructField, Symbol};
 use output::Output;
 use parser::ast;
 
@@ -8,14 +8,15 @@ use parser::ast;
 /// of the contract, even if the struct contains an invalid definition.
 pub fn struct_decl(
     def: &ast::StructDefinition,
-    ns: &mut Contract,
+    contract: &mut Contract,
+    ns: &Namespace,
     errors: &mut Vec<Output>,
 ) -> bool {
     let mut valid = true;
     let mut fields: Vec<StructField> = Vec::new();
 
     for field in &def.fields {
-        let ty = match ns.resolve_type(&field.ty, errors) {
+        let ty = match contract.resolve_type(&field.ty, errors) {
             Ok(s) => s,
             Err(()) => {
                 valid = false;
@@ -71,14 +72,14 @@ pub fn struct_decl(
     }
 
     if valid {
-        let pos = ns.structs.len();
+        let pos = contract.structs.len();
 
-        ns.structs.push(StructDecl {
+        contract.structs.push(StructDecl {
             name: def.name.name.to_string(),
             fields,
         });
 
-        if !ns.add_symbol(&def.name, Symbol::Struct(def.name.loc, pos), errors) {
+        if !contract.add_symbol(&def.name, Symbol::Struct(def.name.loc, pos), ns, errors) {
             valid = false;
         }
     }

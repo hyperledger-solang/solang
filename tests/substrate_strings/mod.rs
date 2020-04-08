@@ -9,7 +9,7 @@ use solang::{parse_and_resolve, Target};
 fn basic_tests() {
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public {
                     string f = new string(2);
 
@@ -26,7 +26,7 @@ fn basic_tests() {
 
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public {
                     bytes f = new string(2);
             }
@@ -41,7 +41,7 @@ fn basic_tests() {
 
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public {
                     string f = new bytes(2);
             }
@@ -56,7 +56,7 @@ fn basic_tests() {
 
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public {
                     string f = string(new bytes(2));
             }
@@ -68,7 +68,7 @@ fn basic_tests() {
 
     let (_, errors) = parse_and_resolve(
         r#"
-        contract foo {
+        contract c {
             function foo() public {
                     bytes f = bytes(new string(2));
             }

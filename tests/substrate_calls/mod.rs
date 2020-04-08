@@ -1,16 +1,68 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::build_solidity;
+use super::{build_solidity, first_error};
+use solang::{parse_and_resolve, Target};
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 struct RevertReturn(u32, String);
 
 #[test]
+fn contract_name() {
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function test() public {}
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "test is already defined as a contract name"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            enum test { a}
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "test is already defined as a contract name"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            bool test;
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "test is already defined as a contract name"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            struct test { bool a; }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "test is already defined as a contract name"
+    );
+}
+
+#[test]
 fn revert() {
     let (runtime, mut store) = build_solidity(
         r##"
-        contract c {
+        contract bar {
             function test() public {
                 revert("yo!");
             }

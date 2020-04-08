@@ -6,16 +6,16 @@ use resolver;
 use Target;
 
 pub fn add_builtin_function(contract: &mut Contract, ns: &Namespace) {
-    add_assert(contract);
-    add_print(contract);
+    add_assert(contract, ns);
+    add_print(contract, ns);
     // FIXME: ewasm has no string encoder yet
     if ns.target == Target::Substrate {
-        add_revert(contract);
-        add_require(contract);
+        add_revert(contract, ns);
+        add_require(contract, ns);
     }
 }
 
-fn add_assert(ns: &mut Contract) {
+fn add_assert(contract: &mut Contract, ns: &Namespace) {
     let argty = resolver::Type::Bool;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -35,7 +35,7 @@ fn add_assert(ns: &mut Contract) {
             ty: resolver::Type::Bool,
         }],
         vec![],
-        &ns,
+        &contract,
     );
 
     let mut errors = Vec::new();
@@ -76,18 +76,19 @@ fn add_assert(ns: &mut Contract) {
 
     assert.cfg = Some(Box::new(cfg));
 
-    let pos = ns.functions.len();
+    let pos = contract.functions.len();
 
-    ns.functions.push(assert);
+    contract.functions.push(assert);
 
-    ns.add_symbol(
+    contract.add_symbol(
         &id,
         resolver::Symbol::Function(vec![(id.loc, pos)]),
+        ns,
         &mut errors,
     );
 }
 
-fn add_print(ns: &mut Contract) {
+fn add_print(contract: &mut Contract, ns: &Namespace) {
     let argty = resolver::Type::String;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -107,7 +108,7 @@ fn add_print(ns: &mut Contract) {
             ty: resolver::Type::String,
         }],
         vec![],
-        &ns,
+        &contract,
     );
 
     let mut errors = Vec::new();
@@ -137,18 +138,19 @@ fn add_print(ns: &mut Contract) {
 
     assert.cfg = Some(Box::new(cfg));
 
-    let pos = ns.functions.len();
+    let pos = contract.functions.len();
 
-    ns.functions.push(assert);
+    contract.functions.push(assert);
 
-    ns.add_symbol(
+    contract.add_symbol(
         &id,
         resolver::Symbol::Function(vec![(id.loc, pos)]),
+        ns,
         &mut errors,
     );
 }
 
-fn add_require(ns: &mut Contract) {
+fn add_require(contract: &mut Contract, ns: &Namespace) {
     let argty = resolver::Type::Bool;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
@@ -174,7 +176,7 @@ fn add_require(ns: &mut Contract) {
             },
         ],
         vec![],
-        &ns,
+        &contract,
     );
 
     let mut errors = Vec::new();
@@ -233,18 +235,19 @@ fn add_require(ns: &mut Contract) {
 
     require.cfg = Some(Box::new(cfg));
 
-    let pos = ns.functions.len();
+    let pos = contract.functions.len();
 
-    ns.functions.push(require);
+    contract.functions.push(require);
 
-    ns.add_symbol(
+    contract.add_symbol(
         &id,
         resolver::Symbol::Function(vec![(id.loc, pos)]),
+        ns,
         &mut errors,
     );
 }
 
-fn add_revert(ns: &mut Contract) {
+fn add_revert(contract: &mut Contract, ns: &Namespace) {
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "revert".to_owned(),
@@ -263,7 +266,7 @@ fn add_revert(ns: &mut Contract) {
             ty: resolver::Type::String,
         }],
         vec![],
-        &ns,
+        &contract,
     );
 
     let mut errors = Vec::new();
@@ -294,9 +297,9 @@ fn add_revert(ns: &mut Contract) {
 
     revert.cfg = Some(Box::new(cfg));
 
-    let pos_with_arg = ns.functions.len();
+    let pos_with_arg = contract.functions.len();
 
-    ns.functions.push(revert);
+    contract.functions.push(revert);
 
     // now add variant with no argument
     let mut revert = FunctionDecl::new(
@@ -309,7 +312,7 @@ fn add_revert(ns: &mut Contract) {
         ast::Visibility::Private(ast::Loc(0, 0)),
         vec![],
         vec![],
-        &ns,
+        &contract,
     );
 
     let mut errors = Vec::new();
@@ -322,13 +325,14 @@ fn add_revert(ns: &mut Contract) {
 
     revert.cfg = Some(Box::new(cfg));
 
-    let pos_with_no_arg = ns.functions.len();
+    let pos_with_no_arg = contract.functions.len();
 
-    ns.functions.push(revert);
+    contract.functions.push(revert);
 
-    ns.add_symbol(
+    contract.add_symbol(
         &id,
         resolver::Symbol::Function(vec![(id.loc, pos_with_arg), (id.loc, pos_with_no_arg)]),
+        ns,
         &mut errors,
     );
 }
