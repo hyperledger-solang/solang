@@ -660,7 +660,7 @@ impl TargetRuntime for EwasmTarget {
             contract.context.i32_type().const_int(4, false),
             contract.context.i32_type().const_int(
                 self.abi
-                    .encoded_length(&resolver::Type::String, contract.contract),
+                    .encoded_length(&resolver::Type::String, contract.ns),
                 false,
             ),
             "length",
@@ -724,7 +724,7 @@ impl TargetRuntime for EwasmTarget {
         let length = contract.context.i32_type().const_int(
             spec.returns
                 .iter()
-                .map(|arg| self.abi.encoded_length(&arg.ty, contract.contract))
+                .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
                 .sum(),
             false,
         );

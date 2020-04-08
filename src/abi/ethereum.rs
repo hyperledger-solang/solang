@@ -31,7 +31,7 @@ pub struct ABI {
 pub fn gen_abi(contract: &Contract, ns: &Namespace) -> Vec<ABI> {
     fn parameter_to_abi(name: &str, ty: &Type, contract: &Contract, ns: &Namespace) -> ABIParam {
         let components = if let Type::Struct(n) = ty {
-            contract.structs[*n]
+            ns.structs[*n]
                 .fields
                 .iter()
                 .map(|f| parameter_to_abi(&f.name, &f.ty, contract, ns))

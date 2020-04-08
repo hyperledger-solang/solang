@@ -598,7 +598,7 @@ impl TargetRuntime for SabreTarget {
         let length = contract.context.i32_type().const_int(
             spec.returns
                 .iter()
-                .map(|arg| self.abi.encoded_length(&arg.ty, contract.contract))
+                .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
                 .sum(),
             false,
         );

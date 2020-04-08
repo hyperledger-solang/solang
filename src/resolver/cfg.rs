@@ -724,7 +724,7 @@ fn statement(
                 // will be stored in memory.
             }
 
-            if var_ty.contains_mapping(contract) && !var_ty.is_contract_storage() {
+            if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
                 errors.push(Output::error(
                     decl.ty.loc(),
                     "mapping only allowed in storage".to_string(),
@@ -732,9 +732,7 @@ fn statement(
                 return Err(());
             }
 
-            if !var_ty.is_contract_storage()
-                && var_ty.size_hint(contract) > BigInt::from(1024 * 1024)
-            {
+            if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
                 errors.push(Output::error(
                     stmt.loc(),
                     "type to large to fit into memory".to_string(),

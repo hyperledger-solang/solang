@@ -355,7 +355,7 @@ pub fn load(bs: &str) -> Result<Metadata, serde_json::error::Error> {
     serde_json::from_str(bs)
 }
 
-pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
+pub fn gen_abi(resolver_contract: &resolver::Contract, ns: &resolver::Namespace) -> Metadata {
     let mut registry = Registry::new();
 
     let fields = resolver_contract
@@ -364,7 +364,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
         .filter(|v| !v.is_storage())
         .map(|v| StructField {
             name: registry.string(&v.name),
-            ty: ty_to_abi(&v.ty, resolver_contract, &mut registry).ty,
+            ty: ty_to_abi(&v.ty, resolver_contract, ns, &mut registry).ty,
         })
         .collect();
 
@@ -380,8 +380,8 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
                         name: registry.string(&v.name),
                         layout: StorageFieldLayout::Field(LayoutField {
                             offset: format!("0x{:064X}", storage),
-                            len: v.ty.storage_slots(resolver_contract).to_string(),
-                            ty: ty_to_abi(&v.ty, resolver_contract, &mut registry).ty,
+                            len: v.ty.storage_slots(ns).to_string(),
+                            ty: ty_to_abi(&v.ty, resolver_contract, ns, &mut registry).ty,
                         }),
                     })
                 } else {
@@ -413,7 +413,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
             args: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(p, resolver_contract, &mut registry))
+                .map(|p| parameter_to_abi(p, resolver_contract, ns, &mut registry))
                 .collect(),
             docs: f.doc.clone(),
         })
@@ -437,6 +437,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
                 1 => Some(ty_to_abi(
                     &f.returns[0].ty,
                     resolver_contract,
+                    ns,
                     &mut registry,
                 )),
                 _ => {
@@ -445,7 +446,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
                         .iter()
                         .map(|f| StructField {
                             name: registry.string(&f.name),
-                            ty: ty_to_abi(&f.ty, resolver_contract, &mut registry).ty,
+                            ty: ty_to_abi(&f.ty, resolver_contract, ns, &mut registry).ty,
                         })
                         .collect();
 
@@ -459,7 +460,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
             args: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(p, resolver_contract, &mut registry))
+                .map(|p| parameter_to_abi(p, resolver_contract, ns, &mut registry))
                 .collect(),
             docs: f.doc.clone(),
         })
@@ -481,6 +482,7 @@ pub fn gen_abi(resolver_contract: &resolver::Contract) -> Metadata {
 fn ty_to_abi(
     ty: &resolver::Type,
     contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     registry: &mut Registry,
 ) -> ParamType {
     match ty {
@@ -504,7 +506,7 @@ fn ty_to_abi(
         resolver::Type::Undef => unreachable!(),
         resolver::Type::Mapping(_, _) => unreachable!(),
         resolver::Type::Array(ty, dims) => {
-            let mut param_ty = ty_to_abi(ty, contract, registry);
+            let mut param_ty = ty_to_abi(ty, contract, ns, registry);
 
             for d in dims {
                 if let Some(d) = d {
@@ -519,8 +521,8 @@ fn ty_to_abi(
 
             param_ty
         }
-        resolver::Type::StorageRef(ty) => ty_to_abi(ty, contract, registry),
-        resolver::Type::Ref(ty) => ty_to_abi(ty, contract, registry),
+        resolver::Type::StorageRef(ty) => ty_to_abi(ty, contract, ns, registry),
+        resolver::Type::Ref(ty) => ty_to_abi(ty, contract, ns, registry),
         resolver::Type::Bool
         | resolver::Type::Uint(_)
         | resolver::Type::Int(_)
@@ -533,13 +535,13 @@ fn ty_to_abi(
             }
         }
         resolver::Type::Struct(n) => {
-            let def = &contract.structs[*n];
+            let def = &ns.structs[*n];
             let fields = def
                 .fields
                 .iter()
                 .map(|f| StructField {
                     name: registry.string(&f.name),
-                    ty: ty_to_abi(&f.ty, contract, registry).ty,
+                    ty: ty_to_abi(&f.ty, contract, ns, registry).ty,
                 })
                 .collect();
             ParamType {
@@ -577,11 +579,12 @@ fn primitive_to_string(ty: resolver::Type) -> String {
 fn parameter_to_abi(
     param: &resolver::Parameter,
     contract: &resolver::Contract,
+    ns: &resolver::Namespace,
     registry: &mut Registry,
 ) -> Param {
     Param {
         name: registry.string(&param.name),
-        ty: ty_to_abi(&param.ty, contract, registry),
+        ty: ty_to_abi(&param.ty, contract, ns, registry),
     }
 }
 
