@@ -74,7 +74,7 @@ impl EthAbiEncoder {
                 }
             }
             resolver::Type::Struct(n) => {
-                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),
@@ -379,7 +379,7 @@ impl EthAbiEncoder {
     }
 
     /// Return the encoded length of the given type
-    pub fn encoded_length(&self, ty: &resolver::Type, contract: &resolver::Contract) -> u64 {
+    pub fn encoded_length(&self, ty: &resolver::Type, ns: &resolver::Namespace) -> u64 {
         match ty {
             resolver::Type::Bool
             | resolver::Type::Address
@@ -387,10 +387,10 @@ impl EthAbiEncoder {
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => 32,
             resolver::Type::Enum(_) => 32,
-            resolver::Type::Struct(n) => contract.structs[*n]
+            resolver::Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .map(|f| self.encoded_length(&f.ty, contract))
+                .map(|f| self.encoded_length(&f.ty, ns))
                 .sum(),
             resolver::Type::Array(ty, dims) => {
                 let mut product = 1;
@@ -402,12 +402,12 @@ impl EthAbiEncoder {
                     }
                 }
 
-                product * self.encoded_length(&ty, contract)
+                product * self.encoded_length(&ty, ns)
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(r) => self.encoded_length(r, contract),
-            resolver::Type::StorageRef(r) => self.encoded_length(r, contract),
+            resolver::Type::Ref(r) => self.encoded_length(r, ns),
+            resolver::Type::StorageRef(r) => self.encoded_length(r, ns),
             resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         }
     }
@@ -654,7 +654,7 @@ impl EthAbiEncoder {
                 let to =
                     to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
 
-                for (i, field) in contract.contract.structs[*n].fields.iter().enumerate() {
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
                             to,
@@ -716,7 +716,7 @@ impl EthAbiEncoder {
         let expected_length = spec
             .params
             .iter()
-            .map(|arg| self.encoded_length(&arg.ty, contract.contract))
+            .map(|arg| self.encoded_length(&arg.ty, contract.ns))
             .sum();
         let mut data = data;
         let decode_block = contract.context.append_basic_block(function, "abi_decode");

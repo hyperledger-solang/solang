@@ -26,7 +26,7 @@ pub fn generate_abi(contract: &Contract, ns: &Namespace, verbose: bool) -> (Stri
                 );
             }
 
-            let abi = substrate::gen_abi(contract);
+            let abi = substrate::gen_abi(contract, ns);
 
             (serde_json::to_string_pretty(&abi).unwrap(), "json")
         }

@@ -19,6 +19,7 @@ pub enum SourceUnitPart {
     PragmaDirective(Identifier, StringLiteral),
     ImportDirective(StringLiteral),
     EnumDefinition(Box<EnumDefinition>),
+    StructDefinition(Box<StructDefinition>),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]

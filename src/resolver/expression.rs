@@ -322,8 +322,8 @@ fn get_int_length(
             errors.push(Output::error(
                 *l_loc,
                 format!(
-                    "type struct {}.{} not allowed",
-                    contract.name, contract.structs[*n].name
+                    "type struct {} not allowed",
+                    ns.structs[*n].print_to_string()
                 ),
             ));
             Err(())
@@ -2257,7 +2257,7 @@ pub fn expression(
                     resolver::Type::Struct(n) => {
                         let mut slot = BigInt::zero();
 
-                        for field in &contract.structs[n].fields {
+                        for field in &ns.structs[n].fields {
                             if id.name == field.name {
                                 return Ok((
                                     Expression::Add(
@@ -2269,14 +2269,14 @@ pub fn expression(
                                 ));
                             }
 
-                            slot += field.ty.storage_slots(contract);
+                            slot += field.ty.storage_slots(ns);
                         }
 
                         errors.push(Output::error(
                             id.loc,
                             format!(
                                 "struct ‘{}’ does not have a field called ‘{}’",
-                                contract.structs[n].name, id.name
+                                ns.structs[n].name, id.name
                             ),
                         ));
                         return Err(());
@@ -2311,7 +2311,7 @@ pub fn expression(
                     _ => {}
                 },
                 resolver::Type::Struct(n) => {
-                    if let Some((i, f)) = contract.structs[n]
+                    if let Some((i, f)) = ns.structs[n]
                         .fields
                         .iter()
                         .enumerate()
@@ -2326,7 +2326,8 @@ pub fn expression(
                             id.loc,
                             format!(
                                 "struct ‘{}’ does not have a field called ‘{}’",
-                                contract.structs[n].name, id.name
+                                ns.structs[n].print_to_string(),
+                                id.name
                             ),
                         ));
                         return Err(());
@@ -3473,7 +3474,7 @@ fn array_subscript(
 
     if let resolver::Type::StorageRef(ty) = array_ty {
         let elem_ty = ty.storage_deref();
-        let elem_size = elem_ty.storage_slots(contract);
+        let elem_size = elem_ty.storage_slots(ns);
         let mut nullsink = Vec::new();
 
         if let Ok(array_length) = eval_number_expression(&array_length, &mut nullsink) {
@@ -3523,7 +3524,7 @@ fn array_subscript(
                     errors,
                 )?,
                 elem_ty.clone(),
-                contract,
+                ns,
             ),
             elem_ty,
         ))
@@ -3622,7 +3623,7 @@ fn struct_literal(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let struct_def = &contract.structs[struct_no];
+    let struct_def = &ns.structs[struct_no];
 
     if args.len() != struct_def.fields.len() {
         errors.push(Output::error(
@@ -3952,7 +3953,7 @@ fn named_struct_literal(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let struct_def = &contract.structs[struct_no];
+    let struct_def = &ns.structs[struct_no];
 
     if args.len() != struct_def.fields.len() {
         errors.push(Output::error(
@@ -4035,7 +4036,7 @@ fn method_call(
                         ));
                         Err(())
                     } else {
-                        array_pop(loc, var_expr, func, ty, args, cfg, contract, vartab, errors)
+                        array_pop(loc, var_expr, func, ty, args, cfg, ns, vartab, errors)
                     };
                 }
             }

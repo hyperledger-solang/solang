@@ -119,7 +119,7 @@ pub fn function_decl(
                         success = false;
                         ty
                     }
-                } else if ty.contains_mapping(contract) {
+                } else if ty.contains_mapping(ns) {
                     errors.push(Output::error(
                         p.ty.loc(),
                         "parameter with mapping type must be of type ‘storage’".to_string(),
@@ -181,7 +181,7 @@ pub fn function_decl(
                             }
                         }
                         _ => {
-                            if ty.contains_mapping(contract) {
+                            if ty.contains_mapping(ns) {
                                 errors.push(Output::error(
                                     r.ty.loc(),
                                     "return type containing mapping  must be of type ‘storage’"
@@ -355,7 +355,6 @@ fn signatures() {
     let contract = Contract {
         doc: vec![],
         name: String::from("foo"),
-        structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),

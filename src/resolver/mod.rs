@@ -56,7 +56,7 @@ impl Type {
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
             Type::Enum(n) => format!("enum {}", ns.enums[*n].print_to_string()),
-            Type::Struct(n) => format!("struct {}.{}", contract.name, contract.structs[*n].name),
+            Type::Struct(n) => format!("struct {}", ns.structs[*n].print_to_string()),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_string(contract, ns),
@@ -171,7 +171,7 @@ impl Type {
     /// Calculate how much memory we expect this type to use when allocated on the
     /// stack or on the heap. Depending on the llvm implementation there might be
     /// padding between elements which is not accounted for.
-    pub fn size_hint(&self, ns: &Contract) -> BigInt {
+    pub fn size_hint(&self, ns: &Namespace) -> BigInt {
         match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
@@ -234,7 +234,7 @@ impl Type {
 
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
     /// be very large
-    pub fn storage_slots(&self, ns: &Contract) -> BigInt {
+    pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
         match self {
             Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
             Type::Struct(n) => ns.structs[*n]
@@ -280,7 +280,7 @@ impl Type {
     }
 
     /// Does this type contain any types which are variable-length
-    pub fn is_dynamic(&self, ns: &Contract) -> bool {
+    pub fn is_dynamic(&self, ns: &Namespace) -> bool {
         match self {
             Type::String | Type::DynamicBytes => true,
             Type::Ref(r) => r.is_dynamic(ns),
@@ -340,7 +340,7 @@ impl Type {
     }
 
     /// Does the type contain any mapping type
-    pub fn contains_mapping(&self, ns: &Contract) -> bool {
+    pub fn contains_mapping(&self, ns: &Namespace) -> bool {
         match self {
             Type::Mapping(_, _) => true,
             Type::Array(ty, _) => ty.contains_mapping(ns),
@@ -371,7 +371,19 @@ pub struct StructField {
 
 pub struct StructDecl {
     pub name: String,
+    pub contract: Option<String>,
     pub fields: Vec<StructField>,
+}
+
+impl StructDecl {
+    /// Make the struct name into a string for printing. The enum can be declared either
+    /// inside or outside a contract.
+    pub fn print_to_string(&self) -> String {
+        match &self.contract {
+            Some(c) => format!("{}.{}", c, self.name),
+            None => self.name.to_owned(),
+        }
+    }
 }
 
 pub struct EnumDecl {
@@ -458,7 +470,7 @@ impl FunctionDecl {
     }
 
     /// Return a unique string for this function which is a valid wasm symbol
-    pub fn wasm_symbol(&self, contract: &Contract, ns: &Namespace) -> String {
+    pub fn wasm_symbol(&self, ns: &Namespace) -> String {
         let mut sig = self.name.to_owned();
 
         if !self.params.is_empty() {
@@ -469,7 +481,7 @@ impl FunctionDecl {
                     sig.push('_');
                 }
 
-                fn type_to_wasm_name(ty: &Type, contract: &Contract, ns: &Namespace) -> String {
+                fn type_to_wasm_name(ty: &Type, ns: &Namespace) -> String {
                     match ty {
                         Type::Bool => "bool".to_string(),
                         Type::Address => "address".to_string(),
@@ -479,10 +491,10 @@ impl FunctionDecl {
                         Type::DynamicBytes => "bytes".to_string(),
                         Type::String => "string".to_string(),
                         Type::Enum(i) => ns.enums[*i].print_to_string(),
-                        Type::Struct(i) => contract.structs[*i].name.to_owned(),
+                        Type::Struct(i) => ns.structs[*i].print_to_string(),
                         Type::Array(ty, len) => format!(
                             "{}{}",
-                            ty.to_string(contract, ns),
+                            type_to_wasm_name(ty, ns),
                             len.iter()
                                 .map(|r| match r {
                                     None => ":".to_string(),
@@ -492,16 +504,16 @@ impl FunctionDecl {
                         ),
                         Type::Mapping(k, v) => format!(
                             "mapping:{}:{}",
-                            type_to_wasm_name(k, contract, ns),
-                            type_to_wasm_name(v, contract, ns)
+                            type_to_wasm_name(k, ns),
+                            type_to_wasm_name(v, ns)
                         ),
                         Type::Undef => unreachable!(),
-                        Type::Ref(r) => type_to_wasm_name(r, contract, ns),
-                        Type::StorageRef(r) => type_to_wasm_name(r, contract, ns),
+                        Type::Ref(r) => type_to_wasm_name(r, ns),
+                        Type::StorageRef(r) => type_to_wasm_name(r, ns),
                     }
                 }
 
-                sig.push_str(&type_to_wasm_name(&p.ty, contract, ns));
+                sig.push_str(&type_to_wasm_name(&p.ty, ns));
             }
         }
 
@@ -558,6 +570,7 @@ pub enum Symbol {
 pub struct Namespace {
     pub target: Target,
     pub enums: Vec<EnumDecl>,
+    pub structs: Vec<StructDecl>,
     pub contracts: Vec<Contract>,
     symbols: HashMap<String, Symbol>,
 }
@@ -567,6 +580,7 @@ impl Namespace {
         Namespace {
             target,
             enums: Vec::new(),
+            structs: Vec::new(),
             contracts: Vec::new(),
             symbols: HashMap::new(),
         }
@@ -591,6 +605,22 @@ impl Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
+                Symbol::Enum(c, _) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as enum", id.name.to_string()),
+                        *c,
+                        "location of previous definition".to_string(),
+                    ));
+                }
+                Symbol::Struct(c, _) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as struct", id.name.to_string()),
+                        *c,
+                        "location of previous definition".to_string(),
+                    ));
+                }
                 _ => unimplemented!(),
             }
 
@@ -607,7 +637,6 @@ pub struct Contract {
     pub doc: Vec<String>,
     pub name: String,
     // events
-    pub structs: Vec<StructDecl>,
     pub constructors: Vec<FunctionDecl>,
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<ContractVariable>,
@@ -618,6 +647,20 @@ pub struct Contract {
 }
 
 impl Contract {
+    pub fn new(name: &str) -> Self {
+        Contract {
+            name: name.to_owned(),
+            doc: Vec::new(),
+            constructors: Vec::new(),
+            functions: Vec::new(),
+            variables: Vec::new(),
+            constants: Vec::new(),
+            initializer: cfg::ControlFlowGraph::new(),
+            top_of_contract_storage: BigInt::zero(),
+            symbols: HashMap::new(),
+        }
+    }
+
     fn add_symbol(
         &mut self,
         id: &ast::Identifier,
@@ -1101,6 +1144,9 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
             ast::SourceUnitPart::EnumDefinition(def) => {
                 let _ = enum_decl(&def, None, &mut ns, &mut errors);
             }
+            ast::SourceUnitPart::StructDefinition(def) => {
+                let _ = structs::struct_decl(&def, None, &mut ns, &mut errors);
+            }
             ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
@@ -1135,7 +1181,6 @@ fn resolve_contract(
     let mut contract = Contract {
         name: def.name.name.to_string(),
         doc: def.doc.clone(),
-        structs: Vec::new(),
         constructors: Vec::new(),
         functions: Vec::new(),
         variables: Vec::new(),
@@ -1172,7 +1217,7 @@ fn resolve_contract(
     // resolve struct definitions
     for parts in &def.parts {
         if let ast::ContractPart::StructDefinition(ref s) = parts {
-            if !structs::struct_decl(s, &mut contract, ns, errors) {
+            if !structs::struct_decl(s, Some(&mut contract), ns, errors) {
                 broken = true;
             }
         }
@@ -1389,19 +1434,7 @@ fn enum_256values_is_uint8() {
     };
 
     let mut ns = Namespace::new(Target::Ewasm);
-
-    let mut contract = Contract {
-        name: "foo".to_string(),
-        doc: Vec::new(),
-        structs: Vec::new(),
-        constructors: Vec::new(),
-        functions: Vec::new(),
-        variables: Vec::new(),
-        constants: Vec::new(),
-        initializer: cfg::ControlFlowGraph::new(),
-        top_of_contract_storage: BigInt::zero(),
-        symbols: HashMap::new(),
-    };
+    let mut contract = Contract::new("foo");
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),

@@ -17,7 +17,7 @@ pub fn array_offset(
     start: Expression,
     index: Expression,
     elem_ty: resolver::Type,
-    ns: &resolver::Contract,
+    ns: &resolver::Namespace,
 ) -> Expression {
     let elem_size = elem_ty.storage_slots(ns);
 
@@ -162,7 +162,7 @@ pub fn array_push(
                 Expression::Keccak256(*loc, vec![(var_expr.clone(), slot_ty.clone())]),
                 Expression::Variable(*loc, length_pos),
                 elem_ty.clone(),
-                contract,
+                ns,
             ),
         },
     );
@@ -238,7 +238,7 @@ pub fn array_pop(
     ty: &resolver::Type,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    ns: &resolver::Contract,
+    ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {

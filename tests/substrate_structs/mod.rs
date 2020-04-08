@@ -541,11 +541,11 @@ fn return_from_struct_storage() {
 
     let (runtime, mut store) = build_solidity(
         r##"
+        struct foo {
+            bytes3 f1;
+            uint32 f2;
+        }
         contract test_struct_parsing {
-            struct foo {
-                bytes3 f1;
-                uint32 f2;
-            }
             foo bar;
 
             constructor() public {
@@ -592,32 +592,32 @@ fn struct_in_init_return() {
 
     let (runtime, mut store) = build_solidity(
         r#"
-    contract structs {
         enum suit { club, diamonds, hearts, spades }
         enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
         struct card {
             value v;
             suit s;
         }
-        card card1 = card({ s: suit.hearts, v: value.two });
-        card card2 = card({ s: suit.diamonds, v: value.three });
-        card card3 = card({ s: suit.club, v: value.four });
-        card card4 = card({ s: suit.diamonds, v: value.ten });
-        card card5 = card({ s: suit.hearts, v: value.jack });
+        contract structs {
+            card card1 = card({ s: suit.hearts, v: value.two });
+            card card2 = card({ s: suit.diamonds, v: value.three });
+            card card3 = card({ s: suit.club, v: value.four });
+            card card4 = card({ s: suit.diamonds, v: value.ten });
+            card card5 = card({ s: suit.hearts, v: value.jack });
 
-        function test() public {
-            assert(card1.s == suit.hearts);
-            assert(card1.v == value.two);
-            assert(card2.s == suit.diamonds);
-            assert(card2.v == value.three);
-            assert(card3.s == suit.club);
-            assert(card3.v == value.four);
-            assert(card4.s == suit.diamonds);
-            assert(card4.v == value.ten);
-            assert(card5.s == suit.hearts);
-            assert(card5.v == value.jack);
-        }
-    }"#,
+            function test() public {
+                assert(card1.s == suit.hearts);
+                assert(card1.v == value.two);
+                assert(card2.s == suit.diamonds);
+                assert(card2.v == value.three);
+                assert(card3.s == suit.club);
+                assert(card3.v == value.four);
+                assert(card4.s == suit.diamonds);
+                assert(card4.v == value.ten);
+                assert(card5.s == suit.hearts);
+                assert(card5.v == value.jack);
+            }
+        }"#,
     );
 
     runtime.constructor(&mut store, 0, Vec::new());

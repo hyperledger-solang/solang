@@ -17,6 +17,7 @@ SourceUnitPart: SourceUnitPart = {
     PragmaDirective => SourceUnitPart::PragmaDirective(<>.0, <>.1),
     ImportDirective => SourceUnitPart::ImportDirective(<>),
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
+    StructDefinition => SourceUnitPart::StructDefinition(<>),
 }
 
 ImportDirective: StringLiteral = {

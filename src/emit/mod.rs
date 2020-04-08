@@ -522,10 +522,7 @@ impl<'a> Contract<'a> {
 
         for resolver_func in &self.contract.functions {
             let name = if resolver_func.name != "" {
-                format!(
-                    "sol::function::{}",
-                    resolver_func.wasm_symbol(self.contract, self.ns)
-                )
+                format!("sol::function::{}", resolver_func.wasm_symbol(self.ns))
             } else {
                 "sol::fallback".to_owned()
             };
@@ -538,10 +535,7 @@ impl<'a> Contract<'a> {
 
         for resolver_func in &self.contract.constructors {
             let func_decl = self.declare_function(
-                &format!(
-                    "sol::constructor{}",
-                    resolver_func.wasm_symbol(self.contract, self.ns)
-                ),
+                &format!("sol::constructor{}", resolver_func.wasm_symbol(self.ns)),
                 resolver_func,
             );
 
@@ -1772,7 +1766,7 @@ impl<'a> Contract<'a> {
                     "dest",
                 );
 
-                for (i, field) in self.contract.structs[*n].fields.iter().enumerate() {
+                for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
                     let val = self.storage_load(&field.ty, slot, slot_ptr, function, runtime);
 
                     let elem = unsafe {
@@ -1865,7 +1859,7 @@ impl<'a> Contract<'a> {
                             if !ty.is_reference_type() {
                                 *slot = self.builder.build_int_add(
                                     *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.contract)),
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
                                     "",
                                 );
                             }
@@ -1976,7 +1970,7 @@ impl<'a> Contract<'a> {
                             if !ty.is_reference_type() {
                                 *slot = self.builder.build_int_add(
                                     *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.contract)),
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
                                     "",
                                 );
                             }
@@ -1996,7 +1990,7 @@ impl<'a> Contract<'a> {
                             if !ty.is_reference_type() {
                                 *slot = self.builder.build_int_add(
                                     *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.contract)),
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
                                     "",
                                 );
                             }
@@ -2005,7 +1999,7 @@ impl<'a> Contract<'a> {
                 }
             }
             resolver::Type::Struct(n) => {
-                for (i, field) in self.contract.structs[*n].fields.iter().enumerate() {
+                for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
                     let mut elem = unsafe {
                         self.builder.build_gep(
                             dest.into_pointer_value(),
@@ -2029,7 +2023,7 @@ impl<'a> Contract<'a> {
                     if !field.ty.is_reference_type() {
                         *slot = self.builder.build_int_add(
                             *slot,
-                            self.number_literal(256, &field.ty.storage_slots(self.contract)),
+                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
                             &field.name,
                         );
                     }
@@ -2085,7 +2079,7 @@ impl<'a> Contract<'a> {
                             if !ty.is_reference_type() {
                                 *slot = self.builder.build_int_add(
                                     *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.contract)),
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
                                     "",
                                 );
                             }
@@ -2128,7 +2122,7 @@ impl<'a> Contract<'a> {
                             if !ty.is_reference_type() {
                                 *slot = self.builder.build_int_add(
                                     *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.contract)),
+                                    self.number_literal(256, &ty.storage_slots(self.ns)),
                                     "",
                                 );
                             }
@@ -2146,13 +2140,13 @@ impl<'a> Contract<'a> {
                 }
             }
             resolver::Type::Struct(n) => {
-                for (_, field) in self.contract.structs[*n].fields.iter().enumerate() {
+                for (_, field) in self.ns.structs[*n].fields.iter().enumerate() {
                     self.storage_clear(&field.ty, slot, slot_ptr, function, runtime);
 
                     if !field.ty.is_reference_type() {
                         *slot = self.builder.build_int_add(
                             *slot,
-                            self.number_literal(256, &field.ty.storage_slots(self.contract)),
+                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
                             &field.name,
                         );
                     }
@@ -3485,7 +3479,7 @@ impl<'a> Contract<'a> {
             resolver::Type::Struct(n) => self
                 .context
                 .struct_type(
-                    &self.contract.structs[*n]
+                    &self.ns.structs[*n]
                         .fields
                         .iter()
                         .map(|f| self.llvm_var(&f.ty))
