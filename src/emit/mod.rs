@@ -2620,6 +2620,7 @@ impl<'a> Contract<'a> {
                             }
                         }
                     }
+                    cfg::Instr::Constructor { .. } => unimplemented!(),
                 }
             }
         }

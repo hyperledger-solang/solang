@@ -67,6 +67,11 @@ pub enum Instr {
     Print {
         expr: Expression,
     },
+    Constructor {
+        res: usize,
+        no: usize,
+        args: Vec<Expression>,
+    },
 }
 
 pub struct BasicBlock {
@@ -515,6 +520,19 @@ impl ControlFlowGraph {
                 self.vars[*pos].id.name
             ),
             Instr::Print { expr } => format!("print {}", self.expr_to_string(contract, ns, expr)),
+            Instr::Constructor { res, no, args } => format!(
+                "%{} = constructor {} ({})",
+                self.vars[*res].id.name,
+                ns.contracts[*no].name,
+                {
+                    let s: Vec<String> = args
+                        .iter()
+                        .map(|expr| self.expr_to_string(contract, ns, expr))
+                        .collect();
+
+                    s.join(", ")
+                }
+            ),
         }
     }
 

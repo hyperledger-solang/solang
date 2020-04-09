@@ -192,6 +192,7 @@ pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
     New(Loc, ComplexType, Vec<Expression>),
+    NewNamed(Loc, ComplexType, Vec<NamedArgument>),
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, ComplexType, Vec<Expression>),
@@ -249,6 +250,7 @@ impl Expression {
             Expression::PostIncrement(loc, _)
             | Expression::PostDecrement(loc, _)
             | Expression::New(loc, _, _)
+            | Expression::NewNamed(loc, _, _)
             | Expression::ArraySubscript(loc, _, _)
             | Expression::MemberAccess(loc, _, _)
             | Expression::FunctionCall(loc, _, _)

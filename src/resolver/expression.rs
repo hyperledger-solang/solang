@@ -2118,9 +2118,7 @@ pub fn expression(
                         return Err(());
                     }
 
-                    function_call_with_named_arguments(
-                        loc, &id, args, cfg, contract, ns, vartab, errors,
-                    )
+                    function_with_named_args(loc, &id, args, cfg, contract, ns, vartab, errors)
                 }
                 _ => unreachable!(),
             }
@@ -2128,6 +2126,16 @@ pub fn expression(
         ast::Expression::New(loc, ty, args) => {
             new(loc, ty, args, cfg, contract, ns, vartab, errors)
         }
+        ast::Expression::NewNamed(loc, ty, args) => match contract.resolve_type(ty, ns, errors) {
+            Ok(resolver::Type::Contract(n)) => {
+                constructor_named_args(loc, n, args, cfg, contract, ns, vartab, errors)
+            }
+            Ok(_) => {
+                errors.push(Output::error(*loc, "contract expected".to_string()));
+                Err(())
+            }
+            _ => Err(()),
+        },
         ast::Expression::Delete(loc, var) => delete(loc, var, cfg, contract, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
@@ -2514,6 +2522,285 @@ pub fn expression(
     }
 }
 
+/// Resolve an new contract expression with positional arguments
+fn constructor(
+    loc: &ast::Loc,
+    no: usize,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // The current contract cannot be constructed with new. In order to create
+    // the contract, we need the code hash of the contract. Part of that code
+    // will be code we're emitted here. So we end up with a crypto puzzle.
+    if no == ns.contracts.len() {
+        errors.push(Output::error(
+            *loc,
+            format!("new cannot construct current contract ‘{}’", contract.name),
+        ));
+        return Err(());
+    }
+
+    let mut resolved_args = Vec::new();
+    let mut resolved_types = Vec::new();
+
+    for arg in args {
+        let (expr, expr_type) = expression(arg, cfg, contract, ns, vartab, errors)?;
+
+        resolved_args.push(Box::new(expr));
+        resolved_types.push(expr_type);
+    }
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot call constructor in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let mut temp_errors = Vec::new();
+    let address_res = tab.temp_anonymous(&resolver::Type::Contract(no));
+
+    // constructor call
+    for func in &ns.contracts[no].constructors {
+        if func.params.len() != args.len() {
+            temp_errors.push(Output::error(
+                *loc,
+                format!(
+                    "constructor expects {} arguments, {} provided",
+                    func.params.len(),
+                    args.len()
+                ),
+            ));
+            continue;
+        }
+
+        let mut matches = true;
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for (i, param) in func.params.iter().enumerate() {
+            let arg = &resolved_args[i];
+
+            match cast(
+                &args[i].loc(),
+                *arg.clone(),
+                &resolved_types[i],
+                &param.ty,
+                true,
+                contract,
+                ns,
+                &mut temp_errors,
+            ) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    break;
+                }
+            }
+        }
+
+        if !matches {
+            continue;
+        }
+
+        cfg.add(
+            tab,
+            Instr::Constructor {
+                res: address_res,
+                no,
+                args: cast_args,
+            },
+        );
+
+        return Ok((
+            Expression::Variable(*loc, address_res),
+            resolver::Type::Contract(no),
+        ));
+    }
+
+    match ns.contracts[no].constructors.len() {
+        0 => {
+            cfg.add(
+                tab,
+                Instr::Constructor {
+                    res: address_res,
+                    no,
+                    args: Vec::new(),
+                },
+            );
+            Ok((
+                Expression::Variable(*loc, address_res),
+                resolver::Type::Contract(no),
+            ))
+        }
+        1 => {
+            errors.append(&mut temp_errors);
+
+            Err(())
+        }
+        _ => {
+            errors.push(Output::error(
+                *loc,
+                "cannot find overloaded constructor which matches signature".to_string(),
+            ));
+
+            Err(())
+        }
+    }
+}
+
+/// Resolve an new contract expression with named arguments
+fn constructor_named_args(
+    loc: &ast::Loc,
+    no: usize,
+    args: &[ast::NamedArgument],
+    cfg: &mut ControlFlowGraph,
+    contract: &resolver::Contract,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // The current contract cannot be constructed with new. In order to create
+    // the contract, we need the code hash of the contract. Part of that code
+    // will be code we're emitted here. So we end up with a crypto puzzle.
+    if no == ns.contracts.len() {
+        errors.push(Output::error(
+            *loc,
+            format!("new cannot construct current contract ‘{}’", contract.name),
+        ));
+        return Err(());
+    }
+
+    let mut arguments = HashMap::new();
+
+    for arg in args {
+        arguments.insert(
+            arg.name.name.to_string(),
+            expression(&arg.expr, cfg, contract, ns, vartab, errors)?,
+        );
+    }
+
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "cannot create contract in constant expression".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    let mut temp_errors = Vec::new();
+    let address_res = tab.temp_anonymous(&resolver::Type::Contract(no));
+
+    // constructor call
+    for func in &ns.contracts[no].constructors {
+        if func.params.len() != args.len() {
+            temp_errors.push(Output::error(
+                *loc,
+                format!(
+                    "constructor expects {} arguments, {} provided",
+                    func.params.len(),
+                    args.len()
+                ),
+            ));
+            continue;
+        }
+
+        let mut matches = true;
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for param in func.params.iter() {
+            let arg = match arguments.get(&param.name) {
+                Some(a) => a,
+                None => {
+                    matches = false;
+                    temp_errors.push(Output::error(
+                        *loc,
+                        format!("missing argument ‘{}’ to constructor", param.name),
+                    ));
+                    break;
+                }
+            };
+
+            match cast(
+                &ast::Loc(0, 0),
+                arg.0.clone(),
+                &arg.1,
+                &param.ty,
+                true,
+                contract,
+                ns,
+                &mut temp_errors,
+            ) {
+                Ok(expr) => cast_args.push(expr),
+                Err(()) => {
+                    matches = false;
+                    break;
+                }
+            }
+        }
+
+        if !matches {
+            continue;
+        }
+
+        cfg.add(
+            tab,
+            Instr::Constructor {
+                res: address_res,
+                no,
+                args: cast_args,
+            },
+        );
+
+        return Ok((
+            Expression::Variable(*loc, address_res),
+            resolver::Type::Contract(no),
+        ));
+    }
+
+    match ns.contracts[no].constructors.len() {
+        0 => {
+            cfg.add(
+                tab,
+                Instr::Constructor {
+                    res: address_res,
+                    no,
+                    args: Vec::new(),
+                },
+            );
+            Ok((
+                Expression::Variable(*loc, address_res),
+                resolver::Type::Contract(no),
+            ))
+        }
+        1 => {
+            errors.append(&mut temp_errors);
+
+            Err(())
+        }
+        _ => {
+            errors.push(Output::error(
+                *loc,
+                "cannot find overloaded constructor which matches signature".to_string(),
+            ));
+
+            Err(())
+        }
+    }
+}
+
 /// Resolve an new expression
 fn new(
     loc: &ast::Loc,
@@ -2525,11 +2812,10 @@ fn new(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    // TODO: new can also be used for creating contracts
     let ty = contract.resolve_type(ty, ns, errors)?;
 
     match &ty {
-        resolver::Type::Array(_, dim) => {
+        resolver::Type::Array(ty, dim) => {
             if dim.last().unwrap().is_some() {
                 errors.push(Output::error(
                     *loc,
@@ -2540,8 +2826,22 @@ fn new(
                 ));
                 return Err(());
             }
+
+            if let resolver::Type::Contract(_) = ty.as_ref() {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "new cannot construct array of ‘{}’",
+                        ty.to_string(contract, ns)
+                    ),
+                ));
+                return Err(());
+            }
         }
         resolver::Type::String | resolver::Type::DynamicBytes => {}
+        resolver::Type::Contract(n) => {
+            return constructor(loc, *n, args, cfg, contract, ns, vartab, errors);
+        }
         _ => {
             errors.push(Output::error(
                 *loc,
@@ -3799,7 +4099,7 @@ fn function_call_with_positional_arguments(
 }
 
 /// Resolve a function call with named arguments
-fn function_call_with_named_arguments(
+fn function_with_named_args(
     loc: &ast::Loc,
     id: &ast::Identifier,
     args: &[ast::NamedArgument],
