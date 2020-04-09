@@ -55,19 +55,17 @@ pub trait TargetRuntime {
         length: IntValue,
         spec: &resolver::FunctionDecl,
     );
+
+    /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
+    /// pointers to data, not the actual data  itself.
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,
+        selector: Option<u32>,
+        load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &resolver::FunctionDecl,
-    ) -> (PointerValue<'b>, IntValue<'b>);
-    /// Error encode
-    fn error_encode<'b>(
-        &self,
-        contract: &Contract<'b>,
-        function: FunctionValue,
-        arg: BasicValueEnum<'b>,
+        spec: &[resolver::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>);
 
     // Access storage
@@ -2506,7 +2504,17 @@ impl<'a> Contract<'a> {
                     cfg::Instr::AssertFailure { expr: Some(expr) } => {
                         let v = self.expression(expr, &w.vars, function, runtime);
 
-                        let (data, len) = runtime.error_encode(self, function, v);
+                        let (data, len) = runtime.abi_encode(
+                            self,
+                            Some(0x08c3_79a0),
+                            false,
+                            function,
+                            &[v],
+                            &[resolver::Parameter {
+                                name: "error".to_owned(),
+                                ty: resolver::Type::String,
+                            }],
+                        );
 
                         runtime.assert_failure(self, data, len);
                     }
@@ -2739,8 +2747,14 @@ impl<'a> Contract<'a> {
                 // return ABI of length 0
                 runtime.return_empty_abi(&self);
             } else {
-                let (data, length) =
-                    runtime.abi_encode(&self, function, &args[f.params.len()..], &f);
+                let (data, length) = runtime.abi_encode(
+                    &self,
+                    None,
+                    true,
+                    function,
+                    &args[f.params.len()..],
+                    &f.returns,
+                );
 
                 runtime.return_abi(&self, data, length);
             }
