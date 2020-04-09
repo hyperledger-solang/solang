@@ -648,86 +648,33 @@ impl TargetRuntime for EwasmTarget {
         contract.builder.build_unreachable();
     }
 
-    /// Error encode
-    fn error_encode<'b>(
-        &self,
-        contract: &Contract<'b>,
-        function: FunctionValue,
-        arg: BasicValueEnum<'b>,
-    ) -> (PointerValue<'b>, IntValue<'b>) {
-        // first calculate how much memory we need to allocate
-        let length = contract.builder.build_int_add(
-            contract.context.i32_type().const_int(4, false),
-            contract.context.i32_type().const_int(
-                self.abi
-                    .encoded_length(&resolver::Type::String, contract.ns),
-                false,
-            ),
-            "length",
-        );
-
-        let data = contract
-            .builder
-            .build_call(
-                contract.module.get_function("__malloc").unwrap(),
-                &[length.into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        contract.builder.build_store(
-            contract.builder.build_pointer_cast(
-                data,
-                contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                "",
-            ),
-            contract.context.i32_type().const_int(0x08c3_79a0, false),
-        );
-
-        let mut argsdata = unsafe {
-            contract
-                .builder
-                .build_gep(data, &[contract.context.i32_type().const_int(4, false)], "")
-        };
-
-        self.abi.encode_ty(
-            contract,
-            function,
-            &resolver::Type::String,
-            arg,
-            &mut argsdata,
-        );
-
-        let length = contract.builder.build_int_sub(
-            contract
-                .builder
-                .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
-            contract
-                .builder
-                .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
-            "datalength",
-        );
-
-        (data, length)
-    }
-
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,
+        selector: Option<u32>,
+        _load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &resolver::FunctionDecl,
+        spec: &[resolver::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let length = contract.context.i32_type().const_int(
-            spec.returns
-                .iter()
+        let mut length = contract.context.i32_type().const_int(
+            spec.iter()
                 .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
                 .sum(),
             false,
         );
+
+        if selector.is_some() {
+            length = contract.builder.build_int_add(
+                length,
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                "",
+            );
+        }
+
         let encoded_data = contract
             .builder
             .build_call(
@@ -743,7 +690,32 @@ impl TargetRuntime for EwasmTarget {
         // malloc returns u8*
         let mut data = encoded_data;
 
-        for (i, arg) in spec.returns.iter().enumerate() {
+        if let Some(selector) = selector {
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    data,
+                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(selector.to_be() as u64, false),
+            );
+
+            data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[contract
+                        .context
+                        .i32_type()
+                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                    "",
+                )
+            };
+        }
+
+        for (i, arg) in spec.iter().enumerate() {
             self.abi
                 .encode_ty(contract, function, &arg.ty, args[i], &mut data);
         }

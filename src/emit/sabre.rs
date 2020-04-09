@@ -575,15 +575,6 @@ impl TargetRuntime for SabreTarget {
             .build_return(Some(&contract.context.i32_type().const_int(1, false)));
     }
 
-    fn error_encode<'b>(
-        &self,
-        _contract: &Contract<'b>,
-        _function: FunctionValue,
-        _arg: BasicValueEnum<'b>,
-    ) -> (PointerValue<'b>, IntValue<'b>) {
-        panic!("sabre cannot return error strings")
-    }
-
     fn assert_failure<'b>(&self, contract: &'b Contract, _data: PointerValue, _length: IntValue) {
         contract.builder.build_unreachable();
     }
@@ -591,17 +582,30 @@ impl TargetRuntime for SabreTarget {
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,
+        selector: Option<u32>,
+        _load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &resolver::FunctionDecl,
+        spec: &[resolver::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let length = contract.context.i32_type().const_int(
-            spec.returns
-                .iter()
+        let mut length = contract.context.i32_type().const_int(
+            spec.iter()
                 .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
                 .sum(),
             false,
         );
+
+        if selector.is_some() {
+            length = contract.builder.build_int_add(
+                length,
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                "",
+            );
+        }
+
         let encoded_data = contract
             .builder
             .build_call(
@@ -617,7 +621,32 @@ impl TargetRuntime for SabreTarget {
         // malloc returns u8*
         let mut data = encoded_data;
 
-        for (i, arg) in spec.returns.iter().enumerate() {
+        if let Some(selector) = selector {
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    data,
+                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(selector.to_be() as u64, false),
+            );
+
+            data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[contract
+                        .context
+                        .i32_type()
+                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                    "",
+                )
+            };
+        }
+
+        for (i, arg) in spec.iter().enumerate() {
             self.abi
                 .encode_ty(contract, function, &arg.ty, args[i], &mut data);
         }
