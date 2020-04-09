@@ -208,4 +208,58 @@ fn contract_type() {
     );
 
     no_errors(errors);
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract printer {
+            function test() public {
+                printer x = address(102);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    no_errors(errors);
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract printer {
+            function test() public {
+                print("In f.test()");
+            }
+        }
+
+        contract test {
+            function test1(printer x) public {
+                address y = 102;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion from uint8 to address not allowed"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract printer {
+            function test() public {
+                print("In f.test()");
+            }
+        }
+
+        contract test {
+            function test1() public {
+                printer y = 102;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "conversion from uint8 to contract printer not possible"
+    );
 }

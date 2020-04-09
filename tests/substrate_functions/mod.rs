@@ -567,6 +567,10 @@ fn named_argument_call() {
             }
 
             function foo1(uint32 x) public returns (int32 a) {
+                a = bar({});
+            }
+
+            function bar() private returns (int32) {
                 return 1;
             }
 
