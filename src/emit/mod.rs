@@ -1356,7 +1356,8 @@ impl<'a> Contract<'a> {
                     Some(s) => self.emit_global_string("const_string", s, false),
                 };
 
-                self.builder
+                let v = self
+                    .builder
                     .build_call(
                         self.module.get_function("vector_new").unwrap(),
                         &[size.into(), elem_size.into(), init.into()],
@@ -1364,7 +1365,18 @@ impl<'a> Contract<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap();
+
+                self.builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        self.module
+                            .get_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
             }
             Expression::DynamicArrayLength(_, a) => {
                 let array = self

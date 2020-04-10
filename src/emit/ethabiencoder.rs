@@ -18,8 +18,10 @@ impl EthAbiEncoder {
         load: bool,
         function: FunctionValue,
         ty: &resolver::Type,
-        arg: BasicValueEnum,
-        data: &mut PointerValue<'a>,
+        arg: BasicValueEnum<'a>,
+        fixed: &mut PointerValue<'a>,
+        offset: &mut IntValue<'a>,
+        dynamic: &mut PointerValue<'a>,
     ) {
         match &ty {
             resolver::Type::Bool
@@ -28,18 +30,18 @@ impl EthAbiEncoder {
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => {
-                self.encode_primitive(contract, load, ty, *data, arg);
+                self.encode_primitive(contract, load, ty, *fixed, arg);
 
-                *data = unsafe {
+                *fixed = unsafe {
                     contract.builder.build_gep(
-                        *data,
+                        *fixed,
                         &[contract.context.i32_type().const_int(32, false)],
                         "",
                     )
                 };
             }
             resolver::Type::Enum(n) => {
-                self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *data, arg);
+                self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *fixed, arg);
             }
             resolver::Type::Array(_, dim) => {
                 let arg = if load {
@@ -56,7 +58,7 @@ impl EthAbiEncoder {
                             .context
                             .i64_type()
                             .const_int(d.to_u64().unwrap(), false),
-                        data,
+                        fixed,
                         |index, data| {
                             let elem = unsafe {
                                 contract.builder.build_gep(
@@ -75,6 +77,8 @@ impl EthAbiEncoder {
                                 &ty.deref(),
                                 elem.into(),
                                 data,
+                                offset,
+                                dynamic,
                             );
                         },
                     );
@@ -101,16 +105,139 @@ impl EthAbiEncoder {
                         )
                     };
 
-                    self.encode_ty(contract, true, function, &field.ty, elem.into(), data);
+                    self.encode_ty(
+                        contract,
+                        true,
+                        function,
+                        &field.ty,
+                        elem.into(),
+                        fixed,
+                        offset,
+                        dynamic,
+                    );
                 }
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::Ref(ty) => {
-                self.encode_ty(contract, load, function, ty, arg, data);
+                self.encode_ty(contract, load, function, ty, arg, fixed, offset, dynamic);
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                // write the current offset to fixed
+                self.encode_primitive(
+                    contract,
+                    false,
+                    &resolver::Type::Uint(32),
+                    *fixed,
+                    (*offset).into(),
+                );
+
+                *fixed = unsafe {
+                    contract.builder.build_gep(
+                        *fixed,
+                        &[contract.context.i32_type().const_int(32, false)],
+                        "",
+                    )
+                };
+
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                // Now, write the length to dynamic
+                let len = unsafe {
+                    contract.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "array.len",
+                    )
+                };
+
+                let len = contract
+                    .builder
+                    .build_load(len, "array.len")
+                    .into_int_value();
+
+                // write the current offset to fixed
+                self.encode_primitive(
+                    contract,
+                    false,
+                    &resolver::Type::Uint(32),
+                    *dynamic,
+                    len.into(),
+                );
+
+                *dynamic = unsafe {
+                    contract.builder.build_gep(
+                        *dynamic,
+                        &[contract.context.i32_type().const_int(32, false)],
+                        "",
+                    )
+                };
+
+                *offset = contract.builder.build_int_add(
+                    *offset,
+                    contract.context.i32_type().const_int(32, false),
+                    "",
+                );
+
+                // now copy the string data
+                let string_start = unsafe {
+                    contract.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "string_start",
+                    )
+                };
+
+                contract.builder.build_call(
+                    contract.module.get_function("__memcpy").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                *dynamic,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "encoded_string",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                string_start,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "string_start",
+                            )
+                            .into(),
+                        len.into(),
+                    ],
+                    "",
+                );
+
+                // round up the length to the next 32 bytes block
+                let len = contract.builder.build_and(
+                    contract.builder.build_int_add(
+                        len,
+                        contract.context.i32_type().const_int(31, false),
+                        "",
+                    ),
+                    contract.context.i32_type().const_int(!31, false),
+                    "",
+                );
+
+                *dynamic = unsafe { contract.builder.build_gep(*dynamic, &[len], "") };
+
+                *offset = contract.builder.build_int_add(*offset, len, "");
+            }
         };
     }
 

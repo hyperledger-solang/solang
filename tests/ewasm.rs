@@ -1219,3 +1219,46 @@ fn array_push_delete() {
 
     assert_eq!(store.store.len(), 0);
 }
+
+#[test]
+fn encode_string() {
+    let (mut runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f() public returns (string) {
+                return "Hello, World!";
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let ret = runtime.function(&mut store, "f", &[]);
+    assert_eq!(ret, vec!(ethabi::Token::String("Hello, World!".to_owned())));
+
+    let (mut runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f() public returns (int32, string, int64) {
+                return (105, "the quick brown dog jumps over the lazy fox", -563);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let ret = runtime.function(&mut store, "f", &[]);
+
+    let n563 = ethereum_types::U256::from(0)
+        .overflowing_sub(ethereum_types::U256::from(563))
+        .0;
+
+    assert_eq!(
+        ret,
+        vec!(
+            ethabi::Token::Int(ethereum_types::U256::from(105)),
+            ethabi::Token::String("the quick brown dog jumps over the lazy fox".to_owned()),
+            ethabi::Token::Int(n563),
+        )
+    );
+}
