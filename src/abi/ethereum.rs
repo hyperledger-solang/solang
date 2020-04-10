@@ -28,10 +28,21 @@ pub struct ABI {
     pub mutability: &'static str,
 }
 
+impl Type {
+    /// Is this type a struct, or an array of structs?
+    fn is_struct_or_array_of_struct(&self) -> Option<usize> {
+        match self {
+            Type::Struct(n) => Some(*n),
+            Type::Array(ty, _) => ty.is_struct_or_array_of_struct(),
+            _ => None,
+        }
+    }
+}
+
 pub fn gen_abi(contract: &Contract, ns: &Namespace) -> Vec<ABI> {
     fn parameter_to_abi(name: &str, ty: &Type, contract: &Contract, ns: &Namespace) -> ABIParam {
-        let components = if let Type::Struct(n) = ty {
-            ns.structs[*n]
+        let components = if let Some(n) = ty.is_struct_or_array_of_struct() {
+            ns.structs[n]
                 .fields
                 .iter()
                 .map(|f| parameter_to_abi(&f.name, &f.ty, contract, ns))
