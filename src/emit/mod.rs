@@ -3445,8 +3445,11 @@ impl<'a> Contract<'a> {
     /// Return the llvm type for a variable holding the type, not the type itself
     fn llvm_var(&self, ty: &resolver::Type) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty);
-        match ty {
-            resolver::Type::Struct(_) | resolver::Type::Array(_, _) => {
+        match ty.deref_nonstorage() {
+            resolver::Type::Struct(_)
+            | resolver::Type::Array(_, _)
+            | resolver::Type::DynamicBytes
+            | resolver::Type::String => {
                 llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
             }
             _ => llvm_ty,

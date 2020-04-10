@@ -891,12 +891,14 @@ impl SubstrateTarget {
                         .into_pointer_value();
 
                     // details about our array elements
-                    let elem_ty = contract.llvm_type(&ty.array_elem());
-                    let elem_size = contract.builder.build_int_truncate(
-                        elem_ty.size_of().unwrap(),
-                        contract.context.i32_type(),
-                        "size_of",
-                    );
+                    let elem_ty = ty.array_deref();
+                    let llvm_elem_ty = contract.llvm_var(&elem_ty);
+                    let elem_size = llvm_elem_ty
+                        .into_pointer_type()
+                        .get_element_type()
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false);
 
                     contract.emit_static_loop_with_pointer(
                         function,
@@ -920,7 +922,7 @@ impl SubstrateTarget {
 
                             let elem = contract.builder.build_pointer_cast(
                                 element_start,
-                                elem_ty.ptr_type(AddressSpace::Generic),
+                                llvm_elem_ty.into_pointer_type(),
                                 "entry",
                             );
 
@@ -1073,7 +1075,7 @@ impl SubstrateTarget {
                         .const_int(d.to_u64().unwrap(), false),
                 };
 
-                let elem_ty = ty.array_elem();
+                let elem_ty = ty.array_deref();
                 let llvm_elem_ty = contract.llvm_var(&elem_ty);
 
                 if elem_ty.is_dynamic(contract.ns) {
@@ -1108,6 +1110,12 @@ impl SubstrateTarget {
                                 )
                             };
 
+                            let elem = contract.builder.build_pointer_cast(
+                                elem,
+                                llvm_elem_ty.into_pointer_type(),
+                                "elem",
+                            );
+
                             *sum = contract.builder.build_int_add(
                                 self.encoded_length(
                                     elem.into(),
@@ -1124,9 +1132,6 @@ impl SubstrateTarget {
 
                     sum
                 } else {
-                    // arg
-                    let elem_ty = ty.array_deref();
-
                     let elem = unsafe {
                         contract.builder.build_gep(
                             arg.into_pointer_value(),

@@ -364,6 +364,14 @@ impl Type {
             _ => self,
         }
     }
+
+    /// If the type is Ref, get the underlying type
+    pub fn deref_nonstorage(&self) -> &Self {
+        match self {
+            Type::Ref(r) => r,
+            _ => self,
+        }
+    }
 }
 
 pub struct StructField {
@@ -1120,9 +1128,9 @@ impl Contract {
 
         for (i, func) in self.functions.iter().enumerate() {
             if func.name != "" {
-                out += &format!("# function({}) {}", i, func.signature);
+                out += &format!("\n# function({}) {}\n", i, func.signature);
             } else {
-                out += &format!("# fallback({})", i);
+                out += &format!("\n# fallback({})\n", i);
             }
 
             if let Some(ref cfg) = func.cfg {
