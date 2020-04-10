@@ -725,9 +725,28 @@ impl TargetRuntime for EwasmTarget {
             };
         }
 
+        // We use a little trick here. The length might or might not include the selector.
+        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
+        // we lose the selector.
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[
+                data.into(),
+                contract
+                    .builder
+                    .build_int_unsigned_div(
+                        length,
+                        contract.context.i32_type().const_int(8, false),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
         for (i, arg) in spec.iter().enumerate() {
             self.abi
-                .encode_ty(contract, function, &arg.ty, args[i], &mut data);
+                .encode_ty(contract, load, function, &arg.ty, args[i], &mut data);
         }
 
         (encoded_data, length)

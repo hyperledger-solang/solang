@@ -15,17 +15,12 @@ impl EthAbiEncoder {
     pub fn encode_ty<'a>(
         &self,
         contract: &Contract<'a>,
+        load: bool,
         function: FunctionValue,
         ty: &resolver::Type,
         arg: BasicValueEnum,
         data: &mut PointerValue<'a>,
     ) {
-        let arg = if ty.is_reference_type() {
-            contract.builder.build_load(arg.into_pointer_value(), "")
-        } else {
-            arg
-        };
-
         match &ty {
             resolver::Type::Bool
             | resolver::Type::Address
@@ -33,7 +28,7 @@ impl EthAbiEncoder {
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => {
-                self.encode_primitive(contract, ty, *data, arg);
+                self.encode_primitive(contract, load, ty, *data, arg);
 
                 *data = unsafe {
                     contract.builder.build_gep(
@@ -44,9 +39,15 @@ impl EthAbiEncoder {
                 };
             }
             resolver::Type::Enum(n) => {
-                self.encode_primitive(contract, &contract.ns.enums[*n].ty, *data, arg);
+                self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *data, arg);
             }
             resolver::Type::Array(_, dim) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
                 if let Some(d) = &dim[0] {
                     contract.emit_static_loop_with_pointer(
                         function,
@@ -67,7 +68,14 @@ impl EthAbiEncoder {
 
                             let ty = ty.array_deref();
 
-                            self.encode_ty(contract, function, &ty.deref(), elem.into(), data);
+                            self.encode_ty(
+                                contract,
+                                true,
+                                function,
+                                &ty.deref(),
+                                elem.into(),
+                                data,
+                            );
                         },
                     );
                 } else {
@@ -75,6 +83,12 @@ impl EthAbiEncoder {
                 }
             }
             resolver::Type::Struct(n) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
@@ -87,14 +101,14 @@ impl EthAbiEncoder {
                         )
                     };
 
-                    self.encode_ty(contract, function, &field.ty, elem.into(), data);
+                    self.encode_ty(contract, true, function, &field.ty, elem.into(), data);
                 }
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::Ref(ty) => {
-                self.encode_ty(contract, function, ty, arg, data);
+                self.encode_ty(contract, load, function, ty, arg, data);
             }
             resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         };
@@ -104,38 +118,30 @@ impl EthAbiEncoder {
     fn encode_primitive(
         &self,
         contract: &Contract,
+        load: bool,
         ty: &resolver::Type,
         dest: PointerValue,
-        val: BasicValueEnum,
+        arg: BasicValueEnum,
     ) {
         match ty {
             resolver::Type::Bool => {
-                // first clear
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let value = contract.builder.build_select(
+                    arg.into_int_value(),
+                    contract.context.i8_type().const_int(1, false),
+                    contract.context.i8_type().const_zero(),
+                    "bool_val",
+                );
+
                 let dest8 = contract.builder.build_pointer_cast(
                     dest,
                     contract.context.i8_type().ptr_type(AddressSpace::Generic),
                     "destvoid",
-                );
-
-                contract.builder.build_call(
-                    contract.module.get_function("__bzero8").unwrap(),
-                    &[
-                        dest8.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                let val = if val.is_pointer_value() {
-                    contract.builder.build_load(val.into_pointer_value(), "")
-                } else {
-                    val
-                };
-                let value = contract.builder.build_select(
-                    val.into_int_value(),
-                    contract.context.i8_type().const_int(1, false),
-                    contract.context.i8_type().const_zero(),
-                    "bool_val",
                 );
 
                 let dest = unsafe {
@@ -149,25 +155,10 @@ impl EthAbiEncoder {
                 contract.builder.build_store(dest, value);
             }
             resolver::Type::Int(8) | resolver::Type::Uint(8) => {
-                let signval = if let resolver::Type::Int(8) = ty {
-                    let negative = contract.builder.build_int_compare(
-                        IntPredicate::SLT,
-                        val.into_int_value(),
-                        contract.context.i8_type().const_zero(),
-                        "neg",
-                    );
-
-                    contract
-                        .builder
-                        .build_select(
-                            negative,
-                            contract.context.i64_type().const_zero(),
-                            contract.context.i64_type().const_int(std::u64::MAX, true),
-                            "val",
-                        )
-                        .into_int_value()
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
-                    contract.context.i64_type().const_zero()
+                    arg
                 };
 
                 let dest8 = contract.builder.build_pointer_cast(
@@ -176,67 +167,23 @@ impl EthAbiEncoder {
                     "destvoid",
                 );
 
-                contract.builder.build_call(
-                    contract.module.get_function("__memset8").unwrap(),
-                    &[
-                        dest8.into(),
-                        signval.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                let dest = unsafe {
-                    contract.builder.build_gep(
-                        dest8,
-                        &[contract.context.i32_type().const_int(31, false)],
-                        "",
-                    )
-                };
-
-                let val = if val.is_pointer_value() {
-                    contract.builder.build_load(val.into_pointer_value(), "")
-                } else {
-                    val
-                };
-                contract.builder.build_store(dest, val);
-            }
-            resolver::Type::Address | resolver::Type::Uint(_) | resolver::Type::Int(_) => {
-                let n = match ty {
-                    resolver::Type::Address => 160,
-                    resolver::Type::Uint(b) => *b,
-                    resolver::Type::Int(b) => *b,
-                    _ => unreachable!(),
-                };
-
-                // first clear/set the upper bits
-                if n < 256 {
-                    let signval = if let resolver::Type::Int(8) = ty {
-                        let negative = contract.builder.build_int_compare(
-                            IntPredicate::SLT,
-                            val.into_int_value(),
-                            contract.context.i8_type().const_zero(),
-                            "neg",
-                        );
-
-                        contract
-                            .builder
-                            .build_select(
-                                negative,
-                                contract.context.i64_type().const_zero(),
-                                contract.context.i64_type().const_int(std::u64::MAX, true),
-                                "val",
-                            )
-                            .into_int_value()
-                    } else {
-                        contract.context.i64_type().const_zero()
-                    };
-
-                    let dest8 = contract.builder.build_pointer_cast(
-                        dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "destvoid",
+                if let resolver::Type::Int(_) = ty {
+                    let negative = contract.builder.build_int_compare(
+                        IntPredicate::SLT,
+                        arg.into_int_value(),
+                        contract.context.i8_type().const_zero(),
+                        "neg",
                     );
+
+                    let signval = contract
+                        .builder
+                        .build_select(
+                            negative,
+                            contract.context.i64_type().const_int(std::u64::MAX, true),
+                            contract.context.i64_type().const_zero(),
+                            "val",
+                        )
+                        .into_int_value();
 
                     contract.builder.build_call(
                         contract.module.get_function("__memset8").unwrap(),
@@ -249,20 +196,147 @@ impl EthAbiEncoder {
                     );
                 }
 
-                // no need to allocate space for each uint64
-                // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(n as u32);
-                let type_size = int_type.size_of();
-
-                let store = if val.is_pointer_value() {
-                    val.into_pointer_value()
-                } else {
-                    let store = contract.builder.build_alloca(int_type, "stack");
-
-                    contract.builder.build_store(store, val);
-
-                    store
+                let dest = unsafe {
+                    contract.builder.build_gep(
+                        dest8,
+                        &[contract.context.i32_type().const_int(31, false)],
+                        "",
+                    )
                 };
+
+                contract.builder.build_store(dest, arg);
+            }
+            resolver::Type::Address | resolver::Type::Uint(_) | resolver::Type::Int(_) if load => {
+                let n = match ty {
+                    resolver::Type::Address => 160,
+                    resolver::Type::Uint(b) => *b,
+                    resolver::Type::Int(b) => *b,
+                    _ => unreachable!(),
+                };
+
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dest8",
+                );
+
+                let arg8 = contract.builder.build_pointer_cast(
+                    arg.into_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "arg8",
+                );
+
+                // first clear/set the upper bits
+                if n < 256 {
+                    if let resolver::Type::Int(_) = ty {
+                        let signdest = unsafe {
+                            contract.builder.build_gep(
+                                arg8,
+                                &[contract
+                                    .context
+                                    .i32_type()
+                                    .const_int((n as u64 / 8) - 1, false)],
+                                "signbyte",
+                            )
+                        };
+
+                        let negative = contract.builder.build_int_compare(
+                            IntPredicate::SLT,
+                            contract
+                                .builder
+                                .build_load(signdest, "signbyte")
+                                .into_int_value(),
+                            contract.context.i8_type().const_zero(),
+                            "neg",
+                        );
+
+                        let signval = contract
+                            .builder
+                            .build_select(
+                                negative,
+                                contract.context.i64_type().const_int(std::u64::MAX, true),
+                                contract.context.i64_type().const_zero(),
+                                "val",
+                            )
+                            .into_int_value();
+
+                        contract.builder.build_call(
+                            contract.module.get_function("__memset8").unwrap(),
+                            &[
+                                dest8.into(),
+                                signval.into(),
+                                contract.context.i32_type().const_int(4, false).into(),
+                            ],
+                            "",
+                        );
+                    }
+                }
+
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobe32").unwrap(),
+                    &[
+                        arg8.into(),
+                        dest8.into(),
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(n as u64 / 8, false)
+                            .into(),
+                    ],
+                    "",
+                );
+            }
+            resolver::Type::Address | resolver::Type::Uint(_) | resolver::Type::Int(_) if !load => {
+                let n = match ty {
+                    resolver::Type::Address => 160,
+                    resolver::Type::Uint(b) => *b,
+                    resolver::Type::Int(b) => *b,
+                    _ => unreachable!(),
+                };
+
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dest8",
+                );
+
+                // first clear/set the upper bits
+                if n < 256 {
+                    if let resolver::Type::Int(_) = ty {
+                        let negative = contract.builder.build_int_compare(
+                            IntPredicate::SLT,
+                            arg.into_int_value(),
+                            arg.get_type().into_int_type().const_zero(),
+                            "neg",
+                        );
+
+                        let signval = contract
+                            .builder
+                            .build_select(
+                                negative,
+                                contract.context.i64_type().const_int(std::u64::MAX, true),
+                                contract.context.i64_type().const_zero(),
+                                "val",
+                            )
+                            .into_int_value();
+
+                        contract.builder.build_call(
+                            contract.module.get_function("__memset8").unwrap(),
+                            &[
+                                dest8.into(),
+                                signval.into(),
+                                contract.context.i32_type().const_int(4, false).into(),
+                            ],
+                            "",
+                        );
+                    }
+                }
+
+                let temp = contract
+                    .builder
+                    .build_alloca(arg.into_int_value().get_type(), &format!("bytes{}", n));
+
+                contract.builder.build_store(temp, arg.into_int_value());
 
                 contract.builder.build_call(
                     contract.module.get_function("__leNtobe32").unwrap(),
@@ -270,82 +344,47 @@ impl EthAbiEncoder {
                         contract
                             .builder
                             .build_pointer_cast(
-                                store,
+                                temp,
                                 contract.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "store",
                             )
                             .into(),
+                        dest8.into(),
                         contract
-                            .builder
-                            .build_pointer_cast(
-                                dest,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "dest",
-                            )
-                            .into(),
-                        contract
-                            .builder
-                            .build_int_truncate(type_size, contract.context.i32_type(), "")
+                            .context
+                            .i32_type()
+                            .const_int(n as u64 / 8, false)
                             .into(),
                     ],
                     "",
                 );
             }
             resolver::Type::Bytes(1) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
                 let dest8 = contract.builder.build_pointer_cast(
                     dest,
                     contract.context.i8_type().ptr_type(AddressSpace::Generic),
                     "destvoid",
                 );
 
-                contract.builder.build_call(
-                    contract.module.get_function("__bzero8").unwrap(),
-                    &[
-                        dest8.into(),
-                        contract.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                let val = if val.is_pointer_value() {
-                    contract.builder.build_load(val.into_pointer_value(), "")
-                } else {
-                    val
-                };
-                contract.builder.build_store(dest8, val);
+                contract.builder.build_store(dest8, arg);
             }
-            resolver::Type::Bytes(b) => {
-                // first clear/set the upper bits
-                if *b < 32 {
-                    let dest8 = contract.builder.build_pointer_cast(
-                        dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "destvoid",
-                    );
-
-                    contract.builder.build_call(
-                        contract.module.get_function("__bzero8").unwrap(),
-                        &[
-                            dest8.into(),
-                            contract.context.i32_type().const_int(4, false).into(),
-                        ],
-                        "",
-                    );
-                }
-
-                // no need to allocate space for each uint64
-                // allocate enough for type
-                let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
-                let type_size = int_type.size_of();
-
-                let store = if val.is_pointer_value() {
-                    val.into_pointer_value()
+            resolver::Type::Bytes(n) => {
+                let val = if load {
+                    arg.into_pointer_value()
                 } else {
-                    let store = contract.builder.build_alloca(int_type, "stack");
+                    let temp = contract
+                        .builder
+                        .build_alloca(arg.into_int_value().get_type(), &format!("bytes{}", n));
 
-                    contract.builder.build_store(store, val);
+                    contract.builder.build_store(temp, arg.into_int_value());
 
-                    store
+                    temp
                 };
 
                 contract.builder.build_call(
@@ -354,7 +393,7 @@ impl EthAbiEncoder {
                         contract
                             .builder
                             .build_pointer_cast(
-                                store,
+                                val,
                                 contract.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "store",
                             )
@@ -368,8 +407,9 @@ impl EthAbiEncoder {
                             )
                             .into(),
                         contract
-                            .builder
-                            .build_int_truncate(type_size, contract.context.i32_type(), "")
+                            .context
+                            .i32_type()
+                            .const_int(*n as u64, false)
                             .into(),
                     ],
                     "",
