@@ -76,7 +76,7 @@ pub fn compile(
             let (abistr, _) = abi::generate_abi(c, &ns, false);
 
             // codegen
-            let contract = emit::Contract::build(&ctx, c, &ns, filename, opt);
+            let mut contract = emit::Contract::build(&ctx, c, &ns, filename, opt);
 
             let obj = contract.wasm(opt).expect("llvm wasm emit should work");
 

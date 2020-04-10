@@ -175,7 +175,7 @@ fn process_filename(
             );
         }
 
-        let contract = resolved_contract.emit(&ns, &context, &filename, opt);
+        let mut contract = resolved_contract.emit(&ns, &context, &filename, opt);
 
         if let Some("llvm") = matches.value_of("EMIT") {
             if let Some(runtime) = &contract.runtime {

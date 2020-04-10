@@ -173,6 +173,7 @@ pub struct Contract<'a> {
     ns: &'a resolver::Namespace,
     constructors: Vec<FunctionValue<'a>>,
     functions: Vec<FunctionValue<'a>>,
+    wasm: Option<Vec<u8>>,
 }
 
 impl<'a> Contract<'a> {
@@ -207,7 +208,11 @@ impl<'a> Contract<'a> {
         res
     }
 
-    pub fn wasm(&self, opt: OptimizationLevel) -> Result<Vec<u8>, String> {
+    pub fn wasm(&mut self, opt: OptimizationLevel) -> Result<Vec<u8>, String> {
+        if let Some(ref wasm) = self.wasm {
+            return Ok(wasm.clone());
+        }
+
         let target = Target::from_name("wasm32").unwrap();
 
         let target_machine = target
@@ -222,7 +227,13 @@ impl<'a> Contract<'a> {
             .unwrap();
 
         match target_machine.write_to_memory_buffer(&self.module, FileType::Object) {
-            Ok(o) => Ok(o.as_slice().to_vec()),
+            Ok(out) => {
+                let slice = out.as_slice();
+
+                self.wasm = Some(slice.to_vec());
+
+                Ok(slice.to_vec())
+            }
             Err(s) => Err(s.to_string()),
         }
     }
@@ -292,6 +303,7 @@ impl<'a> Contract<'a> {
             ns,
             constructors: Vec::new(),
             functions: Vec::new(),
+            wasm: None,
         }
     }
 
