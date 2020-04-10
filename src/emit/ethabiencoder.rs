@@ -83,7 +83,134 @@ impl EthAbiEncoder {
                         },
                     );
                 } else {
-                    // FIXME
+                    // write the current offset to fixed
+                    self.encode_primitive(
+                        contract,
+                        false,
+                        &resolver::Type::Uint(32),
+                        *fixed,
+                        (*offset).into(),
+                    );
+
+                    *fixed = unsafe {
+                        contract.builder.build_gep(
+                            *fixed,
+                            &[contract.context.i32_type().const_int(32, false)],
+                            "",
+                        )
+                    };
+
+                    // Now, write the length to dynamic
+                    let len = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_zero(),
+                            ],
+                            "array.len",
+                        )
+                    };
+
+                    let len = contract
+                        .builder
+                        .build_load(len, "array.len")
+                        .into_int_value();
+
+                    // write the current offset to fixed
+                    self.encode_primitive(
+                        contract,
+                        false,
+                        &resolver::Type::Uint(32),
+                        *dynamic,
+                        len.into(),
+                    );
+
+                    *dynamic = unsafe {
+                        contract.builder.build_gep(
+                            *dynamic,
+                            &[contract.context.i32_type().const_int(32, false)],
+                            "",
+                        )
+                    };
+
+                    *offset = contract.builder.build_int_add(
+                        *offset,
+                        contract.context.i32_type().const_int(32, false),
+                        "",
+                    );
+
+                    // details about our array elements
+                    let elem_ty = ty.array_deref();
+                    let llvm_elem_ty = contract.llvm_var(&elem_ty);
+                    let elem_size = llvm_elem_ty
+                        .into_pointer_type()
+                        .get_element_type()
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false);
+
+                    let mut fixed = *dynamic;
+
+                    let fixed_elems_length = contract.builder.build_int_add(
+                        len,
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(self.encoded_fixed_length(&elem_ty, contract.ns), false),
+                        "",
+                    );
+
+                    *offset = contract
+                        .builder
+                        .build_int_add(*offset, fixed_elems_length, "");
+
+                    *dynamic = unsafe {
+                        contract
+                            .builder
+                            .build_gep(*dynamic, &[fixed_elems_length], "")
+                    };
+
+                    contract.emit_static_loop_with_pointer(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        len,
+                        &mut fixed,
+                        |elem_no, data| {
+                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let element_start = unsafe {
+                                contract.builder.build_gep(
+                                    arg.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            let elem = contract.builder.build_pointer_cast(
+                                element_start,
+                                llvm_elem_ty.into_pointer_type(),
+                                "entry",
+                            );
+
+                            let ty = ty.array_deref();
+
+                            self.encode_ty(
+                                contract,
+                                true,
+                                function,
+                                &ty.deref(),
+                                elem.into(),
+                                data,
+                                offset,
+                                dynamic,
+                            );
+                        },
+                    );
                 }
             }
             resolver::Type::Struct(n) => {

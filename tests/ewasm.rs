@@ -1071,6 +1071,52 @@ fn struct_encode() {
 }
 
 #[test]
+fn struct_dynamic_array_encode() {
+    let (mut runtime, mut store) = build_solidity(
+        r##"
+        contract structs {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+        
+            function test() public returns (foo[]) {
+                foo[] x = new foo[](3);
+
+                x[0] = foo({x: true,y: 64});
+                x[1] = foo({x: false,y: 102});
+                x[2] = foo({x: true,y: 0x800});
+
+                return x;
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let ret = runtime.function(&mut store, "test", &[]);
+
+    assert_eq!(
+        ret,
+        vec![ethabi::Token::Array(vec![
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Bool(true),
+                ethabi::Token::Uint(ethereum_types::U256::from(64))
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Bool(false),
+                ethabi::Token::Uint(ethereum_types::U256::from(102))
+            ]),
+            ethabi::Token::Tuple(vec![
+                ethabi::Token::Bool(true),
+                ethabi::Token::Uint(ethereum_types::U256::from(0x800)),
+            ])
+        ])],
+    );
+}
+
+#[test]
 fn struct_decode() {
     let (mut runtime, mut store) = build_solidity(
         r##"
