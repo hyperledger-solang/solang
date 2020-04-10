@@ -652,17 +652,27 @@ impl TargetRuntime for EwasmTarget {
         &self,
         contract: &Contract<'b>,
         selector: Option<u32>,
-        _load: bool,
+        load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
         spec: &[resolver::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let mut length = contract.context.i32_type().const_int(
             spec.iter()
-                .map(|arg| self.abi.encoded_length(&arg.ty, contract.ns))
+                .map(|arg| self.abi.encoded_fixed_length(&arg.ty, contract.ns))
                 .sum(),
             false,
         );
+
+        // now add the dynamic lengths
+        for (i, s) in spec.iter().enumerate() {
+            length = contract.builder.build_int_add(
+                length,
+                self.abi
+                    .encoded_dynamic_length(args[i], load, &s.ty, function, contract),
+                "",
+            );
+        }
 
         if selector.is_some() {
             length = contract.builder.build_int_add(

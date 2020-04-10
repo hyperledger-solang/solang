@@ -379,8 +379,202 @@ impl EthAbiEncoder {
         }
     }
 
-    /// Return the encoded length of the given type
-    pub fn encoded_length(&self, ty: &resolver::Type, ns: &resolver::Namespace) -> u64 {
+    /// Return the amount of fixed and dynamic storage required to store a type
+    pub fn encoded_dynamic_length<'a>(
+        &self,
+        arg: BasicValueEnum<'a>,
+        load: bool,
+        ty: &resolver::Type,
+        function: FunctionValue,
+        contract: &Contract<'a>,
+    ) -> IntValue<'a> {
+        match ty {
+            resolver::Type::Struct(n) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let mut sum = contract.context.i32_type().const_zero();
+
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    let len = self.encoded_dynamic_length(
+                        elem.into(),
+                        true,
+                        &field.ty,
+                        function,
+                        contract,
+                    );
+
+                    sum = contract.builder.build_int_add(sum, len, "");
+                }
+
+                sum
+            }
+            resolver::Type::Array(_, dims) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let mut sum = contract.context.i32_type().const_zero();
+                let elem_ty = ty.array_deref();
+
+                let len = match dims.last().unwrap() {
+                    None => {
+                        let len = unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "array.len",
+                            )
+                        };
+
+                        let array_len = contract
+                            .builder
+                            .build_load(len, "array.len")
+                            .into_int_value();
+
+                        // A dynamic array will store its own length
+                        sum = contract.builder.build_int_add(
+                            sum,
+                            contract.context.i32_type().const_int(32, false),
+                            "",
+                        );
+
+                        // plus elements in dynamic storage
+                        sum = contract.builder.build_int_add(
+                            sum,
+                            contract.builder.build_int_mul(
+                                array_len,
+                                contract.context.i32_type().const_int(
+                                    self.encoded_fixed_length(&elem_ty, contract.ns),
+                                    false,
+                                ),
+                                "",
+                            ),
+                            "",
+                        );
+
+                        array_len
+                    }
+                    Some(d) => contract
+                        .context
+                        .i32_type()
+                        .const_int(d.to_u64().unwrap(), false),
+                };
+
+                let llvm_elem_ty = contract.llvm_var(&elem_ty);
+
+                if elem_ty.is_dynamic(contract.ns) {
+                    contract.emit_static_loop_with_int(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        len,
+                        &mut sum,
+                        |index, sum| {
+                            let index = contract.builder.build_int_mul(
+                                index,
+                                llvm_elem_ty
+                                    .into_pointer_type()
+                                    .get_element_type()
+                                    .size_of()
+                                    .unwrap()
+                                    .const_cast(contract.context.i32_type(), false),
+                                "",
+                            );
+
+                            let elem = unsafe {
+                                contract.builder.build_gep(
+                                    arg.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "index_access",
+                                )
+                            };
+
+                            let elem = contract.builder.build_pointer_cast(
+                                elem,
+                                llvm_elem_ty.into_pointer_type(),
+                                "elem",
+                            );
+
+                            *sum = contract.builder.build_int_add(
+                                self.encoded_dynamic_length(
+                                    elem.into(),
+                                    true,
+                                    &elem_ty,
+                                    function,
+                                    contract,
+                                ),
+                                *sum,
+                                "",
+                            );
+                        },
+                    );
+                }
+
+                sum
+            }
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let len = unsafe {
+                    contract.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "string.len",
+                    )
+                };
+
+                // The dynamic part is the length (=32 bytes) and the string
+                // data itself. Length 0 occupies no space, length 1-32 occupies
+                // 32 bytes, etc
+                contract.builder.build_and(
+                    contract.builder.build_int_add(
+                        contract
+                            .builder
+                            .build_load(len, "string.len")
+                            .into_int_value(),
+                        contract.context.i32_type().const_int(32 + 31, false),
+                        "",
+                    ),
+                    contract.context.i32_type().const_int(!31, false),
+                    "",
+                )
+            }
+            _ => contract.context.i32_type().const_zero(),
+        }
+    }
+
+    /// Return the encoded length of the given type, fixed part only
+    pub fn encoded_fixed_length(&self, ty: &resolver::Type, ns: &resolver::Namespace) -> u64 {
         match ty {
             resolver::Type::Bool
             | resolver::Type::Contract(_)
@@ -388,11 +582,13 @@ impl EthAbiEncoder {
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => 32,
+            // String and Dynamic bytes use 32 bytes for the offset into dynamic encoded
+            resolver::Type::String | resolver::Type::DynamicBytes => 32,
             resolver::Type::Enum(_) => 32,
             resolver::Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .map(|f| self.encoded_length(&f.ty, ns))
+                .map(|f| self.encoded_fixed_length(&f.ty, ns))
                 .sum(),
             resolver::Type::Array(ty, dims) => {
                 let mut product = 1;
@@ -400,17 +596,18 @@ impl EthAbiEncoder {
                 for dim in dims {
                     match dim {
                         Some(d) => product *= d.to_u64().unwrap(),
-                        None => return product,
+                        None => {
+                            return product * 32;
+                        }
                     }
                 }
 
-                product * self.encoded_length(&ty, ns)
+                product * self.encoded_fixed_length(&ty, ns)
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(r) => self.encoded_length(r, ns),
-            resolver::Type::StorageRef(r) => self.encoded_length(r, ns),
-            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
+            resolver::Type::Ref(r) => self.encoded_fixed_length(r, ns),
+            resolver::Type::StorageRef(r) => self.encoded_fixed_length(r, ns),
         }
     }
 
@@ -718,7 +915,7 @@ impl EthAbiEncoder {
         let expected_length = spec
             .params
             .iter()
-            .map(|arg| self.encoded_length(&arg.ty, contract.ns))
+            .map(|arg| self.encoded_fixed_length(&arg.ty, contract.ns))
             .sum();
         let mut data = data;
         let decode_block = contract.context.append_basic_block(function, "abi_decode");
