@@ -3,16 +3,12 @@ use super::expression::Expression;
 use super::{Contract, FunctionDecl, Namespace, Parameter};
 use parser::ast;
 use resolver;
-use Target;
 
 pub fn add_builtin_function(contract: &mut Contract, ns: &Namespace) {
     add_assert(contract, ns);
     add_print(contract, ns);
-    // FIXME: ewasm has no string encoder yet
-    if ns.target == Target::Substrate {
-        add_revert(contract, ns);
-        add_require(contract, ns);
-    }
+    add_revert(contract, ns);
+    add_require(contract, ns);
 }
 
 fn add_assert(contract: &mut Contract, ns: &Namespace) {
@@ -238,13 +234,77 @@ fn add_require(contract: &mut Contract, ns: &Namespace) {
 
     require.cfg = Some(Box::new(cfg));
 
-    let pos = contract.functions.len();
+    let pos_with_reason = contract.functions.len();
+
+    let argty = resolver::Type::Bool;
+
+    contract.functions.push(require);
+
+    let mut require = FunctionDecl::new(
+        ast::Loc(0, 0),
+        "require".to_owned(),
+        vec![],
+        false,
+        None,
+        None,
+        ast::Visibility::Private(ast::Loc(0, 0)),
+        vec![Parameter {
+            name: "condition".to_owned(),
+            ty: resolver::Type::Bool,
+        }],
+        vec![],
+        &contract,
+        ns,
+    );
+
+    let mut errors = Vec::new();
+    let mut vartab = Vartable::new();
+    let mut cfg = ControlFlowGraph::new();
+
+    let true_ = cfg.new_basic_block("noassert".to_owned());
+    let false_ = cfg.new_basic_block("doassert".to_owned());
+
+    let cond = vartab
+        .add(
+            &ast::Identifier {
+                loc: ast::Loc(0, 0),
+                name: "condition".to_owned(),
+            },
+            argty,
+            &mut errors,
+        )
+        .unwrap();
+
+    cfg.add(&mut vartab, Instr::FuncArg { res: cond, arg: 0 });
+    cfg.add(
+        &mut vartab,
+        Instr::BranchCond {
+            cond: Expression::Variable(ast::Loc(0, 0), cond),
+            true_,
+            false_,
+        },
+    );
+
+    cfg.set_basic_block(true_);
+    cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
+
+    cfg.set_basic_block(false_);
+    cfg.add(&mut vartab, Instr::AssertFailure { expr: None });
+
+    cfg.vars = vartab.drain();
+
+    require.cfg = Some(Box::new(cfg));
+
+    let pos_without_reason = contract.functions.len();
 
     contract.functions.push(require);
 
     contract.add_symbol(
         &id,
-        resolver::Symbol::Function(vec![(id.loc, pos)]),
+        resolver::Symbol::Function(vec![
+            (id.loc, pos_with_reason),
+            (id.loc, pos_without_reason),
+        ]),
         ns,
         &mut errors,
     );

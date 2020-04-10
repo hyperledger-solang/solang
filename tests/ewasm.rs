@@ -5,7 +5,7 @@ extern crate num_traits;
 extern crate solang;
 extern crate wasmi;
 
-use ethabi::Token;
+use ethabi::{decode, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
@@ -223,8 +223,9 @@ impl TestRuntime {
                 TrapKind::Host(_) => {}
                 _ => panic!("fail to invoke main: {}", trap),
             },
-            Ok(_) => {}
+            Ok(Some(RuntimeValue::I32(0))) => {}
             Err(e) => panic!("fail to invoke main: {}", e),
+            _ => panic!("fail to invoke main"),
         }
 
         println!("RETURNDATA: {}", hex::encode(&store.output));
@@ -232,6 +233,50 @@ impl TestRuntime {
         self.abi.functions[name][0]
             .decode_output(&store.output)
             .unwrap()
+    }
+
+    fn function_revert(
+        &self,
+        store: &mut ContractStorage,
+        name: &str,
+        args: &[Token],
+    ) -> Option<String> {
+        let calldata = match self.abi.functions[name][0].encode_input(args) {
+            Ok(n) => n,
+            Err(x) => panic!(format!("{}", x)),
+        };
+
+        println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
+
+        store.input = calldata;
+
+        match self.module.invoke_export("main", &[], store) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Host(_) => {}
+                _ => panic!("fail to invoke main: {}", trap),
+            },
+            Ok(Some(RuntimeValue::I32(1))) => {}
+            Err(e) => panic!("fail to invoke main: {}", e),
+            _ => panic!("fail to invoke main"),
+        }
+
+        println!("RETURNDATA: {}", hex::encode(&store.output));
+
+        if store.output.is_empty() {
+            return None;
+        }
+
+        assert_eq!(store.output[..4], 0x08c3_79a0u32.to_be_bytes());
+
+        if let Ok(v) = decode(&[ethabi::ParamType::String], &store.output[4..]) {
+            assert_eq!(v.len(), 1);
+
+            if let ethabi::Token::String(r) = &v[0] {
+                return Some(r.to_owned());
+            }
+        }
+
+        panic!("failed to decode");
     }
 
     fn constructor(&mut self, store: &mut ContractStorage, args: &[Token]) {
@@ -1261,4 +1306,21 @@ fn encode_string() {
             ethabi::Token::Int(n563),
         )
     );
+}
+
+#[test]
+fn revert() {
+    let (mut runtime, mut store) = build_solidity(
+        r##"
+        contract foo {
+            function f() public {
+                revert("Hello, World!");
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, &[]);
+
+    let ret = runtime.function_revert(&mut store, "f", &[]);
+    assert_eq!(ret, Some("Hello, World!".to_owned()));
 }
