@@ -657,12 +657,14 @@ impl TargetRuntime for EwasmTarget {
         args: &[BasicValueEnum<'b>],
         spec: &[resolver::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let mut length = contract.context.i32_type().const_int(
+        let mut offset = contract.context.i32_type().const_int(
             spec.iter()
                 .map(|arg| self.abi.encoded_fixed_length(&arg.ty, contract.ns))
                 .sum(),
             false,
         );
+
+        let mut length = offset;
 
         // now add the dynamic lengths
         for (i, s) in spec.iter().enumerate() {
@@ -744,9 +746,19 @@ impl TargetRuntime for EwasmTarget {
             "",
         );
 
+        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
+
         for (i, arg) in spec.iter().enumerate() {
-            self.abi
-                .encode_ty(contract, load, function, &arg.ty, args[i], &mut data);
+            self.abi.encode_ty(
+                contract,
+                load,
+                function,
+                &arg.ty,
+                args[i],
+                &mut data,
+                &mut offset,
+                &mut dynamic,
+            );
         }
 
         (encoded_data, length)
