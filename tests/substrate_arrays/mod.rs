@@ -1477,3 +1477,118 @@ fn abi_decode_dynamic_array() {
 
     runtime.function(&mut store, "decode_empty", Int32Array(vec![]).encode());
 }
+
+#[test]
+fn abi_encode_dynamic_array2() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Array(Vec<(bool, u32)>);
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract structs {
+            struct foo {
+                bool x;
+                uint32 y;
+            }
+        
+            function test() public returns (foo[]) {
+                foo[] x = new foo[](3);
+
+                x[0] = foo({x: true, y: 64});
+                x[1] = foo({x: false, y: 102});
+                x[2] = foo({x: true, y: 0x800});
+
+                return x;
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Array(vec!((true, 64), (false, 102), (true, 0x800))).encode()
+    );
+}
+
+#[test]
+fn abi_encode_dynamic_array3() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Array(Vec<(bool, u32, String)>);
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract structs {
+            struct foo {
+                bool x;
+                uint32 y;
+                string z;
+            }
+        
+            function test() public returns (foo[]) {
+                foo[] x = new foo[](3);
+
+                x[0] = foo({x: true, y: 64, z: "abc"});
+                x[1] = foo({x: false, y: 102, z: "a"});
+                x[2] = foo({x: true, y: 0x800, z: "abcdef"});
+
+                return x;
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Array(vec!(
+            (true, 64, "abc".to_owned()),
+            (false, 102, "a".to_owned()),
+            (true, 0x800, "abcdef".to_owned())
+        ))
+        .encode()
+    );
+}
+
+#[test]
+fn abi_encode_dynamic_array4() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Array([(bool, u32, String); 3]);
+
+    let (runtime, mut store) = build_solidity(
+        r#"
+        contract structs {
+            struct foo {
+                bool x;
+                uint32 y;
+                string z;
+            }
+        
+            function test() public returns (foo[3]) {
+                foo[3] x;
+                x[0] = foo({x: true, y: 64, z: "abc"});
+                x[1] = foo({x: false, y: 102, z: "a"});
+                x[2] = foo({x: true, y: 0x800, z: "abcdef"});
+                return x;
+            }
+        }
+        "#,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.function(&mut store, "test", Vec::new());
+
+    assert_eq!(
+        store.scratch,
+        Array([
+            (true, 64, "abc".to_owned()),
+            (false, 102, "a".to_owned()),
+            (true, 0x800, "abcdef".to_owned())
+        ])
+        .encode()
+    );
+}
