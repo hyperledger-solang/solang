@@ -190,6 +190,7 @@ pub struct Contract<'a> {
 }
 
 impl<'a> Contract<'a> {
+    /// Build the LLVM IR for a contract
     pub fn build(
         context: &'a Context,
         contract: &'a resolver::Contract,
@@ -197,28 +198,13 @@ impl<'a> Contract<'a> {
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Self {
-        let res = match ns.target {
+        match ns.target {
             super::Target::Substrate => {
                 substrate::SubstrateTarget::build(context, contract, ns, filename, opt)
             }
             super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
             super::Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename, opt),
-        };
-
-        match opt {
-            OptimizationLevel::Default | OptimizationLevel::Aggressive => {
-                let pass_manager = PassManager::create(());
-
-                pass_manager.add_promote_memory_to_register_pass();
-                pass_manager.add_function_inlining_pass();
-                pass_manager.add_global_dce_pass();
-
-                pass_manager.run_on(&res.module);
-            }
-            _ => {}
         }
-
-        res
     }
 
     /// Compile the contract to wasm and return the wasm as bytes. The result is
@@ -231,6 +217,19 @@ impl<'a> Contract<'a> {
             if !wasm.is_empty() {
                 return Ok(wasm.clone());
             }
+        }
+
+        match self.opt {
+            OptimizationLevel::Default | OptimizationLevel::Aggressive => {
+                let pass_manager = PassManager::create(());
+
+                pass_manager.add_promote_memory_to_register_pass();
+                pass_manager.add_function_inlining_pass();
+                pass_manager.add_global_dce_pass();
+
+                pass_manager.run_on(&self.module);
+            }
+            _ => {}
         }
 
         let target = Target::from_name("wasm32").unwrap();
@@ -600,7 +599,29 @@ impl<'a> Contract<'a> {
                 .into(),
             Expression::NumberLiteral(_, bits, n) => self.number_literal(*bits as u32, n).into(),
             Expression::StructLiteral(_, ty, exprs) => {
-                let s = self.builder.build_alloca(self.llvm_type(ty), "struct");
+                let struct_ty = self.llvm_type(ty);
+
+                let s = self
+                    .builder
+                    .build_call(
+                        self.module.get_function("__malloc").unwrap(),
+                        &[struct_ty
+                            .size_of()
+                            .unwrap()
+                            .const_cast(self.context.i32_type(), false)
+                            .into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let s = self.builder.build_pointer_cast(
+                    s,
+                    struct_ty.ptr_type(AddressSpace::Generic),
+                    "struct_literal",
+                );
 
                 for (i, f) in exprs.iter().enumerate() {
                     let elem = unsafe {
