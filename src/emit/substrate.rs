@@ -1,5 +1,6 @@
 use resolver;
 
+use blake2_rfc;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
@@ -45,6 +46,7 @@ impl SubstrateTarget {
             "ext_hash_keccak_256",
             "ext_return",
             "ext_print",
+            "ext_instantiate",
         ]);
 
         c
@@ -110,6 +112,14 @@ impl SubstrateTarget {
     }
 
     fn declare_externals(&self, contract: &Contract) {
+        let u8_ptr = contract
+            .context
+            .i8_type()
+            .ptr_type(AddressSpace::Generic)
+            .into();
+        let u32_val = contract.context.i32_type().into();
+        let u64_val = contract.context.i32_type().into();
+
         // Access to scratch buffer
         contract.module.add_function(
             "ext_scratch_size",
@@ -242,12 +252,21 @@ impl SubstrateTarget {
             "ext_return",
             contract.context.void_type().fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // data_ptr
-                    contract.context.i32_type().into(), // data_len
+                    u8_ptr, u32_val, // data ptr and len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_instantiate",
+            contract.context.void_type().fn_type(
+                &[
+                    u8_ptr, u32_val, // code hash ptr and len
+                    u64_val, // gas
+                    u8_ptr, u32_val, // value ptr and len
+                    u8_ptr, u32_val, // input ptr and len
                 ],
                 false,
             ),
@@ -1562,6 +1581,7 @@ impl TargetRuntime for SubstrateTarget {
             .unwrap()
             .into_int_value()
     }
+
     fn return_empty_abi(&self, contract: &Contract) {
         // This will clear the scratch buffer
         contract.builder.build_call(
@@ -1755,6 +1775,90 @@ impl TargetRuntime for SubstrateTarget {
         contract.builder.build_call(
             contract.module.get_function("ext_print").unwrap(),
             &[string_ptr.into(), string_len.into()],
+            "",
+        );
+    }
+
+    fn create_contract<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        contract_no: usize,
+        constructor_no: usize,
+        address: PointerValue<'b>,
+        args: &[BasicValueEnum<'b>],
+    ) {
+        let resolver_contract = &contract.ns.contracts[contract_no];
+        let constructor = &resolver_contract.constructors[constructor_no];
+
+        // input
+        let (input, input_len) = self.abi_encode(
+            contract,
+            Some(constructor.selector()),
+            false,
+            function,
+            args,
+            &constructor.params,
+        );
+
+        // balance is a u128
+        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+
+        // code hash
+        let wasm = contract.wasm().expect("compile should succeeed");
+
+        let codehash = contract.emit_global_string(
+            &format!("contract_{}_codehash", resolver_contract.name),
+            blake2_rfc::blake2b::blake2b(32, &[], &wasm).as_bytes(),
+            true,
+        );
+
+        let ret = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_instantiate").unwrap(),
+                &[
+                    codehash.into(),
+                    contract.context.i32_type().const_int(32, false).into(),
+                    contract.context.i64_type().const_zero().into(),
+                    balance.into(),
+                    contract.context.i32_type().const_int(8, false).into(),
+                    input.into(),
+                    input_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+        contract
+            .builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        contract.builder.position_at_end(bail_block);
+
+        contract.builder.build_return(Some(&ret));
+        contract.builder.position_at_end(success_block);
+
+        // scratch buffer contains address
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_read").unwrap(),
+            &[
+                address.into(),
+                contract.context.i32_type().const_zero().into(),
+                contract.context.i32_type().const_int(20, false).into(),
+            ],
             "",
         );
     }

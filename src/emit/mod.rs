@@ -161,6 +161,17 @@ pub trait TargetRuntime {
 
     /// Return failure without any result
     fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue);
+
+    /// Calls constructor
+    fn create_contract<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        contract_no: usize,
+        constructor_no: usize,
+        address: PointerValue<'b>,
+        args: &[BasicValueEnum<'b>],
+    );
 }
 
 pub struct Contract<'a> {
@@ -2663,7 +2674,28 @@ impl<'a> Contract<'a> {
                             }
                         }
                     }
-                    cfg::Instr::Constructor { .. } => unimplemented!(),
+                    cfg::Instr::Constructor {
+                        res,
+                        contract_no,
+                        constructor_no,
+                        args,
+                    } => {
+                        runtime.create_contract(
+                            &self,
+                            function,
+                            *contract_no,
+                            *constructor_no,
+                            self.builder.build_pointer_cast(
+                                w.vars[*res].value.into_pointer_value(),
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
+                            &args
+                                .iter()
+                                .map(|a| self.expression(&a, &w.vars, function, runtime))
+                                .collect::<Vec<BasicValueEnum>>(),
+                        );
+                    }
                 }
             }
         }
