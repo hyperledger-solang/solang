@@ -1072,6 +1072,8 @@ impl SubstrateTarget {
                     arg
                 };
 
+                let mut dynamic_array = false;
+
                 let len = match dims.last().unwrap() {
                     None => {
                         let len = unsafe {
@@ -1084,6 +1086,8 @@ impl SubstrateTarget {
                                 "array.len",
                             )
                         };
+
+                        dynamic_array = true;
 
                         contract
                             .builder
@@ -1119,23 +1123,32 @@ impl SubstrateTarget {
                                 "",
                             );
 
-                            let elem = unsafe {
-                                contract.builder.build_gep(
-                                    arg.into_pointer_value(),
-                                    &[
-                                        contract.context.i32_type().const_zero(),
-                                        contract.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "index_access",
+                            let elem = if dynamic_array {
+                                let p = unsafe {
+                                    contract.builder.build_gep(
+                                        arg.into_pointer_value(),
+                                        &[
+                                            contract.context.i32_type().const_zero(),
+                                            contract.context.i32_type().const_int(2, false),
+                                            index,
+                                        ],
+                                        "index_access",
+                                    )
+                                };
+                                contract.builder.build_pointer_cast(
+                                    p,
+                                    llvm_elem_ty.into_pointer_type(),
+                                    "elem",
                                 )
+                            } else {
+                                unsafe {
+                                    contract.builder.build_gep(
+                                        arg.into_pointer_value(),
+                                        &[contract.context.i32_type().const_zero(), index],
+                                        "index_access",
+                                    )
+                                }
                             };
-
-                            let elem = contract.builder.build_pointer_cast(
-                                elem,
-                                llvm_elem_ty.into_pointer_type(),
-                                "elem",
-                            );
 
                             *sum = contract.builder.build_int_add(
                                 self.encoded_length(
@@ -1153,15 +1166,34 @@ impl SubstrateTarget {
 
                     sum
                 } else {
-                    let elem = unsafe {
-                        contract.builder.build_gep(
-                            arg.into_pointer_value(),
-                            &[
-                                contract.context.i32_type().const_zero(),
-                                contract.context.i32_type().const_zero(),
-                            ],
-                            "index_access",
+                    let elem = if dynamic_array {
+                        let p = unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                ],
+                                "index_access",
+                            )
+                        };
+
+                        contract.builder.build_pointer_cast(
+                            p,
+                            llvm_elem_ty.into_pointer_type(),
+                            "elem",
                         )
+                    } else {
+                        unsafe {
+                            contract.builder.build_gep(
+                                arg.into_pointer_value(),
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "index_access",
+                            )
+                        }
                     };
 
                     contract.builder.build_int_mul(
