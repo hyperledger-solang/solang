@@ -3,6 +3,7 @@ use parser::ast;
 use resolver;
 use resolver::cfg;
 use resolver::expression::{Expression, StringLocation};
+use std::cell::RefCell;
 use std::path::Path;
 use std::str;
 
@@ -173,7 +174,7 @@ pub struct Contract<'a> {
     ns: &'a resolver::Namespace,
     constructors: Vec<FunctionValue<'a>>,
     functions: Vec<FunctionValue<'a>>,
-    wasm: Option<Vec<u8>>,
+    wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
 }
 
@@ -209,9 +210,16 @@ impl<'a> Contract<'a> {
         res
     }
 
-    pub fn wasm(&mut self) -> Result<Vec<u8>, String> {
-        if let Some(ref wasm) = self.wasm {
-            return Ok(wasm.clone());
+    /// Compile the contract to wasm and return the wasm as bytes. The result is
+    /// cached, since this function can be called multiple times (e.g. one for
+    /// each time a contract of this type is created).
+    pub fn wasm(&self) -> Result<Vec<u8>, String> {
+        {
+            let wasm = self.wasm.borrow();
+
+            if !wasm.is_empty() {
+                return Ok(wasm.clone());
+            }
         }
 
         let target = Target::from_name("wasm32").unwrap();
@@ -231,7 +239,7 @@ impl<'a> Contract<'a> {
             Ok(out) => {
                 let slice = out.as_slice();
 
-                self.wasm = Some(slice.to_vec());
+                self.wasm.replace(slice.to_vec());
 
                 Ok(slice.to_vec())
             }
@@ -305,7 +313,7 @@ impl<'a> Contract<'a> {
             ns,
             constructors: Vec::new(),
             functions: Vec::new(),
-            wasm: None,
+            wasm: RefCell::new(Vec::new()),
             opt,
         }
     }
