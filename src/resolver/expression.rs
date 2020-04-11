@@ -2569,7 +2569,7 @@ fn constructor(
     let address_res = tab.temp_anonymous(&resolver::Type::Contract(no));
 
     // constructor call
-    for func in &ns.contracts[no].constructors {
+    for (constructor_no, func) in ns.contracts[no].constructors.iter().enumerate() {
         if func.params.len() != args.len() {
             temp_errors.push(Output::error(
                 *loc,
@@ -2615,7 +2615,8 @@ fn constructor(
             tab,
             Instr::Constructor {
                 res: address_res,
-                no,
+                contract_no: no,
+                constructor_no,
                 args: cast_args,
             },
         );
@@ -2632,7 +2633,8 @@ fn constructor(
                 tab,
                 Instr::Constructor {
                     res: address_res,
-                    no,
+                    contract_no: no,
+                    constructor_no: 0,
                     args: Vec::new(),
                 },
             );
@@ -2703,7 +2705,7 @@ fn constructor_named_args(
     let address_res = tab.temp_anonymous(&resolver::Type::Contract(no));
 
     // constructor call
-    for func in &ns.contracts[no].constructors {
+    for (constructor_no, func) in ns.contracts[no].constructors.iter().enumerate() {
         if func.params.len() != args.len() {
             temp_errors.push(Output::error(
                 *loc,
@@ -2759,7 +2761,8 @@ fn constructor_named_args(
             tab,
             Instr::Constructor {
                 res: address_res,
-                no,
+                contract_no: no,
+                constructor_no,
                 args: cast_args,
             },
         );
@@ -2776,7 +2779,8 @@ fn constructor_named_args(
                 tab,
                 Instr::Constructor {
                     res: address_res,
-                    no,
+                    contract_no: no,
+                    constructor_no: 0,
                     args: Vec::new(),
                 },
             );

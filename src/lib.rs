@@ -1,3 +1,4 @@
+extern crate blake2_rfc;
 extern crate clap;
 extern crate hex;
 extern crate inkwell;

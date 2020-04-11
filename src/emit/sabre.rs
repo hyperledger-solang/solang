@@ -721,4 +721,17 @@ impl TargetRuntime for SabreTarget {
             "",
         );
     }
+
+    /// Create new contract
+    fn create_contract<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _function: FunctionValue,
+        _contract_no: usize,
+        _constructor_no: usize,
+        _address: PointerValue<'b>,
+        _args: &[BasicValueEnum],
+    ) {
+        panic!("Sabre cannot create new contracts");
+    }
 }

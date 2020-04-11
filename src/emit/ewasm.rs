@@ -785,4 +785,41 @@ impl TargetRuntime for EwasmTarget {
             "",
         );
     }
+
+    fn create_contract<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        contract_no: usize,
+        constructor_no: usize,
+        _address: PointerValue<'b>,
+        args: &[BasicValueEnum<'b>],
+    ) {
+        let resolver_contract = &contract.ns.contracts[contract_no];
+
+        // wasm
+        let wasm = contract.wasm().expect("compile should succeeed");
+
+        let _code = contract.emit_global_string(
+            &format!("contract_{}_code", resolver_contract.name),
+            &wasm,
+            true,
+        );
+
+        // input
+        let (_input, _input_len) = self.abi_encode(
+            contract,
+            None,
+            false,
+            function,
+            args,
+            if resolver_contract.constructors.is_empty() {
+                &[]
+            } else {
+                &resolver_contract.constructors[constructor_no].params
+            },
+        );
+
+        // FIXME: call create
+    }
 }

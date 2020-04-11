@@ -69,7 +69,8 @@ pub enum Instr {
     },
     Constructor {
         res: usize,
-        no: usize,
+        contract_no: usize,
+        constructor_no: usize,
         args: Vec<Expression>,
     },
 }
@@ -520,10 +521,16 @@ impl ControlFlowGraph {
                 self.vars[*pos].id.name
             ),
             Instr::Print { expr } => format!("print {}", self.expr_to_string(contract, ns, expr)),
-            Instr::Constructor { res, no, args } => format!(
-                "%{} = constructor {} ({})",
+            Instr::Constructor {
+                res,
+                contract_no,
+                constructor_no,
+                args,
+            } => format!(
+                "%{} = constructor {} #{} ({})",
                 self.vars[*res].id.name,
-                ns.contracts[*no].name,
+                ns.contracts[*contract_no].name,
+                constructor_no,
                 {
                     let s: Vec<String> = args
                         .iter()
