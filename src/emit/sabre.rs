@@ -7,6 +7,7 @@ use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
+use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime};
@@ -21,8 +22,9 @@ impl SabreTarget {
         contract: &'a resolver::Contract,
         ns: &'a resolver::Namespace,
         filename: &'a str,
+        opt: OptimizationLevel,
     ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, ns, filename, None);
+        let mut c = Contract::new(context, contract, ns, filename, opt, None);
         let b = SabreTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };

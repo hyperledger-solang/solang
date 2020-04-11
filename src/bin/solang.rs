@@ -263,7 +263,7 @@ fn process_filename(
             continue;
         }
 
-        let obj = match contract.wasm(opt) {
+        let obj = match contract.wasm() {
             Ok(o) => o,
             Err(s) => {
                 println!("error: {}", s);
