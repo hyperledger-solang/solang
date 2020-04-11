@@ -6,6 +6,7 @@ use inkwell::types::{BasicType, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
+use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
 
 use super::{Contract, TargetRuntime};
@@ -20,8 +21,9 @@ impl SubstrateTarget {
         contract: &'a resolver::Contract,
         ns: &'a resolver::Namespace,
         filename: &'a str,
+        opt: OptimizationLevel,
     ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, ns, filename, None);
+        let mut c = Contract::new(context, contract, ns, filename, opt, None);
         let b = SubstrateTarget {};
 
         b.declare_externals(&c);

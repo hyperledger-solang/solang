@@ -174,6 +174,7 @@ pub struct Contract<'a> {
     constructors: Vec<FunctionValue<'a>>,
     functions: Vec<FunctionValue<'a>>,
     wasm: Option<Vec<u8>>,
+    opt: OptimizationLevel,
 }
 
 impl<'a> Contract<'a> {
@@ -186,10 +187,10 @@ impl<'a> Contract<'a> {
     ) -> Self {
         let res = match ns.target {
             super::Target::Substrate => {
-                substrate::SubstrateTarget::build(context, contract, ns, filename)
+                substrate::SubstrateTarget::build(context, contract, ns, filename, opt)
             }
             super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
-            super::Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename),
+            super::Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename, opt),
         };
 
         match opt {
@@ -208,7 +209,7 @@ impl<'a> Contract<'a> {
         res
     }
 
-    pub fn wasm(&mut self, opt: OptimizationLevel) -> Result<Vec<u8>, String> {
+    pub fn wasm(&mut self) -> Result<Vec<u8>, String> {
         if let Some(ref wasm) = self.wasm {
             return Ok(wasm.clone());
         }
@@ -220,7 +221,7 @@ impl<'a> Contract<'a> {
                 &self.triple,
                 "",
                 "",
-                opt,
+                self.opt,
                 RelocMode::Default,
                 CodeModel::Default,
             )
@@ -278,6 +279,7 @@ impl<'a> Contract<'a> {
         contract: &'a resolver::Contract,
         ns: &'a resolver::Namespace,
         filename: &'a str,
+        opt: OptimizationLevel,
         runtime: Option<Box<Contract<'a>>>,
     ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
@@ -304,6 +306,7 @@ impl<'a> Contract<'a> {
             constructors: Vec::new(),
             functions: Vec::new(),
             wasm: None,
+            opt,
         }
     }
 

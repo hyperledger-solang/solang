@@ -27,7 +27,7 @@ impl EwasmTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         // first emit runtime code
-        let mut runtime_code = Contract::new(context, contract, ns, filename, None);
+        let mut runtime_code = Contract::new(context, contract, ns, filename, opt, None);
         let b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
@@ -43,7 +43,7 @@ impl EwasmTarget {
 
         runtime_code.internalize(&["main"]);
 
-        let runtime_obj = runtime_code.wasm(opt).unwrap();
+        let runtime_obj = runtime_code.wasm().unwrap();
         let runtime_bs = link(&runtime_obj, Target::Ewasm);
 
         // Now we have the runtime code, create the deployer
@@ -52,6 +52,7 @@ impl EwasmTarget {
             contract,
             ns,
             filename,
+            opt,
             Some(Box::new(runtime_code)),
         );
         let b = EwasmTarget {
