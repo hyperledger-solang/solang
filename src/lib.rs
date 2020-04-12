@@ -79,9 +79,7 @@ pub fn compile(
             // codegen
             let contract = emit::Contract::build(&ctx, c, &ns, filename, opt);
 
-            let obj = contract.wasm().expect("llvm wasm emit should work");
-
-            let bc = link::link(&obj, target);
+            let bc = contract.wasm(true).expect("llvm wasm emit should work");
 
             (bc, abistr)
         })
