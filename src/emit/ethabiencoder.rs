@@ -460,9 +460,14 @@ impl EthAbiEncoder {
 
                 contract.builder.build_store(dest, arg);
             }
-            resolver::Type::Address | resolver::Type::Uint(_) | resolver::Type::Int(_) if load => {
+            resolver::Type::Contract(_)
+            | resolver::Type::Address
+            | resolver::Type::Uint(_)
+            | resolver::Type::Int(_)
+                if load =>
+            {
                 let n = match ty {
-                    resolver::Type::Address => 160,
+                    resolver::Type::Contract(_) | resolver::Type::Address => 160,
                     resolver::Type::Uint(b) => *b,
                     resolver::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -540,9 +545,14 @@ impl EthAbiEncoder {
                     "",
                 );
             }
-            resolver::Type::Address | resolver::Type::Uint(_) | resolver::Type::Int(_) if !load => {
+            resolver::Type::Contract(_)
+            | resolver::Type::Address
+            | resolver::Type::Uint(_)
+            | resolver::Type::Int(_)
+                if !load =>
+            {
                 let n = match ty {
-                    resolver::Type::Address => 160,
+                    resolver::Type::Contract(_) | resolver::Type::Address => 160,
                     resolver::Type::Uint(b) => *b,
                     resolver::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -588,7 +598,7 @@ impl EthAbiEncoder {
 
                 let temp = contract
                     .builder
-                    .build_alloca(arg.into_int_value().get_type(), &format!("bytes{}", n));
+                    .build_alloca(arg.into_int_value().get_type(), &format!("uint{}", n));
 
                 contract.builder.build_store(temp, arg.into_int_value());
 
