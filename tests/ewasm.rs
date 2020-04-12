@@ -2,12 +2,14 @@ extern crate ethabi;
 extern crate ethereum_types;
 extern crate num_derive;
 extern crate num_traits;
+extern crate rand;
 extern crate solang;
 extern crate wasmi;
 
 use ethabi::{decode, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use rand::Rng;
 use std::collections::HashMap;
 use std::fmt;
 use wasmi::memory_units::Pages;
@@ -16,12 +18,28 @@ use wasmi::*;
 use solang::output;
 use solang::{compile, Target};
 
-struct ContractStorage {
+type Address = [u8; 20];
+
+fn address_new() -> Address {
+    let mut rng = rand::thread_rng();
+
+    let mut a = [0u8; 20];
+
+    rng.fill(&mut a[..]);
+
+    a
+}
+
+struct TestRuntime {
+    abi: ethabi::Contract,
+    contracts: Vec<Vec<u8>>,
     memory: MemoryRef,
+    cur: Address,
+    accounts: HashMap<Address, Vec<u8>>,
     code: Vec<u8>,
     input: Vec<u8>,
     output: Vec<u8>,
-    store: HashMap<[u8; 32], [u8; 32]>,
+    store: HashMap<(Address, [u8; 32]), [u8; 32]>,
 }
 
 #[derive(FromPrimitive)]
@@ -36,18 +54,7 @@ pub enum Extern {
     printMem,
     getCodeSize,
     codeCopy,
-}
-
-impl ContractStorage {
-    fn new(code: Vec<u8>) -> Self {
-        ContractStorage {
-            memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
-            store: HashMap::new(),
-            code,
-            input: Vec::new(),
-            output: Vec::new(),
-        }
-    }
+    create,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,7 +79,7 @@ impl fmt::Display for HostCodeRevert {
 
 impl HostError for HostCodeRevert {}
 
-impl Externals for ContractStorage {
+impl Externals for TestRuntime {
     fn invoke_index(
         &mut self,
         index: usize,
@@ -100,12 +107,11 @@ impl Externals for ContractStorage {
                 let code_offset = args.nth_checked::<u32>(1)? as usize;
                 let code_len = args.nth_checked::<u32>(2)? as usize;
 
-                self.memory
-                    .set(
-                        dest,
-                        &self.code[code_offset as usize..code_offset + code_len],
-                    )
-                    .expect("codeCopy should work");
+                let data = &self.code[code_offset as usize..code_offset + code_len];
+
+                println!("codeCopy {} {}", code_len, hex::encode(data));
+
+                self.memory.set(dest, data).expect("codeCopy should work");
 
                 Ok(None)
             }
@@ -129,6 +135,8 @@ impl Externals for ContractStorage {
 
                 self.memory.get_into(src, &mut self.output).unwrap();
 
+                println!("revert {} {}", self.output.len(), hex::encode(&self.output));
+
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeRevert {}))))
             }
             Some(Extern::storageLoad) => {
@@ -141,7 +149,7 @@ impl Externals for ContractStorage {
                     .get_into(key_ptr, &mut key)
                     .expect("copy key from wasm memory");
 
-                let res = if let Some(v) = self.store.get(&key) {
+                let res = if let Some(v) = self.store.get(&(self.cur, key)) {
                     v
                 } else {
                     &[0u8; 32]
@@ -168,9 +176,9 @@ impl Externals for ContractStorage {
                     .expect("copy key from wasm memory");
 
                 if data.iter().any(|n| *n != 0) {
-                    self.store.insert(key, data);
+                    self.store.insert((self.cur, key), data);
                 } else {
-                    self.store.remove(&key);
+                    self.store.remove(&(self.cur, key));
                 }
                 Ok(None)
             }
@@ -182,19 +190,61 @@ impl Externals for ContractStorage {
                 buf.resize(len as usize, 0u8);
 
                 if let Err(e) = self.memory.get_into(data_ptr, &mut buf) {
-                    panic!("ext_print: {}", e);
+                    panic!("printMem: {}", e);
                 }
 
                 println!("{}", String::from_utf8_lossy(&buf));
 
                 Ok(None)
             }
+            Some(Extern::create) => {
+                //let balance_ptr: u32 = args.nth_checked(0)?;
+                let input_ptr: u32 = args.nth_checked(1)?;
+                let input_len: u32 = args.nth_checked(2)?;
+                let address_ptr: u32 = args.nth_checked(3)?;
+
+                let mut buf = Vec::new();
+                buf.resize(input_len as usize, 0u8);
+
+                if let Err(e) = self.memory.get_into(input_ptr, &mut buf) {
+                    panic!("create: {}", e);
+                }
+
+                println!("create code: {}", hex::encode(&buf));
+
+                let addr = address_new();
+                println!("create address: {}", hex::encode(&addr));
+
+                let module = self.create_module(&buf);
+
+                self.input = Vec::new();
+                self.output = Vec::new();
+                self.code = buf;
+                self.cur = addr;
+
+                match module.invoke_export("main", &[], self) {
+                    Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                        TrapKind::Host(_) => {}
+                        _ => panic!("fail to invoke main via create: {}", trap),
+                    },
+                    Ok(_) => {}
+                    Err(e) => panic!("fail to invoke main via create: {}", e),
+                }
+
+                self.accounts.insert(addr, self.output.clone());
+
+                self.memory
+                    .set(address_ptr, &addr[..])
+                    .expect("copy key from wasm memory");
+
+                Ok(Some(RuntimeValue::I32(0)))
+            }
             _ => panic!("external {} unknown", index),
         }
     }
 }
 
-impl ModuleImportResolver for ContractStorage {
+impl ModuleImportResolver for TestRuntime {
     fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
         let index = match field_name {
             "getCallDataSize" => Extern::getCallDataSize,
@@ -206,6 +256,7 @@ impl ModuleImportResolver for ContractStorage {
             "printMem" => Extern::printMem,
             "getCodeSize" => Extern::getCodeSize,
             "codeCopy" => Extern::codeCopy,
+            "create" => Extern::create,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -223,23 +274,32 @@ impl ModuleImportResolver for ContractStorage {
     }
 }
 
-struct TestRuntime {
-    module: ModuleRef,
-    abi: ethabi::Contract,
-}
-
 impl TestRuntime {
-    fn function(&self, store: &mut ContractStorage, name: &str, args: &[Token]) -> Vec<Token> {
+    fn create_module(&self, code: &[u8]) -> ModuleRef {
+        let module = Module::from_buffer(&code).expect("parse wasm should work");
+
+        ModuleInstance::new(
+            &module,
+            &ImportsBuilder::new().with_resolver("ethereum", self),
+        )
+        .expect("Failed to instantiate module")
+        .run_start(&mut NopExternals)
+        .expect("Failed to run start function in module")
+    }
+
+    fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
             Err(x) => panic!(format!("{}", x)),
         };
 
+        let module = self.create_module(&self.accounts[&self.cur]);
+
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
-        store.input = calldata;
+        self.input = calldata;
 
-        match self.module.invoke_export("main", &[], store) {
+        match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(_) => {}
                 _ => panic!("fail to invoke main: {}", trap),
@@ -249,29 +309,26 @@ impl TestRuntime {
             _ => panic!("fail to invoke main"),
         }
 
-        println!("RETURNDATA: {}", hex::encode(&store.output));
+        println!("RETURNDATA: {}", hex::encode(&self.output));
 
         self.abi.functions[name][0]
-            .decode_output(&store.output)
+            .decode_output(&self.output)
             .unwrap()
     }
 
-    fn function_revert(
-        &self,
-        store: &mut ContractStorage,
-        name: &str,
-        args: &[Token],
-    ) -> Option<String> {
+    fn function_revert(&mut self, name: &str, args: &[Token]) -> Option<String> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
             Err(x) => panic!(format!("{}", x)),
         };
 
+        let module = self.create_module(&self.accounts[&self.cur]);
+
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
-        store.input = calldata;
+        self.input = calldata;
 
-        match self.module.invoke_export("main", &[], store) {
+        match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(_) => {}
                 _ => panic!("fail to invoke main: {}", trap),
@@ -281,15 +338,15 @@ impl TestRuntime {
             _ => panic!("fail to invoke main"),
         }
 
-        println!("RETURNDATA: {}", hex::encode(&store.output));
+        println!("RETURNDATA: {}", hex::encode(&self.output));
 
-        if store.output.is_empty() {
+        if self.output.is_empty() {
             return None;
         }
 
-        assert_eq!(store.output[..4], 0x08c3_79a0u32.to_be_bytes());
+        assert_eq!(self.output[..4], 0x08c3_79a0u32.to_be_bytes());
 
-        if let Ok(v) = decode(&[ethabi::ParamType::String], &store.output[4..]) {
+        if let Ok(v) = decode(&[ethabi::ParamType::String], &self.output[4..]) {
             assert_eq!(v.len(), 1);
 
             if let ethabi::Token::String(r) = &v[0] {
@@ -300,18 +357,21 @@ impl TestRuntime {
         panic!("failed to decode");
     }
 
-    fn constructor(&mut self, store: &mut ContractStorage, args: &[Token]) {
+    fn constructor(&mut self, args: &[Token]) {
         let calldata = if let Some(constructor) = &self.abi.constructor {
             constructor.encode_input(Vec::new(), args).unwrap()
         } else {
             Vec::new()
         };
 
+        let module = self.create_module(self.contracts.last().unwrap());
+
         println!("CONSTRUCTOR CALLDATA: {}", hex::encode(&calldata));
 
-        store.input = calldata;
+        self.code.extend(calldata);
+        self.cur = address_new();
 
-        match self.module.invoke_export("main", &[], store) {
+        match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(_) => {}
                 _ => panic!("fail to invoke main: {}", trap),
@@ -320,22 +380,18 @@ impl TestRuntime {
             Err(e) => panic!("fail to invoke main: {}", e),
         }
 
-        println!("DEPLOYER RETURNS: {}", hex::encode(&store.output));
+        println!(
+            "DEPLOYER RETURNS: {} {}",
+            self.output.len(),
+            hex::encode(&self.output)
+        );
 
-        let module = Module::from_buffer(&store.output).expect("parse wasm should work");
-
-        self.module = ModuleInstance::new(
-            &module,
-            &ImportsBuilder::new().with_resolver("ethereum", store),
-        )
-        .expect("Failed to instantiate module")
-        .run_start(&mut NopExternals)
-        .expect("Failed to run start function in module");
+        self.accounts.insert(self.cur, self.output.clone());
     }
 }
 
-fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (mut res, errors) = compile(
+fn build_solidity(src: &'static str) -> TestRuntime {
+    let (res, errors) = compile(
         src,
         "test.sol",
         inkwell::OptimizationLevel::Default,
@@ -344,34 +400,32 @@ fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
 
     output::print_messages("test.sol", src, &errors, false);
 
-    assert_eq!(res.len(), 1);
+    for v in &res {
+        println!("contract size:{}", v.0.len());
+    }
+
+    assert_eq!(res.is_empty(), false);
 
     // resolve
-    let (bc, abi) = res.pop().unwrap();
+    let (bc, abi) = res.last().unwrap();
 
-    let module = Module::from_buffer(&bc).expect("parse wasm should work");
-
-    let store = ContractStorage::new(bc);
-
-    (
-        TestRuntime {
-            module: ModuleInstance::new(
-                &module,
-                &ImportsBuilder::new().with_resolver("ethereum", &store),
-            )
-            .expect("Failed to instantiate module")
-            .run_start(&mut NopExternals)
-            .expect("Failed to run start function in module"),
-            abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
-        },
-        store,
-    )
+    TestRuntime {
+        memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
+        accounts: HashMap::new(),
+        input: Vec::new(),
+        output: Vec::new(),
+        code: bc.clone(),
+        store: HashMap::new(),
+        cur: [0u8; 20],
+        abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
+        contracts: res.into_iter().map(|v| v.0).collect(),
+    }
 }
 
 #[test]
 fn simple_solidiy_compile_and_run() {
     // parse
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function foo() public returns (uint32) {
@@ -381,9 +435,9 @@ fn simple_solidiy_compile_and_run() {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let returns = runtime.function(&mut store, "foo", &[]);
+    let returns = runtime.function("foo", &[]);
 
     assert_eq!(
         returns,
@@ -393,7 +447,7 @@ fn simple_solidiy_compile_and_run() {
 
 #[test]
 fn simple_loops() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
 contract test3 {
 	function foo(uint32 a) public returns (uint32) {
@@ -437,16 +491,13 @@ contract test3 {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     for i in 0..=50 {
         let res = ((50 - i) * 100 + 5) + i * 1000;
 
-        let returns = runtime.function(
-            &mut store,
-            "foo",
-            &[ethabi::Token::Uint(ethereum_types::U256::from(i))],
-        );
+        let returns =
+            runtime.function("foo", &[ethabi::Token::Uint(ethereum_types::U256::from(i))]);
 
         assert_eq!(
             returns,
@@ -458,7 +509,6 @@ contract test3 {
         let res = (i + 1) * 10 + 1;
 
         let returns = runtime.function(
-            &mut store,
             "bar",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
@@ -480,7 +530,6 @@ contract test3 {
         }
 
         let returns = runtime.function(
-            &mut store,
             "bar",
             &[
                 ethabi::Token::Uint(ethereum_types::U256::from(i)),
@@ -505,11 +554,8 @@ contract test3 {
             res += 1;
         }
 
-        let returns = runtime.function(
-            &mut store,
-            "baz",
-            &[ethabi::Token::Uint(ethereum_types::U256::from(i))],
-        );
+        let returns =
+            runtime.function("baz", &[ethabi::Token::Uint(ethereum_types::U256::from(i))]);
 
         assert_eq!(
             returns,
@@ -520,7 +566,7 @@ contract test3 {
 
 #[test]
 fn stack_test() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
 contract test3 {
 	function foo() public returns (bool) {
@@ -533,16 +579,16 @@ contract test3 {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let returns = runtime.function(&mut store, "foo", &[]);
+    let returns = runtime.function("foo", &[]);
 
     assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
 }
 
 #[test]
 fn abi_call_return_test() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
 contract test {
 	function foo() public returns (uint32) {
@@ -552,9 +598,9 @@ contract test {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let returns = runtime.function(&mut store, "foo", &[]);
+    let returns = runtime.function("foo", &[]);
 
     assert_eq!(
         returns,
@@ -564,8 +610,14 @@ contract test {
 
 #[test]
 fn abi_call_pass_return_test() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
+contract x {
+    function test() public {
+
+    }
+}
+
 contract test {
 	function foo(uint32 a) public returns (uint32) {
     return a;
@@ -574,11 +626,10 @@ contract test {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     for val in [102i32, 255, 256, 0x7fff_ffff].iter() {
         let returns = runtime.function(
-            &mut store,
             "foo",
             &[ethabi::Token::Uint(ethereum_types::U256::from(*val))],
         );
@@ -592,7 +643,7 @@ contract test {
 
 #[test]
 fn contract_storage_test() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
 contract test {
 uint32 foo;
@@ -609,17 +660,17 @@ constructor() public {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     for val in [4096u32, 1000u32].iter() {
         let eval = ethabi::Token::Uint(ethereum_types::U256::from(*val));
         // create call for foo
-        let returns = runtime.function(&mut store, "setFoo", &[eval]);
+        let returns = runtime.function("setFoo", &[eval]);
 
         assert_eq!(returns, vec![]);
 
         // create call for foo
-        let returns = runtime.function(&mut store, "getFoo", &[]);
+        let returns = runtime.function("getFoo", &[]);
 
         let eval = ethabi::Token::Uint(ethereum_types::U256::from(*val));
         assert_eq!(returns, vec![eval]);
@@ -628,7 +679,7 @@ constructor() public {
 
 #[test]
 fn large_ints_encoded() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
     contract test {
         uint foo;
@@ -645,17 +696,17 @@ fn large_ints_encoded() {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     for val in [4096u32, 1000u32].iter() {
         let eval = ethabi::Token::Uint(ethereum_types::U256::from(*val));
         // create call for foo
-        let returns = runtime.function(&mut store, "setFoo", &[eval]);
+        let returns = runtime.function("setFoo", &[eval]);
 
         assert_eq!(returns, vec![]);
 
         // create call for foo
-        let returns = runtime.function(&mut store, "getFoo", &[]);
+        let returns = runtime.function("getFoo", &[]);
 
         let eval = ethabi::Token::Uint(ethereum_types::U256::from(*val));
         assert_eq!(returns, vec![eval]);
@@ -664,7 +715,7 @@ fn large_ints_encoded() {
 
 #[test]
 fn address() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract address_tester {
             function encode_const() public returns (address) {
@@ -686,9 +737,9 @@ fn address() {
     );
 
     // call constructor
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let ret = runtime.function(&mut store, "encode_const", &[]);
+    let ret = runtime.function("encode_const", &[]);
 
     assert_eq!(
         ret,
@@ -698,14 +749,13 @@ fn address() {
     );
 
     runtime.function(
-        &mut store,
         "test_arg",
         &[ethabi::Token::Address(ethereum_types::Address::from_slice(
             &hex::decode("27b1fdb04752bbc536007a920d24acb045561c26").unwrap(),
         ))],
     );
 
-    let ret = runtime.function(&mut store, "allones", &[]);
+    let ret = runtime.function("allones", &[]);
 
     assert_eq!(
         ret,
@@ -721,7 +771,7 @@ fn address() {
 
 #[test]
 fn bytes() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract bar {
             bytes4 constant foo = hex"11223344";
@@ -764,16 +814,16 @@ fn bytes() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let ret = runtime.function(&mut store, "get_foo", &[]);
+    let ret = runtime.function("get_foo", &[]);
 
     assert_eq!(
         ret,
         [ethabi::Token::FixedBytes(vec!(0x11, 0x22, 0x33, 0x44))]
     );
 
-    let ret = runtime.function(&mut store, "bytes4asuint32", &[]);
+    let ret = runtime.function("bytes4asuint32", &[]);
 
     assert_eq!(
         ret,
@@ -782,7 +832,7 @@ fn bytes() {
         ))]
     );
 
-    let ret = runtime.function(&mut store, "bytes4asuint64", &[]);
+    let ret = runtime.function("bytes4asuint64", &[]);
 
     assert_eq!(
         ret,
@@ -791,28 +841,28 @@ fn bytes() {
         ))]
     );
 
-    let ret = runtime.function(&mut store, "bytes4asbytes2", &[]);
+    let ret = runtime.function("bytes4asbytes2", &[]);
 
     assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0x11, 0x22))]);
 
     let val = vec![ethabi::Token::FixedBytes(vec![0x41, 0x42, 0x43, 0x44])];
 
-    assert_eq!(runtime.function(&mut store, "passthrough", &val), val);
+    assert_eq!(runtime.function("passthrough", &val), val);
 
     let val = vec![ethabi::Token::Uint(ethereum_types::U256::from(1))];
 
-    let ret = runtime.function(&mut store, "entry", &val);
+    let ret = runtime.function("entry", &val);
 
     assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0x22))]);
 
-    let ret = runtime.function(&mut store, "entry2", &val);
+    let ret = runtime.function("entry2", &val);
 
     assert_eq!(ret, [ethabi::Token::FixedBytes(vec!(0xBB))]);
 }
 
 #[test]
 fn array() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f(uint i1) public returns (int) {
@@ -831,28 +881,28 @@ fn array() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     let val = vec![ethabi::Token::Uint(ethereum_types::U256::from(1))];
 
-    let ret = runtime.function(&mut store, "f", &val);
+    let ret = runtime.function("f", &val);
 
     assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(20))]);
 
     let val = vec![ethabi::Token::Uint(ethereum_types::U256::from(2))];
 
-    let ret = runtime.function(&mut store, "f", &val);
+    let ret = runtime.function("f", &val);
 
     assert_eq!(ret, [ethabi::Token::Int(ethereum_types::U256::from(127))]);
 
-    let ret = runtime.function(&mut store, "bar", &[]);
+    let ret = runtime.function("bar", &[]);
 
     assert_eq!(ret, [ethabi::Token::Uint(ethereum_types::U256::from(4))]);
 }
 
 #[test]
 fn encode_array() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f(int32[4] a, uint i) public returns (int32) {
@@ -861,7 +911,7 @@ fn encode_array() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     let array = vec![
         ethabi::Token::Int(ethereum_types::U256::from(0x20)),
@@ -872,7 +922,6 @@ fn encode_array() {
 
     for i in 0..4 {
         let ret = runtime.function(
-            &mut store,
             "f",
             &[
                 ethabi::Token::FixedArray(array.clone()),
@@ -886,7 +935,7 @@ fn encode_array() {
 #[test]
 #[should_panic]
 fn array_bounds_uint() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f(int32[4] a, uint i) public returns (int32) {
@@ -895,7 +944,7 @@ fn array_bounds_uint() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     let array = vec![
         ethabi::Token::Int(ethereum_types::U256::from(0x20)),
@@ -905,7 +954,6 @@ fn array_bounds_uint() {
     ];
 
     runtime.function(
-        &mut store,
         "f",
         &[
             ethabi::Token::FixedArray(array),
@@ -915,7 +963,7 @@ fn array_bounds_uint() {
 }
 
 fn array_bounds_int(index: ethabi::Token) {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f(int32[4] a, int i) public returns (int32) {
@@ -924,7 +972,7 @@ fn array_bounds_int(index: ethabi::Token) {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     let array = vec![
         ethabi::Token::Int(ethereum_types::U256::from(0x20)),
@@ -933,7 +981,7 @@ fn array_bounds_int(index: ethabi::Token) {
         ethabi::Token::Int(ethereum_types::U256::from(0x100)),
     ];
 
-    runtime.function(&mut store, "f", &[ethabi::Token::FixedArray(array), index]);
+    runtime.function("f", &[ethabi::Token::FixedArray(array), index]);
 }
 
 #[test]
@@ -950,7 +998,7 @@ fn array_bounds_int_pos() {
 
 #[test]
 fn array_array() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f(int a, uint i1, uint i2) public returns (int) {
@@ -961,12 +1009,11 @@ fn array_array() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     for i1 in 0..2 {
         for i2 in 0..4 {
             let val = runtime.function(
-                &mut store,
                 "f",
                 &[
                     ethabi::Token::Int(ethereum_types::U256::from(8)),
@@ -990,7 +1037,7 @@ fn array_array() {
 #[test]
 fn arrays_are_refs() {
     // verified on remix
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         pragma solidity >=0.4.22 <0.6.0;
 
@@ -1015,9 +1062,9 @@ fn arrays_are_refs() {
         "##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let val = runtime.function(&mut store, "bar", &[]);
+    let val = runtime.function("bar", &[]);
 
     assert_eq!(
         val,
@@ -1033,7 +1080,7 @@ fn arrays_are_refs() {
 #[test]
 fn storage_structs() {
     // verified on remix
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         pragma solidity 0;
         pragma experimental ABIEncoderV2;
@@ -1056,14 +1103,14 @@ fn storage_structs() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    runtime.function(&mut store, "test", &[]);
+    runtime.function("test", &[]);
 }
 
 #[test]
 fn struct_encode() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract structs {
             struct foo {
@@ -1079,10 +1126,9 @@ fn struct_encode() {
         "##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     runtime.function(
-        &mut store,
         "test",
         &[ethabi::Token::Tuple(vec![
             ethabi::Token::Bool(true),
@@ -1093,7 +1139,7 @@ fn struct_encode() {
 
 #[test]
 fn struct_dynamic_array_encode() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract structs {
             struct foo {
@@ -1114,9 +1160,9 @@ fn struct_dynamic_array_encode() {
         "##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let ret = runtime.function(&mut store, "test", &[]);
+    let ret = runtime.function("test", &[]);
 
     assert_eq!(
         ret,
@@ -1139,7 +1185,7 @@ fn struct_dynamic_array_encode() {
 
 #[test]
 fn struct_decode() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract structs {
             struct foo {
@@ -1159,9 +1205,9 @@ fn struct_decode() {
         "##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let val = runtime.function(&mut store, "test", &[]);
+    let val = runtime.function("test", &[]);
 
     assert_eq!(
         val,
@@ -1205,7 +1251,7 @@ fn struct_in_struct_decode() {
         "##,
     );
 
-    let val = runtime.function(&mut store, "test", &[]);
+    let val = runtime.function("test", &[]);
 
     assert_eq!(
         val,
@@ -1236,7 +1282,7 @@ fn struct_in_struct_decode() {
 
 #[test]
 fn struct_in_struct_encode() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract structs {
             enum suit { club, diamonds, hearts, spades }
@@ -1269,10 +1315,9 @@ fn struct_in_struct_encode() {
         "##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
     runtime.function(
-        &mut store,
         "test",
         &[ethabi::Token::Tuple(vec![
             ethabi::Token::Tuple(vec![
@@ -1302,7 +1347,7 @@ fn struct_in_struct_encode() {
 #[test]
 fn array_push_delete() {
     // ensure that structs and fixed arrays are wiped by delete
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1321,20 +1366,20 @@ fn array_push_delete() {
         }"#,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    runtime.function(&mut store, "setup", &[]);
+    runtime.function("setup", &[]);
 
-    assert_eq!(store.store.len(), 106);
+    assert_eq!(runtime.store.len(), 106);
 
-    runtime.function(&mut store, "clear", &[]);
+    runtime.function("clear", &[]);
 
-    assert_eq!(store.store.len(), 0);
+    assert_eq!(runtime.store.len(), 0);
 }
 
 #[test]
 fn encode_string() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f() public returns (string) {
@@ -1343,12 +1388,12 @@ fn encode_string() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let ret = runtime.function(&mut store, "f", &[]);
+    let ret = runtime.function("f", &[]);
     assert_eq!(ret, vec!(ethabi::Token::String("Hello, World!".to_owned())));
 
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f() public returns (int32, string, int64) {
@@ -1357,9 +1402,9 @@ fn encode_string() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let ret = runtime.function(&mut store, "f", &[]);
+    let ret = runtime.function("f", &[]);
 
     let n563 = ethereum_types::U256::from(0)
         .overflowing_sub(ethereum_types::U256::from(563))
@@ -1377,7 +1422,7 @@ fn encode_string() {
 
 #[test]
 fn revert() {
-    let (mut runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function f() public {
@@ -1386,8 +1431,60 @@ fn revert() {
         }"##,
     );
 
-    runtime.constructor(&mut store, &[]);
+    runtime.constructor(&[]);
 
-    let ret = runtime.function_revert(&mut store, "f", &[]);
+    let ret = runtime.function_revert("f", &[]);
     assert_eq!(ret, Some("Hello, World!".to_owned()));
+}
+
+#[test]
+fn constructor_args() {
+    let mut runtime = build_solidity(
+        r##"
+        contract foo {
+            int64 v;
+
+            constructor(int64 a) public {
+                v = a;
+            }
+
+            function f() public returns (int64) {
+                return v;
+            }
+        }"##,
+    );
+
+    let v = ethabi::Token::Int(ethereum_types::U256::from(105));
+
+    runtime.constructor(&[v.clone()]);
+
+    let ret = runtime.function("f", &[]);
+    assert_eq!(ret, vec!(v));
+}
+
+#[test]
+fn create() {
+    let mut runtime = build_solidity(
+        r##"
+        contract a {
+            int32 x;
+            constructor() public {
+            }
+
+            function test() public {
+                x = 102;
+            }
+        }
+
+        contract b {
+            function x() public {
+                a r = new a();
+            }
+        }
+        "##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.function("x", &[]);
 }

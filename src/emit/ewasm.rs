@@ -8,6 +8,7 @@ use inkwell::module::Linkage;
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
+use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
@@ -34,8 +35,8 @@ impl EwasmTarget {
         // externals
         b.declare_externals(&mut runtime_code);
 
-        // FIXME: this also emits the constructors. We can either rely on lto linking
-        // to optimize them away or do not emit them.
+        // This also emits the constructors. We are relying on DCE to eliminate them from
+        // the final code.
         runtime_code.emit_functions(&b);
 
         b.emit_function_dispatch(&runtime_code);
@@ -167,7 +168,7 @@ impl EwasmTarget {
                 .build_call(
                     contract.module.get_function("getCodeSize").unwrap(),
                     &[],
-                    "calldatasize",
+                    "codesize",
                 )
                 .try_as_basic_value()
                 .left()
@@ -286,6 +287,32 @@ impl EwasmTarget {
                         .ptr_type(AddressSpace::Generic)
                         .into(), // string_ptr
                     contract.context.i32_type().into(), // string_length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "create",
+            contract.context.i32_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // valueOffset
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // input offset
+                    contract.context.i32_type().into(), // input length
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // address result
                 ],
                 false,
             ),
@@ -419,6 +446,162 @@ impl EwasmTarget {
                 contract.builder.build_unreachable();
             }
         }
+    }
+
+    fn encode<'b>(
+        &self,
+        contract: &Contract<'b>,
+        selector: Option<u32>,
+        constant: Option<(PointerValue<'b>, u64)>,
+        load: bool,
+        function: FunctionValue,
+        args: &[BasicValueEnum<'b>],
+        spec: &[resolver::Parameter],
+    ) -> (PointerValue<'b>, IntValue<'b>) {
+        let mut offset = contract.context.i32_type().const_int(
+            spec.iter()
+                .map(|arg| self.abi.encoded_fixed_length(&arg.ty, contract.ns))
+                .sum(),
+            false,
+        );
+
+        let mut length = offset;
+
+        // now add the dynamic lengths
+        for (i, s) in spec.iter().enumerate() {
+            length = contract.builder.build_int_add(
+                length,
+                self.abi
+                    .encoded_dynamic_length(args[i], load, &s.ty, function, contract),
+                "",
+            );
+        }
+
+        if selector.is_some() {
+            length = contract.builder.build_int_add(
+                length,
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                "",
+            );
+        }
+
+        if let Some((_, len)) = constant {
+            length = contract.builder.build_int_add(
+                length,
+                contract.context.i32_type().const_int(len, false),
+                "",
+            );
+        }
+
+        let encoded_data = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        // malloc returns u8*
+        let mut data = encoded_data;
+
+        if let Some(selector) = selector {
+            contract.builder.build_store(
+                contract.builder.build_pointer_cast(
+                    data,
+                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(selector.to_be() as u64, false),
+            );
+
+            data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[contract
+                        .context
+                        .i32_type()
+                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                    "",
+                )
+            };
+        }
+
+        if let Some((code, code_len)) = constant {
+            contract.builder.build_call(
+                contract.module.get_function("__memcpy").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            data,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    code.into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(code_len, false)
+                        .into(),
+                ],
+                "",
+            );
+
+            data = unsafe {
+                contract.builder.build_gep(
+                    data,
+                    &[contract.context.i32_type().const_int(code_len, false)],
+                    "",
+                )
+            };
+        }
+
+        // We use a little trick here. The length might or might not include the selector.
+        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
+        // we lose the selector.
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[
+                data.into(),
+                contract
+                    .builder
+                    .build_int_unsigned_div(
+                        length,
+                        contract.context.i32_type().const_int(8, false),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
+        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
+
+        for (i, arg) in spec.iter().enumerate() {
+            self.abi.encode_ty(
+                contract,
+                load,
+                function,
+                &arg.ty,
+                args[i],
+                &mut data,
+                &mut offset,
+                &mut dynamic,
+            );
+        }
+
+        (encoded_data, length)
     }
 }
 
@@ -745,111 +928,7 @@ impl TargetRuntime for EwasmTarget {
         args: &[BasicValueEnum<'b>],
         spec: &[resolver::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let mut offset = contract.context.i32_type().const_int(
-            spec.iter()
-                .map(|arg| self.abi.encoded_fixed_length(&arg.ty, contract.ns))
-                .sum(),
-            false,
-        );
-
-        let mut length = offset;
-
-        // now add the dynamic lengths
-        for (i, s) in spec.iter().enumerate() {
-            length = contract.builder.build_int_add(
-                length,
-                self.abi
-                    .encoded_dynamic_length(args[i], load, &s.ty, function, contract),
-                "",
-            );
-        }
-
-        if selector.is_some() {
-            length = contract.builder.build_int_add(
-                length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
-                "",
-            );
-        }
-
-        let encoded_data = contract
-            .builder
-            .build_call(
-                contract.module.get_function("__malloc").unwrap(),
-                &[length.into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        // malloc returns u8*
-        let mut data = encoded_data;
-
-        if let Some(selector) = selector {
-            contract.builder.build_store(
-                contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(selector.to_be() as u64, false),
-            );
-
-            data = unsafe {
-                contract.builder.build_gep(
-                    data,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
-                    "",
-                )
-            };
-        }
-
-        // We use a little trick here. The length might or might not include the selector.
-        // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
-        // we lose the selector.
-        contract.builder.build_call(
-            contract.module.get_function("__bzero8").unwrap(),
-            &[
-                data.into(),
-                contract
-                    .builder
-                    .build_int_unsigned_div(
-                        length,
-                        contract.context.i32_type().const_int(8, false),
-                        "",
-                    )
-                    .into(),
-            ],
-            "",
-        );
-
-        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
-
-        for (i, arg) in spec.iter().enumerate() {
-            self.abi.encode_ty(
-                contract,
-                load,
-                function,
-                &arg.ty,
-                args[i],
-                &mut data,
-                &mut offset,
-                &mut dynamic,
-            );
-        }
-
-        (encoded_data, length)
+        self.encode(contract, selector, None, load, function, args, spec)
     }
 
     fn abi_decode<'b>(
@@ -879,24 +958,33 @@ impl TargetRuntime for EwasmTarget {
         function: FunctionValue,
         contract_no: usize,
         constructor_no: usize,
-        _address: PointerValue<'b>,
+        address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
 
-        // wasm
-        let wasm = contract.wasm(true).expect("compile should succeeed");
+        let target_contract = Contract::build(
+            contract.context,
+            &resolver_contract,
+            contract.ns,
+            "",
+            contract.opt,
+        );
 
-        let _code = contract.emit_global_string(
+        // wasm
+        let wasm = target_contract.wasm(true).expect("compile should succeeed");
+
+        let code = contract.emit_global_string(
             &format!("contract_{}_code", resolver_contract.name),
             &wasm,
             true,
         );
 
         // input
-        let (_input, _input_len) = self.abi_encode(
+        let (input, input_len) = self.encode(
             contract,
             None,
+            Some((code, wasm.len() as u64)),
             false,
             function,
             args,
@@ -907,6 +995,52 @@ impl TargetRuntime for EwasmTarget {
             },
         );
 
-        // FIXME: call create
+        // balance is a u128
+        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+
+        // call create
+        let ret = contract
+            .builder
+            .build_call(
+                contract.module.get_function("create").unwrap(),
+                &[
+                    balance.into(),
+                    input.into(),
+                    input_len.into(),
+                    address.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+        contract
+            .builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        contract.builder.position_at_end(bail_block);
+
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(success_block);
     }
 }
