@@ -10,7 +10,6 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use solang::abi;
-use solang::link;
 use solang::output;
 
 #[derive(Serialize)]
@@ -263,15 +262,15 @@ fn process_filename(
             continue;
         }
 
-        let obj = match contract.wasm() {
-            Ok(o) => o,
-            Err(s) => {
-                println!("error: {}", s);
-                std::process::exit(1);
-            }
-        };
-
         if let Some("object") = matches.value_of("EMIT") {
+            let obj = match contract.wasm(false) {
+                Ok(o) => o,
+                Err(s) => {
+                    println!("error: {}", s);
+                    std::process::exit(1);
+                }
+            };
+
             let obj_filename = output_file(&contract.name, "o");
 
             if verbose {
@@ -287,7 +286,13 @@ fn process_filename(
             continue;
         }
 
-        let wasm = link::link(&obj, target);
+        let wasm = match contract.wasm(true) {
+            Ok(o) => o,
+            Err(s) => {
+                println!("error: {}", s);
+                std::process::exit(1);
+            }
+        };
 
         if matches.is_present("STD-JSON") {
             json_contracts.insert(

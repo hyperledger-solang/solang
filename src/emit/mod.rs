@@ -33,6 +33,8 @@ mod ewasm;
 mod sabre;
 mod substrate;
 
+use link::link;
+
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
         Target::initialize_webassembly(&Default::default());
@@ -187,6 +189,7 @@ pub struct Contract<'a> {
     functions: Vec<FunctionValue<'a>>,
     wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
+    code_size: RefCell<Option<IntValue<'a>>>,
 }
 
 impl<'a> Contract<'a> {
@@ -210,7 +213,7 @@ impl<'a> Contract<'a> {
     /// Compile the contract to wasm and return the wasm as bytes. The result is
     /// cached, since this function can be called multiple times (e.g. one for
     /// each time a contract of this type is created).
-    pub fn wasm(&self) -> Result<Vec<u8>, String> {
+    pub fn wasm(&self, linking: bool) -> Result<Vec<u8>, String> {
         {
             let wasm = self.wasm.borrow();
 
@@ -245,15 +248,35 @@ impl<'a> Contract<'a> {
             )
             .unwrap();
 
-        match target_machine.write_to_memory_buffer(&self.module, FileType::Object) {
-            Ok(out) => {
-                let slice = out.as_slice();
+        loop {
+            // we need to loop here to support ewasm deployer. It needs to know the size
+            // of itself. Note that in webassembly, the constants are LEB128 encoded so
+            // patching the length might actually change the length. So we need to loop
+            // until it is right.
 
-                self.wasm.replace(slice.to_vec());
+            // The correct solution is to make ewasm less insane.
+            match target_machine.write_to_memory_buffer(&self.module, FileType::Object) {
+                Ok(out) => {
+                    let slice = out.as_slice();
 
-                Ok(slice.to_vec())
+                    if linking {
+                        let bs = link(slice, self.ns.target);
+
+                        if !self.patch_code_size(bs.len() as u64) {
+                            self.wasm.replace(bs.to_vec());
+
+                            return Ok(bs.to_vec());
+                        }
+                    } else {
+                        self.wasm.replace(slice.to_vec());
+
+                        return Ok(slice.to_vec());
+                    }
+                }
+                Err(s) => {
+                    return Err(s.to_string());
+                }
             }
-            Err(s) => Err(s.to_string()),
         }
     }
 
@@ -325,6 +348,7 @@ impl<'a> Contract<'a> {
             functions: Vec::new(),
             wasm: RefCell::new(Vec::new()),
             opt,
+            code_size: RefCell::new(None),
         }
     }
 
@@ -3603,6 +3627,32 @@ impl<'a> Contract<'a> {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(256))
             }
         }
+    }
+
+    /// ewasm deployer needs to know what its own code size is, so we compile once to
+    /// get the size, patch in the value and then recompile.
+    fn patch_code_size(&self, code_size: u64) -> bool {
+        let current_size = {
+            let current_size_opt = self.code_size.borrow();
+
+            if let Some(current_size) = *current_size_opt {
+                if code_size == current_size.get_zero_extended_constant().unwrap() {
+                    return false;
+                }
+
+                current_size
+            } else {
+                return false;
+            }
+        };
+
+        let new_size = self.context.i32_type().const_int(code_size, false);
+
+        current_size.replace_all_uses_with(new_size);
+
+        self.code_size.replace(Some(new_size));
+
+        true
     }
 }
 

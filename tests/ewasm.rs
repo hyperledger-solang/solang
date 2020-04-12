@@ -18,6 +18,7 @@ use solang::{compile, Target};
 
 struct ContractStorage {
     memory: MemoryRef,
+    code: Vec<u8>,
     input: Vec<u8>,
     output: Vec<u8>,
     store: HashMap<[u8; 32], [u8; 32]>,
@@ -33,13 +34,16 @@ pub enum Extern {
     finish,
     revert,
     printMem,
+    getCodeSize,
+    codeCopy,
 }
 
 impl ContractStorage {
-    fn new() -> Self {
+    fn new(code: Vec<u8>) -> Self {
         ContractStorage {
             memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
             store: HashMap::new(),
+            code,
             input: Vec::new(),
             output: Vec::new(),
         }
@@ -76,6 +80,7 @@ impl Externals for ContractStorage {
     ) -> Result<Option<RuntimeValue>, Trap> {
         match FromPrimitive::from_usize(index) {
             Some(Extern::getCallDataSize) => Ok(Some(RuntimeValue::I32(self.input.len() as i32))),
+            Some(Extern::getCodeSize) => Ok(Some(RuntimeValue::I32(self.code.len() as i32))),
             Some(Extern::callDataCopy) => {
                 let dest = args.nth_checked::<u32>(0)?;
                 let input_offset = args.nth_checked::<u32>(1)? as usize;
@@ -87,6 +92,20 @@ impl Externals for ContractStorage {
                         &self.input[input_offset as usize..input_offset + input_len],
                     )
                     .expect("calldatacopy should work");
+
+                Ok(None)
+            }
+            Some(Extern::codeCopy) => {
+                let dest = args.nth_checked::<u32>(0)?;
+                let code_offset = args.nth_checked::<u32>(1)? as usize;
+                let code_len = args.nth_checked::<u32>(2)? as usize;
+
+                self.memory
+                    .set(
+                        dest,
+                        &self.code[code_offset as usize..code_offset + code_len],
+                    )
+                    .expect("codeCopy should work");
 
                 Ok(None)
             }
@@ -185,6 +204,8 @@ impl ModuleImportResolver for ContractStorage {
             "storageStore" => Extern::storageStore,
             "storageLoad" => Extern::storageLoad,
             "printMem" => Extern::printMem,
+            "getCodeSize" => Extern::getCodeSize,
+            "codeCopy" => Extern::codeCopy,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -328,9 +349,9 @@ fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
     // resolve
     let (bc, abi) = res.pop().unwrap();
 
-    let module = Module::from_buffer(bc).expect("parse wasm should work");
+    let module = Module::from_buffer(&bc).expect("parse wasm should work");
 
-    let store = ContractStorage::new();
+    let store = ContractStorage::new(bc);
 
     (
         TestRuntime {

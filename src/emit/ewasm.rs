@@ -1,5 +1,5 @@
-use link::link;
 use resolver;
+use std::cell::RefCell;
 use std::str;
 
 use inkwell::attributes::{Attribute, AttributeLoc};
@@ -12,7 +12,6 @@ use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime};
-use crate::Target;
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiEncoder,
@@ -43,8 +42,7 @@ impl EwasmTarget {
 
         runtime_code.internalize(&["main"]);
 
-        let runtime_obj = runtime_code.wasm().unwrap();
-        let runtime_bs = link(&runtime_obj, Target::Ewasm);
+        let runtime_bs = runtime_code.wasm(true).unwrap();
 
         // Now we have the runtime code, create the deployer
         let mut deploy_code = Contract::new(
@@ -67,7 +65,7 @@ impl EwasmTarget {
         // and not emit functions, or use lto linking to optimize any unused functions away.
         deploy_code.emit_functions(&b);
 
-        b.emit_constructor_dispatch(&mut deploy_code, &runtime_bs);
+        b.deployer_dispatch(&mut deploy_code, &runtime_bs);
 
         deploy_code.internalize(&[
             "main",
@@ -77,13 +75,14 @@ impl EwasmTarget {
             "storageLoad",
             "finish",
             "revert",
+            "getCodeSize",
             "printMem",
         ]);
 
         deploy_code
     }
 
-    fn main_prelude<'a>(
+    fn runtime_prelude<'a>(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -142,6 +141,71 @@ impl EwasmTarget {
         (args, args_length.into_int_value())
     }
 
+    fn deployer_prelude<'a>(
+        &self,
+        contract: &mut Contract<'a>,
+        function: FunctionValue,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        let entry = contract.context.append_basic_block(function, "entry");
+
+        contract.builder.position_at_end(entry);
+
+        // init our heap
+        contract.builder.build_call(
+            contract.module.get_function("__init_heap").unwrap(),
+            &[],
+            "",
+        );
+
+        // The code_size will need to be patched later
+        let code_size = contract.context.i32_type().const_int(0x4000, false);
+
+        // copy arguments from scratch buffer
+        let args_length = contract.builder.build_int_sub(
+            contract
+                .builder
+                .build_call(
+                    contract.module.get_function("getCodeSize").unwrap(),
+                    &[],
+                    "calldatasize",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            code_size,
+            "",
+        );
+
+        let args = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[args_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        contract.builder.build_call(
+            contract.module.get_function("codeCopy").unwrap(),
+            &[args.into(), code_size.into(), args_length.into()],
+            "",
+        );
+
+        let args = contract.builder.build_pointer_cast(
+            args,
+            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
+
+        contract.code_size = RefCell::new(Some(code_size));
+
+        (args, args_length)
+    }
+
     fn declare_externals(&self, contract: &mut Contract) {
         let ret = contract.context.void_type();
         let args: Vec<BasicTypeEnum> = vec![
@@ -173,7 +237,30 @@ impl EwasmTarget {
         );
 
         contract.module.add_function(
+            "getCodeSize",
+            contract.context.i32_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
             "callDataCopy",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // resultOffset
+                    contract.context.i32_type().into(), // dataOffset
+                    contract.context.i32_type().into(), // length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "codeCopy",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -250,7 +337,7 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
     }
 
-    fn emit_constructor_dispatch(&self, contract: &mut Contract, runtime: &[u8]) {
+    fn deployer_dispatch(&self, contract: &mut Contract, runtime: &[u8]) {
         let initializer = contract.emit_initializer(self);
 
         // create start function
@@ -259,7 +346,7 @@ impl EwasmTarget {
         let function = contract.module.add_function("main", ftype, None);
 
         // FIXME: If there is no constructor, do not copy the calldata (but check calldatasize == 0)
-        let (argsdata, length) = self.main_prelude(contract, function);
+        let (argsdata, length) = self.deployer_prelude(contract, function);
 
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
@@ -303,7 +390,7 @@ impl EwasmTarget {
         let ftype = ret.fn_type(&[], false);
         let function = contract.module.add_function("main", ftype, None);
 
-        let (argsdata, argslen) = self.main_prelude(contract, function);
+        let (argsdata, argslen) = self.runtime_prelude(contract, function);
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
@@ -798,7 +885,7 @@ impl TargetRuntime for EwasmTarget {
         let resolver_contract = &contract.ns.contracts[contract_no];
 
         // wasm
-        let wasm = contract.wasm().expect("compile should succeeed");
+        let wasm = contract.wasm(true).expect("compile should succeeed");
 
         let _code = contract.emit_global_string(
             &format!("contract_{}_code", resolver_contract.name),

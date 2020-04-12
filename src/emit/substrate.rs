@@ -1837,7 +1837,7 @@ impl TargetRuntime for SubstrateTarget {
         let balance = contract.emit_global_string("balance", &[0u8; 8], true);
 
         // code hash
-        let wasm = contract.wasm().expect("compile should succeeed");
+        let wasm = contract.wasm(true).expect("compile should succeeed");
 
         let codehash = contract.emit_global_string(
             &format!("contract_{}_codehash", resolver_contract.name),
