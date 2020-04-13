@@ -73,6 +73,13 @@ pub enum Instr {
         constructor_no: usize,
         args: Vec<Expression>,
     },
+    ExternalCall {
+        res: Vec<usize>,
+        address: Expression,
+        contract_no: usize,
+        func: usize,
+        args: Vec<Expression>,
+    },
 }
 
 pub struct BasicBlock {
@@ -506,6 +513,35 @@ impl ControlFlowGraph {
                 },
                 *func,
                 contract.functions[*func].name.to_owned(),
+                {
+                    let s: Vec<String> = args
+                        .iter()
+                        .map(|expr| self.expr_to_string(contract, ns, expr))
+                        .collect();
+
+                    s.join(", ")
+                }
+            ),
+            Instr::ExternalCall {
+                res,
+                address,
+                contract_no,
+                func,
+                args,
+            } => format!(
+                "{} = external call address:{} signature:{} func:{}.{} {}",
+                {
+                    let s: Vec<String> = res
+                        .iter()
+                        .map(|local| format!("%{}", self.vars[*local].id.name))
+                        .collect();
+
+                    s.join(", ")
+                },
+                self.expr_to_string(contract, ns, address),
+                ns.contracts[*contract_no].functions[*func].signature,
+                ns.contracts[*contract_no].name,
+                ns.contracts[*contract_no].functions[*func].name,
                 {
                     let s: Vec<String> = args
                         .iter()

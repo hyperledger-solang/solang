@@ -4362,6 +4362,131 @@ fn method_call(
         }
     }
 
+    if let resolver::Type::Contract(contract_no) = &var_ty {
+        let mut resolved_args = Vec::new();
+        let mut resolved_types = Vec::new();
+
+        for arg in args {
+            let (expr, expr_type) = expression(arg, cfg, contract, ns, vartab, errors)?;
+            resolved_args.push(Box::new(expr));
+            resolved_types.push(expr_type);
+        }
+
+        let tab = match vartab {
+            &mut Some(ref mut tab) => tab,
+            None => {
+                errors.push(Output::error(
+                    *loc,
+                    "cannot call function in constant expression".to_string(),
+                ));
+                return Err(());
+            }
+        };
+
+        let mut temp_errors = Vec::new();
+
+        let mut name_match = 0;
+        for (n, ftype) in ns.contracts[*contract_no].functions.iter().enumerate() {
+            if func.name != ftype.name {
+                continue;
+            }
+
+            name_match += 1;
+
+            if ftype.params.len() != args.len() {
+                continue;
+            }
+
+            if ftype.params.len() != args.len() {
+                temp_errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "function expects {} arguments, {} provided",
+                        ftype.params.len(),
+                        args.len()
+                    ),
+                ));
+                continue;
+            }
+            let mut matches = true;
+            let mut cast_args = Vec::new();
+            // check if arguments can be implicitly casted
+            for (i, param) in ftype.params.iter().enumerate() {
+                let arg = &resolved_args[i];
+                match cast(
+                    &ast::Loc(0, 0),
+                    *arg.clone(),
+                    &resolved_types[i],
+                    &param.ty,
+                    true,
+                    contract,
+                    ns,
+                    &mut temp_errors,
+                ) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(()) => {
+                        matches = false;
+                        break;
+                    }
+                }
+            }
+            if !matches {
+                continue;
+            }
+            // .. what about return value?
+            if ftype.returns.len() > 1 {
+                errors.push(Output::error(
+                    *loc,
+                    "in expression context a function cannot return more than one value"
+                        .to_string(),
+                ));
+                return Err(());
+            }
+            if !ftype.returns.is_empty() {
+                let ty = &ftype.returns[0].ty;
+                let id = ast::Identifier {
+                    loc: ast::Loc(0, 0),
+                    name: "".to_owned(),
+                };
+                let temp_pos = tab.temp(&id, ty);
+                cfg.add(
+                    tab,
+                    Instr::ExternalCall {
+                        res: vec![temp_pos],
+                        address: var_expr,
+                        contract_no: *contract_no,
+                        func: n,
+                        args: cast_args,
+                    },
+                );
+                return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+            } else {
+                cfg.add(
+                    tab,
+                    Instr::ExternalCall {
+                        res: Vec::new(),
+                        address: var_expr,
+                        contract_no: *contract_no,
+                        func: n,
+                        args: cast_args,
+                    },
+                );
+                return Ok((Expression::Poison, resolver::Type::Undef));
+            }
+        }
+
+        if name_match == 1 {
+            errors.append(&mut temp_errors);
+        } else {
+            errors.push(Output::error(
+                *loc,
+                "cannot find overloaded function which matches signature".to_string(),
+            ));
+        }
+
+        return Err(());
+    }
+
     errors.push(Output::error(
         func.loc,
         format!("method ‘{}’ does not exist", func.name),
