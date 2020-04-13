@@ -2742,6 +2742,7 @@ impl<'a> Contract<'a> {
                                 .collect::<Vec<BasicValueEnum>>(),
                         );
                     }
+                    cfg::Instr::ExternalCall { .. } => unimplemented!(),
                 }
             }
         }
