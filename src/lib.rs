@@ -8,6 +8,7 @@ extern crate num_bigint;
 extern crate num_derive;
 extern crate num_traits;
 extern crate parity_wasm;
+extern crate phf;
 extern crate serde;
 extern crate serde_derive;
 extern crate tiny_keccak;

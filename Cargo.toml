@@ -29,6 +29,7 @@ serde = "1.0"
 serde_derive = { version = "1.0" }
 inkwell = { version = "0.1.0-llvm8sample", features = ["target-webassembly", "llvm8-0"] }
 blake2-rfc = "0.2.18"
+phf = { version = "0.8", features = ["macros"] }
 
 [dev-dependencies]
 parity-scale-codec-derive = "1.1.0"
