@@ -1160,18 +1160,21 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
             ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
-                        name.loc,
-                        "pragma solidity is ignored".to_string(),
+                        ast::Loc(name.loc.0, value.loc.1),
+                        "pragma ‘solidity’ is ignored".to_string(),
                     ));
                 } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
                     errors.push(Output::info(
-                        value.loc,
-                        "pragma experimental ABIEncoderV2 is ignored".to_string(),
+                        ast::Loc(name.loc.0, value.loc.1),
+                        "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
                     ));
                 } else {
                     errors.push(Output::warning(
-                        name.loc,
-                        format!("unknown pragma {} ignored", name.name),
+                        ast::Loc(name.loc.0, value.loc.1),
+                        format!(
+                            "unknown pragma ‘{}’ with value ‘{}’ ignored",
+                            name.name, value.string
+                        ),
                     ));
                 }
             }

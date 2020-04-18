@@ -255,7 +255,7 @@ impl<'input> fmt::Display for Token<'input> {
 pub struct Lexer<'input> {
     input: &'input str,
     chars: Peekable<CharIndices<'input>>,
-    pragma_state: PragmaParserState,
+    last_tokens: [Option<Token<'input>>; 2],
 }
 
 #[derive(Debug, PartialEq)]
@@ -266,7 +266,6 @@ pub enum LexicalError {
     MissingNumber(usize, usize),
     InvalidCharacterInHexLiteral(usize, char),
     UnrecognisedToken(usize, usize, String),
-    PragmaMissingSemiColon(usize, usize),
 }
 
 impl fmt::Display for LexicalError {
@@ -284,9 +283,6 @@ impl fmt::Display for LexicalError {
                 write!(f, "invalid character ‘{}’ in hex literal string", ch)
             }
             LexicalError::UnrecognisedToken(_, _, t) => write!(f, "unrecognised token ‘{}’", t),
-            LexicalError::PragmaMissingSemiColon(_, _) => {
-                write!(f, "pragma is missing terminating ‘;’")
-            }
         }
     }
 }
@@ -300,18 +296,8 @@ impl LexicalError {
             LexicalError::MissingNumber(start, end) => Loc(*start, *end),
             LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(*pos, *pos),
             LexicalError::UnrecognisedToken(start, end, _) => Loc(*start, *end),
-            LexicalError::PragmaMissingSemiColon(start, end) => Loc(*start, *end),
         }
     }
-}
-
-/// Lexer should be aware of whether the last two tokens were
-/// pragma followed by identifier. If this is true, then special parsing should be
-/// done for the pragma value
-pub enum PragmaParserState {
-    NotParsingPragma,
-    SeenPragma,
-    SeenPragmaIdentifier,
 }
 
 static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
@@ -423,6 +409,18 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "throw" => Token::Throw,
     "_" => Token::Underscore,
     "true" => Token::True,
+    "uint8" => Token::Uint(8),
+    "uint16" => Token::Uint(16),
+    "uint24" => Token::Uint(24),
+    "uint32" => Token::Uint(32),
+    "uint40" => Token::Uint(40),
+    "uint48" => Token::Uint(48),
+    "uint56" => Token::Uint(56),
+    "uint64" => Token::Uint(64),
+    "uint72" => Token::Uint(72),
+    "uint80" => Token::Uint(80),
+    "uint88" => Token::Uint(88),
+    "uint96" => Token::Uint(96),
     "uint104" => Token::Uint(104),
     "uint112" => Token::Uint(112),
     "uint120" => Token::Uint(120),
@@ -432,7 +430,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "uint152" => Token::Uint(152),
     "uint160" => Token::Uint(160),
     "uint168" => Token::Uint(168),
-    "uint16" => Token::Uint(16),
     "uint176" => Token::Uint(176),
     "uint184" => Token::Uint(184),
     "uint192" => Token::Uint(192),
@@ -443,18 +440,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "uint232" => Token::Uint(232),
     "uint240" => Token::Uint(240),
     "uint248" => Token::Uint(248),
-    "uint24" => Token::Uint(24),
     "uint256" => Token::Uint(256),
-    "uint32" => Token::Uint(32),
-    "uint40" => Token::Uint(40),
-    "uint48" => Token::Uint(48),
-    "uint56" => Token::Uint(56),
-    "uint64" => Token::Uint(64),
-    "uint72" => Token::Uint(72),
-    "uint80" => Token::Uint(80),
-    "uint88" => Token::Uint(88),
-    "uint8" => Token::Uint(8),
-    "uint96" => Token::Uint(96),
     "uint" => Token::Uint(256),
     "view" => Token::View,
     "while" => Token::While,
@@ -465,7 +451,7 @@ impl<'input> Lexer<'input> {
         Lexer {
             input,
             chars: input.char_indices().peekable(),
-            pragma_state: PragmaParserState::NotParsingPragma,
+            last_tokens: [None, None],
         }
     }
 
@@ -853,7 +839,7 @@ impl<'input> Lexer<'input> {
                         if let Some((i, ch)) = self.chars.next() {
                             end = i;
 
-                            if ch.is_ascii_whitespace() {
+                            if ch.is_whitespace() {
                                 break;
                             }
                         } else {
@@ -872,70 +858,64 @@ impl<'input> Lexer<'input> {
             }
         }
     }
+
+    /// Next token is pragma value. Return it
+    fn pragma_value(&mut self) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
+        // special parser for pragma solidity >=0.4.22 <0.7.0;
+        let mut start = None;
+        let mut end = 0;
+
+        // solc will include anything upto the next semicolon, whitespace
+        // trimmed on left and right
+        loop {
+            match self.chars.peek() {
+                Some((_, ';')) | None => {
+                    return if let Some(start) = start {
+                        Some(Ok((
+                            start,
+                            Token::StringLiteral(&self.input[start..end + 1]),
+                            end + 1,
+                        )))
+                    } else {
+                        None
+                    };
+                }
+                Some((_, ch)) if ch.is_whitespace() => {
+                    self.chars.next();
+                }
+                Some((i, _)) => {
+                    if start.is_none() {
+                        start = Some(*i);
+                    }
+                    end = *i;
+                    self.chars.next();
+                }
+            }
+        }
+    }
 }
 
 impl<'input> Iterator for Lexer<'input> {
     type Item = Spanned<Token<'input>, usize, LexicalError>;
 
+    /// Return the next token
     fn next(&mut self) -> Option<Self::Item> {
-        if let PragmaParserState::SeenPragmaIdentifier = self.pragma_state {
-            // special parser for pragma solidity >=0.4.22 <0.7.0;
-            self.pragma_state = PragmaParserState::NotParsingPragma;
-            let start;
-
-            // eat all whitespace
-            loop {
-                if let Some((i, ch)) = self.chars.next() {
-                    if !ch.is_ascii_whitespace() {
-                        start = i;
-                        break;
-                    }
-                } else {
-                    return None;
-                }
-            }
-
-            loop {
-                match self.chars.next() {
-                    Some((i, ';')) => {
-                        return Some(Ok((
-                            start,
-                            Token::StringLiteral(&self.input[start..i]),
-                            i - 1,
-                        )));
-                    }
-                    Some(_) => (),
-                    None => {
-                        return Some(Err(LexicalError::PragmaMissingSemiColon(
-                            start,
-                            self.input.len(),
-                        )));
-                    }
-                }
-            }
-        }
-
-        let token = self.next();
-
-        self.pragma_state = match self.pragma_state {
-            PragmaParserState::NotParsingPragma => {
-                if let Some(Ok((_, Token::Pragma, _))) = token {
-                    PragmaParserState::SeenPragma
-                } else {
-                    PragmaParserState::NotParsingPragma
-                }
-            }
-            PragmaParserState::SeenPragma => {
-                if let Some(Ok((_, Token::Identifier(_), _))) = token {
-                    PragmaParserState::SeenPragmaIdentifier
-                } else {
-                    PragmaParserState::NotParsingPragma
-                }
-            }
-            PragmaParserState::SeenPragmaIdentifier => {
-                unreachable!();
-            }
+        // Lexer should be aware of whether the last two tokens were
+        // pragma followed by identifier. If this is true, then special parsing should be
+        // done for the pragma value
+        let token = if let [Some(Token::Pragma), Some(Token::Identifier(_))] = self.last_tokens {
+            self.pragma_value()
+        } else {
+            self.next()
         };
+
+        self.last_tokens = [
+            self.last_tokens[1],
+            match token {
+                Some(Ok((_, n, _))) => Some(n),
+                _ => None,
+            },
+        ];
 
         token
     }
@@ -1029,7 +1009,21 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Pragma, 6)),
             Ok((7, Token::Identifier("solidity"), 15)),
-            Ok((16, Token::StringLiteral(">=0.5.0 <0.7.0"), 29)),
+            Ok((16, Token::StringLiteral(">=0.5.0 <0.7.0"), 30)),
+            Ok((30, Token::Semicolon, 31)),
+        )
+    );
+
+    let tokens = Lexer::new("pragma solidity \t>=0.5.0 <0.7.0 \n ;")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((0, Token::Pragma, 6)),
+            Ok((7, Token::Identifier("solidity"), 15)),
+            Ok((17, Token::StringLiteral(">=0.5.0 <0.7.0"), 31)),
+            Ok((34, Token::Semicolon, 35)),
         )
     );
 
@@ -1110,7 +1104,7 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Pragma, 6)),
             Ok((7, Token::Identifier("foo"), 10)),
-            Err(LexicalError::PragmaMissingSemiColon(11, 14))
+            Ok((11, Token::StringLiteral("bar"), 14)),
         )
     );
 
