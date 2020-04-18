@@ -3,7 +3,7 @@
 //  - comments and doc comments
 //  - pragma value is [^;]+
 //
-use std::collections::HashMap;
+use phf::phf_map;
 use std::fmt;
 use std::iter::Peekable;
 use std::str::CharIndices;
@@ -255,7 +255,6 @@ impl<'input> fmt::Display for Token<'input> {
 pub struct Lexer<'input> {
     input: &'input str,
     chars: Peekable<CharIndices<'input>>,
-    keywords: HashMap<String, Token<'input>>,
     pragma_state: PragmaParserState,
 }
 
@@ -315,79 +314,157 @@ pub enum PragmaParserState {
     SeenPragmaIdentifier,
 }
 
+static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
+    "address" => Token::Address,
+    "anonymous" => Token::Anonymous,
+    "bool" => Token::Bool,
+    "break" => Token::Break,
+    "bytes1" => Token::Bytes(1),
+    "bytes2" => Token::Bytes(2),
+    "bytes3" => Token::Bytes(3),
+    "bytes4" => Token::Bytes(4),
+    "bytes5" => Token::Bytes(5),
+    "bytes6" => Token::Bytes(6),
+    "bytes7" => Token::Bytes(7),
+    "bytes8" => Token::Bytes(8),
+    "bytes9" => Token::Bytes(9),
+    "bytes10" => Token::Bytes(10),
+    "bytes11" => Token::Bytes(11),
+    "bytes12" => Token::Bytes(12),
+    "bytes13" => Token::Bytes(13),
+    "bytes14" => Token::Bytes(14),
+    "bytes15" => Token::Bytes(15),
+    "bytes16" => Token::Bytes(16),
+    "bytes17" => Token::Bytes(17),
+    "bytes18" => Token::Bytes(18),
+    "bytes19" => Token::Bytes(19),
+    "bytes20" => Token::Bytes(20),
+    "bytes21" => Token::Bytes(21),
+    "bytes22" => Token::Bytes(22),
+    "bytes23" => Token::Bytes(23),
+    "bytes24" => Token::Bytes(24),
+    "bytes25" => Token::Bytes(25),
+    "bytes26" => Token::Bytes(26),
+    "bytes27" => Token::Bytes(27),
+    "bytes28" => Token::Bytes(28),
+    "bytes29" => Token::Bytes(29),
+    "bytes30" => Token::Bytes(30),
+    "bytes31" => Token::Bytes(31),
+    "bytes32" => Token::Bytes(32),
+    "bytes" => Token::DynamicBytes,
+    "byte" => Token::Bytes(1),
+    "calldata" => Token::Calldata,
+    "constant" => Token::Constant,
+    "constructor" => Token::Constructor,
+    "continue" => Token::Continue,
+    "contract" => Token::Contract,
+    "delete" => Token::Delete,
+    "do" => Token::Do,
+    "else" => Token::Else,
+    "emit" => Token::Emit,
+    "enum" => Token::Enum,
+    "event" => Token::Event,
+    "external" => Token::External,
+    "false" => Token::False,
+    "for" => Token::For,
+    "function" => Token::Function,
+    "if" => Token::If,
+    "import" => Token::Import,
+    "indexed" => Token::Indexed,
+    "int8" => Token::Int(8),
+    "int16" => Token::Int(16),
+    "int24" => Token::Int(24),
+    "int32" => Token::Int(32),
+    "int40" => Token::Int(40),
+    "int48" => Token::Int(48),
+    "int56" => Token::Int(56),
+    "int64" => Token::Int(64),
+    "int72" => Token::Int(72),
+    "int80" => Token::Int(80),
+    "int88" => Token::Int(88),
+    "int96" => Token::Int(96),
+    "int104" => Token::Int(104),
+    "int112" => Token::Int(112),
+    "int120" => Token::Int(120),
+    "int128" => Token::Int(128),
+    "int136" => Token::Int(136),
+    "int144" => Token::Int(144),
+    "int152" => Token::Int(152),
+    "int160" => Token::Int(160),
+    "int168" => Token::Int(168),
+    "int176" => Token::Int(176),
+    "int184" => Token::Int(184),
+    "int192" => Token::Int(192),
+    "int200" => Token::Int(200),
+    "int208" => Token::Int(208),
+    "int216" => Token::Int(216),
+    "int224" => Token::Int(224),
+    "int232" => Token::Int(232),
+    "int240" => Token::Int(240),
+    "int248" => Token::Int(248),
+    "int256" => Token::Int(256),
+    "interface" => Token::Interface,
+    "internal" => Token::Internal,
+    "int" => Token::Int(256),
+    "library" => Token::Library,
+    "mapping" => Token::Mapping,
+    "memory" => Token::Memory,
+    "new" => Token::New,
+    "payable" => Token::Payable,
+    "pragma" => Token::Pragma,
+    "private" => Token::Private,
+    "public" => Token::Public,
+    "pure" => Token::Pure,
+    "returns" => Token::Returns,
+    "return" => Token::Return,
+    "storage" => Token::Storage,
+    "string" => Token::String,
+    "struct" => Token::Struct,
+    "throw" => Token::Throw,
+    "_" => Token::Underscore,
+    "true" => Token::True,
+    "uint104" => Token::Uint(104),
+    "uint112" => Token::Uint(112),
+    "uint120" => Token::Uint(120),
+    "uint128" => Token::Uint(128),
+    "uint136" => Token::Uint(136),
+    "uint144" => Token::Uint(144),
+    "uint152" => Token::Uint(152),
+    "uint160" => Token::Uint(160),
+    "uint168" => Token::Uint(168),
+    "uint16" => Token::Uint(16),
+    "uint176" => Token::Uint(176),
+    "uint184" => Token::Uint(184),
+    "uint192" => Token::Uint(192),
+    "uint200" => Token::Uint(200),
+    "uint208" => Token::Uint(208),
+    "uint216" => Token::Uint(216),
+    "uint224" => Token::Uint(224),
+    "uint232" => Token::Uint(232),
+    "uint240" => Token::Uint(240),
+    "uint248" => Token::Uint(248),
+    "uint24" => Token::Uint(24),
+    "uint256" => Token::Uint(256),
+    "uint32" => Token::Uint(32),
+    "uint40" => Token::Uint(40),
+    "uint48" => Token::Uint(48),
+    "uint56" => Token::Uint(56),
+    "uint64" => Token::Uint(64),
+    "uint72" => Token::Uint(72),
+    "uint80" => Token::Uint(80),
+    "uint88" => Token::Uint(88),
+    "uint8" => Token::Uint(8),
+    "uint96" => Token::Uint(96),
+    "uint" => Token::Uint(256),
+    "view" => Token::View,
+    "while" => Token::While,
+};
+
 impl<'input> Lexer<'input> {
     pub fn new(input: &'input str) -> Self {
-        let mut keywords = HashMap::new();
-
-        for w in 1..=32 {
-            keywords.insert(format!("bytes{}", w).to_owned(), Token::Bytes(w));
-            let w = w as u16 * 8;
-            keywords.insert(format!("uint{}", w).to_owned(), Token::Uint(w));
-            keywords.insert(format!("int{}", w).to_owned(), Token::Int(w));
-        }
-
-        keywords.insert(String::from("byte"), Token::Bytes(1));
-        keywords.insert(String::from("uint"), Token::Uint(256));
-        keywords.insert(String::from("int"), Token::Int(256));
-        keywords.insert(String::from("bool"), Token::Bool);
-        keywords.insert(String::from("address"), Token::Address);
-        keywords.insert(String::from("string"), Token::String);
-
-        keywords.insert(String::from("struct"), Token::Struct);
-        keywords.insert(String::from("event"), Token::Event);
-        keywords.insert(String::from("enum"), Token::Enum);
-
-        keywords.insert(String::from("memory"), Token::Memory);
-        keywords.insert(String::from("calldata"), Token::Calldata);
-        keywords.insert(String::from("storage"), Token::Storage);
-
-        keywords.insert(String::from("public"), Token::Public);
-        keywords.insert(String::from("private"), Token::Private);
-        keywords.insert(String::from("external"), Token::External);
-        keywords.insert(String::from("internal"), Token::Internal);
-
-        keywords.insert(String::from("constant"), Token::Constant);
-
-        keywords.insert(String::from("pragma"), Token::Pragma);
-        keywords.insert(String::from("import"), Token::Import);
-        keywords.insert(String::from("contract"), Token::Contract);
-        keywords.insert(String::from("interface"), Token::Interface);
-        keywords.insert(String::from("library"), Token::Library);
-        keywords.insert(String::from("function"), Token::Function);
-
-        keywords.insert(String::from("new"), Token::New);
-        keywords.insert(String::from("delete"), Token::Delete);
-
-        keywords.insert(String::from("pure"), Token::Pure);
-        keywords.insert(String::from("view"), Token::View);
-        keywords.insert(String::from("payable"), Token::Payable);
-
-        keywords.insert(String::from("do"), Token::Do);
-        keywords.insert(String::from("continue"), Token::Continue);
-        keywords.insert(String::from("break"), Token::Break);
-
-        keywords.insert(String::from("throw"), Token::Throw);
-        keywords.insert(String::from("emit"), Token::Emit);
-        keywords.insert(String::from("return"), Token::Return);
-        keywords.insert(String::from("returns"), Token::Returns);
-
-        keywords.insert(String::from("true"), Token::True);
-        keywords.insert(String::from("false"), Token::False);
-        keywords.insert(String::from("anonymous"), Token::Anonymous);
-        keywords.insert(String::from("constructor"), Token::Constructor);
-        keywords.insert(String::from("indexed"), Token::Indexed);
-        keywords.insert(String::from("for"), Token::For);
-        keywords.insert(String::from("while"), Token::While);
-        keywords.insert(String::from("if"), Token::If);
-        keywords.insert(String::from("else"), Token::Else);
-        keywords.insert(String::from("_"), Token::Underscore);
-        keywords.insert(String::from("bytes"), Token::DynamicBytes);
-        keywords.insert(String::from("mapping"), Token::Mapping);
-
         Lexer {
             input,
             chars: input.char_indices().peekable(),
-            keywords,
             pragma_state: PragmaParserState::NotParsingPragma,
         }
     }
@@ -495,7 +572,7 @@ impl<'input> Lexer<'input> {
                         }
                     }
 
-                    return if let Some(w) = self.keywords.get(id) {
+                    return if let Some(w) = KEYWORDS.get(id) {
                         Some(Ok((start, *w, end + 1)))
                     } else {
                         Some(Ok((start, Token::Identifier(id), end + 1)))
