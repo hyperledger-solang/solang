@@ -7,6 +7,7 @@ use phf::phf_map;
 use std::fmt;
 use std::iter::Peekable;
 use std::str::CharIndices;
+use unicode_xid::UnicodeXID;
 
 use super::ast::Loc;
 
@@ -511,18 +512,23 @@ impl<'input> Lexer<'input> {
     fn next(&mut self) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
         loop {
             match self.chars.next() {
-                Some((start, ch)) if ch == '_' || ch == '$' || ch.is_alphabetic() => {
-                    let mut end = start;
+                Some((start, ch)) if ch == '_' || ch == '$' || UnicodeXID::is_xid_start(ch) => {
+                    let end;
 
-                    while let Some((i, ch)) = self.chars.peek() {
-                        if !ch.is_alphanumeric() && *ch != '_' && *ch != '$' {
+                    loop {
+                        if let Some((i, ch)) = self.chars.peek() {
+                            if !UnicodeXID::is_xid_continue(*ch) && *ch != '$' {
+                                end = *i;
+                                break;
+                            }
+                            self.chars.next();
+                        } else {
+                            end = self.input.len();
                             break;
                         }
-                        end = *i;
-                        self.chars.next();
                     }
 
-                    let id = &self.input[start..=end];
+                    let id = &self.input[start..end];
 
                     if id == "hex" {
                         if let Some((_, '"')) = self.chars.peek() {
@@ -559,9 +565,9 @@ impl<'input> Lexer<'input> {
                     }
 
                     return if let Some(w) = KEYWORDS.get(id) {
-                        Some(Ok((start, *w, end + 1)))
+                        Some(Ok((start, *w, end)))
                     } else {
-                        Some(Ok((start, Token::Identifier(id), end + 1)))
+                        Some(Ok((start, Token::Identifier(id), end)))
                     };
                 }
                 Some((start, '"')) => {
@@ -831,7 +837,7 @@ impl<'input> Lexer<'input> {
                 Some((i, ']')) => return Some(Ok((i, Token::CloseBracket, i + 1))),
                 Some((i, ':')) => return Some(Ok((i, Token::Colon, i + 1))),
                 Some((i, '?')) => return Some(Ok((i, Token::Question, i + 1))),
-                Some((_, '\t')) | Some((_, '\r')) | Some((_, ' ')) | Some((_, '\n')) => (),
+                Some((_, ch)) if ch.is_whitespace() => (),
                 Some((start, _)) => {
                     let mut end;
 
@@ -873,11 +879,11 @@ impl<'input> Lexer<'input> {
                     return if let Some(start) = start {
                         Some(Ok((
                             start,
-                            Token::StringLiteral(&self.input[start..end + 1]),
-                            end + 1,
+                            Token::StringLiteral(&self.input[start..end]),
+                            end,
                         )))
                     } else {
-                        None
+                        self.next()
                     };
                 }
                 Some((_, ch)) if ch.is_whitespace() => {
@@ -887,8 +893,13 @@ impl<'input> Lexer<'input> {
                     if start.is_none() {
                         start = Some(*i);
                     }
-                    end = *i;
                     self.chars.next();
+
+                    // end should point to the byte _after_ the character
+                    end = match self.chars.peek() {
+                        Some((i, _)) => *i,
+                        None => self.input.len(),
+                    }
                 }
             }
         }
@@ -1027,6 +1038,19 @@ fn lexertest() {
         )
     );
 
+    let tokens = Lexer::new("pragma solidity 赤;")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((0, Token::Pragma, 6)),
+            Ok((7, Token::Identifier("solidity"), 15)),
+            Ok((16, Token::StringLiteral("赤"), 19)),
+            Ok((19, Token::Semicolon, 20))
+        )
+    );
+
     let tokens =
         Lexer::new(">>= >> >= >").collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
 
@@ -1146,6 +1170,21 @@ fn lexertest() {
             Token::DocComment(CommentType::Block, " jadajadadjada "),
             18
         )))
+    );
+
+    // some unicode tests
+    let tokens = Lexer::new(">=\u{a0} . très\u{2028}αβγδεζηθικλμνξοπρστυφχψω\u{85}カラス")
+        .collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((0, Token::MoreEqual, 2)),
+            Ok((5, Token::Member, 6)),
+            Ok((7, Token::Identifier("très"), 12)),
+            Ok((15, Token::Identifier("αβγδεζηθικλμνξοπρστυφχψω"), 63)),
+            Ok((65, Token::Identifier("カラス"), 74))
+        )
     );
 }
 
