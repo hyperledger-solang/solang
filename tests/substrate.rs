@@ -57,6 +57,7 @@ pub struct ContractStorage {
     memory: MemoryRef,
     pub scratch: Vec<u8>,
     pub store: HashMap<StorageKey, Vec<u8>>,
+    pub printbuf: String,
 }
 
 impl ContractStorage {
@@ -66,6 +67,7 @@ impl ContractStorage {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             scratch: Vec::new(),
             store: HashMap::new(),
+            printbuf: String::new(),
         }
     }
 }
@@ -209,7 +211,11 @@ impl Externals for ContractStorage {
                     panic!("ext_print: {}", e);
                 }
 
-                println!("{}", String::from_utf8_lossy(&buf));
+                let s = String::from_utf8_lossy(&buf);
+
+                println!("{}", s);
+
+                self.printbuf.push_str(&s);
 
                 Ok(None)
             }

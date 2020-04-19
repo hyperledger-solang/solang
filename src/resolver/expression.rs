@@ -10,7 +10,6 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Mul;
-use unescape::unescape;
 
 use hex;
 use output;
@@ -270,6 +269,101 @@ impl Expression {
             Expression::Poison => false,
         }
     }
+}
+
+/// Unescape a string literal
+fn unescape(literal: &str, start: usize, errors: &mut Vec<output::Output>) -> String {
+    let mut s = String::new();
+    let mut indeces = literal.char_indices();
+
+    while let Some((_, ch)) = indeces.next() {
+        if ch != '\\' {
+            s.push(ch);
+            continue;
+        }
+
+        match indeces.next() {
+            Some((_, '\n')) => (),
+            Some((_, '\\')) => s.push('\\'),
+            Some((_, '\'')) => s.push('\''),
+            Some((_, '"')) => s.push('"'),
+            Some((_, 'b')) => s.push('\u{0008}'),
+            Some((_, 'f')) => s.push('\u{000c}'),
+            Some((_, 'n')) => s.push('\n'),
+            Some((_, 'r')) => s.push('\r'),
+            Some((_, 't')) => s.push('\t'),
+            Some((_, 'v')) => s.push('\u{000b}'),
+            Some((i, 'x')) => match get_digits(&mut indeces, 2) {
+                Ok(ch) => match std::char::from_u32(ch) {
+                    Some(ch) => s.push(ch),
+                    None => {
+                        errors.push(Output::error(
+                            ast::Loc(start + i, start + i + 4),
+                            format!("\\x{:02x} is not a valid unicode character", ch),
+                        ));
+                    }
+                },
+                Err(offset) => {
+                    errors.push(Output::error(
+                        ast::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
+                        "\\x escape should be followed by two hex digits".to_string(),
+                    ));
+                }
+            },
+            Some((i, 'u')) => match get_digits(&mut indeces, 4) {
+                Ok(ch) => match std::char::from_u32(ch) {
+                    Some(ch) => s.push(ch),
+                    None => {
+                        errors.push(Output::error(
+                            ast::Loc(start + i, start + i + 6),
+                            format!("\\u{:04x} is not a valid unicode character", ch),
+                        ));
+                    }
+                },
+                Err(offset) => {
+                    errors.push(Output::error(
+                        ast::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
+                        "\\u escape should be followed by four hex digits".to_string(),
+                    ));
+                }
+            },
+            Some((i, ch)) => {
+                errors.push(Output::error(
+                    ast::Loc(start + i, start + i + ch.len_utf8()),
+                    format!("unknown escape character '{}'", ch),
+                ));
+            }
+            None => unreachable!(),
+        }
+    }
+
+    s
+}
+
+/// Get the hex digits for an escaped \x or \u. Returns either the value or
+/// or the offset of the last character
+fn get_digits(input: &mut std::str::CharIndices, len: usize) -> Result<u32, usize> {
+    let mut n = 0;
+    let offset;
+
+    for _ in 0..len {
+        if let Some((_, ch)) = input.next() {
+            if let Some(v) = ch.to_digit(16) {
+                n = (n << 4) + v;
+                continue;
+            }
+            offset = match input.next() {
+                Some((i, _)) => i,
+                None => std::usize::MAX,
+            };
+        } else {
+            offset = std::usize::MAX;
+        }
+
+        return Err(offset);
+    }
+
+    Ok(n)
 }
 
 fn coerce(
@@ -935,35 +1029,18 @@ pub fn expression(
         }
         ast::Expression::StringLiteral(v) => {
             // Concatenate the strings
-            let mut result = String::new();
-            let mut loc = ast::Loc(0, 0);
+            let mut result = Vec::new();
+            let mut loc = ast::Loc(v[0].loc.0, 0);
 
             for s in v {
-                // unescape supports octal escape values, solc does not
-                // neither solc nor unescape support unicode code points like \u{61}
-                match unescape(&s.string) {
-                    Some(v) => {
-                        result.push_str(&v);
-                        if loc.0 == 0 {
-                            loc.0 = s.loc.0;
-                        }
-                        loc.1 = s.loc.1;
-                    }
-                    None => {
-                        // would be helpful if unescape told us what/where the problem was
-                        errors.push(Output::error(
-                            s.loc,
-                            format!("string \"{}\" has invalid escape", s.string),
-                        ));
-                        return Err(());
-                    }
-                }
+                result.extend_from_slice(unescape(&s.string, s.loc.0, errors).as_bytes());
+                loc.1 = s.loc.1;
             }
 
             let length = result.len();
 
             Ok((
-                Expression::BytesLiteral(loc, result.into_bytes()),
+                Expression::BytesLiteral(loc, result),
                 resolver::Type::Bytes(length as u8),
             ))
         }
