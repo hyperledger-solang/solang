@@ -12,7 +12,6 @@ extern crate phf;
 extern crate serde;
 extern crate serde_derive;
 extern crate tiny_keccak;
-extern crate unescape;
 extern crate unicode_xid;
 
 pub mod abi;

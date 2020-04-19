@@ -637,3 +637,111 @@ fn bytes_memory_subscript() {
 
     assert_eq!(store.scratch, Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode());
 }
+
+#[test]
+fn string_escape() {
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            function foo() public {
+                    string f = "\x";
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "\\x escape should be followed by two hex digits"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            function foo() public {
+                    string f = "\x9k";
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "\\x escape should be followed by two hex digits"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            function foo() public {
+                    string f = "\xたこ";
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "\\x escape should be followed by two hex digits"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            function foo() public {
+                    string f = "\u";
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "\\u escape should be followed by four hex digits"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            function foo() public {
+                    string f = "\uたこ焼き";
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "\\u escape should be followed by four hex digits"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            function foo() public {
+                    string f = "\u9kff";
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "\\u escape should be followed by four hex digits"
+    );
+
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract カラス {
+            function カラス$() public {
+                print(" \u20ac \x41 \f\b\r\n\v\\\'\"\t");
+            }
+        }"##,
+    );
+
+    runtime.constructor(&mut store, 0, Vec::new());
+
+    runtime.function(&mut store, "カラス$", Vec::new());
+
+    assert_eq!(store.printbuf, " € A \u{c}\u{8}\r\n\u{b}\\'\"\t");
+}
