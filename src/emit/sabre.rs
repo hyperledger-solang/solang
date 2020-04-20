@@ -709,7 +709,7 @@ impl TargetRuntime for SabreTarget {
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
-        length: IntValue,
+        length: IntValue<'b>,
         spec: &[resolver::Parameter],
     ) {
         self.abi

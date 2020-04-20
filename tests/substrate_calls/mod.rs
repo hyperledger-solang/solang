@@ -126,14 +126,14 @@ fn revert() {
         }"##,
     );
 
-    runtime.function_expect_revert(&mut store, "test", Vec::new());
+    runtime.function_expect_return(&mut store, "test", Vec::new(), 1);
 
     assert_eq!(
         store.scratch,
         RevertReturn(0x08c3_79a0, "yo!".to_string()).encode()
     );
 
-    runtime.function_expect_revert(&mut store, "a", Vec::new());
+    runtime.function_expect_return(&mut store, "a", Vec::new(), 1);
 
     assert_eq!(
         store.scratch,
@@ -153,7 +153,7 @@ fn revert() {
         }"##,
     );
 
-    runtime.function_expect_revert(&mut store, "test", Vec::new());
+    runtime.function_expect_return(&mut store, "test", Vec::new(), 1);
 
     assert_eq!(store.scratch.len(), 0);
 }
@@ -173,7 +173,7 @@ fn require() {
         }"##,
     );
 
-    runtime.function_expect_revert(&mut store, "test1", Vec::new());
+    runtime.function_expect_return(&mut store, "test1", Vec::new(), 1);
 
     assert_eq!(
         store.scratch,
@@ -262,4 +262,19 @@ fn contract_type() {
         first_error(errors),
         "conversion from uint8 to contract printer not possible"
     );
+}
+
+#[test]
+fn input_wrong_size() {
+    let (runtime, mut store) = build_solidity(
+        r##"
+        contract c {
+            function test(int32 x) public {
+            }
+        }"##,
+    );
+
+    runtime.function_expect_return(&mut store, "test", b"A".to_vec(), 3);
+
+    runtime.function_expect_return(&mut store, "test", b"ABCDE".to_vec(), 3);
 }
