@@ -1214,10 +1214,9 @@ impl EthAbiEncoder {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue,
-        spec: &resolver::FunctionDecl,
+        spec: &[resolver::Parameter],
     ) {
         let expected_length = spec
-            .params
             .iter()
             .map(|arg| self.encoded_fixed_length(&arg.ty, contract.ns))
             .sum();
@@ -1247,7 +1246,7 @@ impl EthAbiEncoder {
 
         contract.builder.position_at_end(decode_block);
 
-        for arg in &spec.params {
+        for arg in spec {
             args.push(self.decode_ty(contract, function, &arg.ty, None, &mut data));
         }
     }

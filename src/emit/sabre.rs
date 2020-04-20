@@ -176,8 +176,14 @@ impl SabreTarget {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.abi
-                .decode(contract, function, &mut args, argsdata, argslen, con);
+            self.abi.decode(
+                contract,
+                function,
+                &mut args,
+                argsdata,
+                argslen,
+                &con.params,
+            );
 
             contract
                 .builder
@@ -704,7 +710,7 @@ impl TargetRuntime for SabreTarget {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue,
-        spec: &resolver::FunctionDecl,
+        spec: &[resolver::Parameter],
     ) {
         self.abi
             .decode(contract, function, args, data, length, spec);
