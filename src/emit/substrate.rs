@@ -449,6 +449,45 @@ impl SubstrateTarget {
         }
     }
 
+    /// Check that data has not overrun end. If last is true, then data must be equal to end
+    fn check_overrun(
+        &self,
+        contract: &Contract,
+        function: FunctionValue,
+        data: PointerValue,
+        end: PointerValue,
+        last: bool,
+    ) {
+        let in_bounds = contract.builder.build_int_compare(
+            if last {
+                IntPredicate::EQ
+            } else {
+                IntPredicate::ULE
+            },
+            contract
+                .builder
+                .build_ptr_to_int(data, contract.context.i32_type(), "args"),
+            contract
+                .builder
+                .build_ptr_to_int(end, contract.context.i32_type(), "end"),
+            "is_done",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+        contract
+            .builder
+            .build_conditional_branch(in_bounds, success_block, bail_block);
+
+        contract.builder.position_at_end(bail_block);
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(3, false)));
+
+        contract.builder.position_at_end(success_block);
+    }
+
     /// recursively encode a single ty
     fn decode_ty<'b>(
         &self,
@@ -456,6 +495,7 @@ impl SubstrateTarget {
         function: FunctionValue,
         ty: &resolver::Type,
         data: &mut PointerValue<'b>,
+        end: PointerValue<'b>,
     ) -> BasicValueEnum<'b> {
         match &ty {
             resolver::Type::Bool
@@ -473,10 +513,13 @@ impl SubstrateTarget {
                         "abi_ptr",
                     )
                 };
+
+                self.check_overrun(contract, function, *data, end, false);
+
                 arg
             }
             resolver::Type::Enum(n) => {
-                self.decode_ty(contract, function, &contract.ns.enums[*n].ty, data)
+                self.decode_ty(contract, function, &contract.ns.enums[*n].ty, data, end)
             }
             resolver::Type::Struct(n) => {
                 let llvm_ty = contract.llvm_type(ty.deref());
@@ -516,7 +559,7 @@ impl SubstrateTarget {
                         )
                     };
 
-                    let val = self.decode_ty(contract, function, &field.ty, data);
+                    let val = self.decode_ty(contract, function, &field.ty, data, end);
 
                     contract.builder.build_store(elem, val);
                 }
@@ -569,7 +612,7 @@ impl SubstrateTarget {
                                 )
                             };
 
-                            let val = self.decode_ty(contract, function, &ty, data);
+                            let val = self.decode_ty(contract, function, &ty, data, end);
                             contract.builder.build_store(elem, val);
                         },
                     );
@@ -650,7 +693,7 @@ impl SubstrateTarget {
 
                             let ty = ty.array_deref();
 
-                            let val = self.decode_ty(contract, function, &ty, data);
+                            let val = self.decode_ty(contract, function, &ty, data, end);
                             contract.builder.build_store(elem, val);
                         },
                     );
@@ -683,12 +726,14 @@ impl SubstrateTarget {
                     .build_load(from, "data")
                     .into_pointer_value();
 
+                self.check_overrun(contract, function, *data, end, false);
+
                 v.into()
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, data),
+            resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, data, end),
         }
     }
 
@@ -1701,7 +1746,7 @@ impl TargetRuntime for SubstrateTarget {
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
-        _datalength: IntValue,
+        datalength: IntValue<'b>,
         spec: &[resolver::Parameter],
     ) {
         let mut argsdata = contract.builder.build_pointer_cast(
@@ -1710,8 +1755,14 @@ impl TargetRuntime for SubstrateTarget {
             "",
         );
 
+        let argsend = unsafe {
+            contract
+                .builder
+                .build_gep(argsdata, &[datalength], "argsend")
+        };
+
         for param in spec {
-            let v = self.decode_ty(contract, function, &param.ty, &mut argsdata);
+            let v = self.decode_ty(contract, function, &param.ty, &mut argsdata, argsend);
 
             args.push(if param.ty.stack_based() && !param.ty.is_reference_type() {
                 let s = contract.builder.build_alloca(v.get_type(), &param.name);
@@ -1723,6 +1774,10 @@ impl TargetRuntime for SubstrateTarget {
                 v
             });
         }
+
+        // Actually we always end with two checks: with last = false, and then another
+        // with last = true. We rely on llvm to optimize the former away
+        self.check_overrun(contract, function, argsdata, argsend, true);
     }
 
     ///  ABI encode the return values for the function

@@ -291,7 +291,13 @@ impl TestRuntime {
         }
     }
 
-    pub fn function_expect_revert(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
+    pub fn function_expect_return(
+        &self,
+        store: &mut ContractStorage,
+        name: &str,
+        args: Vec<u8>,
+        expected_ret: i32,
+    ) {
         let m = self.abi.get_function(name).unwrap();
 
         store.scratch = m.selector().into_iter().chain(args).collect();
@@ -301,7 +307,7 @@ impl TestRuntime {
             .invoke_export("call", &[], store)
             .expect("failed to call function")
         {
-            if ret != 1 {
+            if expected_ret != ret {
                 panic!("non one return")
             }
         }

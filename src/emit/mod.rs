@@ -55,7 +55,7 @@ pub trait TargetRuntime {
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
-        length: IntValue,
+        length: IntValue<'b>,
         spec: &[resolver::Parameter],
     );
 
@@ -415,6 +415,7 @@ impl<'a> Contract<'a> {
             .build_int_compare(IntPredicate::ULT, next, to, "loop_cond");
         self.builder.build_conditional_branch(comp, body, done);
 
+        let body = self.builder.get_insert_block().unwrap();
         loop_phi.add_incoming(&[(&from, entry), (&next, body)]);
         data_phi.add_incoming(&[(&*data_ref, entry), (&data, body)]);
 
