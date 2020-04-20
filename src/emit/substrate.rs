@@ -1702,7 +1702,7 @@ impl TargetRuntime for SubstrateTarget {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         _datalength: IntValue,
-        spec: &resolver::FunctionDecl,
+        spec: &[resolver::Parameter],
     ) {
         let mut argsdata = contract.builder.build_pointer_cast(
             data,
@@ -1710,7 +1710,7 @@ impl TargetRuntime for SubstrateTarget {
             "",
         );
 
-        for param in &spec.params {
+        for param in spec {
             let v = self.decode_ty(contract, function, &param.ty, &mut argsdata);
 
             args.push(if param.ty.stack_based() && !param.ty.is_reference_type() {

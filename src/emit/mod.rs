@@ -56,7 +56,7 @@ pub trait TargetRuntime {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue,
-        spec: &resolver::FunctionDecl,
+        spec: &[resolver::Parameter],
     );
 
     /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
@@ -2815,7 +2815,7 @@ impl<'a> Contract<'a> {
             let mut args = Vec::new();
 
             // insert abi decode
-            runtime.abi_decode(&self, function, &mut args, argsdata, argslen, f);
+            runtime.abi_decode(&self, function, &mut args, argsdata, argslen, &f.params);
 
             // add return values as pointer arguments at the end
             if !f.returns.is_empty() {
