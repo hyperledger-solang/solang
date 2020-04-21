@@ -1,6 +1,7 @@
 use num_traits::ToPrimitive;
 use resolver;
 
+use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -923,6 +924,7 @@ impl EthAbiEncoder {
         ty: &resolver::Type,
         to: Option<PointerValue<'b>>,
         data: &mut PointerValue<'b>,
+        begin: PointerValue<'b>,
         end: PointerValue<'b>,
     ) -> BasicValueEnum<'b> {
         let val = match &ty {
@@ -959,15 +961,9 @@ impl EthAbiEncoder {
                 val.into()
             }
             resolver::Type::Uint(8) | resolver::Type::Int(8) => {
-                let int8_ptr = contract.builder.build_pointer_cast(
-                    *data,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "",
-                );
-
                 let int8_ptr = unsafe {
                     contract.builder.build_gep(
-                        int8_ptr,
+                        *data,
                         &[contract.context.i32_type().const_int(31, false)],
                         "bool_ptr",
                     )
@@ -991,14 +987,7 @@ impl EthAbiEncoder {
                 contract.builder.build_call(
                     contract.module.get_function("__be32toleN").unwrap(),
                     &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                *data,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
+                        (*data).into(),
                         contract
                             .builder
                             .build_pointer_cast(
@@ -1026,14 +1015,7 @@ impl EthAbiEncoder {
                 contract.builder.build_call(
                     contract.module.get_function("__be32toleN").unwrap(),
                     &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                *data,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
+                        (*data).into(),
                         contract
                             .builder
                             .build_pointer_cast(
@@ -1057,14 +1039,7 @@ impl EthAbiEncoder {
                 }
             }
             resolver::Type::Bytes(1) => {
-                let val = contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
-                        *data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    ),
-                    "bytes1",
-                );
+                let val = contract.builder.build_load(*data, "bytes1");
 
                 if let Some(p) = to {
                     contract.builder.build_store(p, val);
@@ -1080,14 +1055,7 @@ impl EthAbiEncoder {
                 contract.builder.build_call(
                     contract.module.get_function("__beNtoleN").unwrap(),
                     &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                *data,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
+                        (*data).into(),
                         contract
                             .builder
                             .build_pointer_cast(
@@ -1117,6 +1085,7 @@ impl EthAbiEncoder {
                     &contract.ns.enums[*n].ty,
                     to,
                     data,
+                    begin,
                     end,
                 );
             }
@@ -1148,10 +1117,26 @@ impl EthAbiEncoder {
                                 let val = contract
                                     .builder
                                     .build_alloca(contract.llvm_type(&ty.deref()), "");
-                                self.decode_ty(contract, function, &ty, Some(val), data, end);
+                                self.decode_ty(
+                                    contract,
+                                    function,
+                                    &ty,
+                                    Some(val),
+                                    data,
+                                    begin,
+                                    end,
+                                );
                                 contract.builder.build_store(elem, val);
                             } else {
-                                self.decode_ty(contract, function, &ty, Some(elem), data, end);
+                                self.decode_ty(
+                                    contract,
+                                    function,
+                                    &ty,
+                                    Some(elem),
+                                    data,
+                                    begin,
+                                    end,
+                                );
                             }
                         },
                     );
@@ -1182,11 +1167,11 @@ impl EthAbiEncoder {
                             .builder
                             .build_alloca(contract.llvm_type(&field.ty), "");
 
-                        self.decode_ty(contract, function, &field.ty, Some(val), data, end);
+                        self.decode_ty(contract, function, &field.ty, Some(val), data, begin, end);
 
                         contract.builder.build_store(elem, val);
                     } else {
-                        self.decode_ty(contract, function, &field.ty, Some(elem), data, end);
+                        self.decode_ty(contract, function, &field.ty, Some(elem), data, begin, end);
                     }
                 }
 
@@ -1195,18 +1180,81 @@ impl EthAbiEncoder {
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::StorageRef(ty) => {
-                return self.decode_ty(contract, function, ty, to, data, end);
+                return self.decode_ty(contract, function, ty, to, data, begin, end);
             }
             resolver::Type::Ref(ty) => {
-                return self.decode_ty(contract, function, ty, to, data, end);
+                return self.decode_ty(contract, function, ty, to, data, begin, end);
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
+            resolver::Type::String | resolver::Type::DynamicBytes => {
+                let offset = self.decode_ty(
+                    contract,
+                    function,
+                    &resolver::Type::Uint(32),
+                    None,
+                    data,
+                    begin,
+                    end,
+                );
+
+                let mut dataoffset = unsafe {
+                    contract
+                        .builder
+                        .build_gep(begin, &[offset.into_int_value()], "dataoffset")
+                };
+
+                let datalen = self.decode_ty(
+                    contract,
+                    function,
+                    &resolver::Type::Uint(32),
+                    None,
+                    &mut dataoffset,
+                    begin,
+                    end,
+                );
+
+                // TODO: can this overflow?
+                let stringend = unsafe {
+                    contract
+                        .builder
+                        .build_gep(dataoffset, &[datalen.into_int_value()], "stringend")
+                };
+
+                self.check_overrun(contract, function, stringend, end);
+
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[
+                            datalen,
+                            contract.context.i32_type().const_int(1, false).into(),
+                            dataoffset.into(),
+                        ],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                return contract
+                    .builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        contract
+                            .module
+                            .get_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "string",
+                    )
+                    .into();
+            }
         };
 
         *data = unsafe {
             contract.builder.build_gep(
                 *data,
-                &[contract.context.i32_type().const_int(8, false)],
+                &[contract.context.i32_type().const_int(32, false)],
                 "data_next",
             )
         };
@@ -1260,18 +1308,24 @@ impl EthAbiEncoder {
         datalength: IntValue<'b>,
         spec: &[resolver::Parameter],
     ) {
-        let mut data = data;
-
-        let data8 = contract.builder.build_pointer_cast(
+        let databegin8 = contract.builder.build_pointer_cast(
             data,
             contract.context.i8_type().ptr_type(AddressSpace::Generic),
             "",
         );
 
-        let dataend8 = unsafe { contract.builder.build_gep(data8, &[datalength], "dataend8") };
+        let mut data = databegin8;
+
+        let dataend8 = unsafe {
+            contract
+                .builder
+                .build_gep(databegin8, &[datalength], "dataend8")
+        };
 
         for arg in spec {
-            args.push(self.decode_ty(contract, function, &arg.ty, None, &mut data, dataend8));
+            args.push(self.decode_ty(
+                contract, function, &arg.ty, None, &mut data, databegin8, dataend8,
+            ));
         }
     }
 }

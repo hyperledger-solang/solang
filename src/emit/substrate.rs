@@ -718,8 +718,7 @@ impl SubstrateTarget {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
-                    .into_pointer_value();
+                    .unwrap();
 
                 *data = contract
                     .builder
@@ -728,7 +727,7 @@ impl SubstrateTarget {
 
                 self.check_overrun(contract, function, *data, end, false);
 
-                v.into()
+                v
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),
