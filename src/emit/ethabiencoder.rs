@@ -1090,8 +1090,32 @@ impl EthAbiEncoder {
                 );
             }
             resolver::Type::Array(_, dim) => {
-                let to =
-                    to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
+                let llvm_ty = contract.llvm_type(ty.deref());
+
+                let size = llvm_ty
+                    .size_of()
+                    .unwrap()
+                    .const_cast(contract.context.i32_type(), false);
+
+                let ty = ty.array_deref();
+
+                let new = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[size.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let dest = contract.builder.build_pointer_cast(
+                    new,
+                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    "dest",
+                );
 
                 if let Some(d) = &dim[0] {
                     contract.emit_static_loop_with_pointer(
@@ -1105,55 +1129,135 @@ impl EthAbiEncoder {
                         |index: IntValue<'b>, data: &mut PointerValue<'b>| {
                             let elem = unsafe {
                                 contract.builder.build_gep(
-                                    to,
+                                    dest,
                                     &[contract.context.i32_type().const_zero(), index],
                                     "index_access",
                                 )
                             };
 
-                            let ty = ty.array_deref();
-
-                            if ty.is_reference_type() {
-                                let val = contract
-                                    .builder
-                                    .build_alloca(contract.llvm_type(&ty.deref()), "");
-                                self.decode_ty(
-                                    contract,
-                                    function,
-                                    &ty,
-                                    Some(val),
-                                    data,
-                                    begin,
-                                    end,
-                                );
-                                contract.builder.build_store(elem, val);
-                            } else {
-                                self.decode_ty(
-                                    contract,
-                                    function,
-                                    &ty,
-                                    Some(elem),
-                                    data,
-                                    begin,
-                                    end,
-                                );
-                            }
+                            self.decode_ty(contract, function, &ty, Some(elem), data, begin, end);
                         },
                     );
                 } else {
-                    // FIXME
+                    let offset = self.decode_ty(
+                        contract,
+                        function,
+                        &resolver::Type::Uint(32),
+                        None,
+                        data,
+                        begin,
+                        end,
+                    );
+
+                    let mut dataoffset = unsafe {
+                        contract
+                            .builder
+                            .build_gep(begin, &[offset.into_int_value()], "dataoffset")
+                    };
+
+                    let datalen = self
+                        .decode_ty(
+                            contract,
+                            function,
+                            &resolver::Type::Uint(32),
+                            None,
+                            &mut dataoffset,
+                            begin,
+                            end,
+                        )
+                        .into_int_value();
+
+                    let elem_ty = contract.llvm_var(&ty.deref());
+                    let elem_size = elem_ty
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false);
+
+                    let init = contract.builder.build_int_to_ptr(
+                        contract.context.i32_type().const_all_ones(),
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "invalid",
+                    );
+
+                    let v = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("vector_new").unwrap(),
+                            &[datalen.into(), elem_size.into(), init.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    contract.emit_loop_cond_first_with_pointer(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        datalen,
+                        &mut dataoffset,
+                        |elem_no: IntValue<'b>, data: &mut PointerValue<'b>| {
+                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let element_start = unsafe {
+                                contract.builder.build_gep(
+                                    v,
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            let elem = contract.builder.build_pointer_cast(
+                                element_start,
+                                elem_ty.ptr_type(AddressSpace::Generic),
+                                "entry",
+                            );
+
+                            self.decode_ty(contract, function, &ty, Some(elem), data, begin, end);
+                        },
+                    );
                 }
 
-                return to.into();
+                if let Some(to) = to {
+                    contract.builder.build_store(to, dest);
+                }
+
+                return dest.into();
             }
             resolver::Type::Struct(n) => {
-                let to =
-                    to.unwrap_or_else(|| contract.builder.build_alloca(contract.llvm_type(ty), ""));
+                let llvm_ty = contract.llvm_type(ty.deref());
+
+                let size = llvm_ty
+                    .size_of()
+                    .unwrap()
+                    .const_cast(contract.context.i32_type(), false);
+
+                let new = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[size.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let struct_pointer = contract.builder.build_pointer_cast(
+                    new,
+                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    &contract.ns.structs[*n].name,
+                );
 
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
                     let elem = unsafe {
                         contract.builder.build_gep(
-                            to,
+                            struct_pointer,
                             &[
                                 contract.context.i32_type().const_zero(),
                                 contract.context.i32_type().const_int(i as u64, false),
@@ -1162,20 +1266,14 @@ impl EthAbiEncoder {
                         )
                     };
 
-                    if field.ty.is_reference_type() {
-                        let val = contract
-                            .builder
-                            .build_alloca(contract.llvm_type(&field.ty), "");
-
-                        self.decode_ty(contract, function, &field.ty, Some(val), data, begin, end);
-
-                        contract.builder.build_store(elem, val);
-                    } else {
-                        self.decode_ty(contract, function, &field.ty, Some(elem), data, begin, end);
-                    }
+                    self.decode_ty(contract, function, &field.ty, Some(elem), data, begin, end);
                 }
 
-                return to.into();
+                if let Some(to) = to {
+                    contract.builder.build_store(to, struct_pointer);
+                }
+
+                return struct_pointer.into();
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
@@ -1236,18 +1334,21 @@ impl EthAbiEncoder {
                     .left()
                     .unwrap();
 
-                return contract
-                    .builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        contract
-                            .module
-                            .get_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "string",
-                    )
-                    .into();
+                let v = contract.builder.build_pointer_cast(
+                    v.into_pointer_value(),
+                    contract
+                        .module
+                        .get_type("struct.vector")
+                        .unwrap()
+                        .ptr_type(AddressSpace::Generic),
+                    "string",
+                );
+
+                if let Some(to) = to {
+                    contract.builder.build_store(to, v);
+                }
+
+                return v.into();
             }
         };
 
