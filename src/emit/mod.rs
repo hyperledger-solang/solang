@@ -1595,7 +1595,8 @@ impl<'a> Contract<'a> {
                 let (left, left_len) = self.string_location(l, vartab, function, runtime);
                 let (right, right_len) = self.string_location(r, vartab, function, runtime);
 
-                self.builder
+                let v = self
+                    .builder
                     .build_call(
                         self.module.get_function("concat").unwrap(),
                         &[left.into(), left_len.into(), right.into(), right_len.into()],
@@ -1603,7 +1604,18 @@ impl<'a> Contract<'a> {
                     )
                     .try_as_basic_value()
                     .left()
-                    .unwrap()
+                    .unwrap();
+
+                self.builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        self.module
+                            .get_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
             }
             Expression::Poison => unreachable!(),
         }

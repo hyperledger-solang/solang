@@ -1421,6 +1421,27 @@ fn encode_string() {
 }
 
 #[test]
+fn decode_string() {
+    let mut runtime = build_solidity(
+        r##"
+        contract foo {
+            function f(string a) public returns (string) {
+                return a + " ";
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    let ret = runtime.function("f", &[ethabi::Token::String("Hello, World!".to_owned())]);
+
+    assert_eq!(
+        ret,
+        vec!(ethabi::Token::String("Hello, World! ".to_owned()))
+    );
+}
+
+#[test]
 fn revert() {
     let mut runtime = build_solidity(
         r##"
