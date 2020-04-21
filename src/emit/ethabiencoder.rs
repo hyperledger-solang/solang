@@ -915,7 +915,7 @@ impl EthAbiEncoder {
         }
     }
 
-    /// recursively encode a single ty
+    /// recursively decode a single ty
     fn decode_ty<'b>(
         &self,
         contract: &Contract<'b>,
@@ -923,6 +923,7 @@ impl EthAbiEncoder {
         ty: &resolver::Type,
         to: Option<PointerValue<'b>>,
         data: &mut PointerValue<'b>,
+        end: PointerValue<'b>,
     ) -> BasicValueEnum<'b> {
         let val = match &ty {
             resolver::Type::Bool => {
@@ -1110,7 +1111,14 @@ impl EthAbiEncoder {
                 }
             }
             resolver::Type::Enum(n) => {
-                return self.decode_ty(contract, function, &contract.ns.enums[*n].ty, to, data);
+                return self.decode_ty(
+                    contract,
+                    function,
+                    &contract.ns.enums[*n].ty,
+                    to,
+                    data,
+                    end,
+                );
             }
             resolver::Type::Array(_, dim) => {
                 let to =
@@ -1140,10 +1148,10 @@ impl EthAbiEncoder {
                                 let val = contract
                                     .builder
                                     .build_alloca(contract.llvm_type(&ty.deref()), "");
-                                self.decode_ty(contract, function, &ty, Some(val), data);
+                                self.decode_ty(contract, function, &ty, Some(val), data, end);
                                 contract.builder.build_store(elem, val);
                             } else {
-                                self.decode_ty(contract, function, &ty, Some(elem), data);
+                                self.decode_ty(contract, function, &ty, Some(elem), data, end);
                             }
                         },
                     );
@@ -1174,11 +1182,11 @@ impl EthAbiEncoder {
                             .builder
                             .build_alloca(contract.llvm_type(&field.ty), "");
 
-                        self.decode_ty(contract, function, &field.ty, Some(val), data);
+                        self.decode_ty(contract, function, &field.ty, Some(val), data, end);
 
                         contract.builder.build_store(elem, val);
                     } else {
-                        self.decode_ty(contract, function, &field.ty, Some(elem), data);
+                        self.decode_ty(contract, function, &field.ty, Some(elem), data, end);
                     }
                 }
 
@@ -1187,10 +1195,10 @@ impl EthAbiEncoder {
             resolver::Type::Undef => unreachable!(),
             resolver::Type::Mapping(_, _) => unreachable!(),
             resolver::Type::StorageRef(ty) => {
-                return self.decode_ty(contract, function, ty, to, data);
+                return self.decode_ty(contract, function, ty, to, data, end);
             }
             resolver::Type::Ref(ty) => {
-                return self.decode_ty(contract, function, ty, to, data);
+                return self.decode_ty(contract, function, ty, to, data, end);
             }
             resolver::Type::String | resolver::Type::DynamicBytes => unimplemented!(),
         };
@@ -1203,7 +1211,43 @@ impl EthAbiEncoder {
             )
         };
 
+        self.check_overrun(contract, function, *data, end);
+
         val
+    }
+
+    /// Check that data has not overrun end
+    fn check_overrun(
+        &self,
+        contract: &Contract,
+        function: FunctionValue,
+        data: PointerValue,
+        end: PointerValue,
+    ) {
+        let in_bounds = contract.builder.build_int_compare(
+            IntPredicate::ULE,
+            contract
+                .builder
+                .build_ptr_to_int(data, contract.context.i32_type(), "args"),
+            contract
+                .builder
+                .build_ptr_to_int(end, contract.context.i32_type(), "end"),
+            "is_done",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+        contract
+            .builder
+            .build_conditional_branch(in_bounds, success_block, bail_block);
+
+        contract.builder.position_at_end(bail_block);
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(3, false)));
+
+        contract.builder.position_at_end(success_block);
     }
 
     /// abi decode the encoded data into the BasicValueEnums
@@ -1213,41 +1257,21 @@ impl EthAbiEncoder {
         function: FunctionValue,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
-        length: IntValue,
+        datalength: IntValue<'b>,
         spec: &[resolver::Parameter],
     ) {
-        let expected_length = spec
-            .iter()
-            .map(|arg| self.encoded_fixed_length(&arg.ty, contract.ns))
-            .sum();
         let mut data = data;
-        let decode_block = contract.context.append_basic_block(function, "abi_decode");
-        let wrong_length_block = contract
-            .context
-            .append_basic_block(function, "wrong_abi_length");
 
-        let is_ok = contract.builder.build_int_compare(
-            IntPredicate::EQ,
-            length,
-            contract
-                .context
-                .i32_type()
-                .const_int(expected_length, false),
-            "correct_length",
+        let data8 = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "",
         );
 
-        contract
-            .builder
-            .build_conditional_branch(is_ok, decode_block, wrong_length_block);
-
-        // FIXME: generate a call to revert/abort with some human readable error or error code
-        contract.builder.position_at_end(wrong_length_block);
-        contract.builder.build_unreachable();
-
-        contract.builder.position_at_end(decode_block);
+        let dataend8 = unsafe { contract.builder.build_gep(data8, &[datalength], "dataend8") };
 
         for arg in spec {
-            args.push(self.decode_ty(contract, function, &arg.ty, None, &mut data));
+            args.push(self.decode_ty(contract, function, &arg.ty, None, &mut data, dataend8));
         }
     }
 }
