@@ -641,7 +641,7 @@ impl SubstrateTarget {
                         .into_int_value();
 
                     // details about our array elements
-                    let elem_ty = contract.llvm_type(&ty.array_elem());
+                    let elem_ty = contract.llvm_var(&ty.array_elem());
                     let elem_size = elem_ty
                         .size_of()
                         .unwrap()

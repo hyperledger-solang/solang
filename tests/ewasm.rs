@@ -305,8 +305,10 @@ impl TestRuntime {
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(Some(RuntimeValue::I32(0))) => {}
+            Ok(Some(RuntimeValue::I32(ret))) => panic!("main returns: {}", ret),
             Err(e) => panic!("fail to invoke main: {}", e),
-            _ => panic!("fail to invoke main"),
+            Ok(None) => panic!("fail to invoke main"),
+            _ => panic!("fail to invoke main, unknown"),
         }
 
         println!("RETURNDATA: {}", hex::encode(&self.output));
@@ -1508,4 +1510,45 @@ fn create() {
     runtime.constructor(&[]);
 
     runtime.function("x", &[]);
+}
+
+#[test]
+fn decode_complexish() {
+    let mut runtime = build_solidity(
+        r##"
+        pragma solidity 0;
+
+        struct foo1 {
+            int32 f1;
+            string f2;
+            int64[2] f3;
+            int64[] f4;
+        }
+
+        contract c {
+            function test(foo1[] a) public {
+                assert(a.length == 1);
+                assert(a[0].f2 == "Hello, World!");
+                assert(a[0].f3[0] == 55);
+                assert(a[0].f3[1] == 59);
+                assert(a[0].f4.length == 1);
+                assert(a[0].f4[0] == 102);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.function(
+        "test",
+        &[ethabi::Token::Array(vec![ethabi::Token::Tuple(vec![
+            ethabi::Token::Int(ethereum_types::U256::from(102)),
+            ethabi::Token::String("Hello, World!".to_owned()),
+            ethabi::Token::FixedArray(vec![
+                ethabi::Token::Int(ethereum_types::U256::from(55)),
+                ethabi::Token::Int(ethereum_types::U256::from(59)),
+            ]),
+            ethabi::Token::Array(vec![ethabi::Token::Int(ethereum_types::U256::from(102))]),
+        ])])],
+    );
 }

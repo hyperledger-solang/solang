@@ -3767,7 +3767,19 @@ fn array_subscript(
                     (array_length, resolver::Type::Uint(256))
                 } else {
                     (
-                        Expression::DynamicArrayLength(*loc, Box::new(array_expr.clone())),
+                        Expression::DynamicArrayLength(
+                            *loc,
+                            Box::new(cast(
+                                &array.loc(),
+                                array_expr.clone(),
+                                &array_ty,
+                                &array_ty.deref(),
+                                true,
+                                contract,
+                                ns,
+                                errors,
+                            )?),
+                        ),
                         resolver::Type::Uint(32),
                     )
                 }
