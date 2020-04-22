@@ -77,7 +77,7 @@ pub enum Instr {
         res: Vec<usize>,
         address: Expression,
         contract_no: usize,
-        func: usize,
+        function_no: usize,
         args: Vec<Expression>,
     },
 }
@@ -526,7 +526,7 @@ impl ControlFlowGraph {
                 res,
                 address,
                 contract_no,
-                func,
+                function_no,
                 args,
             } => format!(
                 "{} = external call address:{} signature:{} func:{}.{} {}",
@@ -539,9 +539,9 @@ impl ControlFlowGraph {
                     s.join(", ")
                 },
                 self.expr_to_string(contract, ns, address),
-                ns.contracts[*contract_no].functions[*func].signature,
+                ns.contracts[*contract_no].functions[*function_no].signature,
                 ns.contracts[*contract_no].name,
-                ns.contracts[*contract_no].functions[*func].name,
+                ns.contracts[*contract_no].functions[*function_no].name,
                 {
                     let s: Vec<String> = args
                         .iter()

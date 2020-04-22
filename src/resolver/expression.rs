@@ -4544,7 +4544,7 @@ fn method_call(
                         res: vec![temp_pos],
                         address: var_expr,
                         contract_no: *contract_no,
-                        func: n,
+                        function_no: n,
                         args: cast_args,
                     },
                 );
@@ -4556,7 +4556,7 @@ fn method_call(
                         res: Vec::new(),
                         address: var_expr,
                         contract_no: *contract_no,
-                        func: n,
+                        function_no: n,
                         args: cast_args,
                     },
                 );
