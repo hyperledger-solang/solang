@@ -319,6 +319,33 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
+        contract.module.add_function(
+            "call",
+            contract.context.i32_type().fn_type(
+                &[
+                    contract.context.i64_type().into(), // gas
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // address result
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // valueOffset
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // input offset
+                    contract.context.i32_type().into(), // input length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
         let noreturn = contract
             .context
             .create_enum_attribute(Attribute::get_named_enum_kind_id("noreturn"), 0);
@@ -1008,6 +1035,64 @@ impl TargetRuntime for EwasmTarget {
                     input.into(),
                     input_len.into(),
                     address.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+        contract
+            .builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        contract.builder.position_at_end(bail_block);
+
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(success_block);
+    }
+
+    fn external_call<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        payload: PointerValue<'b>,
+        payload_len: IntValue<'b>,
+        address: PointerValue<'b>,
+    ) {
+        // balance is a u128
+        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+
+        // call create
+        let ret = contract
+            .builder
+            .build_call(
+                contract.module.get_function("call").unwrap(),
+                &[
+                    contract.context.i64_type().const_zero().into(),
+                    address.into(),
+                    balance.into(),
+                    payload.into(),
+                    payload_len.into(),
                 ],
                 "",
             )

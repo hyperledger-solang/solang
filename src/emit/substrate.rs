@@ -1961,4 +1961,16 @@ impl TargetRuntime for SubstrateTarget {
             "",
         );
     }
+
+    /// Call external contract
+    fn external_call<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _function: FunctionValue,
+        _payload: PointerValue<'b>,
+        _payload_len: IntValue<'b>,
+        _address: PointerValue<'b>,
+    ) {
+        unimplemented!();
+    }
 }

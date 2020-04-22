@@ -174,6 +174,16 @@ pub trait TargetRuntime {
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
     );
+
+    /// call external function
+    fn external_call<'b>(
+        &self,
+        contract: &Contract<'b>,
+        function: FunctionValue,
+        payload: PointerValue<'b>,
+        payload_len: IntValue<'b>,
+        address: PointerValue<'b>,
+    );
 }
 
 pub struct Contract<'a> {
@@ -2755,7 +2765,46 @@ impl<'a> Contract<'a> {
                                 .collect::<Vec<BasicValueEnum>>(),
                         );
                     }
-                    cfg::Instr::ExternalCall { .. } => unimplemented!(),
+                    cfg::Instr::ExternalCall {
+                        address,
+                        contract_no,
+                        function_no,
+                        args,
+                        ..
+                    } => {
+                        let dest_func = &self.ns.contracts[*contract_no].functions[*function_no];
+                        let (payload, payload_len) = runtime.abi_encode(
+                            self,
+                            Some(dest_func.selector()),
+                            false,
+                            function,
+                            &args
+                                .iter()
+                                .map(|a| self.expression(&a, &w.vars, function, runtime))
+                                .collect::<Vec<BasicValueEnum>>(),
+                            &dest_func.params,
+                        );
+                        let address = self
+                            .expression(address, &w.vars, function, runtime)
+                            .into_int_value();
+
+                        let addr = self.builder.build_array_alloca(
+                            self.context.i8_type(),
+                            self.context.i32_type().const_int(20, false),
+                            "address",
+                        );
+
+                        self.builder.build_store(
+                            self.builder.build_pointer_cast(
+                                addr,
+                                address.get_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
+                            address,
+                        );
+
+                        runtime.external_call(self, function, payload, payload_len, addr);
+                    }
                 }
             }
         }
