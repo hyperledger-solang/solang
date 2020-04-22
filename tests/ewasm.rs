@@ -318,6 +318,33 @@ impl TestRuntime {
             .unwrap()
     }
 
+    fn function_abi_fail(&mut self, name: &str, args: &[Token], patch: fn(&mut Vec<u8>)) {
+        let mut calldata = match self.abi.functions[name][0].encode_input(args) {
+            Ok(n) => n,
+            Err(x) => panic!(format!("{}", x)),
+        };
+
+        patch(&mut calldata);
+
+        let module = self.create_module(&self.accounts[&self.cur]);
+
+        println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
+
+        self.input = calldata;
+
+        match module.invoke_export("main", &[], self) {
+            Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                TrapKind::Host(_) => {}
+                _ => panic!("fail to invoke main: {}", trap),
+            },
+            Ok(Some(RuntimeValue::I32(3))) => {}
+            Ok(Some(RuntimeValue::I32(ret))) => panic!("main returns: {}", ret),
+            Err(e) => panic!("fail to invoke main: {}", e),
+            Ok(None) => panic!("fail to invoke main"),
+            _ => panic!("fail to invoke main, unknown"),
+        }
+    }
+
     fn function_revert(&mut self, name: &str, args: &[Token]) -> Option<String> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
@@ -1550,5 +1577,56 @@ fn decode_complexish() {
             ]),
             ethabi::Token::Array(vec![ethabi::Token::Int(ethereum_types::U256::from(102))]),
         ])])],
+    );
+}
+
+#[test]
+fn decode_bad_abi() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    // patch offset to be garbage
+    runtime.function_abi_fail(
+        "test",
+        &[ethabi::Token::String("Hello, World!".to_owned())],
+        |x| x[30] = 2,
+    );
+
+    // patch offset to overflow
+    runtime.function_abi_fail(
+        "test",
+        &[ethabi::Token::String("Hello, World!".to_owned())],
+        |x| {
+            x[31] = 0xff;
+            x[30] = 0xff;
+            x[29] = 0xff;
+            x[28] = 0xe0;
+        },
+    );
+
+    // patch length to be garbage
+    runtime.function_abi_fail(
+        "test",
+        &[ethabi::Token::String("Hello, World!".to_owned())],
+        |x| x[62] = 2,
+    );
+
+    // patch length to overflow
+    runtime.function_abi_fail(
+        "test",
+        &[ethabi::Token::String("Hello, World!".to_owned())],
+        |x| {
+            x[63] = 0xff;
+            x[62] = 0xff;
+            x[61] = 0xff;
+            x[60] = 0xe0;
+        },
     );
 }
