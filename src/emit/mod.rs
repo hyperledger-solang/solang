@@ -179,11 +179,12 @@ pub trait TargetRuntime {
     fn external_call<'b>(
         &self,
         contract: &Contract<'b>,
-        function: FunctionValue,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
-    );
+    ) -> IntValue<'b>;
+
+    fn return_data<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, IntValue<'b>);
 }
 
 pub struct Contract<'a> {
@@ -2770,7 +2771,7 @@ impl<'a> Contract<'a> {
                         contract_no,
                         function_no,
                         args,
-                        ..
+                        res,
                     } => {
                         let dest_func = &self.ns.contracts[*contract_no].functions[*function_no];
                         let (payload, payload_len) = runtime.abi_encode(
@@ -2803,7 +2804,50 @@ impl<'a> Contract<'a> {
                             address,
                         );
 
-                        runtime.external_call(self, function, payload, payload_len, addr);
+                        let ret = runtime.external_call(self, payload, payload_len, addr);
+
+                        let success = self.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            ret,
+                            self.context.i32_type().const_zero(),
+                            "success",
+                        );
+
+                        let success_block = self.context.append_basic_block(function, "success");
+                        let bail_block = self.context.append_basic_block(function, "bail");
+                        self.builder
+                            .build_conditional_branch(success, success_block, bail_block);
+                        self.builder.position_at_end(bail_block);
+
+                        runtime.assert_failure(
+                            self,
+                            self.context
+                                .i8_type()
+                                .ptr_type(AddressSpace::Generic)
+                                .const_null(),
+                            self.context.i32_type().const_zero(),
+                        );
+
+                        self.builder.position_at_end(success_block);
+
+                        if !dest_func.returns.is_empty() {
+                            let (return_data, return_size) = runtime.return_data(self);
+
+                            let mut returns = Vec::new();
+
+                            runtime.abi_decode(
+                                self,
+                                function,
+                                &mut returns,
+                                return_data,
+                                return_size,
+                                &dest_func.returns,
+                            );
+
+                            for (i, ret) in returns.into_iter().enumerate() {
+                                w.vars[res[i]].value = ret;
+                            }
+                        }
                     }
                 }
             }

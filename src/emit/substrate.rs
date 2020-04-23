@@ -1966,11 +1966,47 @@ impl TargetRuntime for SubstrateTarget {
     fn external_call<'b>(
         &self,
         _contract: &Contract<'b>,
-        _function: FunctionValue,
         _payload: PointerValue<'b>,
         _payload_len: IntValue<'b>,
         _address: PointerValue<'b>,
-    ) {
+    ) -> IntValue<'b> {
         unimplemented!();
+    }
+
+    fn return_data<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, IntValue<'b>) {
+        let length = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_scratch_size").unwrap(),
+                &[],
+                "returndatasize",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let return_data = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[length],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_read").unwrap(),
+            &[
+                return_data.into(),
+                contract.context.i32_type().const_zero().into(),
+                length,
+            ],
+            "",
+        );
+
+        (return_data, length.into_int_value())
     }
 }
