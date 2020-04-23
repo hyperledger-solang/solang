@@ -745,11 +745,15 @@ impl TargetRuntime for SabreTarget {
     fn external_call<'b>(
         &self,
         _contract: &Contract<'b>,
-        _function: FunctionValue,
         _payload: PointerValue<'b>,
         _payload_len: IntValue<'b>,
         _address: PointerValue<'b>,
-    ) {
+    ) -> IntValue<'b> {
+        panic!("Sabre cannot call other contracts");
+    }
+
+    /// Get return buffer for external call
+    fn return_data<'b>(&self, _contract: &Contract<'b>) -> (PointerValue<'b>, IntValue<'b>) {
         panic!("Sabre cannot call other contracts");
     }
 }
