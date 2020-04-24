@@ -71,14 +71,12 @@ pub fn compile(
     // resolve
     let (ns, errors) = resolver::resolver(ast, target);
 
-    let results = ns
-        .contracts
-        .iter()
+    let results = (0..ns.contracts.len())
         .map(|c| {
             let (abistr, _) = abi::generate_abi(c, &ns, false);
 
             // codegen
-            let contract = emit::Contract::build(&ctx, c, &ns, filename, opt);
+            let contract = emit::Contract::build(&ctx, &ns.contracts[c], &ns, filename, opt);
 
             let bc = contract.wasm(true).expect("llvm wasm emit should work");
 

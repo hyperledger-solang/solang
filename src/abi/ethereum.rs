@@ -1,7 +1,7 @@
 // ethereum style ABIs
 
 use parser::ast;
-use resolver::{Contract, Namespace, Type};
+use resolver::{Namespace, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -39,13 +39,13 @@ impl Type {
     }
 }
 
-pub fn gen_abi(contract: &Contract, ns: &Namespace) -> Vec<ABI> {
-    fn parameter_to_abi(name: &str, ty: &Type, contract: &Contract, ns: &Namespace) -> ABIParam {
+pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
+    fn parameter_to_abi(name: &str, ty: &Type, ns: &Namespace) -> ABIParam {
         let components = if let Some(n) = ty.is_struct_or_array_of_struct() {
             ns.structs[n]
                 .fields
                 .iter()
-                .map(|f| parameter_to_abi(&f.name, &f.ty, contract, ns))
+                .map(|f| parameter_to_abi(&f.name, &f.ty, ns))
                 .collect::<Vec<ABIParam>>()
         } else {
             Vec::new()
@@ -53,13 +53,13 @@ pub fn gen_abi(contract: &Contract, ns: &Namespace) -> Vec<ABI> {
 
         ABIParam {
             name: name.to_string(),
-            ty: ty.to_signature_string(contract, ns),
-            internal_ty: ty.to_string(contract, ns),
+            ty: ty.to_signature_string(ns),
+            internal_ty: ty.to_string(ns),
             components,
         }
     }
 
-    contract
+    ns.contracts[contract_no]
         .constructors
         .iter()
         .map(|f| ABI {
@@ -80,16 +80,16 @@ pub fn gen_abi(contract: &Contract, ns: &Namespace) -> Vec<ABI> {
             inputs: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(&p.name, &p.ty, contract, ns))
+                .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
                 .collect(),
             outputs: f
                 .returns
                 .iter()
-                .map(|p| parameter_to_abi(&p.name, &p.ty, contract, ns))
+                .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
                 .collect(),
         })
         .chain(
-            contract
+            ns.contracts[contract_no]
                 .functions
                 .iter()
                 .filter(|f| {
@@ -121,12 +121,12 @@ pub fn gen_abi(contract: &Contract, ns: &Namespace) -> Vec<ABI> {
                     inputs: f
                         .params
                         .iter()
-                        .map(|p| parameter_to_abi(&p.name, &p.ty, contract, ns))
+                        .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
                         .collect(),
                     outputs: f
                         .returns
                         .iter()
-                        .map(|p| parameter_to_abi(&p.name, &p.ty, contract, ns))
+                        .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
                         .collect(),
                 }),
         )

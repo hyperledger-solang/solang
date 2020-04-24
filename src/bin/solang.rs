@@ -161,7 +161,7 @@ fn process_filename(
     }
 
     // emit phase
-    for resolved_contract in &ns.contracts {
+    for (contract_no, resolved_contract) in ns.contracts.iter().enumerate() {
         if let Some("cfg") = matches.value_of("EMIT") {
             println!("{}", resolved_contract.print_to_string(&ns));
             continue;
@@ -298,7 +298,7 @@ fn process_filename(
             json_contracts.insert(
                 contract.name.to_owned(),
                 JsonContract {
-                    abi: abi::ethereum::gen_abi(&resolved_contract, &ns),
+                    abi: abi::ethereum::gen_abi(contract_no, &ns),
                     ewasm: EwasmContract {
                         wasm: hex::encode_upper(wasm),
                     },
@@ -318,7 +318,7 @@ fn process_filename(
             let mut file = File::create(wasm_filename).unwrap();
             file.write_all(&wasm).unwrap();
 
-            let (abi_bytes, abi_ext) = resolved_contract.abi(&ns, verbose);
+            let (abi_bytes, abi_ext) = ns.abi(contract_no, verbose);
             let abi_filename = output_file(&contract.name, abi_ext);
 
             if verbose {

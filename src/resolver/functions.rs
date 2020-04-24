@@ -1,4 +1,4 @@
-use super::{Contract, FunctionDecl, Namespace, Parameter, Symbol, Type};
+use super::{FunctionDecl, Namespace, Parameter, Symbol, Type};
 use output::Output;
 use parser::ast;
 use Target;
@@ -6,8 +6,8 @@ use Target;
 pub fn function_decl(
     f: &ast::FunctionDefinition,
     i: usize,
-    contract: &mut Contract,
-    ns: &Namespace,
+    contract_no: usize,
+    ns: &mut Namespace,
     errors: &mut Vec<Output>,
 ) -> bool {
     let mut params = Vec::new();
@@ -94,7 +94,7 @@ pub fn function_decl(
     };
 
     for p in &f.params {
-        match contract.resolve_type(&p.ty, ns, errors) {
+        match ns.resolve_type(Some(contract_no), &p.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
@@ -143,7 +143,7 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
-        match contract.resolve_type(&r.ty, ns, errors) {
+        match ns.resolve_type(Some(contract_no), &r.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
@@ -226,14 +226,13 @@ pub fn function_decl(
         visibility,
         params,
         returns,
-        &contract,
         ns,
     );
 
     if f.constructor {
         // In the eth solidity, only one constructor is allowed
-        if ns.target == Target::Ewasm && !contract.constructors.is_empty() {
-            let prev = &contract.constructors[i];
+        if ns.target == Target::Ewasm && !ns.contracts[contract_no].constructors.is_empty() {
+            let prev = &ns.contracts[contract_no].constructors[i];
             errors.push(Output::error_with_note(
                 f.loc,
                 "constructor already defined".to_string(),
@@ -273,7 +272,7 @@ pub fn function_decl(
             _ => (),
         }
 
-        for v in contract.constructors.iter() {
+        for v in ns.contracts[contract_no].constructors.iter() {
             if v.signature == fdecl.signature {
                 errors.push(Output::error_with_note(
                     f.loc,
@@ -286,14 +285,16 @@ pub fn function_decl(
             }
         }
 
-        contract.constructors.push(fdecl);
+        ns.contracts[contract_no].constructors.push(fdecl);
 
         true
     } else if let Some(ref id) = f.name {
-        if let Some(Symbol::Function(ref mut v)) = contract.symbols.get_mut(&id.name) {
+        if let Some(Symbol::Function(ref mut v)) =
+            ns.symbols.get_mut(&(Some(contract_no), id.name.to_owned()))
+        {
             // check if signature already present
             for o in v.iter() {
-                if contract.functions[o.1].signature == fdecl.signature {
+                if ns.contracts[contract_no].functions[o.1].signature == fdecl.signature {
                     errors.push(Output::error_with_note(
                         f.loc,
                         "overloaded function with this signature already exist".to_string(),
@@ -304,23 +305,28 @@ pub fn function_decl(
                 }
             }
 
-            let pos = contract.functions.len();
+            let pos = ns.contracts[contract_no].functions.len();
 
-            contract.functions.push(fdecl);
+            ns.contracts[contract_no].functions.push(fdecl);
 
             v.push((f.loc, pos));
             return true;
         }
 
-        let pos = contract.functions.len();
+        let pos = ns.contracts[contract_no].functions.len();
 
-        contract.functions.push(fdecl);
+        ns.contracts[contract_no].functions.push(fdecl);
 
-        contract.add_symbol(id, Symbol::Function(vec![(id.loc, pos)]), ns, errors)
+        ns.add_symbol(
+            Some(contract_no),
+            id,
+            Symbol::Function(vec![(id.loc, pos)]),
+            errors,
+        )
     } else {
         // fallback function
-        if let Some(i) = contract.fallback_function() {
-            let prev = &contract.functions[i];
+        if let Some(i) = ns.contracts[contract_no].fallback_function() {
+            let prev = &ns.contracts[contract_no].functions[i];
 
             errors.push(Output::error_with_note(
                 f.loc,
@@ -341,7 +347,7 @@ pub fn function_decl(
             return false;
         }
 
-        contract.functions.push(fdecl);
+        ns.contracts[contract_no].functions.push(fdecl);
 
         true
     }
@@ -352,17 +358,6 @@ fn signatures() {
     use super::*;
 
     let ns = Namespace::new(Target::Ewasm);
-    let contract = Contract {
-        doc: vec![],
-        name: String::from("foo"),
-        constructors: Vec::new(),
-        functions: Vec::new(),
-        variables: Vec::new(),
-        constants: Vec::new(),
-        initializer: cfg::ControlFlowGraph::new(),
-        top_of_contract_storage: BigInt::zero(),
-        symbols: HashMap::new(),
-    };
 
     let fdecl = FunctionDecl::new(
         ast::Loc(0, 0),
@@ -383,7 +378,6 @@ fn signatures() {
             },
         ],
         Vec::new(),
-        &contract,
         &ns,
     );
 

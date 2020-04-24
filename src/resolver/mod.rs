@@ -47,7 +47,7 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn to_string(&self, contract: &Contract, ns: &Namespace) -> String {
+    pub fn to_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Address => "address".to_string(),
@@ -60,7 +60,7 @@ impl Type {
             Type::Struct(n) => format!("struct {}", ns.structs[*n].print_to_string()),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 len.iter()
                     .map(|l| match l {
                         None => "[]".to_string(),
@@ -68,14 +68,10 @@ impl Type {
                     })
                     .collect::<String>()
             ),
-            Type::Mapping(k, v) => format!(
-                "mapping({} => {})",
-                k.to_string(contract, ns),
-                v.to_string(contract, ns)
-            ),
+            Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
-            Type::Ref(r) => r.to_string(contract, ns),
-            Type::StorageRef(ty) => format!("storage {}", ty.to_string(contract, ns)),
+            Type::Ref(r) => r.to_string(ns),
+            Type::StorageRef(ty) => format!("storage {}", ty.to_string(ns)),
             Type::Undef => "undefined".to_owned(),
         }
     }
@@ -94,7 +90,7 @@ impl Type {
         }
     }
 
-    pub fn to_signature_string(&self, contract: &Contract, ns: &Namespace) -> String {
+    pub fn to_signature_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
             Type::Contract(_) | Type::Address => "address".to_string(),
@@ -103,10 +99,10 @@ impl Type {
             Type::Bytes(n) => format!("bytes{}", n),
             Type::DynamicBytes => "bytes".to_string(),
             Type::String => "string".to_string(),
-            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(contract, ns),
+            Type::Enum(n) => ns.enums[*n].ty.to_signature_string(ns),
             Type::Array(ty, len) => format!(
                 "{}{}",
-                ty.to_signature_string(contract, ns),
+                ty.to_signature_string(ns),
                 len.iter()
                     .map(|l| match l {
                         None => "[]".to_string(),
@@ -114,8 +110,8 @@ impl Type {
                     })
                     .collect::<String>()
             ),
-            Type::Ref(r) => r.to_string(contract, ns),
-            Type::StorageRef(r) => r.to_string(contract, ns),
+            Type::Ref(r) => r.to_string(ns),
+            Type::StorageRef(r) => r.to_string(ns),
             Type::Struct(_) => "tuple".to_owned(),
             Type::Mapping(_, _) => unreachable!(),
             Type::Undef => "undefined".to_owned(),
@@ -445,7 +441,6 @@ impl FunctionDecl {
         visibility: ast::Visibility,
         params: Vec<Parameter>,
         returns: Vec<Parameter>,
-        contract: &Contract,
         ns: &Namespace,
     ) -> Self {
         let signature = format!(
@@ -453,7 +448,7 @@ impl FunctionDecl {
             name,
             params
                 .iter()
-                .map(|p| p.ty.to_signature_string(contract, ns))
+                .map(|p| p.ty.to_signature_string(ns))
                 .collect::<Vec<String>>()
                 .join(",")
         );
@@ -584,7 +579,7 @@ pub struct Namespace {
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
     pub contracts: Vec<Contract>,
-    symbols: HashMap<String, Symbol>,
+    symbols: HashMap<(Option<usize>, String), Symbol>,
 }
 
 impl Namespace {
@@ -600,17 +595,25 @@ impl Namespace {
 
     pub fn add_symbol(
         &mut self,
+        contract_no: Option<usize>,
         id: &ast::Identifier,
         symbol: Symbol,
         errors: &mut Vec<Output>,
     ) -> bool {
-        if let Some(prev) = self.symbols.get(&id.name) {
+        let mut prev = self.symbols.get(&(contract_no, id.name.to_owned()));
+
+        // if there is nothing on the contract level, try top-level scope
+        if prev.is_none() && contract_no.is_some() {
+            prev = self.symbols.get(&(None, id.name.to_owned()));
+        }
+
+        if let Some(prev) = prev {
             match prev {
                 Symbol::Contract(c, _) => {
                     errors.push(Output::error_with_note(
                         id.loc,
                         format!(
-                            "{} is already defined as contract name",
+                            "{} is already defined as a contract name",
                             id.name.to_string()
                         ),
                         *c,
@@ -620,7 +623,7 @@ impl Namespace {
                 Symbol::Enum(c, _) => {
                     errors.push(Output::error_with_note(
                         id.loc,
-                        format!("{} is already defined as enum", id.name.to_string()),
+                        format!("{} is already defined as an enum", id.name.to_string()),
                         *c,
                         "location of previous definition".to_string(),
                     ));
@@ -628,7 +631,7 @@ impl Namespace {
                 Symbol::Struct(c, _) => {
                     errors.push(Output::error_with_note(
                         id.loc,
-                        format!("{} is already defined as struct", id.name.to_string()),
+                        format!("{} is already defined as a struct", id.name.to_string()),
                         *c,
                         "location of previous definition".to_string(),
                     ));
@@ -638,323 +641,22 @@ impl Namespace {
 
             false
         } else {
-            self.symbols.insert(id.name.to_string(), symbol);
+            self.symbols
+                .insert((contract_no, id.name.to_string()), symbol);
 
             true
         }
     }
-}
 
-pub struct Contract {
-    pub doc: Vec<String>,
-    pub name: String,
-    // events
-    pub constructors: Vec<FunctionDecl>,
-    pub functions: Vec<FunctionDecl>,
-    pub variables: Vec<ContractVariable>,
-    pub constants: Vec<Expression>,
-    pub initializer: cfg::ControlFlowGraph,
-    top_of_contract_storage: BigInt,
-    symbols: HashMap<String, Symbol>,
-}
-
-impl Contract {
-    pub fn new(name: &str) -> Self {
-        Contract {
-            name: name.to_owned(),
-            doc: Vec::new(),
-            constructors: Vec::new(),
-            functions: Vec::new(),
-            variables: Vec::new(),
-            constants: Vec::new(),
-            initializer: cfg::ControlFlowGraph::new(),
-            top_of_contract_storage: BigInt::zero(),
-            symbols: HashMap::new(),
-        }
-    }
-
-    fn add_symbol(
-        &mut self,
-        id: &ast::Identifier,
-        symbol: Symbol,
-        ns: &Namespace,
-        errors: &mut Vec<Output>,
-    ) -> bool {
-        let mut s = self.symbols.get(&id.name);
-
-        if s.is_none() {
-            s = ns.symbols.get(&id.name);
-        }
-
-        if let Some(prev) = s {
-            match prev {
-                Symbol::Enum(e, _) => {
-                    errors.push(Output::error_with_note(
-                        id.loc,
-                        format!("{} is already defined as enum", id.name.to_string()),
-                        *e,
-                        "location of previous definition".to_string(),
-                    ));
-                }
-                Symbol::Function(v) => {
-                    let mut notes = Vec::new();
-
-                    for e in v {
-                        notes.push(Note {
-                            pos: e.0,
-                            message: "location of previous definition".into(),
-                        });
-                    }
-
-                    errors.push(Output::error_with_notes(
-                        id.loc,
-                        format!("{} is already defined as function", id.name.to_string()),
-                        notes,
-                    ));
-                }
-                Symbol::Variable(e, _) => {
-                    errors.push(Output::error_with_note(
-                        id.loc,
-                        format!(
-                            "{} is already defined as state variable",
-                            id.name.to_string()
-                        ),
-                        *e,
-                        "location of previous definition".to_string(),
-                    ));
-                }
-                Symbol::Struct(e, _) => {
-                    errors.push(Output::error_with_note(
-                        id.loc,
-                        format!(
-                            "{} is already defined as struct definition",
-                            id.name.to_string()
-                        ),
-                        *e,
-                        "location of previous definition".to_string(),
-                    ));
-                }
-                Symbol::Contract(e, _) => {
-                    errors.push(Output::error_with_note(
-                        id.loc,
-                        format!(
-                            "{} is already defined as a contract name",
-                            id.name.to_string()
-                        ),
-                        *e,
-                        "location of previous definition".to_string(),
-                    ));
-                }
-            }
-            return false;
-        }
-
-        self.symbols.insert(id.name.to_string(), symbol);
-
-        true
-    }
-
-    /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
-    pub fn resolve_type(
-        &self,
-        id: &ast::ComplexType,
-        ns: &Namespace,
-        errors: &mut Vec<Output>,
-    ) -> Result<Type, ()> {
-        fn resolve_dimensions(
-            ast_dimensions: &[Option<(ast::Loc, BigInt)>],
-            errors: &mut Vec<Output>,
-        ) -> Result<Vec<Option<BigInt>>, ()> {
-            let mut dimensions = Vec::new();
-
-            for d in ast_dimensions.iter() {
-                if let Some((loc, n)) = d {
-                    if n.is_zero() {
-                        errors.push(Output::decl_error(
-                            *loc,
-                            "zero size of array declared".to_string(),
-                        ));
-                        return Err(());
-                    } else if n.is_negative() {
-                        errors.push(Output::decl_error(
-                            *loc,
-                            "negative size of array declared".to_string(),
-                        ));
-                        return Err(());
-                    }
-                    dimensions.push(Some(n.clone()));
-                } else {
-                    dimensions.push(None);
-                }
-            }
-
-            Ok(dimensions)
-        }
-
-        match id {
-            ast::ComplexType::Primitive(_, p, dimensions) if dimensions.is_empty() => {
-                Ok(Type::from(*p))
-            }
-            ast::ComplexType::Primitive(_, p, exprs) => {
-                let mut dimensions = Vec::new();
-
-                for expr in exprs {
-                    dimensions.push(match expr {
-                        Some(e) => self.resolve_array_dimension(e, ns, errors)?,
-                        None => None,
-                    });
-                }
-
-                Ok(Type::Array(
-                    Box::new(Type::from(*p)),
-                    resolve_dimensions(&dimensions, errors)?,
-                ))
-            }
-            ast::ComplexType::Mapping(_, k, v) => {
-                let key = self.resolve_type(k, ns, errors)?;
-                let value = self.resolve_type(v, ns, errors)?;
-
-                match key {
-                    Type::Mapping(_, _) => {
-                        errors.push(Output::decl_error(
-                            k.loc(),
-                            "key of mapping cannot be another mapping type".to_string(),
-                        ));
-                        Err(())
-                    }
-                    Type::Struct(_) => {
-                        errors.push(Output::decl_error(
-                            k.loc(),
-                            "key of mapping cannot be struct type".to_string(),
-                        ));
-                        Err(())
-                    }
-                    Type::Array(_, _) => {
-                        errors.push(Output::decl_error(
-                            k.loc(),
-                            "key of mapping cannot be array type".to_string(),
-                        ));
-                        Err(())
-                    }
-                    _ => Ok(Type::Mapping(Box::new(key), Box::new(value))),
-                }
-            }
-            ast::ComplexType::Unresolved(expr) => {
-                let (id, dimensions) = self.expr_to_type(&expr, ns, errors)?;
-
-                let mut s = self.symbols.get(&id.name);
-
-                if s.is_none() {
-                    s = ns.symbols.get(&id.name);
-                }
-
-                match s {
-                    None => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("type ‘{}’ not found", id.name),
-                        ));
-                        Err(())
-                    }
-                    Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
-                    Some(Symbol::Enum(_, n)) => Ok(Type::Array(
-                        Box::new(Type::Enum(*n)),
-                        resolve_dimensions(&dimensions, errors)?,
-                    )),
-                    Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
-                    Some(Symbol::Struct(_, n)) => Ok(Type::Array(
-                        Box::new(Type::Struct(*n)),
-                        resolve_dimensions(&dimensions, errors)?,
-                    )),
-                    Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
-                    Some(Symbol::Contract(_, n)) => Ok(Type::Array(
-                        Box::new(Type::Contract(*n)),
-                        resolve_dimensions(&dimensions, errors)?,
-                    )),
-                    Some(Symbol::Function(_)) => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("‘{}’ is a function", id.name),
-                        ));
-                        Err(())
-                    }
-                    Some(Symbol::Variable(_, _)) => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("‘{}’ is a contract variable", id.name),
-                        ));
-                        Err(())
-                    }
-                }
-            }
-        }
-    }
-
-    // An array type can look like foo[2], if foo is an enum type. The lalrpop parses
-    // this as an expression, so we need to convert it to Type and check there are
-    // no unexpected expressions types.
-    pub fn expr_to_type(
-        &self,
-        expr: &ast::Expression,
-        ns: &Namespace,
-        errors: &mut Vec<Output>,
-    ) -> Result<(ast::Identifier, Vec<ArrayDimension>), ()> {
-        let mut expr = expr;
-        let mut dimensions = Vec::new();
-
-        loop {
-            expr = match expr {
-                ast::Expression::ArraySubscript(_, r, None) => {
-                    dimensions.push(None);
-
-                    &*r
-                }
-                ast::Expression::ArraySubscript(_, r, Some(index)) => {
-                    dimensions.push(self.resolve_array_dimension(index, ns, errors)?);
-
-                    &*r
-                }
-                ast::Expression::Variable(id) => return Ok((id.clone(), dimensions)),
-                _ => {
-                    errors.push(Output::decl_error(
-                        expr.loc(),
-                        "expression found where type expected".to_string(),
-                    ));
-                    return Err(());
-                }
-            }
-        }
-    }
-
-    /// Resolve an expression which defines the array length, e.g. 2**8 in "bool[2**8]"
-    pub fn resolve_array_dimension(
-        &self,
-        expr: &ast::Expression,
-        ns: &Namespace,
-        errors: &mut Vec<Output>,
-    ) -> Result<ArrayDimension, ()> {
-        let mut cfg = ControlFlowGraph::new();
-        let (size_expr, size_ty) = expression(&expr, &mut cfg, &self, ns, &mut None, errors)?;
-        match size_ty {
-            Type::Uint(_) | Type::Int(_) => {}
-            _ => {
-                errors.push(Output::decl_error(
-                    expr.loc(),
-                    "expression is not a number".to_string(),
-                ));
-                return Err(());
-            }
-        }
-        Ok(Some(eval_number_expression(&size_expr, errors)?))
-    }
-
-    pub fn resolve_enum(&self, id: &ast::Identifier, ns: &Namespace) -> Option<usize> {
-        if let Some(Symbol::Enum(_, n)) = self.symbols.get(&id.name) {
+    pub fn resolve_enum(&self, contract_no: Option<usize>, id: &ast::Identifier) -> Option<usize> {
+        if let Some(Symbol::Enum(_, n)) = self.symbols.get(&(contract_no, id.name.to_owned())) {
             return Some(*n);
         }
 
-        if let Some(Symbol::Enum(_, n)) = ns.symbols.get(&id.name) {
-            return Some(*n);
+        if contract_no.is_some() {
+            if let Some(Symbol::Enum(_, n)) = self.symbols.get(&(None, id.name.to_owned())) {
+                return Some(*n);
+            }
         }
 
         None
@@ -962,10 +664,11 @@ impl Contract {
 
     pub fn resolve_func(
         &self,
+        contract_no: usize,
         id: &ast::Identifier,
         errors: &mut Vec<Output>,
     ) -> Result<&Vec<(ast::Loc, usize)>, ()> {
-        match self.symbols.get(&id.name) {
+        match self.symbols.get(&(Some(contract_no), id.name.to_owned())) {
             Some(Symbol::Function(v)) => Ok(v),
             _ => {
                 errors.push(Output::error(
@@ -980,14 +683,14 @@ impl Contract {
 
     pub fn resolve_var(
         &self,
+        contract_no: usize,
         id: &ast::Identifier,
-        ns: &Namespace,
         errors: &mut Vec<Output>,
     ) -> Result<usize, ()> {
-        let mut s = self.symbols.get(&id.name);
+        let mut s = self.symbols.get(&(Some(contract_no), id.name.to_owned()));
 
         if s.is_none() {
-            s = ns.symbols.get(&id.name);
+            s = self.symbols.get(&(None, id.name.to_owned()));
         }
 
         match s {
@@ -1030,11 +733,16 @@ impl Contract {
         }
     }
 
-    pub fn check_shadowing(&self, id: &ast::Identifier, ns: &Namespace, errors: &mut Vec<Output>) {
-        let mut s = self.symbols.get(&id.name);
+    pub fn check_shadowing(
+        &self,
+        contract_no: usize,
+        id: &ast::Identifier,
+        errors: &mut Vec<Output>,
+    ) {
+        let mut s = self.symbols.get(&(Some(contract_no), id.name.to_owned()));
 
         if s.is_none() {
-            s = ns.symbols.get(&id.name);
+            s = self.symbols.get(&(None, id.name.to_owned()));
         }
 
         match s {
@@ -1088,6 +796,230 @@ impl Contract {
         }
     }
 
+    /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
+    pub fn resolve_type(
+        &self,
+        contract_no: Option<usize>,
+        id: &ast::ComplexType,
+        errors: &mut Vec<Output>,
+    ) -> Result<Type, ()> {
+        fn resolve_dimensions(
+            ast_dimensions: &[Option<(ast::Loc, BigInt)>],
+            errors: &mut Vec<Output>,
+        ) -> Result<Vec<Option<BigInt>>, ()> {
+            let mut dimensions = Vec::new();
+
+            for d in ast_dimensions.iter() {
+                if let Some((loc, n)) = d {
+                    if n.is_zero() {
+                        errors.push(Output::decl_error(
+                            *loc,
+                            "zero size of array declared".to_string(),
+                        ));
+                        return Err(());
+                    } else if n.is_negative() {
+                        errors.push(Output::decl_error(
+                            *loc,
+                            "negative size of array declared".to_string(),
+                        ));
+                        return Err(());
+                    }
+                    dimensions.push(Some(n.clone()));
+                } else {
+                    dimensions.push(None);
+                }
+            }
+
+            Ok(dimensions)
+        }
+
+        match id {
+            ast::ComplexType::Primitive(_, p, dimensions) if dimensions.is_empty() => {
+                Ok(Type::from(*p))
+            }
+            ast::ComplexType::Primitive(_, p, exprs) => {
+                let mut dimensions = Vec::new();
+
+                for expr in exprs {
+                    dimensions.push(match expr {
+                        Some(e) => self.resolve_array_dimension(e, errors)?,
+                        None => None,
+                    });
+                }
+
+                Ok(Type::Array(
+                    Box::new(Type::from(*p)),
+                    resolve_dimensions(&dimensions, errors)?,
+                ))
+            }
+            ast::ComplexType::Mapping(_, k, v) => {
+                let key = self.resolve_type(contract_no, k, errors)?;
+                let value = self.resolve_type(contract_no, v, errors)?;
+
+                match key {
+                    Type::Mapping(_, _) => {
+                        errors.push(Output::decl_error(
+                            k.loc(),
+                            "key of mapping cannot be another mapping type".to_string(),
+                        ));
+                        Err(())
+                    }
+                    Type::Struct(_) => {
+                        errors.push(Output::decl_error(
+                            k.loc(),
+                            "key of mapping cannot be struct type".to_string(),
+                        ));
+                        Err(())
+                    }
+                    Type::Array(_, _) => {
+                        errors.push(Output::decl_error(
+                            k.loc(),
+                            "key of mapping cannot be array type".to_string(),
+                        ));
+                        Err(())
+                    }
+                    _ => Ok(Type::Mapping(Box::new(key), Box::new(value))),
+                }
+            }
+            ast::ComplexType::Unresolved(expr) => {
+                let (id, dimensions) = self.expr_to_type(&expr, errors)?;
+
+                let mut s = self.symbols.get(&(contract_no, id.name.to_owned()));
+
+                // try global scope
+                if s.is_none() && contract_no.is_some() {
+                    s = self.symbols.get(&(None, id.name.to_owned()));
+                }
+
+                match s {
+                    None => {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("type ‘{}’ not found", id.name),
+                        ));
+                        Err(())
+                    }
+                    Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
+                    Some(Symbol::Enum(_, n)) => Ok(Type::Array(
+                        Box::new(Type::Enum(*n)),
+                        resolve_dimensions(&dimensions, errors)?,
+                    )),
+                    Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
+                    Some(Symbol::Struct(_, n)) => Ok(Type::Array(
+                        Box::new(Type::Struct(*n)),
+                        resolve_dimensions(&dimensions, errors)?,
+                    )),
+                    Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
+                    Some(Symbol::Contract(_, n)) => Ok(Type::Array(
+                        Box::new(Type::Contract(*n)),
+                        resolve_dimensions(&dimensions, errors)?,
+                    )),
+                    Some(Symbol::Function(_)) => {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is a function", id.name),
+                        ));
+                        Err(())
+                    }
+                    Some(Symbol::Variable(_, _)) => {
+                        errors.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is a contract variable", id.name),
+                        ));
+                        Err(())
+                    }
+                }
+            }
+        }
+    }
+
+    // An array type can look like foo[2], if foo is an enum type. The lalrpop parses
+    // this as an expression, so we need to convert it to Type and check there are
+    // no unexpected expressions types.
+    pub fn expr_to_type(
+        &self,
+        expr: &ast::Expression,
+        errors: &mut Vec<Output>,
+    ) -> Result<(ast::Identifier, Vec<ArrayDimension>), ()> {
+        let mut expr = expr;
+        let mut dimensions = Vec::new();
+
+        loop {
+            expr = match expr {
+                ast::Expression::ArraySubscript(_, r, None) => {
+                    dimensions.push(None);
+
+                    &*r
+                }
+                ast::Expression::ArraySubscript(_, r, Some(index)) => {
+                    dimensions.push(self.resolve_array_dimension(index, errors)?);
+
+                    &*r
+                }
+                ast::Expression::Variable(id) => return Ok((id.clone(), dimensions)),
+                _ => {
+                    errors.push(Output::decl_error(
+                        expr.loc(),
+                        "expression found where type expected".to_string(),
+                    ));
+                    return Err(());
+                }
+            }
+        }
+    }
+
+    /// Resolve an expression which defines the array length, e.g. 2**8 in "bool[2**8]"
+    pub fn resolve_array_dimension(
+        &self,
+        expr: &ast::Expression,
+        errors: &mut Vec<Output>,
+    ) -> Result<ArrayDimension, ()> {
+        let mut cfg = ControlFlowGraph::new();
+        let (size_expr, size_ty) = expression(&expr, &mut cfg, None, self, &mut None, errors)?;
+        match size_ty {
+            Type::Uint(_) | Type::Int(_) => {}
+            _ => {
+                errors.push(Output::decl_error(
+                    expr.loc(),
+                    "expression is not a number".to_string(),
+                ));
+                return Err(());
+            }
+        }
+        Ok(Some(eval_number_expression(&size_expr, errors)?))
+    }
+
+    pub fn abi(&self, contract_no: usize, verbose: bool) -> (String, &'static str) {
+        abi::generate_abi(contract_no, self, verbose)
+    }
+}
+
+pub struct Contract {
+    pub doc: Vec<String>,
+    pub name: String,
+    // events
+    pub constructors: Vec<FunctionDecl>,
+    pub functions: Vec<FunctionDecl>,
+    pub variables: Vec<ContractVariable>,
+    pub constants: Vec<Expression>,
+    pub initializer: cfg::ControlFlowGraph,
+    top_of_contract_storage: BigInt,
+}
+
+impl Contract {
+    pub fn new(name: &str) -> Self {
+        Contract {
+            name: name.to_owned(),
+            doc: Vec::new(),
+            constructors: Vec::new(),
+            functions: Vec::new(),
+            variables: Vec::new(),
+            constants: Vec::new(),
+            initializer: cfg::ControlFlowGraph::new(),
+            top_of_contract_storage: BigInt::zero(),
+        }
+    }
+
     pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
             if f.fallback {
@@ -1095,10 +1027,6 @@ impl Contract {
             }
         }
         None
-    }
-
-    pub fn abi(&self, ns: &Namespace, verbose: bool) -> (String, &'static str) {
-        abi::generate_abi(self, ns, verbose)
     }
 
     pub fn emit<'a>(
@@ -1190,18 +1118,10 @@ fn resolve_contract(
     target: Target,
     errors: &mut Vec<Output>,
     ns: &mut Namespace,
-) {
-    let mut contract = Contract {
-        name: def.name.name.to_string(),
-        doc: def.doc.clone(),
-        constructors: Vec::new(),
-        functions: Vec::new(),
-        variables: Vec::new(),
-        constants: Vec::new(),
-        initializer: cfg::ControlFlowGraph::new(),
-        top_of_contract_storage: BigInt::zero(),
-        symbols: HashMap::new(),
-    };
+) -> bool {
+    let contract_no = ns.contracts.len();
+
+    ns.contracts.push(Contract::new(&def.name.name));
 
     errors.push(Output::info(
         def.loc,
@@ -1209,17 +1129,18 @@ fn resolve_contract(
     ));
 
     let mut broken = !ns.add_symbol(
+        None,
         &def.name,
-        Symbol::Contract(def.loc, ns.contracts.len()),
+        Symbol::Contract(def.loc, contract_no),
         errors,
     );
 
-    builtin::add_builtin_function(&mut contract, ns);
+    builtin::add_builtin_function(ns, contract_no);
 
     // first resolve enums
     for parts in &def.parts {
         if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            if !enum_decl(e, Some(&mut contract), ns, errors) {
+            if !enum_decl(e, Some(contract_no), ns, errors) {
                 broken = true;
             }
         }
@@ -1230,7 +1151,7 @@ fn resolve_contract(
     // resolve struct definitions
     for parts in &def.parts {
         if let ast::ContractPart::StructDefinition(ref s) = parts {
-            if !structs::struct_decl(s, Some(&mut contract), ns, errors) {
+            if !structs::struct_decl(s, Some(contract_no), ns, errors) {
                 broken = true;
             }
         }
@@ -1239,23 +1160,29 @@ fn resolve_contract(
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {
         if let ast::ContractPart::FunctionDefinition(ref f) = parts {
-            if !functions::function_decl(f, i, &mut contract, ns, errors) {
+            if !functions::function_decl(f, i, contract_no, ns, errors) {
                 broken = true;
             }
         }
     }
 
     // resolve state variables
-    if variables::contract_variables(&def, &mut contract, ns, errors) {
+    if variables::contract_variables(&def, contract_no, ns, errors) {
         broken = true;
     }
 
     // resolve constructor bodies
-    for f in 0..contract.constructors.len() {
-        if let Some(ast_index) = contract.constructors[f].ast_index {
+    for f in 0..ns.contracts[contract_no].constructors.len() {
+        if let Some(ast_index) = ns.contracts[contract_no].constructors[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(ast_f, &contract.constructors[f], &contract, &ns, errors) {
-                    Ok(c) => contract.constructors[f].cfg = Some(c),
+                match cfg::generate_cfg(
+                    ast_f,
+                    &ns.contracts[contract_no].constructors[f],
+                    contract_no,
+                    &ns,
+                    errors,
+                ) {
+                    Ok(c) => ns.contracts[contract_no].constructors[f].cfg = Some(c),
                     Err(_) => broken = true,
                 }
             }
@@ -1263,7 +1190,7 @@ fn resolve_contract(
     }
 
     // Substrate requires one constructor
-    if contract.constructors.is_empty() && target == Target::Substrate {
+    if ns.contracts[contract_no].constructors.is_empty() && target == Target::Substrate {
         let mut fdecl = FunctionDecl::new(
             ast::Loc(0, 0),
             "".to_owned(),
@@ -1274,7 +1201,6 @@ fn resolve_contract(
             ast::Visibility::Public(ast::Loc(0, 0)),
             Vec::new(),
             Vec::new(),
-            &contract,
             ns,
         );
 
@@ -1286,16 +1212,22 @@ fn resolve_contract(
 
         fdecl.cfg = Some(Box::new(cfg));
 
-        contract.constructors.push(fdecl);
+        ns.contracts[contract_no].constructors.push(fdecl);
     }
 
     // resolve function bodies
-    for f in 0..contract.functions.len() {
-        if let Some(ast_index) = contract.functions[f].ast_index {
+    for f in 0..ns.contracts[contract_no].functions.len() {
+        if let Some(ast_index) = ns.contracts[contract_no].functions[f].ast_index {
             if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(ast_f, &contract.functions[f], &contract, &ns, errors) {
+                match cfg::generate_cfg(
+                    ast_f,
+                    &ns.contracts[contract_no].functions[f],
+                    contract_no,
+                    &ns,
+                    errors,
+                ) {
                     Ok(c) => {
-                        match &contract.functions[f].mutability {
+                        match &ns.contracts[contract_no].functions[f].mutability {
                             Some(ast::StateMutability::Pure(loc)) => {
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
@@ -1332,7 +1264,7 @@ fn resolve_contract(
                                 unimplemented!();
                             }
                             None => {
-                                let loc = &contract.functions[f].loc;
+                                let loc = &ns.contracts[contract_no].functions[f].loc;
 
                                 if !c.writes_contract_storage && !c.reads_contract_storage() {
                                     errors.push(Output::warning(
@@ -1347,7 +1279,7 @@ fn resolve_contract(
                                 }
                             }
                         }
-                        contract.functions[f].cfg = Some(c);
+                        ns.contracts[contract_no].functions[f].cfg = Some(c);
                     }
                     Err(_) => broken = true,
                 }
@@ -1355,16 +1287,14 @@ fn resolve_contract(
         }
     }
 
-    if !broken {
-        ns.contracts.push(contract);
-    }
+    broken
 }
 
 /// Parse enum declaration. If the declaration is invalid, it is still generated
 /// so that we can continue parsing, with errors recorded.
 fn enum_decl(
     enum_: &ast::EnumDefinition,
-    mut contract: Option<&mut Contract>,
+    contract_no: Option<usize>,
     ns: &mut Namespace,
     errors: &mut Vec<Output>,
 ) -> bool {
@@ -1411,8 +1341,8 @@ fn enum_decl(
 
     let decl = EnumDecl {
         name: enum_.name.name.to_string(),
-        contract: match contract {
-            Some(ref c) => Some(c.name.to_owned()),
+        contract: match contract_no {
+            Some(c) => Some(ns.contracts[c].name.to_owned()),
             None => None,
         },
         ty: Type::Uint(bits as u16),
@@ -1423,12 +1353,12 @@ fn enum_decl(
 
     ns.enums.push(decl);
 
-    if !(match contract {
-        Some(ref mut contract) => {
-            contract.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), ns, errors)
-        }
-        None => ns.add_symbol(&enum_.name, Symbol::Enum(enum_.name.loc, pos), errors),
-    }) {
+    if !ns.add_symbol(
+        contract_no,
+        &enum_.name,
+        Symbol::Enum(enum_.name.loc, pos),
+        errors,
+    ) {
         valid = false;
     }
 
@@ -1447,14 +1377,13 @@ fn enum_256values_is_uint8() {
     };
 
     let mut ns = Namespace::new(Target::Ewasm);
-    let mut contract = Contract::new("foo");
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "first".into(),
     });
 
-    assert!(enum_decl(&e, Some(&mut contract), &mut ns, &mut Vec::new()));
+    assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
@@ -1467,7 +1396,7 @@ fn enum_256values_is_uint8() {
     assert_eq!(e.values.len(), 256);
 
     e.name.name = "foo2".to_owned();
-    assert!(enum_decl(&e, Some(&mut contract), &mut ns, &mut Vec::new()));
+    assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     e.values.push(ast::Identifier {
@@ -1476,6 +1405,6 @@ fn enum_256values_is_uint8() {
     });
 
     e.name.name = "foo3".to_owned();
-    assert!(enum_decl(&e, Some(&mut contract), &mut ns, &mut Vec::new()));
+    assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }
