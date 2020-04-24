@@ -312,7 +312,7 @@ fn test_cast_errors() {
             }
         }
 
-        contract bar {
+        contract foo2 {
             enum X { Y1, Y2, Y3}
             X y;
 

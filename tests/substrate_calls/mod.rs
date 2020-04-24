@@ -195,7 +195,7 @@ fn contract_type() {
             }
         }
 
-        contract test {
+        contract foo {
             function test1(printer x) public {
                 address y = x;
             }
@@ -229,7 +229,7 @@ fn contract_type() {
             }
         }
 
-        contract test {
+        contract foo {
             function test1(printer x) public {
                 address y = 102;
             }
@@ -250,7 +250,7 @@ fn contract_type() {
             }
         }
 
-        contract test {
+        contract foo {
             function test1() public {
                 printer y = 102;
             }

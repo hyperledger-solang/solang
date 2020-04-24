@@ -17,7 +17,7 @@ mod eval;
 pub mod expression;
 mod functions;
 mod storage;
-mod structs;
+mod types;
 mod variables;
 
 use inkwell::OptimizationLevel;
@@ -378,6 +378,7 @@ pub struct StructField {
 
 pub struct StructDecl {
     pub name: String,
+    pub loc: ast::Loc,
     pub contract: Option<String>,
     pub fields: Vec<StructField>,
 }
@@ -593,6 +594,7 @@ impl Namespace {
         }
     }
 
+    /// Add symbol to symbol table; either returns true for success, or adds an appropriate error
     pub fn add_symbol(
         &mut self,
         contract_no: Option<usize>,
@@ -1071,19 +1073,22 @@ impl Contract {
 }
 
 pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) {
-    let mut errors = Vec::new();
-    let mut ns = Namespace::new(target);
+    // first resolve all the types we can find
+    let (mut ns, mut errors) = types::resolve(&s, target);
+
+    // give up if we failed
+    if !errors.is_empty() {
+        return (ns, errors);
+    }
+
+    let mut contract_no = 0;
 
     for part in s.0 {
         match part {
             ast::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(def, target, &mut errors, &mut ns);
-            }
-            ast::SourceUnitPart::EnumDefinition(def) => {
-                let _ = enum_decl(&def, None, &mut ns, &mut errors);
-            }
-            ast::SourceUnitPart::StructDefinition(def) => {
-                let _ = structs::struct_decl(&def, None, &mut ns, &mut errors);
+                resolve_contract(def, contract_no, target, &mut errors, &mut ns);
+
+                contract_no += 1;
             }
             ast::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
@@ -1106,7 +1111,7 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
                     ));
                 }
             }
-            _ => unimplemented!(),
+            _ => (),
         }
     }
 
@@ -1115,47 +1120,19 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
 
 fn resolve_contract(
     def: Box<ast::ContractDefinition>,
+    contract_no: usize,
     target: Target,
     errors: &mut Vec<Output>,
     ns: &mut Namespace,
 ) -> bool {
-    let contract_no = ns.contracts.len();
-
-    ns.contracts.push(Contract::new(&def.name.name));
-
     errors.push(Output::info(
         def.loc,
         format!("found contract {}", def.name.name),
     ));
 
-    let mut broken = !ns.add_symbol(
-        None,
-        &def.name,
-        Symbol::Contract(def.loc, contract_no),
-        errors,
-    );
-
     builtin::add_builtin_function(ns, contract_no);
 
-    // first resolve enums
-    for parts in &def.parts {
-        if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            if !enum_decl(e, Some(contract_no), ns, errors) {
-                broken = true;
-            }
-        }
-    }
-
-    // FIXME: next resolve event
-
-    // resolve struct definitions
-    for parts in &def.parts {
-        if let ast::ContractPart::StructDefinition(ref s) = parts {
-            if !structs::struct_decl(s, Some(contract_no), ns, errors) {
-                broken = true;
-            }
-        }
-    }
+    let mut broken = false;
 
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {
@@ -1288,123 +1265,4 @@ fn resolve_contract(
     }
 
     broken
-}
-
-/// Parse enum declaration. If the declaration is invalid, it is still generated
-/// so that we can continue parsing, with errors recorded.
-fn enum_decl(
-    enum_: &ast::EnumDefinition,
-    contract_no: Option<usize>,
-    ns: &mut Namespace,
-    errors: &mut Vec<Output>,
-) -> bool {
-    let mut valid = true;
-
-    let mut bits = if enum_.values.is_empty() {
-        errors.push(Output::error(
-            enum_.name.loc,
-            format!("enum ‘{}’ is missing fields", enum_.name.name),
-        ));
-        valid = false;
-
-        0
-    } else {
-        // Number of bits required to represent this enum
-        std::mem::size_of::<usize>() as u32 * 8 - (enum_.values.len() - 1).leading_zeros()
-    };
-
-    // round it up to the next
-    if bits <= 8 {
-        bits = 8;
-    } else {
-        bits += 7;
-        bits -= bits % 8;
-    }
-
-    // check for duplicates
-    let mut entries: HashMap<String, (ast::Loc, usize)> = HashMap::new();
-
-    for (i, e) in enum_.values.iter().enumerate() {
-        if let Some(prev) = entries.get(&e.name.to_string()) {
-            errors.push(Output::error_with_note(
-                e.loc,
-                format!("duplicate enum value {}", e.name),
-                prev.0,
-                "location of previous definition".to_string(),
-            ));
-            valid = false;
-            continue;
-        }
-
-        entries.insert(e.name.to_string(), (e.loc, i));
-    }
-
-    let decl = EnumDecl {
-        name: enum_.name.name.to_string(),
-        contract: match contract_no {
-            Some(c) => Some(ns.contracts[c].name.to_owned()),
-            None => None,
-        },
-        ty: Type::Uint(bits as u16),
-        values: entries,
-    };
-
-    let pos = ns.enums.len();
-
-    ns.enums.push(decl);
-
-    if !ns.add_symbol(
-        contract_no,
-        &enum_.name,
-        Symbol::Enum(enum_.name.loc, pos),
-        errors,
-    ) {
-        valid = false;
-    }
-
-    valid
-}
-
-#[test]
-fn enum_256values_is_uint8() {
-    let mut e = ast::EnumDefinition {
-        doc: vec![],
-        name: ast::Identifier {
-            loc: ast::Loc(0, 0),
-            name: "foo".into(),
-        },
-        values: Vec::new(),
-    };
-
-    let mut ns = Namespace::new(Target::Ewasm);
-
-    e.values.push(ast::Identifier {
-        loc: ast::Loc(0, 0),
-        name: "first".into(),
-    });
-
-    assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
-
-    for i in 1..256 {
-        e.values.push(ast::Identifier {
-            loc: ast::Loc(0, 0),
-            name: format!("val{}", i),
-        })
-    }
-
-    assert_eq!(e.values.len(), 256);
-
-    e.name.name = "foo2".to_owned();
-    assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
-
-    e.values.push(ast::Identifier {
-        loc: ast::Loc(0, 0),
-        name: "another".into(),
-    });
-
-    e.name.name = "foo3".to_owned();
-    assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
-    assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }

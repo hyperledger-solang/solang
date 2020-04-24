@@ -114,7 +114,29 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "type ‘Foo’ not found");
+    assert_eq!(first_error(errors), "struct ‘Foo’ has infinite size");
+
+    // is it impossible to define recursive structs
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract c {
+            s z;
+        }
+        
+        struct s {
+            bool f1;
+            int32 f2;
+            s2 f3;
+        }
+        
+        struct s2 {
+            bytes4 selector;
+            s foo;	
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "struct ‘s’ has infinite size");
 
     // literal initializers
     let (_, errors) = parse_and_resolve(
