@@ -255,22 +255,22 @@ impl ControlFlowGraph {
             }
             Expression::StorageLoad(_, ty, expr) => format!(
                 "({} storage[{}])",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, expr)
             ),
             Expression::ZeroExt(_, ty, e) => format!(
                 "(zext {} {})",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
             Expression::SignExt(_, ty, e) => format!(
                 "(sext {} {})",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
             Expression::Trunc(_, ty, e) => format!(
                 "(trunc {} {})",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
             Expression::SMore(_, l, r) => format!(
@@ -378,12 +378,12 @@ impl ControlFlowGraph {
             Expression::Poison => "☠".to_string(),
             Expression::AllocDynamicArray(_, ty, size, None) => format!(
                 "(alloc {} len {})",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, size)
             ),
             Expression::AllocDynamicArray(_, ty, size, Some(init)) => format!(
                 "(alloc {} {} {})",
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.expr_to_string(contract, ns, size),
                 match str::from_utf8(init) {
                     Ok(s) => format!("\"{}\"", s.to_owned()),
@@ -452,7 +452,7 @@ impl ControlFlowGraph {
             }
             Instr::Set { res, expr } => format!(
                 "ty:{} %{} = {}",
-                self.vars[*res].ty.to_string(contract, ns),
+                self.vars[*res].ty.to_string(ns),
                 self.vars[*res].id.name,
                 self.expr_to_string(contract, ns, expr)
             ),
@@ -479,12 +479,12 @@ impl ControlFlowGraph {
             Instr::ClearStorage { ty, storage } => format!(
                 "clear storage slot({}) ty:{}",
                 self.expr_to_string(contract, ns, storage),
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
             ),
             Instr::SetStorage { ty, local, storage } => format!(
                 "set storage slot({}) ty:{} = %{}",
                 self.expr_to_string(contract, ns, storage),
-                ty.to_string(contract, ns),
+                ty.to_string(ns),
                 self.vars[*local].id.name
             ),
             Instr::SetStorageBytes {
@@ -621,7 +621,7 @@ impl ControlFlowGraph {
 pub fn generate_cfg(
     ast_f: &ast::FunctionDefinition,
     resolve_f: &resolver::FunctionDecl,
-    contract: &resolver::Contract,
+    contract_no: usize,
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<Box<ControlFlowGraph>, ()> {
@@ -634,7 +634,7 @@ pub fn generate_cfg(
     for (i, p) in ast_f.params.iter().enumerate() {
         if let Some(ref name) = p.name {
             if let Some(pos) = vartab.add(name, resolve_f.params[i].ty.clone(), errors) {
-                contract.check_shadowing(name, ns, errors);
+                ns.check_shadowing(contract_no, name, errors);
 
                 cfg.add(&mut vartab, Instr::FuncArg { res: pos, arg: i });
             }
@@ -650,7 +650,7 @@ pub fn generate_cfg(
         for (i, p) in ast_f.returns.iter().enumerate() {
             returns.push(if let Some(ref name) = p.name {
                 if let Some(pos) = vartab.add(name, resolve_f.returns[i].ty.clone(), errors) {
-                    contract.check_shadowing(name, ns, errors);
+                    ns.check_shadowing(contract_no, name, errors);
 
                     // set to zero
                     cfg.add(
@@ -696,7 +696,7 @@ pub fn generate_cfg(
         &ast_f.body,
         resolve_f,
         &mut cfg,
-        contract,
+        contract_no,
         ns,
         &mut vartab,
         &mut loops,
@@ -755,7 +755,7 @@ fn statement(
     stmt: &ast::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: usize,
     ns: &resolver::Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
@@ -763,7 +763,7 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let mut var_ty = contract.resolve_type(&decl.ty, ns, errors)?;
+            let mut var_ty = ns.resolve_type(Some(contract_no), &decl.ty, errors)?;
 
             if let Some(storage) = &decl.storage {
                 if !var_ty.can_have_data_location() {
@@ -803,7 +803,7 @@ fn statement(
 
             let e_t = if let Some(init) = init {
                 let (expr, init_ty) =
-                    expression(init, cfg, contract, ns, &mut Some(vartab), errors)?;
+                    expression(init, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
                 Some(cast(
                     &decl.name.loc,
@@ -811,7 +811,6 @@ fn statement(
                     &init_ty,
                     &var_ty,
                     true,
-                    contract,
                     ns,
                     errors,
                 )?)
@@ -820,7 +819,7 @@ fn statement(
             };
 
             if let Some(pos) = vartab.add(&decl.name, var_ty, errors) {
-                contract.check_shadowing(&decl.name, ns, errors);
+                ns.check_shadowing(contract_no, &decl.name, errors);
 
                 if let Some(expr) = e_t {
                     cfg.add(vartab, Instr::Set { res: pos, expr });
@@ -840,7 +839,7 @@ fn statement(
                     ));
                     return Err(());
                 }
-                reachable = statement(&stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+                reachable = statement(&stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
             }
 
             vartab.leave_scope();
@@ -911,18 +910,9 @@ fn statement(
             let mut exprs = Vec::new();
 
             for (i, r) in returns.iter().enumerate() {
-                let (e, ty) = expression(r, cfg, contract, ns, &mut Some(vartab), errors)?;
+                let (e, ty) = expression(r, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
-                exprs.push(cast(
-                    &r.loc(),
-                    e,
-                    &ty,
-                    &f.returns[i].ty,
-                    true,
-                    contract,
-                    ns,
-                    errors,
-                )?);
+                exprs.push(cast(&r.loc(), e, &ty, &f.returns[i].ty, true, ns, errors)?);
             }
 
             cfg.add(vartab, Instr::Return { value: exprs });
@@ -930,7 +920,8 @@ fn statement(
             Ok(false)
         }
         ast::Statement::Expression(expr) => {
-            let (expr, _) = expression(expr, cfg, contract, ns, &mut Some(vartab), errors)?;
+            let (expr, _) =
+                expression(expr, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
             if let Expression::Poison = expr {
                 // ignore
@@ -940,11 +931,28 @@ fn statement(
 
             Ok(true)
         }
-        ast::Statement::If(cond, then_stmt, None) => {
-            if_then(cond, then_stmt, f, cfg, contract, ns, vartab, loops, errors)
-        }
+        ast::Statement::If(cond, then_stmt, None) => if_then(
+            cond,
+            then_stmt,
+            f,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            loops,
+            errors,
+        ),
         ast::Statement::If(cond, then_stmt, Some(else_stmt)) => if_then_else(
-            cond, then_stmt, else_stmt, f, cfg, contract, ns, vartab, loops, errors,
+            cond,
+            then_stmt,
+            else_stmt,
+            f,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            loops,
+            errors,
         ),
         ast::Statement::Break => match loops.do_break() {
             Some(bb) => {
@@ -986,7 +994,7 @@ fn statement(
             loops.new_scope(end, cond);
 
             let mut body_reachable =
-                statement(body_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+                statement(body_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
 
             if body_reachable {
                 cfg.add(vartab, Instr::Branch { bb: cond });
@@ -1002,8 +1010,14 @@ fn statement(
             if body_reachable {
                 cfg.set_basic_block(cond);
 
-                let (expr, expr_ty) =
-                    expression(cond_expr, cfg, contract, ns, &mut Some(vartab), errors)?;
+                let (expr, expr_ty) = expression(
+                    cond_expr,
+                    cfg,
+                    Some(contract_no),
+                    ns,
+                    &mut Some(vartab),
+                    errors,
+                )?;
 
                 cfg.add(
                     vartab,
@@ -1014,7 +1028,6 @@ fn statement(
                             &expr_ty,
                             &resolver::Type::Bool,
                             true,
-                            contract,
                             ns,
                             errors,
                         )?,
@@ -1042,8 +1055,14 @@ fn statement(
 
             cfg.set_basic_block(cond);
 
-            let (expr, expr_ty) =
-                expression(cond_expr, cfg, contract, ns, &mut Some(vartab), errors)?;
+            let (expr, expr_ty) = expression(
+                cond_expr,
+                cfg,
+                Some(contract_no),
+                ns,
+                &mut Some(vartab),
+                errors,
+            )?;
 
             cfg.add(
                 vartab,
@@ -1054,7 +1073,6 @@ fn statement(
                         &expr_ty,
                         &resolver::Type::Bool,
                         true,
-                        contract,
                         ns,
                         errors,
                     )?,
@@ -1069,7 +1087,8 @@ fn statement(
             vartab.new_dirty_tracker();
             loops.new_scope(end, cond);
 
-            let body_reachable = statement(body_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+            let body_reachable =
+                statement(body_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
 
             if body_reachable {
                 cfg.add(vartab, Instr::Branch { bb: cond });
@@ -1093,7 +1112,7 @@ fn statement(
             vartab.new_scope();
 
             if let Some(init_stmt) = init_stmt {
-                statement(init_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+                statement(init_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
             }
 
             cfg.add(vartab, Instr::Branch { bb: body });
@@ -1111,7 +1130,7 @@ fn statement(
 
             let mut body_reachable = match body_stmt {
                 Some(body_stmt) => {
-                    statement(body_stmt, f, cfg, contract, ns, vartab, loops, errors)?
+                    statement(body_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?
                 }
                 None => true,
             };
@@ -1130,7 +1149,7 @@ fn statement(
                 if let Some(next_stmt) = next_stmt {
                     cfg.set_basic_block(next);
                     body_reachable =
-                        statement(next_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+                        statement(next_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
                 }
 
                 if body_reachable {
@@ -1159,15 +1178,21 @@ fn statement(
             vartab.new_scope();
 
             if let Some(init_stmt) = init_stmt {
-                statement(init_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+                statement(init_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
             }
 
             cfg.add(vartab, Instr::Branch { bb: cond });
 
             cfg.set_basic_block(cond);
 
-            let (expr, expr_ty) =
-                expression(cond_expr, cfg, contract, ns, &mut Some(vartab), errors)?;
+            let (expr, expr_ty) = expression(
+                cond_expr,
+                cfg,
+                Some(contract_no),
+                ns,
+                &mut Some(vartab),
+                errors,
+            )?;
 
             cfg.add(
                 vartab,
@@ -1178,7 +1203,6 @@ fn statement(
                         &expr_ty,
                         &resolver::Type::Bool,
                         true,
-                        contract,
                         ns,
                         errors,
                     )?,
@@ -1201,7 +1225,7 @@ fn statement(
 
             let mut body_reachable = match body_stmt {
                 Some(body_stmt) => {
-                    statement(body_stmt, f, cfg, contract, ns, vartab, loops, errors)?
+                    statement(body_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?
                 }
                 None => true,
             };
@@ -1221,7 +1245,7 @@ fn statement(
 
                 if let Some(next_stmt) = next_stmt {
                     body_reachable =
-                        statement(next_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+                        statement(next_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
                 }
 
                 if body_reachable {
@@ -1253,13 +1277,13 @@ fn if_then(
     then_stmt: &ast::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: usize,
     ns: &resolver::Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
-    let (expr, expr_ty) = expression(cond, cfg, contract, ns, &mut Some(vartab), errors)?;
+    let (expr, expr_ty) = expression(cond, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
     let then = cfg.new_basic_block("then".to_string());
     let endif = cfg.new_basic_block("endif".to_string());
@@ -1273,7 +1297,6 @@ fn if_then(
                 &expr_ty,
                 &resolver::Type::Bool,
                 true,
-                contract,
                 ns,
                 errors,
             )?,
@@ -1287,7 +1310,7 @@ fn if_then(
     vartab.new_scope();
     vartab.new_dirty_tracker();
 
-    let reachable = statement(then_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+    let reachable = statement(then_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
 
     if reachable {
         cfg.add(vartab, Instr::Branch { bb: endif });
@@ -1308,13 +1331,13 @@ fn if_then_else(
     else_stmt: &ast::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: usize,
     ns: &resolver::Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
-    let (expr, expr_ty) = expression(cond, cfg, contract, ns, &mut Some(vartab), errors)?;
+    let (expr, expr_ty) = expression(cond, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
     let then = cfg.new_basic_block("then".to_string());
     let else_ = cfg.new_basic_block("else".to_string());
@@ -1329,7 +1352,6 @@ fn if_then_else(
                 &expr_ty,
                 &resolver::Type::Bool,
                 true,
-                contract,
                 ns,
                 errors,
             )?,
@@ -1344,7 +1366,7 @@ fn if_then_else(
     vartab.new_scope();
     vartab.new_dirty_tracker();
 
-    let then_reachable = statement(then_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+    let then_reachable = statement(then_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
 
     if then_reachable {
         cfg.add(vartab, Instr::Branch { bb: endif });
@@ -1357,7 +1379,7 @@ fn if_then_else(
 
     vartab.new_scope();
 
-    let else_reachable = statement(else_stmt, f, cfg, contract, ns, vartab, loops, errors)?;
+    let else_reachable = statement(else_stmt, f, cfg, contract_no, ns, vartab, loops, errors)?;
 
     if else_reachable {
         cfg.add(vartab, Instr::Branch { bb: endif });
@@ -1469,7 +1491,7 @@ impl Vartable {
     pub fn find(
         &mut self,
         id: &ast::Identifier,
-        contract: &resolver::Contract,
+        contract_no: usize,
         ns: &resolver::Namespace,
         errors: &mut Vec<output::Output>,
     ) -> Result<Variable, ()> {
@@ -1483,8 +1505,8 @@ impl Vartable {
             return Ok(self.vars[*n].clone());
         }
 
-        let v = contract.resolve_var(&id, ns, errors)?;
-        let var = &contract.variables[v];
+        let v = ns.resolve_var(contract_no, &id, errors)?;
+        let var = &ns.contracts[contract_no].variables[v];
         let pos = self.vars.len();
 
         self.vars.push(Variable {

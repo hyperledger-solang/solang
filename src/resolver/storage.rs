@@ -58,12 +58,12 @@ pub fn delete(
     loc: &ast::Loc,
     var: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: Option<usize>,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (var_expr, var_ty) = expression(var, cfg, contract, ns, vartab, errors)?;
+    let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     let tab = match vartab {
         &mut Some(ref mut tab) => tab,
@@ -112,7 +112,7 @@ pub fn array_push(
     ty: &resolver::Type,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: Option<usize>,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
@@ -168,7 +168,8 @@ pub fn array_push(
     );
 
     if args.len() == 1 {
-        let (val_expr, val_ty) = expression(&args[0], cfg, contract, ns, &mut Some(tab), errors)?;
+        let (val_expr, val_ty) =
+            expression(&args[0], cfg, contract_no, ns, &mut Some(tab), errors)?;
 
         let pos = tab.temp_anonymous(&elem_ty);
 
@@ -182,7 +183,6 @@ pub fn array_push(
                     &val_ty,
                     &elem_ty.deref(),
                     true,
-                    contract,
                     ns,
                     errors,
                 )?,
@@ -369,7 +369,7 @@ pub fn bytes_push(
     func: &ast::Identifier,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: Option<usize>,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
@@ -391,7 +391,7 @@ pub fn bytes_push(
         0 => Expression::NumberLiteral(*loc, 8, BigInt::zero()),
         1 => {
             let (val_expr, val_ty) =
-                expression(&args[0], cfg, contract, ns, &mut Some(tab), errors)?;
+                expression(&args[0], cfg, contract_no, ns, &mut Some(tab), errors)?;
 
             cast(
                 &args[0].loc(),
@@ -399,7 +399,6 @@ pub fn bytes_push(
                 &val_ty,
                 &resolver::Type::Bytes(1),
                 true,
-                contract,
                 ns,
                 errors,
             )?
@@ -458,7 +457,7 @@ pub fn mapping_subscript(
     mapping_ty: &resolver::Type,
     index: &ast::Expression,
     cfg: &mut ControlFlowGraph,
-    contract: &resolver::Contract,
+    contract_no: Option<usize>,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
@@ -468,7 +467,7 @@ pub fn mapping_subscript(
         _ => unreachable!(),
     };
 
-    let (index_expr, index_ty) = expression(index, cfg, contract, ns, vartab, errors)?;
+    let (index_expr, index_ty) = expression(index, cfg, contract_no, ns, vartab, errors)?;
 
     let index_expr = cast(
         &index.loc(),
@@ -476,7 +475,6 @@ pub fn mapping_subscript(
         &index_ty,
         key_ty,
         true,
-        contract,
         ns,
         errors,
     )?;
