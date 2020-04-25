@@ -97,6 +97,56 @@ fn contract_name() {
         first_warning(errors),
         "declaration of `test\' shadows contract name"
     );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract a {
+            function x() public {
+                b y = new b();
+            }
+        }
+        
+        contract b {
+            function x() public {
+                a y = new a();
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "circular reference creating contract ‘a’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract a {
+            function x() public {
+                b y = new b();
+            }
+        }
+        
+        contract b {
+            function x() public {
+                c y = new c();
+            }
+        }
+
+        contract c {
+            function x() public {
+                a y = new a();
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "circular reference creating contract ‘a’"
+    );
 }
 
 #[test]

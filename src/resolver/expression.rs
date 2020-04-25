@@ -2306,7 +2306,23 @@ fn constructor(
         }
     };
 
-    // are we circular yet
+    // check for circular references
+    if circular_reference(no, contract_no, ns) {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "circular reference creating contract ‘{}’",
+                ns.contracts[no].name
+            ),
+        ));
+        return Err(());
+    }
+
+    let mut creates = ns.contracts[contract_no].creates.borrow_mut();
+
+    if !creates.contains(&no) {
+        creates.push(no);
+    }
 
     let mut resolved_args = Vec::new();
     let mut resolved_types = Vec::new();
@@ -2422,6 +2438,17 @@ fn constructor(
     }
 }
 
+/// check if from creates to, recursively
+fn circular_reference(from: usize, to: usize, ns: &resolver::Namespace) -> bool {
+    let creates = ns.contracts[from].creates.borrow();
+
+    if creates.contains(&to) {
+        return true;
+    }
+
+    creates.iter().any(|n| circular_reference(*n, to, &ns))
+}
+
 /// Resolve an new contract expression with named arguments
 fn constructor_named_args(
     loc: &ast::Loc,
@@ -2456,6 +2483,24 @@ fn constructor_named_args(
             return Err(());
         }
     };
+
+    // check for circular references
+    if circular_reference(no, contract_no, ns) {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "circular reference creating contract ‘{}’",
+                ns.contracts[no].name
+            ),
+        ));
+        return Err(());
+    }
+
+    let mut creates = ns.contracts[contract_no].creates.borrow_mut();
+
+    if !creates.contains(&no) {
+        creates.push(no);
+    }
 
     let mut arguments = HashMap::new();
 

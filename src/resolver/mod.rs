@@ -5,6 +5,7 @@ use num_traits::Signed;
 use num_traits::{One, Zero};
 use output::{any_errors, Note, Output};
 use parser::ast;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Mul;
 use tiny_keccak::keccak256;
@@ -1075,6 +1076,7 @@ pub struct Contract {
     pub constants: Vec<Expression>,
     pub initializer: cfg::ControlFlowGraph,
     top_of_contract_storage: BigInt,
+    creates: RefCell<Vec<usize>>,
 }
 
 impl Contract {
@@ -1088,6 +1090,7 @@ impl Contract {
             constants: Vec::new(),
             initializer: cfg::ControlFlowGraph::new(),
             top_of_contract_storage: BigInt::zero(),
+            creates: RefCell::new(Vec::new()),
         }
     }
 
