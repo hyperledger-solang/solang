@@ -196,6 +196,11 @@ pub fn print_messages(filename: &str, src: &str, messages: &[Output], verbose: b
     }
 }
 
+/// Do we have any errors
+pub fn any_errors(output: &[Output]) -> bool {
+    output.iter().any(|m| m.level == Level::Error)
+}
+
 #[derive(Serialize)]
 pub struct LocJson {
     pub file: String,

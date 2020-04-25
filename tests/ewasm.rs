@@ -641,17 +641,17 @@ contract test {
 fn abi_call_pass_return_test() {
     let mut runtime = build_solidity(
         r##"
-contract x {
-    function test() public {
+        contract x {
+            function test() public {
 
-    }
-}
+            }
+        }
 
-contract test {
-	function foo(uint32 a) public returns (uint32) {
-    return a;
-	}
-}"##,
+        contract bar {
+            function foo(uint32 a) public returns (uint32) {
+            return a;
+            }
+        }"##,
     );
 
     // call constructor

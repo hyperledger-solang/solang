@@ -16,6 +16,27 @@ pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
     // done
     for part in &s.0 {
         match part {
+            ast::SourceUnitPart::PragmaDirective(name, value) => {
+                if name.name == "solidity" {
+                    errors.push(Output::info(
+                        ast::Loc(name.loc.0, value.loc.1),
+                        "pragma ‘solidity’ is ignored".to_string(),
+                    ));
+                } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
+                    errors.push(Output::info(
+                        ast::Loc(name.loc.0, value.loc.1),
+                        "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
+                    ));
+                } else {
+                    errors.push(Output::warning(
+                        ast::Loc(name.loc.0, value.loc.1),
+                        format!(
+                            "unknown pragma ‘{}’ with value ‘{}’ ignored",
+                            name.name, value.string
+                        ),
+                    ));
+                }
+            }
             ast::SourceUnitPart::ContractDefinition(def) => {
                 resolve_contract(&def, &mut structs, &mut errors, &mut ns);
             }
@@ -92,6 +113,7 @@ pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
     (ns, errors)
 }
 
+/// Resolve all the types in a contract
 fn resolve_contract<'a>(
     def: &'a ast::ContractDefinition,
     structs: &mut Vec<(StructDecl, &'a ast::StructDefinition, Option<usize>)>,
@@ -108,35 +130,33 @@ fn resolve_contract<'a>(
         errors,
     );
 
-    // FIXME: this loop and next can be folded into one
     for parts in &def.parts {
-        if let ast::ContractPart::EnumDefinition(ref e) = parts {
-            if !enum_decl(e, Some(contract_no), ns, errors) {
-                broken = true;
+        match parts {
+            ast::ContractPart::EnumDefinition(ref e) => {
+                if !enum_decl(e, Some(contract_no), ns, errors) {
+                    broken = true;
+                }
             }
-        }
-    }
+            ast::ContractPart::StructDefinition(ref s) => {
+                if ns.add_symbol(
+                    Some(contract_no),
+                    &s.name,
+                    Symbol::Struct(s.name.loc, structs.len()),
+                    errors,
+                ) {
+                    let decl = StructDecl {
+                        name: s.name.name.to_owned(),
+                        loc: s.name.loc,
+                        contract: Some(def.name.name.to_owned()),
+                        fields: Vec::new(),
+                    };
 
-    // FIXME: next resolve event
-
-    // resolve struct definitions
-    for parts in &def.parts {
-        if let ast::ContractPart::StructDefinition(ref s) = parts {
-            if ns.add_symbol(
-                Some(contract_no),
-                &s.name,
-                Symbol::Struct(s.name.loc, structs.len()),
-                errors,
-            ) {
-                let decl = StructDecl {
-                    name: s.name.name.to_owned(),
-                    loc: s.name.loc,
-                    contract: Some(def.name.name.to_owned()),
-                    fields: Vec::new(),
-                };
-
-                structs.push((decl, s, Some(contract_no)));
+                    structs.push((decl, s, Some(contract_no)));
+                } else {
+                    broken = true;
+                }
             }
+            _ => (),
         }
     }
 
