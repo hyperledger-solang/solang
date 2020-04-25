@@ -1043,11 +1043,24 @@ impl SubstrateTarget {
                     arg
                 };
 
+                let function = contract.module.get_function("scale_encode_string").unwrap();
+
                 *data = contract
                     .builder
                     .build_call(
-                        contract.module.get_function("scale_encode_string").unwrap(),
-                        &[(*data).into(), arg],
+                        function,
+                        &[
+                            (*data).into(),
+                            // when we call LinkModules2() some types like vector get renamed to vector.1
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    arg.into_pointer_value(),
+                                    function.get_type().get_param_types()[1].into_pointer_type(),
+                                    "vector",
+                                )
+                                .into(),
+                        ],
                         "",
                     )
                     .try_as_basic_value()

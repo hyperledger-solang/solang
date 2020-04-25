@@ -53,6 +53,36 @@ fn weekdays() {
 }
 
 #[test]
+fn enums_other_contracts() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u8);
+
+    // parse
+    let (runtime, mut store) = build_solidity(
+        "
+        contract a {
+            c.foo bar;
+        
+            constructor() public {
+                bar = c.foo.bar;
+            }
+
+            function test(c.foo x) public {
+                assert(x == c.foo.bar2);
+                assert(c.foo.bar2 != c.foo.bar3);
+            }
+        }
+        
+        contract c {
+            enum foo { bar, bar2, bar3 }
+        }
+        ",
+    );
+
+    runtime.function(&mut store, "test", Val(1).encode());
+}
+
+#[test]
 fn test_cast_errors() {
     let (_, errors) = parse_and_resolve(
         "contract test {

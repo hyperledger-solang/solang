@@ -343,7 +343,7 @@ impl TestRuntime {
 }
 
 pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
-    let (mut res, errors) = compile(
+    let (res, errors) = compile(
         src,
         "test.sol",
         inkwell::OptimizationLevel::Default,
@@ -352,10 +352,10 @@ pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
 
     output::print_messages("test.sol", src, &errors, false);
 
-    assert_eq!(res.len(), 1);
+    assert!(!res.is_empty());
 
     // resolve
-    let (bc, abistr) = res.pop().unwrap();
+    let (bc, abistr) = &res[0];
 
     let module = Module::from_buffer(bc).expect("parse wasm should work");
 

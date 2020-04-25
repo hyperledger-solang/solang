@@ -664,6 +664,14 @@ impl Namespace {
         None
     }
 
+    pub fn resolve_contract(&self, id: &ast::Identifier) -> Option<usize> {
+        if let Some(Symbol::Contract(_, n)) = self.symbols.get(&(None, id.name.to_owned())) {
+            return Some(*n);
+        }
+
+        None
+    }
+
     pub fn resolve_func(
         &self,
         contract_no: usize,
@@ -884,7 +892,50 @@ impl Namespace {
                 }
             }
             ast::ComplexType::Unresolved(expr) => {
-                let (id, dimensions) = self.expr_to_type(&expr, errors)?;
+                let (contract_name, id, dimensions) = self.expr_to_type(&expr, errors)?;
+
+                let contract_no = if let Some(contract_name) = contract_name {
+                    match self.symbols.get(&(None, contract_name.name)) {
+                        None => {
+                            errors.push(Output::decl_error(
+                                id.loc,
+                                format!("contract type ‘{}’ not found", id.name),
+                            ));
+                            return Err(());
+                        }
+                        Some(Symbol::Contract(_, n)) => Some(*n),
+                        Some(Symbol::Function(_)) => {
+                            errors.push(Output::decl_error(
+                                id.loc,
+                                format!("‘{}’ is a function", id.name),
+                            ));
+                            return Err(());
+                        }
+                        Some(Symbol::Variable(_, _)) => {
+                            errors.push(Output::decl_error(
+                                id.loc,
+                                format!("‘{}’ is a contract variable", id.name),
+                            ));
+                            return Err(());
+                        }
+                        Some(Symbol::Struct(_, _)) => {
+                            errors.push(Output::decl_error(
+                                id.loc,
+                                format!("‘{}’ is a struct", id.name),
+                            ));
+                            return Err(());
+                        }
+                        Some(Symbol::Enum(_, _)) => {
+                            errors.push(Output::decl_error(
+                                id.loc,
+                                format!("‘{}’ is an enum variable", id.name),
+                            ));
+                            return Err(());
+                        }
+                    }
+                } else {
+                    contract_no
+                };
 
                 let mut s = self.symbols.get(&(contract_no, id.name.to_owned()));
 
@@ -942,7 +993,14 @@ impl Namespace {
         &self,
         expr: &ast::Expression,
         errors: &mut Vec<Output>,
-    ) -> Result<(ast::Identifier, Vec<ArrayDimension>), ()> {
+    ) -> Result<
+        (
+            Option<ast::Identifier>,
+            ast::Identifier,
+            Vec<ArrayDimension>,
+        ),
+        (),
+    > {
         let mut expr = expr;
         let mut dimensions = Vec::new();
 
@@ -958,7 +1016,18 @@ impl Namespace {
 
                     &*r
                 }
-                ast::Expression::Variable(id) => return Ok((id.clone(), dimensions)),
+                ast::Expression::Variable(id) => return Ok((None, id.clone(), dimensions)),
+                ast::Expression::MemberAccess(_, namespace, id) => {
+                    if let ast::Expression::Variable(namespace) = namespace.as_ref() {
+                        return Ok((Some(namespace.clone()), id.clone(), dimensions));
+                    } else {
+                        errors.push(Output::decl_error(
+                            namespace.loc(),
+                            "expression found where contract type expected".to_string(),
+                        ));
+                        return Err(());
+                    }
+                }
                 _ => {
                     errors.push(Output::decl_error(
                         expr.loc(),
