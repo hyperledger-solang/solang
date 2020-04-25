@@ -2285,22 +2285,34 @@ fn constructor(
     // The current contract cannot be constructed with new. In order to create
     // the contract, we need the code hash of the contract. Part of that code
     // will be code we're emitted here. So we end up with a crypto puzzle.
-    if no == ns.contracts.len() {
-        errors.push(Output::error(
-            *loc,
-            format!(
-                "new cannot construct current contract ‘{}’",
-                ns.contracts[contract_no.unwrap()].name
-            ),
-        ));
-        return Err(());
-    }
+    let contract_no = match contract_no {
+        Some(n) if n == no => {
+            errors.push(Output::error(
+                *loc,
+                format!(
+                    "new cannot construct current contract ‘{}’",
+                    ns.contracts[contract_no.unwrap()].name
+                ),
+            ));
+            return Err(());
+        }
+        Some(n) => n,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "new contract not allowed in this context".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    // are we circular yet
 
     let mut resolved_args = Vec::new();
     let mut resolved_types = Vec::new();
 
     for arg in args {
-        let (expr, expr_type) = expression(arg, cfg, contract_no, ns, vartab, errors)?;
+        let (expr, expr_type) = expression(arg, cfg, Some(contract_no), ns, vartab, errors)?;
 
         resolved_args.push(Box::new(expr));
         resolved_types.push(expr_type);
@@ -2424,23 +2436,33 @@ fn constructor_named_args(
     // The current contract cannot be constructed with new. In order to create
     // the contract, we need the code hash of the contract. Part of that code
     // will be code we're emitted here. So we end up with a crypto puzzle.
-    if no == ns.contracts.len() {
-        errors.push(Output::error(
-            *loc,
-            format!(
-                "new cannot construct current contract ‘{}’",
-                ns.contracts[contract_no.unwrap()].name
-            ),
-        ));
-        return Err(());
-    }
+    let contract_no = match contract_no {
+        Some(n) if n == no => {
+            errors.push(Output::error(
+                *loc,
+                format!(
+                    "new cannot construct current contract ‘{}’",
+                    ns.contracts[contract_no.unwrap()].name
+                ),
+            ));
+            return Err(());
+        }
+        Some(n) => n,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "new contract not allowed in this context".to_string(),
+            ));
+            return Err(());
+        }
+    };
 
     let mut arguments = HashMap::new();
 
     for arg in args {
         arguments.insert(
             arg.name.name.to_string(),
-            expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?,
+            expression(&arg.expr, cfg, Some(contract_no), ns, vartab, errors)?,
         );
     }
 

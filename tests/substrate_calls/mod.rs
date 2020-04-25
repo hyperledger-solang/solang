@@ -262,6 +262,36 @@ fn contract_type() {
         first_error(errors),
         "conversion from uint8 to contract printer not possible"
     );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract printer {
+            function test() public returns (printer) {
+                return new printer();
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "new cannot construct current contract ‘printer’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r#"
+        contract printer {
+            function test() public returns (printer) {
+                return new printer({});
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "new cannot construct current contract ‘printer’"
+    );
 }
 
 #[test]
