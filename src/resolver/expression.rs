@@ -1833,7 +1833,7 @@ pub fn expression(
 
             match ty {
                 ast::ComplexType::Unresolved(expr) => {
-                    let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+                    let (_namespace, id, dimensions) = ns.expr_to_type(expr, errors)?;
                     if !dimensions.is_empty() {
                         errors.push(Output::error(*loc, "unexpected array type".to_string()));
                         return Err(());
@@ -1903,7 +1903,7 @@ pub fn expression(
                             errors,
                         )
                     } else {
-                        let (id, dimensions) = ns.expr_to_type(expr, errors)?;
+                        let (_namespace, id, dimensions) = ns.expr_to_type(expr, errors)?;
 
                         if !dimensions.is_empty() {
                             errors.push(Output::error(*loc, "unexpected array type".to_string()));
@@ -1937,6 +1937,38 @@ pub fn expression(
             array_subscript(loc, array, index, cfg, contract_no, ns, vartab, errors)
         }
         ast::Expression::MemberAccess(loc, e, id) => {
+            // is of the form "contract_name.enum_name.enum_value"
+            if let ast::Expression::MemberAccess(_, e, enum_name) = e.as_ref() {
+                if let ast::Expression::Variable(contract_name) = e.as_ref() {
+                    if let Some(contract_no) = ns.resolve_contract(contract_name) {
+                        if let Some(e) = ns.resolve_enum(Some(contract_no), enum_name) {
+                            return match ns.enums[e].values.get(&id.name) {
+                                Some((_, val)) => Ok((
+                                    Expression::NumberLiteral(
+                                        *loc,
+                                        ns.enums[e].ty.bits(),
+                                        BigInt::from_usize(*val).unwrap(),
+                                    ),
+                                    resolver::Type::Enum(e),
+                                )),
+                                None => {
+                                    errors.push(Output::error(
+                                        id.loc,
+                                        format!(
+                                            "enum {} does not have value {}",
+                                            ns.enums[e].print_to_string(),
+                                            id.name
+                                        ),
+                                    ));
+                                    Err(())
+                                }
+                            };
+                        }
+                    }
+                }
+            }
+
+            // is of the form "enum_name.enum_value"
             if let ast::Expression::Variable(namespace) = e.as_ref() {
                 if let Some(e) = ns.resolve_enum(contract_no, namespace) {
                     return match ns.enums[e].values.get(&id.name) {
