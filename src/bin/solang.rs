@@ -155,6 +155,11 @@ fn process_filename(
         output::print_messages(filename, &contents, &errors, verbose);
     }
 
+    let ns = match ns {
+        Some(ns) => ns,
+        None => std::process::exit(1),
+    };
+
     if ns.contracts.is_empty() {
         eprintln!("{}: error: no contracts found", filename);
         std::process::exit(1);

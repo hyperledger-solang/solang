@@ -3,7 +3,7 @@ use emit;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::{One, Zero};
-use output::{Note, Output};
+use output::{any_errors, Note, Output};
 use parser::ast;
 use std::collections::HashMap;
 use std::ops::Mul;
@@ -1141,54 +1141,46 @@ impl Contract {
     }
 }
 
-pub fn resolver(s: ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) {
+pub fn resolver(s: ast::SourceUnit, target: Target) -> (Option<Namespace>, Vec<Output>) {
     // first resolve all the types we can find
     let (mut ns, mut errors) = types::resolve(&s, target);
 
     // give up if we failed
-    if !errors.is_empty() {
-        return (ns, errors);
+    if any_errors(&errors) {
+        return (None, errors);
     }
 
+    // we need to resolve declarations first, so we call functions/constructors of
+    // contracts before they are declared
     let mut contract_no = 0;
+    for part in &s.0 {
+        if let ast::SourceUnitPart::ContractDefinition(def) = part {
+            resolve_contract_declarations(def, contract_no, target, &mut errors, &mut ns);
 
-    for part in s.0 {
-        match part {
-            ast::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(def, contract_no, target, &mut errors, &mut ns);
-
-                contract_no += 1;
-            }
-            ast::SourceUnitPart::PragmaDirective(name, value) => {
-                if name.name == "solidity" {
-                    errors.push(Output::info(
-                        ast::Loc(name.loc.0, value.loc.1),
-                        "pragma ‘solidity’ is ignored".to_string(),
-                    ));
-                } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
-                    errors.push(Output::info(
-                        ast::Loc(name.loc.0, value.loc.1),
-                        "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
-                    ));
-                } else {
-                    errors.push(Output::warning(
-                        ast::Loc(name.loc.0, value.loc.1),
-                        format!(
-                            "unknown pragma ‘{}’ with value ‘{}’ ignored",
-                            name.name, value.string
-                        ),
-                    ));
-                }
-            }
-            _ => (),
+            contract_no += 1;
         }
     }
 
-    (ns, errors)
+    // Now we can resolve the bodies
+    let mut contract_no = 0;
+    for part in &s.0 {
+        if let ast::SourceUnitPart::ContractDefinition(def) = part {
+            resolve_contract_bodies(def, contract_no, &mut errors, &mut ns);
+
+            contract_no += 1;
+        }
+    }
+
+    if any_errors(&errors) {
+        (None, errors)
+    } else {
+        (Some(ns), errors)
+    }
 }
 
-fn resolve_contract(
-    def: Box<ast::ContractDefinition>,
+/// Resolve functions declarations, constructor declarations, and contract variables
+fn resolve_contract_declarations(
+    def: &ast::ContractDefinition,
     contract_no: usize,
     target: Target,
     errors: &mut Vec<Output>,
@@ -1217,24 +1209,6 @@ fn resolve_contract(
         broken = true;
     }
 
-    // resolve constructor bodies
-    for f in 0..ns.contracts[contract_no].constructors.len() {
-        if let Some(ast_index) = ns.contracts[contract_no].constructors[f].ast_index {
-            if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(
-                    ast_f,
-                    &ns.contracts[contract_no].constructors[f],
-                    contract_no,
-                    &ns,
-                    errors,
-                ) {
-                    Ok(c) => ns.contracts[contract_no].constructors[f].cfg = Some(c),
-                    Err(_) => broken = true,
-                }
-            }
-        }
-    }
-
     // Substrate requires one constructor
     if ns.contracts[contract_no].constructors.is_empty() && target == Target::Substrate {
         let mut fdecl = FunctionDecl::new(
@@ -1259,6 +1233,35 @@ fn resolve_contract(
         fdecl.cfg = Some(Box::new(cfg));
 
         ns.contracts[contract_no].constructors.push(fdecl);
+    }
+
+    broken
+}
+
+fn resolve_contract_bodies(
+    def: &ast::ContractDefinition,
+    contract_no: usize,
+    errors: &mut Vec<Output>,
+    ns: &mut Namespace,
+) -> bool {
+    let mut broken = false;
+
+    // resolve constructor bodies
+    for f in 0..ns.contracts[contract_no].constructors.len() {
+        if let Some(ast_index) = ns.contracts[contract_no].constructors[f].ast_index {
+            if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
+                match cfg::generate_cfg(
+                    ast_f,
+                    &ns.contracts[contract_no].constructors[f],
+                    contract_no,
+                    &ns,
+                    errors,
+                ) {
+                    Ok(c) => ns.contracts[contract_no].constructors[f].cfg = Some(c),
+                    Err(_) => broken = true,
+                }
+            }
+        }
     }
 
     // resolve function bodies

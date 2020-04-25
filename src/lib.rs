@@ -69,7 +69,12 @@ pub fn compile(
     };
 
     // resolve
-    let (ns, errors) = resolver::resolver(ast, target);
+    let (ns, errors) = match resolver::resolver(ast, target) {
+        (None, errors) => {
+            return (Vec::new(), errors);
+        }
+        (Some(ns), errors) => (ns, errors),
+    };
 
     let results = (0..ns.contracts.len())
         .map(|c| {
@@ -92,11 +97,14 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(src: &str, target: Target) -> (resolver::Namespace, Vec<output::Output>) {
+pub fn parse_and_resolve(
+    src: &str,
+    target: Target,
+) -> (Option<resolver::Namespace>, Vec<output::Output>) {
     let ast = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {
-            return (resolver::Namespace::new(target), errors);
+            return (None, errors);
         }
     };
 
