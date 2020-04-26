@@ -4128,7 +4128,7 @@ fn method_call(
         }
     }
 
-    if let resolver::Type::Contract(contract_no) = &var_ty {
+    if let resolver::Type::Contract(contract_no) = &var_ty.deref() {
         let mut resolved_args = Vec::new();
         let mut resolved_types = Vec::new();
 
@@ -4218,7 +4218,15 @@ fn method_call(
                     tab,
                     Instr::ExternalCall {
                         res: vec![temp_pos],
-                        address: var_expr,
+                        address: cast(
+                            &var.loc(),
+                            var_expr,
+                            &var_ty,
+                            &resolver::Type::Address,
+                            true,
+                            ns,
+                            errors,
+                        )?,
                         contract_no: *contract_no,
                         function_no: n,
                         args: cast_args,
@@ -4230,7 +4238,15 @@ fn method_call(
                     tab,
                     Instr::ExternalCall {
                         res: Vec::new(),
-                        address: var_expr,
+                        address: cast(
+                            &var.loc(),
+                            var_expr,
+                            &var_ty,
+                            &resolver::Type::Address,
+                            true,
+                            ns,
+                            errors,
+                        )?,
                         contract_no: *contract_no,
                         function_no: n,
                         args: cast_args,
