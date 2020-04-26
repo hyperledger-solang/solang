@@ -72,9 +72,15 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
                 imports.remove(ind);
             } else {
                 if let Target::Ewasm = target {
+                    let module_name = if imports[ind].field().starts_with("print") {
+                        "debug"
+                    } else {
+                        "ethereum"
+                    };
+
                     let module = imports[ind].module_mut();
 
-                    *module = "ethereum".to_string();
+                    *module = module_name.to_owned();
                 }
 
                 ind += 1;
