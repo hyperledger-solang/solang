@@ -1833,13 +1833,37 @@ pub fn expression(
 
             match ty {
                 ast::ComplexType::Unresolved(expr) => {
-                    let (_namespace, id, dimensions) = ns.expr_to_type(expr, errors)?;
-                    if !dimensions.is_empty() {
-                        errors.push(Output::error(*loc, "unexpected array type".to_string()));
-                        return Err(());
-                    }
+                    if let ast::Expression::MemberAccess(_, member, func) = expr.as_ref() {
+                        method_call_with_named_args(
+                            loc,
+                            member,
+                            func,
+                            args,
+                            cfg,
+                            contract_no,
+                            ns,
+                            vartab,
+                            errors,
+                        )
+                    } else {
+                        let (_namespace, id, dimensions) = ns.expr_to_type(expr, errors)?;
 
-                    function_with_named_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
+                        if !dimensions.is_empty() {
+                            errors.push(Output::error(*loc, "unexpected array type".to_string()));
+                            return Err(());
+                        }
+
+                        function_with_named_args(
+                            loc,
+                            &id,
+                            args,
+                            cfg,
+                            contract_no,
+                            ns,
+                            vartab,
+                            errors,
+                        )
+                    }
                 }
                 _ => unreachable!(),
             }
@@ -4271,6 +4295,193 @@ fn method_call(
     errors.push(Output::error(
         func.loc,
         format!("method ‘{}’ does not exist", func.name),
+    ));
+
+    Err(())
+}
+
+fn method_call_with_named_args(
+    loc: &ast::Loc,
+    var: &ast::Expression,
+    func_name: &ast::Identifier,
+    args: &[ast::NamedArgument],
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
+
+    if let resolver::Type::Contract(external_contract_no) = &var_ty.deref() {
+        let mut arguments = HashMap::new();
+
+        for arg in args {
+            arguments.insert(
+                arg.name.name.to_string(),
+                expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?,
+            );
+        }
+        let tab = match vartab {
+            &mut Some(ref mut tab) => tab,
+            None => {
+                errors.push(Output::error(
+                    *loc,
+                    "cannot call function in constant expression".to_string(),
+                ));
+                return Err(());
+            }
+        };
+        let mut temp_errors = Vec::new();
+
+        let mut name_match = 0;
+
+        // function call
+        for (func_no, func) in ns.contracts[*external_contract_no]
+            .functions
+            .iter()
+            .enumerate()
+        {
+            if func.name != func_name.name {
+                continue;
+            }
+
+            name_match += 1;
+
+            if func.params.len() != args.len() {
+                temp_errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "function expects {} arguments, {} provided",
+                        func.params.len(),
+                        args.len()
+                    ),
+                ));
+                continue;
+            }
+            let mut matches = true;
+            let mut cast_args = Vec::new();
+            // check if arguments can be implicitly casted
+            for param in func.params.iter() {
+                let arg = match arguments.get(&param.name) {
+                    Some(a) => a,
+                    None => {
+                        matches = false;
+                        temp_errors.push(Output::error(
+                            *loc,
+                            format!(
+                                "missing argument ‘{}’ to function ‘{}’",
+                                param.name, func.name,
+                            ),
+                        ));
+                        break;
+                    }
+                };
+                match cast(
+                    &ast::Loc(0, 0),
+                    arg.0.clone(),
+                    &arg.1,
+                    &param.ty,
+                    true,
+                    ns,
+                    &mut temp_errors,
+                ) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(()) => {
+                        matches = false;
+                        break;
+                    }
+                }
+            }
+            if !matches {
+                continue;
+            }
+            // .. what about return value?
+            if func.returns.len() > 1 {
+                errors.push(Output::error(
+                    *loc,
+                    "in expression context a function cannot return more than one value"
+                        .to_string(),
+                ));
+                return Err(());
+            }
+
+            if !func.returns.is_empty() {
+                let ty = &func.returns[0].ty;
+                let id = ast::Identifier {
+                    loc: ast::Loc(0, 0),
+                    name: "".to_owned(),
+                };
+                let temp_pos = tab.temp(&id, ty);
+                cfg.add(
+                    tab,
+                    Instr::ExternalCall {
+                        res: vec![temp_pos],
+                        address: cast(
+                            &var.loc(),
+                            var_expr,
+                            &var_ty,
+                            &resolver::Type::Address,
+                            true,
+                            ns,
+                            errors,
+                        )?,
+                        contract_no: *external_contract_no,
+                        function_no: func_no,
+                        args: cast_args,
+                    },
+                );
+                return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+            } else {
+                cfg.add(
+                    tab,
+                    Instr::ExternalCall {
+                        res: Vec::new(),
+                        address: cast(
+                            &var.loc(),
+                            var_expr,
+                            &var_ty,
+                            &resolver::Type::Address,
+                            true,
+                            ns,
+                            errors,
+                        )?,
+                        contract_no: *external_contract_no,
+                        function_no: func_no,
+                        args: cast_args,
+                    },
+                );
+                return Ok((Expression::Poison, resolver::Type::Undef));
+            }
+        }
+
+        match name_match {
+            0 => {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "contract ‘{}’ does not have function ‘{}’",
+                        var_ty.deref().to_string(ns),
+                        func_name.name
+                    ),
+                ));
+            }
+            1 => {
+                errors.append(&mut temp_errors);
+            }
+            _ => {
+                errors.push(Output::error(
+                    *loc,
+                    "cannot find overloaded function which matches signature".to_string(),
+                ));
+            }
+        }
+        return Err(());
+    }
+
+    errors.push(Output::error(
+        func_name.loc,
+        format!("method ‘{}’ does not exist", func_name.name),
     ));
 
     Err(())
