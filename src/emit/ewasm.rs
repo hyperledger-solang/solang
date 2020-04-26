@@ -76,6 +76,7 @@ impl EwasmTarget {
             "storageLoad",
             "finish",
             "revert",
+            "copyCopy",
             "getCodeSize",
             "printMem",
             "call",
