@@ -356,7 +356,7 @@ impl EwasmTarget {
                         .context
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
-                        .into(), // address result
+                        .into(), // address
                     contract
                         .context
                         .i8_type()
