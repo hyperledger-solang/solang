@@ -45,6 +45,7 @@ impl SubstrateTarget {
             "ext_return",
             "ext_print",
             "ext_instantiate",
+            "ext_call",
         ]);
 
         c
@@ -262,6 +263,20 @@ impl SubstrateTarget {
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr, u32_val, // code hash ptr and len
+                    u64_val, // gas
+                    u8_ptr, u32_val, // value ptr and len
+                    u8_ptr, u32_val, // input ptr and len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_call",
+            contract.context.void_type().fn_type(
+                &[
+                    u8_ptr, u32_val, // address ptr and len
                     u64_val, // gas
                     u8_ptr, u32_val, // value ptr and len
                     u8_ptr, u32_val, // input ptr and len
@@ -1862,12 +1877,21 @@ impl TargetRuntime for SubstrateTarget {
             &constructor.params,
         );
 
-        // balance is a u128
-        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+        // balance is a u64
+        let balance = contract.emit_global_string("balance", &[0u8; 4], true);
+
+        // wasm
+        let target_contract = Contract::build(
+            contract.context,
+            &resolver_contract,
+            contract.ns,
+            "",
+            contract.opt,
+        );
+
+        let wasm = target_contract.wasm(true).expect("compile should succeeed");
 
         // code hash
-        let wasm = contract.wasm(true).expect("compile should succeeed");
-
         let codehash = contract.emit_global_string(
             &format!("contract_{}_codehash", resolver_contract.name),
             blake2_rfc::blake2b::blake2b(32, &[], &wasm).as_bytes(),
@@ -1918,7 +1942,11 @@ impl TargetRuntime for SubstrateTarget {
             &[
                 address.into(),
                 contract.context.i32_type().const_zero().into(),
-                contract.context.i32_type().const_int(20, false).into(),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.address_length as u64, false)
+                    .into(),
             ],
             "",
         );
@@ -1927,12 +1955,38 @@ impl TargetRuntime for SubstrateTarget {
     /// Call external contract
     fn external_call<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _payload: PointerValue<'b>,
-        _payload_len: IntValue<'b>,
-        _address: PointerValue<'b>,
+        contract: &Contract<'b>,
+        payload: PointerValue<'b>,
+        payload_len: IntValue<'b>,
+        address: PointerValue<'b>,
     ) -> IntValue<'b> {
-        unimplemented!();
+        // balance is a u64
+        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+
+        // call create
+        contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_call").unwrap(),
+                &[
+                    address.into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.address_length as u64, false)
+                        .into(),
+                    contract.context.i64_type().const_zero().into(),
+                    balance.into(),
+                    contract.context.i32_type().const_int(8, false).into(),
+                    payload.into(),
+                    payload_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value()
     }
 
     fn return_data<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, IntValue<'b>) {
