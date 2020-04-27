@@ -468,7 +468,9 @@ impl EthAbiEncoder {
                 if load =>
             {
                 let n = match ty {
-                    resolver::Type::Contract(_) | resolver::Type::Address => 160,
+                    resolver::Type::Contract(_) | resolver::Type::Address => {
+                        contract.ns.address_length as u16 * 8
+                    }
                     resolver::Type::Uint(b) => *b,
                     resolver::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -553,7 +555,9 @@ impl EthAbiEncoder {
                 if !load =>
             {
                 let n = match ty {
-                    resolver::Type::Contract(_) | resolver::Type::Address => 160,
+                    resolver::Type::Contract(_) | resolver::Type::Address => {
+                        contract.ns.address_length as u16 * 8
+                    }
                     resolver::Type::Uint(b) => *b,
                     resolver::Type::Int(b) => *b,
                     _ => unreachable!(),
@@ -997,7 +1001,9 @@ impl EthAbiEncoder {
                 val
             }
             resolver::Type::Address | resolver::Type::Contract(_) => {
-                let int_type = contract.context.custom_width_int_type(160);
+                let int_type = contract
+                    .context
+                    .custom_width_int_type(contract.ns.address_length as u32 * 8);
                 let type_size = int_type.size_of();
 
                 let store =

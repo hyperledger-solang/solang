@@ -14,8 +14,6 @@ use super::{Contract, TargetRuntime};
 
 pub struct SubstrateTarget {}
 
-const ADDRESS_LENGTH: u64 = 20;
-
 impl SubstrateTarget {
     pub fn build<'a>(
         context: &'a Context,
@@ -368,8 +366,16 @@ impl SubstrateTarget {
                 );
                 (val.into(), 1)
             }
-            resolver::Type::Uint(n) | resolver::Type::Int(n) => {
-                let int_type = contract.context.custom_width_int_type(*n as u32);
+            resolver::Type::Contract(_)
+            | resolver::Type::Address
+            | resolver::Type::Uint(_)
+            | resolver::Type::Int(_) => {
+                let bits = match ty {
+                    resolver::Type::Uint(n) | resolver::Type::Int(n) => *n as u32,
+                    _ => contract.ns.address_length as u32 * 8,
+                };
+
+                let int_type = contract.context.custom_width_int_type(bits);
 
                 let val = contract.builder.build_load(
                     contract.builder.build_pointer_cast(
@@ -380,7 +386,7 @@ impl SubstrateTarget {
                     "",
                 );
 
-                let len = *n as u64 / 8;
+                let len = bits as u64 / 8;
 
                 (val, len)
             }
@@ -415,35 +421,6 @@ impl SubstrateTarget {
                     contract.builder.build_load(buf, &format!("bytes{}", len)),
                     *len as u64,
                 )
-            }
-            resolver::Type::Contract(_) | resolver::Type::Address => {
-                let int_type = contract.context.custom_width_int_type(160);
-
-                let buf = contract.builder.build_alloca(int_type, "address");
-
-                // byte order needs to be reversed
-                contract.builder.build_call(
-                    contract.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        src.into(),
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                buf,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        contract
-                            .context
-                            .i32_type()
-                            .const_int(ADDRESS_LENGTH, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                (contract.builder.build_load(buf, "address"), ADDRESS_LENGTH)
             }
             _ => unreachable!(),
         }
@@ -763,7 +740,15 @@ impl SubstrateTarget {
                 );
                 1
             }
-            resolver::Type::Uint(n) | resolver::Type::Int(n) => {
+            resolver::Type::Contract(_)
+            | resolver::Type::Address
+            | resolver::Type::Uint(_)
+            | resolver::Type::Int(_) => {
+                let len = match ty {
+                    resolver::Type::Uint(n) | resolver::Type::Int(n) => *n as u64 / 8,
+                    _ => contract.ns.address_length as u64,
+                };
+
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -781,7 +766,7 @@ impl SubstrateTarget {
                     arg.into_int_value(),
                 );
 
-                *n as u64 / 8
+                len
             }
             resolver::Type::Bytes(n) => {
                 let val = if load {
@@ -819,43 +804,6 @@ impl SubstrateTarget {
                 );
 
                 *n as u64
-            }
-            resolver::Type::Address => {
-                let arg = if load {
-                    arg.into_pointer_value()
-                } else {
-                    let temp = contract
-                        .builder
-                        .build_alloca(arg.into_int_value().get_type(), "address");
-
-                    contract.builder.build_store(temp, arg.into_int_value());
-
-                    temp
-                };
-
-                // byte order needs to be reversed
-                contract.builder.build_call(
-                    contract.module.get_function("__leNtobeN").unwrap(),
-                    &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                arg,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        dest.into(),
-                        contract
-                            .context
-                            .i32_type()
-                            .const_int(ADDRESS_LENGTH, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                ADDRESS_LENGTH
             }
             _ => unimplemented!(),
         }
@@ -1089,9 +1037,10 @@ impl SubstrateTarget {
                 contract.context.i32_type().const_int(*n as u64 / 8, false)
             }
             resolver::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
-            resolver::Type::Address | resolver::Type::Contract(_) => {
-                contract.context.i32_type().const_int(ADDRESS_LENGTH, false)
-            }
+            resolver::Type::Address | resolver::Type::Contract(_) => contract
+                .context
+                .i32_type()
+                .const_int(contract.ns.address_length as u64, false),
             resolver::Type::Enum(n) => {
                 self.encoded_length(arg, load, &contract.ns.enums[*n].ty, function, contract)
             }

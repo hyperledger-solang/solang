@@ -357,7 +357,7 @@ pub fn function_decl(
 fn signatures() {
     use super::*;
 
-    let ns = Namespace::new(Target::Ewasm);
+    let ns = Namespace::new(Target::Ewasm, 20);
 
     let fdecl = FunctionDecl::new(
         ast::Loc(0, 0),

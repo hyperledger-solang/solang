@@ -8,7 +8,14 @@ use Target;
 /// structs as fields, including ones that have not been declared yet.
 pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) {
     let mut errors = Vec::new();
-    let mut ns = Namespace::new(target);
+    let mut ns = Namespace::new(
+        target,
+        match target {
+            Target::Ewasm => 20,
+            Target::Substrate => 32,
+            Target::Sabre => 0, // substrate has no address type
+        },
+    );
     let mut structs = Vec::new();
 
     // Find all the types: contracts, enums, and structs. Either in a contract or not
@@ -325,7 +332,7 @@ fn enum_256values_is_uint8() {
         values: Vec::new(),
     };
 
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Ewasm, 20);
 
     e.values.push(ast::Identifier {
         loc: ast::Loc(0, 0),

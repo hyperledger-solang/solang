@@ -245,28 +245,28 @@ fn address() {
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070d;
+            address foo = 0xa368df6dfcd5ba7b0bc108af09e98e4655e35a2c3b2e2d5e3eae6c6f7cd8d2d4;
         }",
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "address literal has incorrect checksum, expected ‘0x8617E340B3D01FA5F11F306F4090FD50E238070D’");
+    assert_eq!(first_error(errors), "address literal has incorrect checksum, expected ‘0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4’");
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            uint160 foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+            uint256 foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
         }",
         Target::Substrate,
     );
 
     assert_eq!(
         first_error(errors),
-        "implicit conversion would truncate from address to uint160"
+        "implicit conversion would truncate from address to uint256"
     );
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+            address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
 
             function bar() private returns (bool) {
                 return foo > address(0);
@@ -282,7 +282,7 @@ fn address() {
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+            address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
 
             function bar() private returns (address) {
                 return foo + address(1);
@@ -298,7 +298,7 @@ fn address() {
 
     let (_, errors) = parse_and_resolve(
         "contract test {
-            address foo = 0x8617E340B3D01FA5F11F306F4090FD50E238070D;
+            address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
 
             function bar() private returns (address) {
                 return foo | address(1);
@@ -313,18 +313,18 @@ fn address() {
     );
 
     #[derive(Debug, PartialEq, Encode, Decode)]
-    struct Address([u8; 20]);
+    struct Address([u8; 32]);
 
     // parse
     let (runtime, mut store) = build_solidity(
         "
         contract test {
             function check_return() public returns (address) {
-                return 0xde709f2102306220921060314715629080e2fb77;
+                return 0x7d5839e24ACaDa338c257643a7d2e025453F77D058b8335C1c3791Bc6742b320;
             }
 
             function check_param(address a) public {
-                assert(a == 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91);
+                assert(a == 0x8D166E028f3148854F2427d29B8755F617EED0651Bc6C8809b189200A4E3aaa9);
             }
         }",
     );
@@ -334,15 +334,17 @@ fn address() {
     assert_eq!(
         store.scratch,
         Address([
-            0xde, 0x70, 0x9f, 0x21, 0x02, 0x30, 0x62, 0x20, 0x92, 0x10, 0x60, 0x31, 0x47, 0x15,
-            0x62, 0x90, 0x80, 0xe2, 0xfb, 0x77
+            0x20, 0xb3, 0x42, 0x67, 0xbc, 0x91, 0x37, 0x1c, 0x5C, 0x33, 0xb8, 0x58, 0xD0, 0x77,
+            0x3F, 0x45, 0x25, 0xe0, 0xd2, 0xa7, 0x43, 0x76, 0x25, 0x8c, 0x33, 0xda, 0xca, 0x4A,
+            0xe2, 0x39, 0x58, 0x7d
         ])
         .encode()
     );
 
     let val = Address([
-        0xE9, 0x43, 0x0d, 0x8c, 0x01, 0xc4, 0xe4, 0xbb, 0x33, 0xE4, 0x4f, 0xd7, 0x74, 0x89, 0x42,
-        0x08, 0x5D, 0x82, 0xfc, 0x91,
+        0xa9, 0xaa, 0xE3, 0xA4, 0x00, 0x92, 0x18, 0x9b, 0x80, 0xC8, 0xc6, 0x1B, 0x65, 0xD0, 0xEE,
+        0x17, 0xF6, 0x55, 0x87, 0x9B, 0xd2, 0x27, 0x24, 0x4F, 0x85, 0x48, 0x31, 0x8f, 0x02, 0x6E,
+        0x16, 0x8D,
     ])
     .encode();
 
