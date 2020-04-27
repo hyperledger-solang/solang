@@ -1,8 +1,7 @@
 // auto-generated: "lalrpop 0.18.1"
-// sha256: 63a1349dd44fc454bfb14a581cc2d6f4bfa21fba890aa1e6b456317fdeb13
+// sha256: ed488bb48934841e8dec3ba7a137501a96b5644b5516838f8f574f4812a5
 use std::str::FromStr;
 use num_bigint::BigInt;
-use num_traits::Num;
 use parser::ast::*;
 use parser::box_option;
 use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
@@ -17,7 +16,6 @@ mod __parse__SourceUnit {
 
     use std::str::FromStr;
     use num_bigint::BigInt;
-    use num_traits::Num;
     use parser::ast::*;
     use parser::box_option;
     use super::super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
@@ -12212,16 +12210,7 @@ fn __action120<
 ) -> Expression
 {
     {
-        let is_address = n.len() == 42 && n.starts_with("0x") && !n.chars().any(|c| c == '_');
-
-        if is_address {
-            Expression::AddressLiteral(Loc(l, r), n.to_string())
-        } else {
-            // from_str_radix does not like the 0x prefix
-            let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
-
-            Expression::NumberLiteral(Loc(l, r), BigInt::from_str_radix(&s, 16).unwrap())
-        }
+        Expression::HexNumberLiteral(Loc(l, r), n.to_owned())
     }
 }
 

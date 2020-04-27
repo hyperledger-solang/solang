@@ -1061,25 +1061,39 @@ pub fn expression(
             ))
         }
         ast::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, errors),
-        ast::Expression::AddressLiteral(loc, n) => {
-            let address = to_hexstr_eip55(n);
+        ast::Expression::HexNumberLiteral(loc, n) => {
+            let looks_like_address =
+                n.len() == 42 && n.starts_with("0x") && !n.chars().any(|c| c == '_');
 
-            if address == *n {
-                let s: String = address.chars().skip(2).collect();
+            if looks_like_address {
+                let address = to_hexstr_eip55(n);
 
-                Ok((
-                    Expression::NumberLiteral(*loc, 160, BigInt::from_str_radix(&s, 16).unwrap()),
-                    resolver::Type::Address,
-                ))
+                if address == *n {
+                    let s: String = address.chars().skip(2).collect();
+
+                    Ok((
+                        Expression::NumberLiteral(
+                            *loc,
+                            160,
+                            BigInt::from_str_radix(&s, 16).unwrap(),
+                        ),
+                        resolver::Type::Address,
+                    ))
+                } else {
+                    errors.push(Output::error(
+                        *loc,
+                        format!(
+                            "address literal has incorrect checksum, expected ‘{}’",
+                            address
+                        ),
+                    ));
+                    Err(())
+                }
             } else {
-                errors.push(Output::error(
-                    *loc,
-                    format!(
-                        "address literal has incorrect checksum, expected ‘{}’",
-                        address
-                    ),
-                ));
-                Err(())
+                // from_str_radix does not like the 0x prefix
+                let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
+
+                bigint_to_expression(loc, &BigInt::from_str_radix(&s, 16).unwrap(), errors)
             }
         }
         ast::Expression::Variable(id) => {
@@ -1534,19 +1548,11 @@ pub fn expression(
             Ok((Expression::Complement(*loc, Box::new(expr)), expr_type))
         }
         ast::Expression::UnaryMinus(loc, e) => {
-            let expr: &ast::Expression = e;
-            if let ast::Expression::NumberLiteral(loc, n) = expr {
-                expression(
-                    &ast::Expression::NumberLiteral(*loc, -n),
-                    cfg,
-                    contract_no,
-                    ns,
-                    vartab,
-                    errors,
-                )
-            } else {
-                let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
+            let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
+            if let Expression::NumberLiteral(_, _, n) = expr {
+                bigint_to_expression(loc, &-n, errors)
+            } else {
                 get_int_length(&expr_type, loc, false, ns, errors)?;
 
                 Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
