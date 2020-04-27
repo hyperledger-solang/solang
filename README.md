@@ -16,18 +16,6 @@ Solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at
 [our documentation](https://solang.readthedocs.io/en/latest/).
 
-## Solang Hyperledger Mentorship
-
-Solang has been accepted in the
-[Hyperledger Mentorship Program](https://wiki.hyperledger.org/display/INTERN/Create+a+new+Solidity+Language+Server+%28SLS%29+using+Solang+Compiler).
-The Mentorship Program exists to encourage students to contribute to Hyperledger
-open source projects. Hyperledger projects provide mentors and the Hyperledger
-organization gives some money to participating students.
-
-If you would like mentorship, please apply before the 24th of April 2020.
-
-Looking forward to your applications!
-
 ## Simple example
 
 First build [Solang](https://solang.readthedocs.io/en/latest/installing.html)
