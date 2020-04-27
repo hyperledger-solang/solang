@@ -2791,7 +2791,9 @@ impl<'a> Contract<'a> {
 
                         let addr = self.builder.build_array_alloca(
                             self.context.i8_type(),
-                            self.context.i32_type().const_int(20, false),
+                            self.context
+                                .i32_type()
+                                .const_int(self.ns.address_length as u64, false),
                             "address",
                         );
 
@@ -3683,15 +3685,14 @@ impl<'a> Contract<'a> {
             resolver::Type::Int(n) | resolver::Type::Uint(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
             }
-            resolver::Type::Contract(_) | resolver::Type::Address => {
-                BasicTypeEnum::IntType(self.context.custom_width_int_type(20 * 8))
-            }
+            resolver::Type::Contract(_) | resolver::Type::Address => BasicTypeEnum::IntType(
+                self.context
+                    .custom_width_int_type(self.ns.address_length as u32 * 8),
+            ),
             resolver::Type::Bytes(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
             }
-            resolver::Type::Enum(n) => {
-                BasicTypeEnum::IntType(self.ns.enums[*n].ty.llvm_type(self.context))
-            }
+            resolver::Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
             resolver::Type::String | resolver::Type::DynamicBytes => {
                 self.module.get_type("struct.vector").unwrap()
             }
@@ -3765,21 +3766,6 @@ impl<'a> Contract<'a> {
 }
 
 impl resolver::Type {
-    /// Return the llvm type for this primitive. Non-primitives will panic and should be generated via resolver::Type.llvm_Type()
-    fn llvm_type<'a>(&self, context: &'a Context) -> IntType<'a> {
-        match self {
-            resolver::Type::Bool => context.bool_type(),
-            resolver::Type::Int(n) | resolver::Type::Uint(n) => {
-                context.custom_width_int_type(*n as u32)
-            }
-            resolver::Type::Address => context.custom_width_int_type(20 * 8),
-            resolver::Type::Bytes(n) => context.custom_width_int_type(*n as u32 * 8),
-            _ => {
-                panic!("llvm type for {:?} not implemented", self);
-            }
-        }
-    }
-
     /// Does this type need a phi node
     pub fn needs_phi(&self) -> bool {
         match self {

@@ -672,6 +672,8 @@ pub fn cast(
         _ => (),
     };
 
+    let address_bits = ns.address_length as u16 * 8;
+
     #[allow(clippy::comparison_chain)]
     match (from_conv, to_conv) {
         (resolver::Type::Bytes(1), resolver::Type::Uint(8)) => Ok(expr),
@@ -770,9 +772,9 @@ pub fn cast(
                     ),
                 ));
                 Err(())
-            } else if from_len > 160 {
+            } else if from_len > address_bits {
                 Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
-            } else if from_len < 160 {
+            } else if from_len < address_bits {
                 Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
@@ -790,9 +792,9 @@ pub fn cast(
                     ),
                 ));
                 Err(())
-            } else if to_len < 160 {
+            } else if to_len < address_bits {
                 Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
-            } else if to_len > 160 {
+            } else if to_len > address_bits {
                 Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
             } else {
                 Ok(expr)
@@ -910,7 +912,7 @@ pub fn cast(
                     ),
                 ));
                 Err(())
-            } else if from_len != 20 {
+            } else if from_len as usize != ns.address_length {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -940,7 +942,7 @@ pub fn cast(
                     ),
                 ));
                 Err(())
-            } else if to_len != 20 {
+            } else if to_len as usize != ns.address_length {
                 errors.push(Output::type_error(
                     *loc,
                     format!(
@@ -1062,8 +1064,10 @@ pub fn expression(
         }
         ast::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, errors),
         ast::Expression::HexNumberLiteral(loc, n) => {
-            let looks_like_address =
-                n.len() == 42 && n.starts_with("0x") && !n.chars().any(|c| c == '_');
+            // ns.address_length is in bytes; double for hex and two for the leading 0x
+            let looks_like_address = n.len() == ns.address_length * 2 + 2
+                && n.starts_with("0x")
+                && !n.chars().any(|c| c == '_');
 
             if looks_like_address {
                 let address = to_hexstr_eip55(n);
@@ -1074,7 +1078,7 @@ pub fn expression(
                     Ok((
                         Expression::NumberLiteral(
                             *loc,
-                            160,
+                            ns.address_length as u16 * 8,
                             BigInt::from_str_radix(&s, 16).unwrap(),
                         ),
                         resolver::Type::Address,
@@ -1232,7 +1236,7 @@ pub fn expression(
                 Expression::ShiftLeft(
                     *loc,
                     Box::new(left),
-                    Box::new(cast_shift_arg(loc, right, right_length, &left_type)),
+                    Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
                 ),
                 left_type,
             ))
@@ -1250,7 +1254,7 @@ pub fn expression(
                 Expression::ShiftRight(
                     *loc,
                     Box::new(left),
-                    Box::new(cast_shift_arg(loc, right, right_length, &left_type)),
+                    Box::new(cast_shift_arg(loc, right, right_length, &left_type, ns)),
                     left_type.signed(),
                 ),
                 left_type,
@@ -1664,7 +1668,11 @@ pub fn expression(
                             expr: Expression::Add(
                                 *loc,
                                 Box::new(Expression::Variable(id.loc, v.pos)),
-                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    v.ty.bits(ns),
+                                    One::one(),
+                                )),
                             ),
                         },
                     );
@@ -1701,7 +1709,11 @@ pub fn expression(
                             expr: Expression::Subtract(
                                 *loc,
                                 Box::new(Expression::Variable(id.loc, temp_pos)),
-                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    v.ty.bits(ns),
+                                    One::one(),
+                                )),
                             ),
                         },
                     );
@@ -1729,7 +1741,11 @@ pub fn expression(
                             expr: Expression::Add(
                                 *loc,
                                 Box::new(lvalue),
-                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    v.ty.bits(ns),
+                                    One::one(),
+                                )),
                             ),
                         },
                     );
@@ -1764,7 +1780,11 @@ pub fn expression(
                             expr: Expression::Subtract(
                                 *loc,
                                 Box::new(lvalue),
-                                Box::new(Expression::NumberLiteral(*loc, v.ty.bits(), One::one())),
+                                Box::new(Expression::NumberLiteral(
+                                    *loc,
+                                    v.ty.bits(ns),
+                                    One::one(),
+                                )),
                             ),
                         },
                     );
@@ -1976,7 +1996,7 @@ pub fn expression(
                                 Some((_, val)) => Ok((
                                     Expression::NumberLiteral(
                                         *loc,
-                                        ns.enums[e].ty.bits(),
+                                        ns.enums[e].ty.bits(ns),
                                         BigInt::from_usize(*val).unwrap(),
                                     ),
                                     resolver::Type::Enum(e),
@@ -2005,7 +2025,7 @@ pub fn expression(
                         Some((_, val)) => Ok((
                             Expression::NumberLiteral(
                                 *loc,
-                                ns.enums[e].ty.bits(),
+                                ns.enums[e].ty.bits(ns),
                                 BigInt::from_usize(*val).unwrap(),
                             ),
                             resolver::Type::Enum(e),
@@ -3505,7 +3525,7 @@ fn array_subscript(
         }
     };
 
-    let array_width = array_length_ty.bits();
+    let array_width = array_length_ty.bits(ns);
     let width = std::cmp::max(array_width, index_width);
     let coerced_ty = resolver::Type::Uint(width);
 
@@ -3645,6 +3665,7 @@ fn array_subscript(
                                         Expression::Variable(index.loc(), pos),
                                         index_width,
                                         &array_ty,
+                                        ns,
                                     )),
                                 )),
                                 Box::new(Expression::NumberLiteral(
@@ -4501,8 +4522,9 @@ fn cast_shift_arg(
     expr: Expression,
     from_width: u16,
     ty: &resolver::Type,
+    ns: &resolver::Namespace,
 ) -> Expression {
-    let to_width = ty.bits();
+    let to_width = ty.bits(ns);
 
     if from_width == to_width {
         expr

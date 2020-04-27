@@ -4,7 +4,6 @@ use tiny_keccak::keccak256;
 /// Assumes the src is hex number, starting with 0x, no underscores and 40 hexdigits long,
 /// i.e. an ethereum address.
 pub fn to_hexstr_eip55(src: &str) -> String {
-    assert_eq!(src.len(), 42);
     assert!(src.starts_with("0x"));
     assert!(src.chars().skip(2).all(|c| c.is_ascii_hexdigit()));
 

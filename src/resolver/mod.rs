@@ -174,7 +174,7 @@ impl Type {
         match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
-            Type::Contract(_) | Type::Address => BigInt::from(20),
+            Type::Contract(_) | Type::Address => BigInt::from(ns.address_length),
             Type::Bytes(n) => BigInt::from(*n),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Array(ty, dims) => {
@@ -198,9 +198,9 @@ impl Type {
         }
     }
 
-    pub fn bits(&self) -> u16 {
+    pub fn bits(&self, ns: &Namespace) -> u16 {
         match self {
-            Type::Address => 160,
+            Type::Address => ns.address_length as u16 * 8,
             Type::Bool => 1,
             Type::Int(n) => *n,
             Type::Uint(n) => *n,
@@ -581,16 +581,18 @@ pub struct Namespace {
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
     pub contracts: Vec<Contract>,
+    pub address_length: usize,
     symbols: HashMap<(Option<usize>, String), Symbol>,
 }
 
 impl Namespace {
-    pub fn new(target: Target) -> Self {
+    pub fn new(target: Target, address_length: usize) -> Self {
         Namespace {
             target,
             enums: Vec::new(),
             structs: Vec::new(),
             contracts: Vec::new(),
+            address_length,
             symbols: HashMap::new(),
         }
     }

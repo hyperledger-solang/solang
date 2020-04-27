@@ -312,11 +312,11 @@ fn test_string() {
 #[test]
 fn test_user() {
     #[derive(Debug, PartialEq, Encode, Decode)]
-    struct AddArg(Vec<u8>, [u8; 20]);
+    struct AddArg(Vec<u8>, [u8; 32]);
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct GetArg(Vec<u8>);
     #[derive(Debug, PartialEq, Encode, Decode)]
-    struct GetRet(bool, [u8; 20]);
+    struct GetRet(bool, [u8; 32]);
 
     let (runtime, mut store) = build_solidity(
         r##"
@@ -357,7 +357,7 @@ fn test_user() {
         let mut index = Vec::new();
         index.resize(len, 0u8);
         rng.fill(&mut index[..]);
-        let mut val = [0u8; 20];
+        let mut val = [0u8; 32];
         rng.fill(&mut val[..]);
 
         runtime.function(&mut store, "add", AddArg(index.clone(), val).encode());
@@ -380,6 +380,6 @@ fn test_user() {
     for val in vals {
         runtime.function(&mut store, "get", GetArg(val.0).encode());
 
-        assert_eq!(store.scratch, GetRet(false, [0u8; 20]).encode());
+        assert_eq!(store.scratch, GetRet(false, [0u8; 32]).encode());
     }
 }
