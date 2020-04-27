@@ -237,7 +237,7 @@ pub enum Expression {
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
     BoolLiteral(Loc, bool),
     NumberLiteral(Loc, BigInt),
-    AddressLiteral(Loc, String),
+    HexNumberLiteral(Loc, String),
     StringLiteral(Vec<StringLiteral>),
     HexLiteral(Vec<HexLiteral>),
     Variable(Identifier),
@@ -295,7 +295,7 @@ impl Expression {
             | Expression::AssignModulo(loc, _, _)
             | Expression::BoolLiteral(loc, _)
             | Expression::NumberLiteral(loc, _)
-            | Expression::AddressLiteral(loc, _)
+            | Expression::HexNumberLiteral(loc, _)
             | Expression::ArrayLiteral(loc, _)
             | Expression::Variable(Identifier { loc, .. }) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
