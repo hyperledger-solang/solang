@@ -117,7 +117,7 @@ impl SubstrateTarget {
             .ptr_type(AddressSpace::Generic)
             .into();
         let u32_val = contract.context.i32_type().into();
-        let u64_val = contract.context.i32_type().into();
+        let u64_val = contract.context.i64_type().into();
 
         // Access to scratch buffer
         contract.module.add_function(
@@ -260,7 +260,7 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_instantiate",
-            contract.context.void_type().fn_type(
+            contract.context.i32_type().fn_type(
                 &[
                     u8_ptr, u32_val, // code hash ptr and len
                     u64_val, // gas
@@ -274,7 +274,7 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_call",
-            contract.context.void_type().fn_type(
+            contract.context.i32_type().fn_type(
                 &[
                     u8_ptr, u32_val, // address ptr and len
                     u64_val, // gas
