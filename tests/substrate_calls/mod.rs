@@ -18,7 +18,7 @@ fn contract_name() {
 
     assert_eq!(
         first_error(errors),
-        "test is already defined as a contract name"
+        "function cannot have same name as the contract"
     );
 
     let (_, errors) = parse_and_resolve(

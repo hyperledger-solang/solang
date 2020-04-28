@@ -14,6 +14,17 @@ pub fn function_decl(
     let mut returns = Vec::new();
     let mut success = true;
 
+    // Function name cannot be the same as the contract name
+    if let Some(n) = &f.name {
+        if n.name == ns.contracts[contract_no].name {
+            errors.push(Output::error(
+                f.loc,
+                "function cannot have same name as the contract".to_string(),
+            ));
+            return false;
+        }
+    }
+
     // The parser allows constructors to have return values. This is so that we can give a
     // nicer error message than "returns unexpected"
     if f.constructor && !f.returns.is_empty() {
