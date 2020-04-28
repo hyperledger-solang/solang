@@ -292,3 +292,81 @@ fn external_call() {
 
     assert_eq!(runtime.vm.scratch, Ret(1020).encode());
 }
+
+#[test]
+fn revert_external_call() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            b x;
+            constructor() public {
+                x = new b(102);
+            }
+            function test() public returns (int32) {
+                return x.get_x({ t: 10 });
+            }
+        }
+
+        contract b {
+            int32 x;
+            constructor(int32 a) public {
+                x = a;
+            }
+            function get_x(int32 t) public returns (int32) {
+                revert("The reason why");
+                return 0;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function_expect_return("test", Vec::new(), 1);
+
+    assert_eq!(
+        runtime.vm.scratch,
+        RevertReturn(0x08c3_79a0, "The reason why".to_string()).encode()
+    );
+}
+
+#[test]
+fn revert_constructor() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            b x;
+            constructor() public {
+            }
+            function test() public returns (int32) {
+                x = new b(102);
+                return x.get_x({ t: 10 });
+            }
+        }
+
+        contract b {
+            int32 x;
+            constructor(int32 a) public {
+                require(a == 0, "Hello,\
+ World!");
+            }
+
+            function get_x(int32 t) public returns (int32) {
+                return x * t;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function_expect_return("test", Vec::new(), 1);
+
+    let expected = RevertReturn(0x08c3_79a0, "Hello, World!".to_string()).encode();
+
+    println!(
+        "{} == {}",
+        hex::encode(&runtime.vm.scratch),
+        hex::encode(&expected)
+    );
+
+    assert_eq!(runtime.vm.scratch, expected);
+}

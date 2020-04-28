@@ -2821,14 +2821,7 @@ impl<'a> Contract<'a> {
                             .build_conditional_branch(success, success_block, bail_block);
                         self.builder.position_at_end(bail_block);
 
-                        runtime.assert_failure(
-                            self,
-                            self.context
-                                .i8_type()
-                                .ptr_type(AddressSpace::Generic)
-                                .const_null(),
-                            self.context.i32_type().const_zero(),
-                        );
+                        self.builder.build_return(Some(&ret));
 
                         self.builder.position_at_end(success_block);
 

@@ -137,6 +137,12 @@ impl Externals for TestRuntime {
                     panic!("ext_scratch_write: {}", e);
                 }
 
+                println!(
+                    "ext_scratch_write({}, {})",
+                    len,
+                    hex::encode(&self.vm.scratch)
+                );
+
                 Ok(None)
             }
             Some(SubstrateExternal::ext_get_storage) => {
@@ -273,6 +279,12 @@ impl Externals for TestRuntime {
                     panic!("ext_call: {}", e);
                 }
 
+                println!(
+                    "ext_call: address={} input={}",
+                    hex::encode(address),
+                    hex::encode(&input)
+                );
+
                 let mut vm = VM::new(address);
 
                 std::mem::swap(&mut self.vm, &mut vm);
@@ -280,22 +292,19 @@ impl Externals for TestRuntime {
                 let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
                 self.vm.scratch = input;
-                if let Some(RuntimeValue::I32(ret)) = module
+                let ret = module
                     .invoke_export("call", &[], self)
-                    .expect("failed to call function")
-                {
-                    if ret != 0 {
-                        panic!("non zero return")
-                    }
-                }
+                    .expect("failed to call function");
 
                 let output = self.vm.scratch.clone();
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
+                println!("ext_call ret={:?} buf={}", ret, hex::encode(&output));
+
                 self.vm.scratch = output;
 
-                Ok(Some(RuntimeValue::I32(0)))
+                Ok(ret)
             }
             Some(SubstrateExternal::ext_instantiate) => {
                 let codehash_ptr: u32 = args.nth_checked(0)?;
@@ -339,20 +348,21 @@ impl Externals for TestRuntime {
                 let module = self.create_module(&code.0);
 
                 self.vm.scratch = input;
-                if let Some(RuntimeValue::I32(ret)) = module
+                let ret = module
                     .invoke_export("deploy", &[], self)
-                    .expect("failed to call constructor")
-                {
-                    if ret != 0 {
-                        panic!("non zero return")
-                    }
-                }
+                    .expect("failed to call constructor");
+
+                let output = self.vm.scratch.clone();
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                self.vm.scratch = address.to_vec();
+                if let Some(RuntimeValue::I32(0)) = ret {
+                    self.vm.scratch = address.to_vec();
+                } else {
+                    self.vm.scratch = output;
+                }
 
-                Ok(Some(RuntimeValue::I32(0)))
+                Ok(ret)
             }
             _ => panic!("external {} unknown", index),
         }
