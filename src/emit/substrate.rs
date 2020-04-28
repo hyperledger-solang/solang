@@ -719,7 +719,18 @@ impl SubstrateTarget {
 
                 self.check_overrun(contract, function, *data, end, false);
 
-                v
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        contract
+                            .module
+                            .get_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "string",
+                    )
+                    .into()
             }
             resolver::Type::Undef => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),

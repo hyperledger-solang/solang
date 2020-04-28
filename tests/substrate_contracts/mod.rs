@@ -370,3 +370,55 @@ fn revert_constructor() {
 
     assert_eq!(runtime.vm.scratch, expected);
 }
+
+#[test]
+fn external_datatypes() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(u64);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            b x;
+            constructor() public {
+                x = new b(102);
+            }
+
+            function test() public returns (int64) {
+                strukt k = x.get_x(10, "foobar", true, strukt({ f1: "abcd", f2: address(555555), f3: -1 }));
+
+                assert(k.f1 == "1234");
+                assert(k.f2 == address(102));
+                return int64(k.f3);
+            }
+        }
+
+        contract b {
+            int x;
+            constructor(int a) public {
+                x = a;
+            }
+
+            function get_x(int t, string s, bool y, strukt k) public returns (strukt) {
+                assert(y == true);
+                assert(t == 10);
+                assert(s == "foobar");
+                assert(k.f1 == "abcd");
+
+                return strukt({ f1: "1234", f2: address(102), f3: x * t });
+            }
+        }
+
+        struct strukt {
+            bytes4 f1;
+            address f2;
+            int f3;
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("test", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(1020).encode());
+}
