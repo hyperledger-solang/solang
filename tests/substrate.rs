@@ -1,4 +1,5 @@
 // Create WASM virtual machine like substrate
+extern crate blake2_rfc;
 extern crate ethabi;
 extern crate ethereum_types;
 extern crate num_bigint;
@@ -31,6 +32,7 @@ mod substrate_expressions;
 
 mod substrate_arrays;
 mod substrate_calls;
+mod substrate_contracts;
 mod substrate_first;
 mod substrate_functions;
 mod substrate_mappings;
@@ -63,6 +65,8 @@ enum SubstrateExternal {
     ext_return,
     ext_hash_keccak_256,
     ext_print,
+    ext_call,
+    ext_instantiate,
 }
 
 pub struct VM {
@@ -104,6 +108,15 @@ impl Externals for TestRuntime {
                 let dest: u32 = args.nth_checked(0)?;
                 let offset: u32 = args.nth_checked(1)?;
                 let len: u32 = args.nth_checked(2)?;
+
+                println!(
+                    "ext_scratch_read({}, {}, {}) scratch={} {}",
+                    dest,
+                    offset,
+                    len,
+                    self.vm.scratch.len(),
+                    hex::encode(&self.vm.scratch)
+                );
 
                 if let Err(e) = self.vm.memory.set(
                     dest,
@@ -237,6 +250,110 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_call) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+                let address_len: u32 = args.nth_checked(1)?;
+                let input_ptr: u32 = args.nth_checked(5)?;
+                let input_len: u32 = args.nth_checked(6)?;
+
+                let mut address = [0u8; 32];
+
+                if address_len != 32 {
+                    panic!("ext_call: len = {}", address_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                    panic!("ext_call: {}", e);
+                }
+
+                let mut input = Vec::new();
+                input.resize(input_len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(input_ptr, &mut input) {
+                    panic!("ext_call: {}", e);
+                }
+
+                let mut vm = VM::new(address);
+
+                std::mem::swap(&mut self.vm, &mut vm);
+
+                let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+
+                self.vm.scratch = input;
+                if let Some(RuntimeValue::I32(ret)) = module
+                    .invoke_export("call", &[], self)
+                    .expect("failed to call function")
+                {
+                    if ret != 0 {
+                        panic!("non zero return")
+                    }
+                }
+
+                let output = self.vm.scratch.clone();
+
+                std::mem::swap(&mut self.vm, &mut vm);
+
+                self.vm.scratch = output;
+
+                Ok(Some(RuntimeValue::I32(0)))
+            }
+            Some(SubstrateExternal::ext_instantiate) => {
+                let codehash_ptr: u32 = args.nth_checked(0)?;
+                let codehash_len: u32 = args.nth_checked(1)?;
+                let input_ptr: u32 = args.nth_checked(5)?;
+                let input_len: u32 = args.nth_checked(6)?;
+
+                let mut codehash = [0u8; 32];
+
+                if codehash_len != 32 {
+                    panic!("ext_instantiate: len = {}", codehash_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(codehash_ptr, &mut codehash) {
+                    panic!("ext_instantiate: {}", e);
+                }
+
+                let address = address_new();
+
+                let code = self
+                    .contracts
+                    .iter()
+                    .find(|code| {
+                        blake2_rfc::blake2b::blake2b(32, &[], &code.0).as_bytes() == codehash
+                    })
+                    .expect("codehash not found");
+
+                self.accounts.insert(address, code.0.clone());
+
+                let mut input = Vec::new();
+                input.resize(input_len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(input_ptr, &mut input) {
+                    panic!("ext_instantiate: {}", e);
+                }
+
+                let mut vm = VM::new(address);
+
+                std::mem::swap(&mut self.vm, &mut vm);
+
+                let module = self.create_module(&code.0);
+
+                self.vm.scratch = input;
+                if let Some(RuntimeValue::I32(ret)) = module
+                    .invoke_export("deploy", &[], self)
+                    .expect("failed to call constructor")
+                {
+                    if ret != 0 {
+                        panic!("non zero return")
+                    }
+                }
+
+                std::mem::swap(&mut self.vm, &mut vm);
+
+                self.vm.scratch = address.to_vec();
+
+                Ok(Some(RuntimeValue::I32(0)))
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -254,6 +371,8 @@ impl ModuleImportResolver for TestRuntime {
             "ext_return" => SubstrateExternal::ext_return,
             "ext_hash_keccak_256" => SubstrateExternal::ext_hash_keccak_256,
             "ext_print" => SubstrateExternal::ext_print,
+            "ext_call" => SubstrateExternal::ext_call,
+            "ext_instantiate" => SubstrateExternal::ext_instantiate,
             _ => {
                 panic!("{} not implemented", field_name);
             }
