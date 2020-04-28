@@ -156,7 +156,7 @@ fn bad_mapping_declares() {
 
 #[test]
 fn basic() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract c {
             mapping(uint => bytes4) data;
@@ -170,7 +170,7 @@ fn basic() {
         "##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -182,7 +182,7 @@ fn test_uint64() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct GetArg(u64);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
     contract foo {
         mapping(uint64 => int32) v;
@@ -205,15 +205,15 @@ fn test_uint64() {
         let index = rng.gen::<u64>();
         let val = rng.gen::<i32>();
 
-        runtime.function(&mut store, "set", SetArg(index, val).encode());
+        runtime.function("set", SetArg(index, val).encode());
 
         vals.push((index, val));
     }
 
     for val in vals {
-        runtime.function(&mut store, "get", GetArg(val.0).encode());
+        runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(store.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
     }
 }
 
@@ -226,7 +226,7 @@ fn test_enum() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct GetArg(u8);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
     contract foo {
         enum bar { bar1,bar2,bar3,bar4,bar5,bar6,bar7,bar8,bar9,bar10,bar11,bar12,bar13,bar14,bar15,bar16,bar17,bar18,bar19,bar20,bar21,bar22,bar23,bar24,bar25,bar26,bar27,bar28,bar29,bar30,bar31,bar32,bar33,bar34,bar35,bar36,bar37,bar38,bar39,bar40,bar41,bar42,bar43,bar44,bar45,bar46,bar47,bar48,bar49,bar50,bar51,bar52,bar53,bar54,bar55,bar56,bar57,bar58,bar59,bar60,bar61,bar62,bar63,bar64,bar65,bar66,bar67,bar68,bar69,bar70,bar71,bar72,bar73,bar74,bar75,bar76,bar77,bar78,bar79,bar80,bar81,bar82,bar83,bar84,bar85,bar86,bar87,bar88,bar89,bar90,bar91,bar92,bar93,bar94,bar95,bar96,bar97,bar98,bar99,bar100}
@@ -250,15 +250,15 @@ fn test_enum() {
         let index = rng.gen::<u8>() % 100;
         let val = rng.gen::<i32>();
 
-        runtime.function(&mut store, "set", SetArg(index, val).encode());
+        runtime.function("set", SetArg(index, val).encode());
 
         vals.insert(index, val);
     }
 
     for val in vals {
-        runtime.function(&mut store, "get", GetArg(val.0).encode());
+        runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(store.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
     }
 }
 
@@ -271,7 +271,7 @@ fn test_string() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct GetArg(Vec<u8>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
     contract foo {
         mapping(bytes => int64) v;
@@ -297,15 +297,15 @@ fn test_string() {
         rng.fill(&mut index[..]);
         let val = rng.gen::<i64>();
 
-        runtime.function(&mut store, "set", SetArg(index.clone(), val).encode());
+        runtime.function("set", SetArg(index.clone(), val).encode());
 
         vals.insert(index, val);
     }
 
     for val in vals {
-        runtime.function(&mut store, "get", GetArg(val.0).encode());
+        runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(store.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
     }
 }
 
@@ -318,7 +318,7 @@ fn test_user() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct GetRet(bool, [u8; 32]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract b {
             struct user {
@@ -360,26 +360,26 @@ fn test_user() {
         let mut val = [0u8; 32];
         rng.fill(&mut val[..]);
 
-        runtime.function(&mut store, "add", AddArg(index.clone(), val).encode());
+        runtime.function("add", AddArg(index.clone(), val).encode());
 
         vals.insert(index, val);
     }
 
     for val in &vals {
-        runtime.function(&mut store, "get", GetArg(val.0.clone()).encode());
+        runtime.function("get", GetArg(val.0.clone()).encode());
 
-        assert_eq!(store.scratch, GetRet(true, *val.1).encode());
+        assert_eq!(runtime.vm.scratch, GetRet(true, *val.1).encode());
     }
 
     // now delete them
 
     for val in &vals {
-        runtime.function(&mut store, "rm", GetArg(val.0.clone()).encode());
+        runtime.function("rm", GetArg(val.0.clone()).encode());
     }
 
     for val in vals {
-        runtime.function(&mut store, "get", GetArg(val.0).encode());
+        runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(store.scratch, GetRet(false, [0u8; 32]).encode());
+        assert_eq!(runtime.vm.scratch, GetRet(false, [0u8; 32]).encode());
     }
 }

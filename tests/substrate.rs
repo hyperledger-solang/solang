@@ -14,6 +14,7 @@ extern crate wasmi;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use rand::Rng;
 use std::collections::HashMap;
 use tiny_keccak::keccak256;
 use wasmi::memory_units::Pages;
@@ -38,6 +39,17 @@ mod substrate_strings;
 mod substrate_structs;
 
 type StorageKey = [u8; 32];
+type Address = [u8; 32];
+
+fn address_new() -> Address {
+    let mut rng = rand::thread_rng();
+
+    let mut a = [0u8; 32];
+
+    rng.fill(&mut a[..]);
+
+    a
+}
 
 #[derive(FromPrimitive)]
 #[allow(non_camel_case_types)]
@@ -53,26 +65,32 @@ enum SubstrateExternal {
     ext_print,
 }
 
-pub struct ContractStorage {
+pub struct VM {
+    address: Address,
     memory: MemoryRef,
     pub scratch: Vec<u8>,
-    pub store: HashMap<StorageKey, Vec<u8>>,
-    pub printbuf: String,
 }
 
-impl ContractStorage {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        ContractStorage {
+impl VM {
+    fn new(address: Address) -> Self {
+        VM {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             scratch: Vec::new(),
-            store: HashMap::new(),
-            printbuf: String::new(),
+            address,
         }
     }
 }
 
-impl Externals for ContractStorage {
+pub struct TestRuntime {
+    pub store: HashMap<(Address, StorageKey), Vec<u8>>,
+    pub contracts: Vec<(Vec<u8>, String)>,
+    pub printbuf: String,
+    pub accounts: HashMap<Address, Vec<u8>>,
+    pub abi: abi::substrate::Metadata,
+    pub vm: VM,
+}
+
+impl Externals for TestRuntime {
     fn invoke_index(
         &mut self,
         index: usize,
@@ -80,16 +98,16 @@ impl Externals for ContractStorage {
     ) -> Result<Option<RuntimeValue>, Trap> {
         match FromPrimitive::from_usize(index) {
             Some(SubstrateExternal::ext_scratch_size) => {
-                Ok(Some(RuntimeValue::I32(self.scratch.len() as i32)))
+                Ok(Some(RuntimeValue::I32(self.vm.scratch.len() as i32)))
             }
             Some(SubstrateExternal::ext_scratch_read) => {
                 let dest: u32 = args.nth_checked(0)?;
                 let offset: u32 = args.nth_checked(1)?;
                 let len: u32 = args.nth_checked(2)?;
 
-                if let Err(e) = self.memory.set(
+                if let Err(e) = self.vm.memory.set(
                     dest,
-                    &self.scratch[offset as usize..(offset + len) as usize],
+                    &self.vm.scratch[offset as usize..(offset + len) as usize],
                 ) {
                     panic!("ext_scratch_read: {}", e);
                 }
@@ -100,9 +118,9 @@ impl Externals for ContractStorage {
                 let dest: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
 
-                self.scratch.resize(len as usize, 0u8);
+                self.vm.scratch.resize(len as usize, 0u8);
 
-                if let Err(e) = self.memory.get_into(dest, &mut self.scratch) {
+                if let Err(e) = self.vm.memory.get_into(dest, &mut self.vm.scratch) {
                     panic!("ext_scratch_write: {}", e);
                 }
 
@@ -115,16 +133,16 @@ impl Externals for ContractStorage {
 
                 let mut key: StorageKey = [0; 32];
 
-                if let Err(e) = self.memory.get_into(key_ptr, &mut key) {
+                if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
                     panic!("ext_get_storage: {}", e);
                 }
 
-                if self.store.contains_key(&key) {
-                    self.scratch = self.store[&key].clone();
-                    println!("ext_get_storage: {:?} = {:?}", key, self.scratch);
+                if let Some(value) = self.store.get(&(self.vm.address, key)) {
+                    self.vm.scratch = value.clone();
+                    println!("ext_get_storage: {:?} = {:?}", key, self.vm.scratch);
                     Ok(Some(RuntimeValue::I32(0)))
                 } else {
-                    self.scratch.clear();
+                    self.vm.scratch.clear();
                     println!("ext_get_storage: {:?} = nil", key);
                     Ok(Some(RuntimeValue::I32(1)))
                 }
@@ -134,12 +152,12 @@ impl Externals for ContractStorage {
 
                 let mut key: StorageKey = [0; 32];
 
-                if let Err(e) = self.memory.get_into(key_ptr, &mut key) {
+                if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
                     panic!("ext_clear_storage: {}", e);
                 }
 
                 println!("ext_clear_storage: {:?}", key);
-                self.store.remove(&key);
+                self.store.remove(&(self.vm.address, key));
 
                 Ok(None)
             }
@@ -152,19 +170,19 @@ impl Externals for ContractStorage {
 
                 let mut key: StorageKey = [0; 32];
 
-                if let Err(e) = self.memory.get_into(key_ptr, &mut key) {
+                if let Err(e) = self.vm.memory.get_into(key_ptr, &mut key) {
                     panic!("ext_set_storage: {}", e);
                 }
 
                 let mut data = Vec::new();
                 data.resize(len as usize, 0u8);
 
-                if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
                     panic!("ext_set_storage: {}", e);
                 }
                 println!("ext_set_storage: {:?} = {:?}", key, data);
 
-                self.store.insert(key, data);
+                self.store.insert((self.vm.address, key), data);
 
                 Ok(None)
             }
@@ -177,12 +195,12 @@ impl Externals for ContractStorage {
 
                 data.resize(len as usize, 0);
 
-                if let Err(e) = self.memory.get_into(data_ptr, &mut data) {
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
                     panic!("ext_hash_keccak_256: {}", e);
                 }
                 let hash = keccak256(&data);
 
-                if let Err(e) = self.memory.set(out_ptr, &hash) {
+                if let Err(e) = self.vm.memory.set(out_ptr, &hash) {
                     panic!("ext_hash_keccak_256: {}", e);
                 }
 
@@ -192,9 +210,9 @@ impl Externals for ContractStorage {
                 let data_ptr: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
 
-                self.scratch.resize(len as usize, 0u8);
+                self.vm.scratch.resize(len as usize, 0u8);
 
-                if let Err(e) = self.memory.get_into(data_ptr, &mut self.scratch) {
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut self.vm.scratch) {
                     panic!("ext_return: {}", e);
                 }
 
@@ -207,7 +225,7 @@ impl Externals for ContractStorage {
                 let mut buf = Vec::new();
                 buf.resize(len as usize, 0u8);
 
-                if let Err(e) = self.memory.get_into(data_ptr, &mut buf) {
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
                     panic!("ext_print: {}", e);
                 }
 
@@ -224,7 +242,7 @@ impl Externals for ContractStorage {
     }
 }
 
-impl ModuleImportResolver for ContractStorage {
+impl ModuleImportResolver for TestRuntime {
     fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
         let index = match field_name {
             "ext_scratch_size" => SubstrateExternal::ext_scratch_size,
@@ -249,24 +267,29 @@ impl ModuleImportResolver for ContractStorage {
         _field_name: &str,
         _memory_type: &MemoryDescriptor,
     ) -> Result<MemoryRef, Error> {
-        Ok(self.memory.clone())
+        Ok(self.vm.memory.clone())
     }
-}
-
-pub struct TestRuntime {
-    module: ModuleRef,
-    abi: abi::substrate::Metadata,
 }
 
 impl TestRuntime {
-    pub fn constructor(&self, store: &mut ContractStorage, index: usize, args: Vec<u8>) {
+    fn create_module(&self, code: &[u8]) -> ModuleRef {
+        let module = Module::from_buffer(&code).expect("parse wasm should work");
+
+        ModuleInstance::new(&module, &ImportsBuilder::new().with_resolver("env", self))
+            .expect("Failed to instantiate module")
+            .run_start(&mut NopExternals)
+            .expect("Failed to run start function in module")
+    }
+
+    pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
         let m = &self.abi.contract.constructors[index];
 
-        store.scratch = m.selector().into_iter().chain(args).collect();
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
-        if let Some(RuntimeValue::I32(ret)) = self
-            .module
-            .invoke_export("deploy", &[], store)
+        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("deploy", &[], self)
             .expect("failed to call function")
         {
             if ret != 0 {
@@ -275,14 +298,15 @@ impl TestRuntime {
         }
     }
 
-    pub fn function(&self, store: &mut ContractStorage, name: &str, args: Vec<u8>) {
+    pub fn function(&mut self, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
-        store.scratch = m.selector().into_iter().chain(args).collect();
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
-        if let Some(RuntimeValue::I32(ret)) = self
-            .module
-            .invoke_export("call", &[], store)
+        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("call", &[], self)
             .expect("failed to call function")
         {
             if ret != 0 {
@@ -291,20 +315,15 @@ impl TestRuntime {
         }
     }
 
-    pub fn function_expect_return(
-        &self,
-        store: &mut ContractStorage,
-        name: &str,
-        args: Vec<u8>,
-        expected_ret: i32,
-    ) {
+    pub fn function_expect_return(&mut self, name: &str, args: Vec<u8>, expected_ret: i32) {
         let m = self.abi.get_function(name).unwrap();
 
-        store.scratch = m.selector().into_iter().chain(args).collect();
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
-        if let Some(RuntimeValue::I32(ret)) = self
-            .module
-            .invoke_export("call", &[], store)
+        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("call", &[], self)
             .expect("failed to call function")
         {
             if expected_ret != ret {
@@ -313,12 +332,13 @@ impl TestRuntime {
         }
     }
 
-    pub fn raw_function(&self, store: &mut ContractStorage, input: Vec<u8>) {
-        store.scratch = input;
+    pub fn raw_function(&mut self, input: Vec<u8>) {
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
-        if let Some(RuntimeValue::I32(ret)) = self
-            .module
-            .invoke_export("call", &[], store)
+        self.vm.scratch = input;
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("call", &[], self)
             .expect("failed to call function")
         {
             if ret != 0 {
@@ -327,12 +347,13 @@ impl TestRuntime {
         }
     }
 
-    pub fn raw_constructor(&self, store: &mut ContractStorage, input: Vec<u8>) {
-        store.scratch = input;
+    pub fn raw_constructor(&mut self, input: Vec<u8>) {
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
-        if let Some(RuntimeValue::I32(ret)) = self
-            .module
-            .invoke_export("deploy", &[], store)
+        self.vm.scratch = input;
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("deploy", &[], self)
             .expect("failed to call constructor")
         {
             if ret != 0 {
@@ -342,7 +363,7 @@ impl TestRuntime {
     }
 }
 
-pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
+pub fn build_solidity(src: &'static str) -> TestRuntime {
     let (res, errors) = compile(
         src,
         "test.sol",
@@ -354,26 +375,22 @@ pub fn build_solidity(src: &'static str) -> (TestRuntime, ContractStorage) {
 
     assert!(!res.is_empty());
 
-    // resolve
-    let (bc, abistr) = &res[0];
+    let abistr = res[0].1.clone();
+    let code = res[0].0.clone();
+    let address = address_new();
 
-    let module = Module::from_buffer(bc).expect("parse wasm should work");
+    let mut t = TestRuntime {
+        accounts: HashMap::new(),
+        printbuf: String::new(),
+        store: HashMap::new(),
+        contracts: res,
+        vm: VM::new(address),
+        abi: abi::substrate::load(&abistr).unwrap(),
+    };
 
-    let store = ContractStorage::new();
+    t.accounts.insert(address, code);
 
-    (
-        TestRuntime {
-            module: ModuleInstance::new(
-                &module,
-                &ImportsBuilder::new().with_resolver("env", &store),
-            )
-            .expect("Failed to instantiate module")
-            .run_start(&mut NopExternals)
-            .expect("Failed to run start function in module"),
-            abi: abi::substrate::load(&abistr).unwrap(),
-        },
-        store,
-    )
+    t
 }
 
 pub fn first_error(errors: Vec<output::Output>) -> String {

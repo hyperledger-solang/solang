@@ -13,7 +13,7 @@ fn celcius_and_fahrenheit() {
     struct Val(u32);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function celcius2fahrenheit(int32 celcius) pure public returns (int32) {
@@ -28,13 +28,13 @@ fn celcius_and_fahrenheit() {
         }",
     );
 
-    runtime.function(&mut store, "celcius2fahrenheit", Val(10).encode());
+    runtime.function("celcius2fahrenheit", Val(10).encode());
 
-    assert_eq!(store.scratch, Val(50).encode());
+    assert_eq!(runtime.vm.scratch, Val(50).encode());
 
-    runtime.function(&mut store, "fahrenheit2celcius", Val(50).encode());
+    runtime.function("fahrenheit2celcius", Val(50).encode());
 
-    assert_eq!(store.scratch, Val(10).encode());
+    assert_eq!(runtime.vm.scratch, Val(10).encode());
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn digits() {
     struct Val64(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function digitslen(uint64 val) pure public returns (uint32) {
@@ -73,13 +73,13 @@ fn digits() {
         }",
     );
 
-    runtime.function(&mut store, "digitslen", Val64(1234567).encode());
+    runtime.function("digitslen", Val64(1234567).encode());
 
-    assert_eq!(store.scratch, Val32(7).encode());
+    assert_eq!(runtime.vm.scratch, Val32(7).encode());
 
-    runtime.function(&mut store, "sumdigits", Val64(123456789).encode());
+    runtime.function("sumdigits", Val64(123456789).encode());
 
-    assert_eq!(store.scratch, Val32(45).encode());
+    assert_eq!(runtime.vm.scratch, Val32(45).encode());
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn large_loops() {
     struct Val64(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function foo(uint val) pure public returns (uint) {
@@ -113,17 +113,17 @@ fn large_loops() {
         }",
     );
 
-    runtime.function(&mut store, "bar", Vec::new());
+    runtime.function("bar", Vec::new());
 
     let mut args = Val64(7000).encode();
     args.resize(32, 0);
 
-    runtime.function(&mut store, "baz", args);
+    runtime.function("baz", args);
 
     let mut rets = Val64(7000000000).encode();
     rets.resize(32, 0);
 
-    assert_eq!(store.scratch, rets);
+    assert_eq!(runtime.vm.scratch, rets);
 }
 
 #[test]
@@ -134,7 +134,7 @@ fn expressions() {
     struct Val8(u8);
 
     // parse
-    let (runtime, mut store) = build_solidity("
+    let mut runtime = build_solidity("
         contract test {
             // this is 2^254
             int constant large_value = 14474011154664524427946373126085988481658748083205070504932198000989141204992;
@@ -224,21 +224,21 @@ fn expressions() {
         }",
     );
 
-    runtime.function(&mut store, "add_100", Val16(0xffc0).encode());
+    runtime.function("add_100", Val16(0xffc0).encode());
 
-    assert_eq!(store.scratch, Val16(36).encode());
+    assert_eq!(runtime.vm.scratch, Val16(36).encode());
 
-    runtime.function(&mut store, "clear_digit", Val8(25).encode());
+    runtime.function("clear_digit", Val8(25).encode());
 
-    assert_eq!(store.scratch, Val8(20).encode());
+    assert_eq!(runtime.vm.scratch, Val8(20).encode());
 
-    runtime.function(&mut store, "low_digit", Val8(25).encode());
+    runtime.function("low_digit", Val8(25).encode());
 
-    assert_eq!(store.scratch, Val8(5).encode());
+    assert_eq!(runtime.vm.scratch, Val8(5).encode());
 
-    runtime.function(&mut store, "test_comparisons", Vec::new());
+    runtime.function("test_comparisons", Vec::new());
 
-    runtime.function(&mut store, "increments", Vec::new());
+    runtime.function("increments", Vec::new());
 }
 
 #[test]
@@ -338,7 +338,7 @@ fn test_cast_errors() {
 #[should_panic]
 fn divisions_by_zero() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public returns (uint){
@@ -349,13 +349,13 @@ fn divisions_by_zero() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn divisions() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             uint constant large = 101213131318098987934191741;
@@ -373,13 +373,13 @@ fn divisions() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn divisions64() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             uint64 constant large = 101213131318098987;
@@ -397,7 +397,7 @@ fn divisions64() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
@@ -409,7 +409,7 @@ fn divisions128() {
     struct Rets(i128);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             uint128 constant large = 101213131318098987;
@@ -478,51 +478,47 @@ fn divisions128() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 
-    runtime.function(&mut store, "return_neg", Vec::new());
+    runtime.function("return_neg", Vec::new());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
         assert_eq!(r, -100);
     } else {
         panic!();
     }
 
-    runtime.function(&mut store, "return_pos", Vec::new());
+    runtime.function("return_pos", Vec::new());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
         assert_eq!(r, 255);
     } else {
         panic!();
     }
 
-    runtime.function(&mut store, "do_div", Args(-9900, -100).encode());
+    runtime.function("do_div", Args(-9900, -100).encode());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
         assert_eq!(r, 99);
     } else {
         panic!();
     }
 
-    runtime.function(
-        &mut store,
-        "do_div",
-        Args(-101213131318098987, -100000).encode(),
-    );
+    runtime.function("do_div", Args(-101213131318098987, -100000).encode());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &store.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
         assert_eq!(r, 1012131313180);
     } else {
         panic!();
     }
 
-    runtime.function(&mut store, "do_signed_test", Vec::new());
+    runtime.function("do_signed_test", Vec::new());
 }
 
 #[test]
 fn divisions256() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             uint256 constant large = 101213131318098987;
@@ -547,13 +543,13 @@ fn divisions256() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn complement() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public {
@@ -569,14 +565,14 @@ fn complement() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 
     let mut args = Vec::new();
     args.resize(32, 0);
 
-    runtime.function(&mut store, "do_complement", args);
+    runtime.function("do_complement", args);
 
-    let ret = store.scratch;
+    let ret = runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.into_iter().filter(|x| *x == 255).count() == 32);
@@ -585,7 +581,7 @@ fn complement() {
 #[test]
 fn bitwise() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public {
@@ -614,15 +610,15 @@ fn bitwise() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 
     let mut args = Vec::new();
     args.resize(32, 0);
     args.resize(64, 0xff);
 
-    runtime.function(&mut store, "do_xor", args);
+    runtime.function("do_xor", args);
 
-    let ret = &store.scratch;
+    let ret = &runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -631,9 +627,9 @@ fn bitwise() {
     args.resize(32, 0);
     args.resize(64, 0xff);
 
-    runtime.function(&mut store, "do_or", args);
+    runtime.function("do_or", args);
 
-    let ret = &store.scratch;
+    let ret = &runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -642,9 +638,9 @@ fn bitwise() {
     args.resize(32, 0);
     args.resize(64, 0xff);
 
-    runtime.function(&mut store, "do_and", args);
+    runtime.function("do_and", args);
 
-    let ret = &store.scratch;
+    let ret = &runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
@@ -653,7 +649,7 @@ fn bitwise() {
 #[test]
 fn shift() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public {
@@ -675,13 +671,13 @@ fn shift() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn assign_bitwise() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public {
@@ -721,15 +717,15 @@ fn assign_bitwise() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 
     let mut args = Vec::new();
     args.resize(32, 0);
     args.resize(64, 0xff);
 
-    runtime.function(&mut store, "do_xor", args);
+    runtime.function("do_xor", args);
 
-    let ret = &store.scratch;
+    let ret = &runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -738,9 +734,9 @@ fn assign_bitwise() {
     args.resize(32, 0);
     args.resize(64, 0xff);
 
-    runtime.function(&mut store, "do_or", args);
+    runtime.function("do_or", args);
 
-    let ret = &store.scratch;
+    let ret = &runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -749,9 +745,9 @@ fn assign_bitwise() {
     args.resize(32, 0);
     args.resize(64, 0xff);
 
-    runtime.function(&mut store, "do_and", args);
+    runtime.function("do_and", args);
 
-    let ret = &store.scratch;
+    let ret = &runtime.vm.scratch;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
@@ -760,7 +756,7 @@ fn assign_bitwise() {
 #[test]
 fn assign_shift() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public {
@@ -786,13 +782,13 @@ fn assign_shift() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn ternary() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function do_test() public {
@@ -805,13 +801,13 @@ fn ternary() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn short_circuit_or() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             uint32 counter;
@@ -845,13 +841,13 @@ fn short_circuit_or() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
 fn short_circuit_and() {
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             uint32 counter;
@@ -894,7 +890,7 @@ fn short_circuit_and() {
         }",
     );
 
-    runtime.function(&mut store, "do_test", Vec::new());
+    runtime.function("do_test", Vec::new());
 }
 
 #[test]
@@ -903,7 +899,7 @@ fn power() {
     struct Val(u64);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract c {
             function power(uint64 base, uint64 exp) public returns (uint64) {
@@ -919,9 +915,9 @@ fn power() {
         .chain(Val(5).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(1024).encode());
+    assert_eq!(runtime.vm.scratch, Val(1024).encode());
 
     // n ** 1 = n
     let args = Val(2345)
@@ -930,9 +926,9 @@ fn power() {
         .chain(Val(1).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(2345).encode());
+    assert_eq!(runtime.vm.scratch, Val(2345).encode());
 
     // n ** 0 = 0
     let args = Val(0xdead_beef)
@@ -941,9 +937,9 @@ fn power() {
         .chain(Val(0).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.scratch, Val(1).encode());
 
     // 0 ** n = 0
     let args = Val(0)
@@ -952,9 +948,9 @@ fn power() {
         .chain(Val(0xdead_beef).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(0).encode());
+    assert_eq!(runtime.vm.scratch, Val(0).encode());
 
     let (_, errors) = parse_and_resolve(
         "contract test {
@@ -1005,7 +1001,7 @@ fn large_power() {
     struct Val(u128);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract c {
             function power(uint128 base, uint128 exp) public returns (uint128) {
@@ -1021,9 +1017,9 @@ fn large_power() {
         .chain(Val(5).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(1024).encode());
+    assert_eq!(runtime.vm.scratch, Val(1024).encode());
 
     // n ** 1 = n
     let args = Val(2345)
@@ -1032,9 +1028,9 @@ fn large_power() {
         .chain(Val(1).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(2345).encode());
+    assert_eq!(runtime.vm.scratch, Val(2345).encode());
 
     // n ** 0 = 0
     let args = Val(0xdeadbeef)
@@ -1043,9 +1039,9 @@ fn large_power() {
         .chain(Val(0).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.scratch, Val(1).encode());
 
     // 0 ** n = 0
     let args = Val(0)
@@ -1054,9 +1050,9 @@ fn large_power() {
         .chain(Val(0xdeadbeef).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
-    assert_eq!(store.scratch, Val(0).encode());
+    assert_eq!(runtime.vm.scratch, Val(0).encode());
 
     // 10 ** 36 = 1000000000000000000000000000000000000
     let args = Val(10)
@@ -1065,10 +1061,10 @@ fn large_power() {
         .chain(Val(36).encode().into_iter())
         .collect();
 
-    runtime.function(&mut store, "power", args);
+    runtime.function("power", args);
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Val(1000000000000000000000000000000000000).encode()
     );
 }
@@ -1078,7 +1074,7 @@ fn multiply() {
     let mut rng = rand::thread_rng();
     let size = 32;
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract c {
             function multiply(uint a, uint b) public returns (uint) {
@@ -1106,14 +1102,13 @@ fn multiply() {
         println!("in: a:{:?} b:{:?}", a_data, b_data);
 
         runtime.function(
-            &mut store,
             "multiply",
             a_data.into_iter().chain(b_data.into_iter()).collect(),
         );
 
-        println!("out: res:{:?}", store.scratch);
+        println!("out: res:{:?}", runtime.vm.scratch);
 
-        let res = BigInt::from_bytes_le(Sign::Plus, &store.scratch);
+        let res = BigInt::from_bytes_le(Sign::Plus, &runtime.vm.scratch);
 
         println!("{} = {} * {}", res, a, b);
 
@@ -1122,7 +1117,7 @@ fn multiply() {
         let (_, mut res) = (a * b).to_bytes_le();
         res.resize(size, 0);
 
-        assert_eq!(res, store.scratch);
+        assert_eq!(res, runtime.vm.scratch);
     }
 }
 
@@ -1136,7 +1131,7 @@ fn bytes_bitwise() {
     struct BytesArray([u8; 7], u32);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract c {
             function or(bytes5 x) public returns (bytes5 y) {
@@ -1187,100 +1182,68 @@ fn bytes_bitwise() {
         }",
     );
 
-    runtime.function(
-        &mut store,
-        "or",
-        Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode(),
-    );
+    runtime.function("or", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes5([0x81, 0x81, 0x81, 0x81, 0x01]).encode()
     );
 
-    runtime.function(
-        &mut store,
-        "and",
-        Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode(),
-    );
+    runtime.function("and", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
-    assert_eq!(store.scratch, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
+    assert_eq!(runtime.vm.scratch, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
 
-    runtime.function(
-        &mut store,
-        "xor",
-        Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode(),
-    );
+    runtime.function("xor", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode()
     );
 
     // shifty-shift
-    runtime.function(
-        &mut store,
-        "shift_left",
-        Bytes3([0xf3, 0x7d, 0x03]).encode(),
-    );
+    runtime.function("shift_left", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
     );
 
-    runtime.function(
-        &mut store,
-        "shift_right",
-        Bytes3([0xf3, 0x7d, 0x03]).encode(),
-    );
+    runtime.function("shift_right", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
     );
 
     // assignment versions
-    runtime.function(
-        &mut store,
-        "shift_left2",
-        Bytes3([0xf3, 0x7d, 0x03]).encode(),
-    );
+    runtime.function("shift_left2", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
     );
 
-    runtime.function(
-        &mut store,
-        "shift_right2",
-        Bytes3([0xf3, 0x7d, 0x03]).encode(),
-    );
+    runtime.function("shift_right2", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
     );
 
     // check length
-    runtime.function(&mut store, "bytes_length", Vec::new());
+    runtime.function("bytes_length", Vec::new());
 
     // complement
-    runtime.function(
-        &mut store,
-        "complement",
-        Bytes3([0xf3, 0x7d, 0x03]).encode(),
-    );
+    runtime.function("complement", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
-    assert_eq!(store.scratch, Bytes3([0x0c, 0x82, 0xfc]).encode());
+    assert_eq!(runtime.vm.scratch, Bytes3([0x0c, 0x82, 0xfc]).encode());
 
     // array access
     let bytes7 = *b"NAWABRA";
     for i in 0..6 {
-        runtime.function(&mut store, "bytes_array", BytesArray(bytes7, i).encode());
+        runtime.function("bytes_array", BytesArray(bytes7, i).encode());
 
-        assert_eq!(store.scratch, [bytes7[i as usize]]);
+        assert_eq!(runtime.vm.scratch, [bytes7[i as usize]]);
     }
 }
 
@@ -1291,7 +1254,7 @@ fn bytesn_underflow_index_acccess() {
     struct BytesArray([u8; 7], i32);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function bytes_array(bytes7 foo, int32 index) public returns (bytes1) {
@@ -1300,11 +1263,7 @@ fn bytesn_underflow_index_acccess() {
         }",
     );
 
-    runtime.function(
-        &mut store,
-        "bytes_array",
-        BytesArray(*b"nawabra", -1).encode(),
-    );
+    runtime.function("bytes_array", BytesArray(*b"nawabra", -1).encode());
 }
 
 #[test]
@@ -1314,7 +1273,7 @@ fn bytesn_overflow_index_acccess() {
     struct BytesArray([u8; 7], i32);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function bytes_array(bytes7 foo, int32 index) public returns (byte) {
@@ -1323,17 +1282,13 @@ fn bytesn_overflow_index_acccess() {
         }",
     );
 
-    runtime.function(
-        &mut store,
-        "bytes_array",
-        BytesArray(*b"nawabra", 7).encode(),
-    );
+    runtime.function("bytes_array", BytesArray(*b"nawabra", 7).encode());
 }
 
 #[test]
 fn unaryminus_and_subtract() {
     // The minus sign can be a unary negative or subtract.
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract c {
             function test() public {
@@ -1345,13 +1300,13 @@ fn unaryminus_and_subtract() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn div() {
     // The minus sign can be a unary negative or subtract.
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract c {
             function test1() public {
@@ -1392,7 +1347,7 @@ fn div() {
         }"#,
     );
 
-    runtime.function(&mut store, "test1", Vec::new());
+    runtime.function("test1", Vec::new());
 
-    runtime.function(&mut store, "test2", Vec::new());
+    runtime.function("test2", Vec::new());
 }
