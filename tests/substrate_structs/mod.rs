@@ -491,15 +491,17 @@ fn structs_in_structs_encode() {
                 int32 f2;
             }
 
-            struct bar {
-                bool a;
-                foo b;
-                foo c;
-            }
-                
-            function test(bar f) public {
+            function test(other.bar f) public {
                 assert(f.c.f2 == 0x4002);
                 assert(f.b.f1 == hex"c30000");
+            }
+        }
+
+        contract other {
+            struct bar {
+                bool a;
+                test_struct_parsing.foo b;
+                test_struct_parsing.foo c;
             }
         }"##,
     );
