@@ -29,7 +29,7 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_warning(errors),
         "test is already defined as a contract name"
     );
 
@@ -41,7 +41,7 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_warning(errors),
         "test is already defined as a contract name"
     );
 
@@ -53,7 +53,7 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_warning(errors),
         "test is already defined as a contract name"
     );
 

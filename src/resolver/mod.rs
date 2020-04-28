@@ -605,15 +605,8 @@ impl Namespace {
         symbol: Symbol,
         errors: &mut Vec<Output>,
     ) -> bool {
-        let mut prev = self.symbols.get(&(contract_no, id.name.to_owned()));
-
-        // if there is nothing on the contract level, try top-level scope
-        if prev.is_none() && contract_no.is_some() {
-            prev = self.symbols.get(&(None, id.name.to_owned()));
-        }
-
-        if let Some(prev) = prev {
-            match prev {
+        if let Some(sym) = self.symbols.get(&(contract_no, id.name.to_owned())) {
+            match sym {
                 Symbol::Contract(c, _) => {
                     errors.push(Output::error_with_note(
                         id.loc,
@@ -641,16 +634,88 @@ impl Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
-                _ => unimplemented!(),
+                Symbol::Variable(c, _) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!(
+                            "{} is already defined as a contract variable",
+                            id.name.to_string()
+                        ),
+                        *c,
+                        "location of previous definition".to_string(),
+                    ));
+                }
+                Symbol::Function(v) => {
+                    errors.push(Output::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as a function", id.name.to_string()),
+                        v[0].0,
+                        "location of previous definition".to_string(),
+                    ));
+                }
             }
 
-            false
-        } else {
-            self.symbols
-                .insert((contract_no, id.name.to_string()), symbol);
-
-            true
+            return false;
         }
+
+        // if there is nothing on the contract level, try top-level scope
+        if contract_no.is_some() {
+            if let Some(sym) = self.symbols.get(&(None, id.name.to_owned())) {
+                match sym {
+                    Symbol::Contract(c, _) => {
+                        errors.push(Output::warning_with_note(
+                            id.loc,
+                            format!(
+                                "{} is already defined as a contract name",
+                                id.name.to_string()
+                            ),
+                            *c,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    Symbol::Enum(c, _) => {
+                        errors.push(Output::warning_with_note(
+                            id.loc,
+                            format!("{} is already defined as an enum", id.name.to_string()),
+                            *c,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    Symbol::Struct(c, _) => {
+                        errors.push(Output::warning_with_note(
+                            id.loc,
+                            format!("{} is already defined as a struct", id.name.to_string()),
+                            *c,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    Symbol::Variable(c, _) => {
+                        errors.push(Output::warning_with_note(
+                            id.loc,
+                            format!(
+                                "{} is already defined as a contract variable",
+                                id.name.to_string()
+                            ),
+                            *c,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    Symbol::Function(v) => {
+                        errors.push(Output::warning_with_note(
+                            id.loc,
+                            format!("{} is already defined as a function", id.name.to_string()),
+                            v[0].0,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                }
+            }
+        }
+
+        self.symbols
+            .insert((contract_no, id.name.to_string()), symbol);
+
+        true
     }
 
     pub fn resolve_enum(&self, contract_no: Option<usize>, id: &ast::Identifier) -> Option<usize> {
