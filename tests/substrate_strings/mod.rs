@@ -81,7 +81,7 @@ fn basic_tests() {
 
 #[test]
 fn more_tests() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public {
@@ -92,9 +92,9 @@ fn more_tests() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public {
@@ -111,9 +111,9 @@ fn more_tests() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function ref_test(bytes n) private {
@@ -140,9 +140,9 @@ fn more_tests() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public {
@@ -158,13 +158,13 @@ fn more_tests() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn string_compare() {
     // compare literal to literal. This should be compile-time thing
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public {
@@ -175,9 +175,9 @@ fn string_compare() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function lets_compare1(string s) private returns (bool) {
@@ -208,13 +208,13 @@ fn string_compare() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn string_concat() {
     // concat literal and literal. This should be compile-time thing
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public {
@@ -223,9 +223,9 @@ fn string_concat() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public {
@@ -240,7 +240,7 @@ fn string_concat() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -254,7 +254,7 @@ fn string_abi_encode() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct RetStringArray(Vec<String>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public returns (string) {
@@ -263,11 +263,11 @@ fn string_abi_encode() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    assert_eq!(store.scratch, Val("foobar".to_string()).encode());
+    assert_eq!(runtime.vm.scratch, Val("foobar".to_string()).encode());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public returns (int8[4], string, bool) {
@@ -277,11 +277,11 @@ fn string_abi_encode() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    assert_eq!(store.scratch, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
+    assert_eq!(runtime.vm.scratch, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         struct s {
             int8[4] f1;
@@ -297,11 +297,11 @@ fn string_abi_encode() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
-    assert_eq!(store.scratch, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
+    assert_eq!(runtime.vm.scratch, Ret3([ 120, 3, -127, 64], "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.".to_string(), true).encode());
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test() public returns (string[]) {
@@ -316,10 +316,10 @@ fn string_abi_encode() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         RetStringArray(vec!(
             "abc".to_string(),
             "dl".to_string(),
@@ -338,7 +338,7 @@ fn string_abi_decode() {
     struct ValB(Vec<u8>);
 
     // we should try lengths: 0 to 63, 64 to 0x800
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function test(string s) public returns (string){
@@ -349,17 +349,13 @@ fn string_abi_decode() {
 
     let moby_dick_first_para = "Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation. Whenever I find myself growing grim about the mouth; whenever it is a damp, drizzly November in my soul; whenever I find myself involuntarily pausing before coffin warehouses, and bringing up the rear of every funeral I meet; and especially whenever my hypos get such an upper hand of me, that it requires a strong moral principle to prevent me from deliberately stepping into the street, and methodically knocking people’s hats off—then, I account it high time to get to sea as soon as I can. This is my substitute for pistol and ball. With a philosophical flourish Cato throws himself upon his sword; I quietly take to the ship. There is nothing surprising in this. If they but knew it, almost all men in their degree, some time or other, cherish very nearly the same feelings towards the ocean with me.";
 
-    runtime.function(&mut store, "test", Val("foobar".to_string()).encode());
-    assert_eq!(store.scratch, Val(" foobar ".to_string()).encode());
+    runtime.function("test", Val("foobar".to_string()).encode());
+    assert_eq!(runtime.vm.scratch, Val(" foobar ".to_string()).encode());
 
-    runtime.function(
-        &mut store,
-        "test",
-        Val(moby_dick_first_para.to_string()).encode(),
-    );
+    runtime.function("test", Val(moby_dick_first_para.to_string()).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Val(format!(" {} ", moby_dick_first_para)).encode()
     );
 
@@ -372,7 +368,7 @@ fn string_abi_decode() {
 
         rng.fill(&mut s[..]);
 
-        let (runtime, mut store) = build_solidity(
+        let mut runtime = build_solidity(
             r##"
             contract foo {
                 function test(bytes s) public returns (bytes){
@@ -383,13 +379,13 @@ fn string_abi_decode() {
 
         let arg = ValB(s.clone()).encode();
 
-        runtime.function(&mut store, "test", arg.clone());
+        runtime.function("test", arg.clone());
 
         s.insert(0, 0xfeu8);
 
         let ret = ValB(s).encode();
 
-        assert_eq!(store.scratch, ret);
+        assert_eq!(runtime.vm.scratch, ret);
     }
 }
 
@@ -398,7 +394,7 @@ fn string_storage() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val(String);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             string bar;
@@ -414,13 +410,16 @@ fn string_storage() {
         }"##,
     );
 
-    runtime.function(&mut store, "set_bar", Vec::new());
+    runtime.function("set_bar", Vec::new());
 
-    assert_eq!(store.store.get(&[0u8; 32]).unwrap(), b"foobar");
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, [0u8; 32])).unwrap(),
+        b"foobar"
+    );
 
-    runtime.function(&mut store, "get_bar", Vec::new());
+    runtime.function("get_bar", Vec::new());
 
-    assert_eq!(store.scratch, Val("foobar".to_string()).encode());
+    assert_eq!(runtime.vm.scratch, Val("foobar".to_string()).encode());
 }
 
 #[test]
@@ -437,7 +436,7 @@ fn bytes_storage() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Arg64(u64);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             bytes bar = hex"aabbccddeeff";
@@ -452,21 +451,21 @@ fn bytes_storage() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "get_index", Arg(1).encode());
+    runtime.function("get_index", Arg(1).encode());
 
-    assert_eq!(store.scratch, Ret(0xbb).encode());
+    assert_eq!(runtime.vm.scratch, Ret(0xbb).encode());
 
     for i in 0..6 {
-        runtime.function(&mut store, "get_index64", Arg64(i).encode());
+        runtime.function("get_index64", Arg64(i).encode());
 
         let vals = [0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff];
 
-        assert_eq!(store.scratch, [Ret(vals[i as usize])].encode());
+        assert_eq!(runtime.vm.scratch, [Ret(vals[i as usize])].encode());
     }
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             bytes bar;
@@ -489,7 +488,7 @@ fn bytes_storage() {
         }"##,
     );
 
-    runtime.function(&mut store, "push_test", Vec::new());
+    runtime.function("push_test", Vec::new());
 }
 
 #[test]
@@ -497,7 +496,7 @@ fn bytes_storage_subscript() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Arg(u32, u8);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             bytes bar = hex"aabbccddeeff";
@@ -512,16 +511,16 @@ fn bytes_storage_subscript() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "set_index", Arg(1, 0x33).encode());
+    runtime.function("set_index", Arg(1, 0x33).encode());
 
     assert_eq!(
-        store.store.get(&[0u8; 32]).unwrap(),
+        runtime.store.get(&(runtime.vm.address, [0u8; 32])).unwrap(),
         &vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)
     );
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             bytes bar = hex"deadcafe";
@@ -540,26 +539,26 @@ fn bytes_storage_subscript() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "or", Arg(1, 0x50).encode());
+    runtime.function("or", Arg(1, 0x50).encode());
 
     assert_eq!(
-        store.store.get(&[0u8; 32]).unwrap(),
+        runtime.store.get(&(runtime.vm.address, [0u8; 32])).unwrap(),
         &vec!(0xde, 0xfd, 0xca, 0xfe)
     );
 
-    runtime.function(&mut store, "and", Arg(3, 0x7f).encode());
+    runtime.function("and", Arg(3, 0x7f).encode());
 
     assert_eq!(
-        store.store.get(&[0u8; 32]).unwrap(),
+        runtime.store.get(&(runtime.vm.address, [0u8; 32])).unwrap(),
         &vec!(0xde, 0xfd, 0xca, 0x7e)
     );
 
-    runtime.function(&mut store, "xor", Arg(2, 0xff).encode());
+    runtime.function("xor", Arg(2, 0xff).encode());
 
     assert_eq!(
-        store.store.get(&[0u8; 32]).unwrap(),
+        runtime.store.get(&(runtime.vm.address, [0u8; 32])).unwrap(),
         &vec!(0xde, 0xfd, 0x35, 0x7e)
     );
 }
@@ -572,7 +571,7 @@ fn bytes_memory_subscript() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(Vec<u8>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function set_index(uint32 index, bytes1 val) public returns (bytes) {
@@ -585,16 +584,16 @@ fn bytes_memory_subscript() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "set_index", Arg(1, 0x33).encode());
+    runtime.function("set_index", Arg(1, 0x33).encode());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Ret(vec!(0xaa, 0x33, 0xcc, 0xdd, 0xee, 0xff)).encode()
     );
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function or(uint32 index, bytes1 val) public returns (bytes) {
@@ -623,19 +622,28 @@ fn bytes_memory_subscript() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "or", Arg(1, 0x50).encode());
+    runtime.function("or", Arg(1, 0x50).encode());
 
-    assert_eq!(store.scratch, Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode());
+    assert_eq!(
+        runtime.vm.scratch,
+        Ret(vec!(0xde, 0xfd, 0xca, 0xfe)).encode()
+    );
 
-    runtime.function(&mut store, "and", Arg(3, 0x7f).encode());
+    runtime.function("and", Arg(3, 0x7f).encode());
 
-    assert_eq!(store.scratch, Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode());
+    assert_eq!(
+        runtime.vm.scratch,
+        Ret(vec!(0xde, 0xad, 0xca, 0x7e)).encode()
+    );
 
-    runtime.function(&mut store, "xor", Arg(2, 0xff).encode());
+    runtime.function("xor", Arg(2, 0xff).encode());
 
-    assert_eq!(store.scratch, Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode());
+    assert_eq!(
+        runtime.vm.scratch,
+        Ret(vec!(0xde, 0xad, 0x35, 0xfe)).encode()
+    );
 }
 
 #[test]
@@ -730,7 +738,7 @@ fn string_escape() {
         "\\u escape should be followed by four hex digits"
     );
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract カラス {
             function カラス$() public {
@@ -739,9 +747,9 @@ fn string_escape() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "カラス$", Vec::new());
+    runtime.function("カラス$", Vec::new());
 
-    assert_eq!(store.printbuf, " € A \u{c}\u{8}\r\n\u{b}\\'\"\t");
+    assert_eq!(runtime.printbuf, " € A \u{c}\u{8}\r\n\u{b}\\'\"\t");
 }

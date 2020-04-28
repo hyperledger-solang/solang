@@ -12,7 +12,7 @@ fn various_constants() {
     struct Foo64Return(i64);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function foo() public returns (uint32) {
@@ -21,12 +21,12 @@ fn various_constants() {
         }",
     );
 
-    runtime.function(&mut store, "foo", Vec::new());
+    runtime.function("foo", Vec::new());
 
-    assert_eq!(store.scratch, FooReturn(2).encode());
+    assert_eq!(runtime.vm.scratch, FooReturn(2).encode());
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function foo() public returns (uint32) {
@@ -35,12 +35,12 @@ fn various_constants() {
         }",
     );
 
-    runtime.function(&mut store, "foo", Vec::new());
+    runtime.function("foo", Vec::new());
 
-    assert_eq!(store.scratch, FooReturn(0xdead_cafe).encode());
+    assert_eq!(runtime.vm.scratch, FooReturn(0xdead_cafe).encode());
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function foo() public returns (int64) {
@@ -49,9 +49,12 @@ fn various_constants() {
         }",
     );
 
-    runtime.function(&mut store, "foo", Vec::new());
+    runtime.function("foo", Vec::new());
 
-    assert_eq!(store.scratch, Foo64Return(-0x7afe_dead_deed_cafe).encode());
+    assert_eq!(
+        runtime.vm.scratch,
+        Foo64Return(-0x7afe_dead_deed_cafe).encode()
+    );
 }
 
 #[test]
@@ -158,7 +161,7 @@ fn bytes() {
     struct Test4args(u32, [u8; 4]);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function const3() public returns (bytes3) {
@@ -196,37 +199,37 @@ fn bytes() {
         }",
     );
 
-    runtime.function(&mut store, "const3", Vec::new());
+    runtime.function("const3", Vec::new());
 
-    assert_eq!(store.scratch, Bytes3([0x11, 0x22, 0x33]).encode());
+    assert_eq!(runtime.vm.scratch, Bytes3([0x11, 0x22, 0x33]).encode());
 
-    runtime.function(&mut store, "const4", Vec::new());
+    runtime.function("const4", Vec::new());
 
-    assert_eq!(store.scratch, Bytes4(*b"ABCD").encode());
+    assert_eq!(runtime.vm.scratch, Bytes4(*b"ABCD").encode());
 
-    runtime.function(&mut store, "const32", Vec::new());
+    runtime.function("const32", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes32(*b"The quick brown fox jumped over ").encode()
     );
 
-    runtime.function(&mut store, "test4", Test4args(1, *b"abcd").encode());
-    runtime.function(&mut store, "test4", Test4args(2, *b"ABCD").encode());
+    runtime.function("test4", Test4args(1, *b"abcd").encode());
+    runtime.function("test4", Test4args(2, *b"ABCD").encode());
 
     // Casting to larger bytesN should insert stuff on the right
-    runtime.function(&mut store, "test7", Bytes7(*b"1234567").encode());
+    runtime.function("test7", Bytes7(*b"1234567").encode());
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bytes32(*b"1234567\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").encode()
     );
 
-    runtime.function(&mut store, "test3", Bytes3(*b"XYZ").encode());
-    assert_eq!(store.scratch, Bytes7(*b"XYZ\0\0\0\0").encode());
+    runtime.function("test3", Bytes3(*b"XYZ").encode());
+    assert_eq!(runtime.vm.scratch, Bytes7(*b"XYZ\0\0\0\0").encode());
 
     // truncating should drop values on the right
-    runtime.function(&mut store, "test7trunc", Bytes7(*b"XYWOLEH").encode());
-    assert_eq!(store.scratch, Bytes3(*b"XYW").encode());
+    runtime.function("test7trunc", Bytes7(*b"XYWOLEH").encode());
+    assert_eq!(runtime.vm.scratch, Bytes3(*b"XYW").encode());
 }
 
 #[test]
@@ -316,7 +319,7 @@ fn address() {
     struct Address([u8; 32]);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract test {
             function check_return() public returns (address) {
@@ -329,10 +332,10 @@ fn address() {
         }",
     );
 
-    runtime.function(&mut store, "check_return", Vec::new());
+    runtime.function("check_return", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Address([
             0x20, 0xb3, 0x42, 0x67, 0xbc, 0x91, 0x37, 0x1c, 0x5C, 0x33, 0xb8, 0x58, 0xD0, 0x77,
             0x3F, 0x45, 0x25, 0xe0, 0xd2, 0xa7, 0x43, 0x76, 0x25, 0x8c, 0x33, 0xda, 0xca, 0x4A,
@@ -348,5 +351,5 @@ fn address() {
     ])
     .encode();
 
-    runtime.function(&mut store, "check_param", val);
+    runtime.function("check_param", val);
 }

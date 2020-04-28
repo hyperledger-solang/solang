@@ -151,7 +151,7 @@ fn contract_name() {
 
 #[test]
 fn revert() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract bar {
             function test() public {
@@ -176,17 +176,17 @@ fn revert() {
         }"##,
     );
 
-    runtime.function_expect_return(&mut store, "test", Vec::new(), 1);
+    runtime.function_expect_return("test", Vec::new(), 1);
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         RevertReturn(0x08c3_79a0, "yo!".to_string()).encode()
     );
 
-    runtime.function_expect_return(&mut store, "a", Vec::new(), 1);
+    runtime.function_expect_return("a", Vec::new(), 1);
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         RevertReturn(
             0x08c3_79a0,
             "revert value has to be passed down the stack".to_string()
@@ -194,7 +194,7 @@ fn revert() {
         .encode()
     );
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract c {
             function test() public {
@@ -203,14 +203,14 @@ fn revert() {
         }"##,
     );
 
-    runtime.function_expect_return(&mut store, "test", Vec::new(), 1);
+    runtime.function_expect_return("test", Vec::new(), 1);
 
-    assert_eq!(store.scratch.len(), 0);
+    assert_eq!(runtime.vm.scratch.len(), 0);
 }
 
 #[test]
 fn require() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract c {
             function test1() public {
@@ -223,16 +223,16 @@ fn require() {
         }"##,
     );
 
-    runtime.function_expect_return(&mut store, "test1", Vec::new(), 1);
+    runtime.function_expect_return("test1", Vec::new(), 1);
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         RevertReturn(0x08c3_79a0, "Program testing can be used to show the presence of bugs, but never to show their absence!".to_string()).encode()
     );
 
-    runtime.function(&mut store, "test2", Vec::new());
+    runtime.function("test2", Vec::new());
 
-    assert_eq!(store.scratch.len(), 0);
+    assert_eq!(runtime.vm.scratch.len(), 0);
 }
 
 #[test]
@@ -346,7 +346,7 @@ fn contract_type() {
 
 #[test]
 fn input_wrong_size() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract c {
             function test(int32 x) public {
@@ -354,7 +354,7 @@ fn input_wrong_size() {
         }"##,
     );
 
-    runtime.function_expect_return(&mut store, "test", b"A".to_vec(), 3);
+    runtime.function_expect_return("test", b"A".to_vec(), 3);
 
-    runtime.function_expect_return(&mut store, "test", b"ABCDE".to_vec(), 3);
+    runtime.function_expect_return("test", b"ABCDE".to_vec(), 3);
 }

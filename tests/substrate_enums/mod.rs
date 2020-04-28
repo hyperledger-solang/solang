@@ -10,7 +10,7 @@ fn weekdays() {
     struct Val(u8);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         enum Weekday { Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
 
@@ -41,15 +41,15 @@ fn weekdays() {
         }",
     );
 
-    runtime.function(&mut store, "is_weekend", Val(4).encode());
+    runtime.function("is_weekend", Val(4).encode());
 
-    assert_eq!(store.scratch, Val(0).encode());
+    assert_eq!(runtime.vm.scratch, Val(0).encode());
 
-    runtime.function(&mut store, "is_weekend", Val(5).encode());
+    runtime.function("is_weekend", Val(5).encode());
 
-    assert_eq!(store.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.scratch, Val(1).encode());
 
-    runtime.function(&mut store, "test_values", Vec::new());
+    runtime.function("test_values", Vec::new());
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn enums_other_contracts() {
     struct Val(u8);
 
     // parse
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         "
         contract a {
             c.foo bar;
@@ -79,7 +79,7 @@ fn enums_other_contracts() {
         ",
     );
 
-    runtime.function(&mut store, "test", Val(1).encode());
+    runtime.function("test", Val(1).encode());
 }
 
 #[test]

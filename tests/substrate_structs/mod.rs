@@ -231,7 +231,7 @@ fn parse_structs() {
 
 #[test]
 fn struct_members() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         pragma solidity 0;
         pragma experimental ABIEncoderV2;
@@ -268,12 +268,12 @@ fn struct_members() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn structs_as_ref_args() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract test_struct_parsing {
             struct foo {
@@ -305,7 +305,7 @@ fn structs_as_ref_args() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -316,7 +316,7 @@ fn structs_encode() {
         f2: bool,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract test_struct_parsing {
             struct foo {
@@ -332,7 +332,6 @@ fn structs_encode() {
     );
 
     runtime.function(
-        &mut store,
         "test",
         Foo {
             f1: [0x41, 0x42, 0x43],
@@ -350,7 +349,7 @@ fn structs_decode() {
         f2: i32,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract test_struct_parsing {
             struct foo {
@@ -369,10 +368,10 @@ fn structs_decode() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Foo {
             f1: [0xf3, 0x3e, 0xc3],
             f2: 0xfd7f,
@@ -383,7 +382,7 @@ fn structs_decode() {
 
 #[test]
 fn struct_in_struct() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         pragma solidity 0;
 
@@ -412,7 +411,7 @@ fn struct_in_struct() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -429,7 +428,7 @@ fn structs_in_structs_decode() {
         c: Foo,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract test_struct_parsing {
             struct foo {
@@ -451,10 +450,10 @@ fn structs_in_structs_decode() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Bar {
             a: true,
             b: Foo {
@@ -484,7 +483,7 @@ fn structs_in_structs_encode() {
         c: Foo,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract test_struct_parsing {
             struct foo {
@@ -506,7 +505,6 @@ fn structs_in_structs_encode() {
     );
 
     runtime.function(
-        &mut store,
         "test",
         Bar {
             a: true,
@@ -525,7 +523,7 @@ fn structs_in_structs_encode() {
 
 #[test]
 fn struct_storage_to_memory() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract test_struct_parsing {
             struct foo {
@@ -548,9 +546,9 @@ fn struct_storage_to_memory() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -561,7 +559,7 @@ fn return_from_struct_storage() {
         f2: u32,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         struct foo {
             bytes3 f1;
@@ -581,12 +579,12 @@ fn return_from_struct_storage() {
         }"##,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Foo {
             f1: [0x70, 0x6e, 0x67],
             f2: 0x89ab_cdef,
@@ -612,7 +610,7 @@ fn struct_in_init_return() {
         card5: Card,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         enum suit { club, diamonds, hearts, spades }
         enum value { two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace }
@@ -642,9 +640,9 @@ fn struct_in_init_return() {
         }"#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -664,7 +662,7 @@ fn struct_struct_in_init_and_return() {
         card5: Card,
     };
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract structs {
             enum suit { club, diamonds, hearts, spades }
@@ -709,7 +707,7 @@ fn struct_struct_in_init_and_return() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }

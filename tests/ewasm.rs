@@ -1429,10 +1429,10 @@ fn struct_decode() {
     );
 }
 
-/*
+/* TODO: find out why this test fails.
 #[test]
 fn struct_in_struct_decode() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract structs {
             enum suit { club, diamonds, hearts, spades }
@@ -1461,6 +1461,8 @@ fn struct_in_struct_decode() {
         }
         "##,
     );
+
+    runtime.constructor(&[]);
 
     let val = runtime.function("test", &[]);
 

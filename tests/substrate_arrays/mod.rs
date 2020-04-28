@@ -47,7 +47,7 @@ fn missing_array_index() {
 
 #[test]
 fn const_array_array() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             int8[8] constant bar = [ int8(1), 2, 3, 4, 5, 6, 7, 8 ];
@@ -58,9 +58,9 @@ fn const_array_array() {
         }"##,
     );
 
-    runtime.function(&mut store, "f", Val32(1).encode());
+    runtime.function("f", Val32(1).encode());
 
-    assert_eq!(store.scratch, Val8(2).encode());
+    assert_eq!(runtime.vm.scratch, Val8(2).encode());
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn votes() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Votes([bool; 11]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             /// In a jury, do the ayes have it?
@@ -88,7 +88,6 @@ fn votes() {
     );
 
     runtime.function(
-        &mut store,
         "f",
         Votes([
             true, true, true, true, true, true, false, false, false, false, false,
@@ -96,10 +95,9 @@ fn votes() {
         .encode(),
     );
 
-    assert_eq!(store.scratch, true.encode());
+    assert_eq!(runtime.vm.scratch, true.encode());
 
     runtime.function(
-        &mut store,
         "f",
         Votes([
             true, true, true, true, true, false, false, false, false, false, false,
@@ -107,7 +105,7 @@ fn votes() {
         .encode(),
     );
 
-    assert_eq!(store.scratch, false.encode());
+    assert_eq!(runtime.vm.scratch, false.encode());
 }
 
 #[test]
@@ -115,7 +113,7 @@ fn return_array() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Res([u64; 4]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             function array() pure public returns (int64[4]) {
@@ -124,9 +122,9 @@ fn return_array() {
         }"##,
     );
 
-    runtime.function(&mut store, "array", Vec::new());
+    runtime.function("array", Vec::new());
 
-    assert_eq!(store.scratch, Res([4, 84564, 31213, 1312]).encode());
+    assert_eq!(runtime.vm.scratch, Res([4, 84564, 31213, 1312]).encode());
 }
 
 #[test]
@@ -138,7 +136,7 @@ fn storage_arrays() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct GetArg(u64);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract foo {
             int32[8589934592] bigarray;
@@ -161,15 +159,15 @@ fn storage_arrays() {
         let index = rng.gen::<u64>() % 0x2_000_000;
         let val = rng.gen::<i32>();
 
-        runtime.function(&mut store, "set", SetArg(index, val).encode());
+        runtime.function("set", SetArg(index, val).encode());
 
         vals.push((index, val));
     }
 
     for val in vals {
-        runtime.function(&mut store, "get", GetArg(val.0).encode());
+        runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(store.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
     }
 }
 
@@ -180,7 +178,7 @@ fn enum_arrays() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(u32);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract enum_array {
             enum Foo { Bar1, Bar2, Bar3, Bar4 }
@@ -213,8 +211,8 @@ fn enum_arrays() {
         }
     }
 
-    runtime.function(&mut store, "count_bar2", Arg(a).encode());
-    assert_eq!(store.scratch, Ret(count).encode());
+    runtime.function("count_bar2", Arg(a).encode());
+    assert_eq!(runtime.vm.scratch, Ret(count).encode());
 }
 
 #[test]
@@ -355,7 +353,7 @@ fn data_locations() {
 
 #[test]
 fn storage_ref_arg() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             int32[10] a;
@@ -375,12 +373,12 @@ fn storage_ref_arg() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn storage_ref_var() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             int32[10] a;
@@ -405,12 +403,12 @@ fn storage_ref_var() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn storage_ref_returns() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             int32[10] a;
@@ -443,7 +441,7 @@ fn storage_ref_returns() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -451,7 +449,7 @@ fn storage_to_memory() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret([u32; 10]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             uint32[10] a;
@@ -467,11 +465,11 @@ fn storage_to_memory() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(store.scratch, val.encode());
+    assert_eq!(runtime.vm.scratch, val.encode());
 }
 
 #[test]
@@ -479,7 +477,7 @@ fn memory_to_storage() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret([u32; 10]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             int32[10] a;
@@ -494,11 +492,11 @@ fn memory_to_storage() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(store.scratch, val.encode());
+    assert_eq!(runtime.vm.scratch, val.encode());
 }
 
 #[test]
@@ -557,7 +555,7 @@ fn array_dimensions() {
 
     assert_eq!(first_error(errors), "divide by zero");
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             int32[2**16] a;
@@ -568,7 +566,7 @@ fn array_dimensions() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -576,7 +574,7 @@ fn array_in_struct() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret([u32; 10]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract storage_refs {
             struct foo {
@@ -592,16 +590,16 @@ fn array_in_struct() {
         }"##,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(store.scratch, val.encode());
+    assert_eq!(runtime.vm.scratch, val.encode());
 }
 
 #[test]
 fn struct_array_struct() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract flipper {
             struct bool_struct {
@@ -623,9 +621,9 @@ fn struct_array_struct() {
         }"##,
     );
 
-    runtime.function(&mut store, "get_memory", Vec::new());
+    runtime.function("get_memory", Vec::new());
 
-    assert_eq!(store.scratch, true.encode());
+    assert_eq!(runtime.vm.scratch, true.encode());
 }
 
 #[test]
@@ -641,7 +639,7 @@ fn struct_array_struct_abi() {
         bars: [Foo; 10],
     }
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r##"
         contract flipper {
             struct foo {
@@ -700,11 +698,11 @@ fn struct_array_struct_abi() {
         ],
     };
 
-    runtime.function(&mut store, "get_bar", Vec::new());
+    runtime.function("get_bar", Vec::new());
 
-    assert_eq!(store.scratch, b.encode());
+    assert_eq!(runtime.vm.scratch, b.encode());
 
-    runtime.function(&mut store, "set_bar", b.encode());
+    runtime.function("set_bar", b.encode());
 }
 
 #[test]
@@ -791,7 +789,7 @@ fn memory_dynamic_array_new() {
 
     assert_eq!(first_error(errors), "new cannot allocate type ‘bool’");
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract foo {
             function test() public {
@@ -802,10 +800,10 @@ fn memory_dynamic_array_new() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     // The Ethereum Foundation solc allows you to create arrays of length 0
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract foo {
             function test() public {
@@ -816,7 +814,7 @@ fn memory_dynamic_array_new() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -857,7 +855,7 @@ fn memory_dynamic_array_deref() {
     );
 
     // The Ethereum Foundation solc allows you to create arrays of length 0
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract foo {
             function test() public {
@@ -875,13 +873,13 @@ fn memory_dynamic_array_deref() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 #[should_panic]
 fn array_bounds_dynamic_array() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract foo {
             function test() public {
@@ -892,13 +890,13 @@ fn array_bounds_dynamic_array() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 #[should_panic]
 fn empty_array_bounds_dynamic_array() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract foo {
             function test() public {
@@ -909,12 +907,12 @@ fn empty_array_bounds_dynamic_array() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn memory_dynamic_array_types_call_return() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract foo {
             function a(bool cond) public returns (bytes27[]) {
@@ -943,12 +941,12 @@ fn memory_dynamic_array_types_call_return() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
 fn dynamic_arrays_need_phi_node() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -979,7 +977,7 @@ fn dynamic_arrays_need_phi_node() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 // test:
@@ -994,7 +992,7 @@ fn dynamic_arrays_need_phi_node() {
 
 #[test]
 fn storage_dynamic_array_length() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1007,7 +1005,7 @@ fn storage_dynamic_array_length() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 }
 
 #[test]
@@ -1047,7 +1045,7 @@ fn storage_dynamic_array_push() {
         "method ‘push()’ not allowed on fixed length array"
     );
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1066,10 +1064,10 @@ fn storage_dynamic_array_push() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     // push() returns a reference to the thing
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1090,7 +1088,7 @@ fn storage_dynamic_array_push() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     let (_, errors) = parse_and_resolve(
         r#"
@@ -1151,7 +1149,7 @@ fn storage_dynamic_array_pop() {
         "method ‘pop()’ not allowed on fixed length array"
     );
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1170,13 +1168,13 @@ fn storage_dynamic_array_pop() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert_eq!(store.store.len(), 1);
+    assert_eq!(runtime.store.len(), 1);
 
     // ensure that structs and fixed arrays are wiped by pop
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1209,10 +1207,10 @@ fn storage_dynamic_array_pop() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert_eq!(store.store.len(), 1);
+    assert_eq!(runtime.store.len(), 1);
 
     // pop returns the dereferenced value, not a reference to storage
     let (_, errors) = parse_and_resolve(
@@ -1274,7 +1272,7 @@ fn storage_delete() {
     );
 
     // ensure that structs and fixed arrays are wiped by pop
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1289,13 +1287,13 @@ fn storage_delete() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     // We should have one entry for the length; pop should have removed the 102 entry
-    assert!(store.store.is_empty());
+    assert!(runtime.store.is_empty());
 
     // ensure that structs and fixed arrays are wiped by delete
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1328,13 +1326,13 @@ fn storage_delete() {
         }"#,
     );
 
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.function("test", Vec::new());
 
     // We should have one entry for the length; delete should have removed the entry
-    assert_eq!(store.store.len(), 1);
+    assert_eq!(runtime.store.len(), 1);
 
     // ensure that structs and fixed arrays are wiped by delete
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         pragma solidity 0;
 
@@ -1352,23 +1350,23 @@ fn storage_delete() {
         }"#,
     );
 
-    runtime.function(&mut store, "setup", Vec::new());
+    runtime.function("setup", Vec::new());
 
-    assert_eq!(store.store.len(), 3);
+    assert_eq!(runtime.store.len(), 3);
 
-    runtime.function(&mut store, "clear", Vec::new());
+    runtime.function("clear", Vec::new());
 
-    assert_eq!(store.store.len(), 0);
+    assert_eq!(runtime.store.len(), 0);
 
     // our delete operator has to iterate over the dynamic array. Ensure it works if the array is empty
-    runtime.function(&mut store, "clear", Vec::new());
+    runtime.function("clear", Vec::new());
 
-    assert_eq!(store.store.len(), 0);
+    assert_eq!(runtime.store.len(), 0);
 }
 
 #[test]
 fn storage_dynamic_copy() {
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract c {
             int32[] foo;
@@ -1408,11 +1406,11 @@ fn storage_dynamic_copy() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
-    runtime.function(&mut store, "storage_to_memory", Vec::new());
-    runtime.function(&mut store, "memory_to_storage", Vec::new());
+    runtime.constructor(0, Vec::new());
+    runtime.function("storage_to_memory", Vec::new());
+    runtime.function("memory_to_storage", Vec::new());
 
-    assert_eq!(store.store.len(), 6);
+    assert_eq!(runtime.store.len(), 6);
 }
 
 #[test]
@@ -1420,7 +1418,7 @@ fn abi_encode_dynamic_array() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Int32Array(Vec<i32>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract c {
             function encode() pure public returns (int32[]) {
@@ -1436,11 +1434,11 @@ fn abi_encode_dynamic_array() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
-    runtime.function(&mut store, "encode", Vec::new());
+    runtime.constructor(0, Vec::new());
+    runtime.function("encode", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Int32Array(vec!(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30)).encode()
     );
 }
@@ -1450,7 +1448,7 @@ fn abi_decode_dynamic_array() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Int32Array(Vec<i32>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract c {
             function decode(int32[] bar) pure public {
@@ -1468,14 +1466,13 @@ fn abi_decode_dynamic_array() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
+    runtime.constructor(0, Vec::new());
     runtime.function(
-        &mut store,
         "decode",
         Int32Array(vec![0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30]).encode(),
     );
 
-    runtime.function(&mut store, "decode_empty", Int32Array(vec![]).encode());
+    runtime.function("decode_empty", Int32Array(vec![]).encode());
 }
 
 #[test]
@@ -1483,7 +1480,7 @@ fn abi_encode_dynamic_array2() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Array(Vec<(bool, u32)>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract structs {
             struct foo {
@@ -1504,11 +1501,11 @@ fn abi_encode_dynamic_array2() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Array(vec!((true, 64), (false, 102), (true, 0x800))).encode()
     );
 }
@@ -1518,7 +1515,7 @@ fn abi_encode_dynamic_array3() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Array(Vec<(bool, u32, String)>);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract structs {
             struct foo {
@@ -1540,11 +1537,11 @@ fn abi_encode_dynamic_array3() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Array(vec!(
             (true, 64, "abc".to_owned()),
             (false, 102, "a".to_owned()),
@@ -1559,7 +1556,7 @@ fn abi_encode_dynamic_array4() {
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Array([(bool, u32, String); 3]);
 
-    let (runtime, mut store) = build_solidity(
+    let mut runtime = build_solidity(
         r#"
         contract structs {
             struct foo {
@@ -1579,11 +1576,11 @@ fn abi_encode_dynamic_array4() {
         "#,
     );
 
-    runtime.constructor(&mut store, 0, Vec::new());
-    runtime.function(&mut store, "test", Vec::new());
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
 
     assert_eq!(
-        store.scratch,
+        runtime.vm.scratch,
         Array([
             (true, 64, "abc".to_owned()),
             (false, 102, "a".to_owned()),
