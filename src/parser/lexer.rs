@@ -144,6 +144,9 @@ pub enum Token<'input> {
 
     Mapping,
     Arrow,
+
+    Try,
+    Catch,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -249,6 +252,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Indexed => write!(f, "indexed"),
             Token::Mapping => write!(f, "mapping"),
             Token::Arrow => write!(f, "=>"),
+            Token::Try => write!(f, "try"),
+            Token::Catch => write!(f, "catch"),
         }
     }
 }
@@ -445,6 +450,8 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "uint" => Token::Uint(256),
     "view" => Token::View,
     "while" => Token::While,
+    "try" => Token::Try,
+    "catch" => Token::Catch,
 };
 
 impl<'input> Lexer<'input> {

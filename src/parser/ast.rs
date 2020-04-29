@@ -404,8 +404,13 @@ pub enum Statement {
     Continue,
     Break,
     Return(Loc, Vec<Expression>),
-    Throw,
     Emit(Identifier, Vec<Expression>),
+    Try(
+        Expression,
+        Vec<Parameter>,
+        Option<Box<(Identifier, Parameter, Statement)>>,
+        Box<(Parameter, Statement)>,
+    ),
     Empty,
 }
 
