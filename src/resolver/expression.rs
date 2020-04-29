@@ -87,6 +87,7 @@ pub enum Expression {
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
     Poison,
+    Unreachable,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -152,7 +153,7 @@ impl Expression {
             | Expression::StringConcat(loc, _, _)
             | Expression::Keccak256(loc, _)
             | Expression::And(loc, _, _) => *loc,
-            Expression::Poison => unreachable!(),
+            Expression::Poison | Expression::Unreachable => unreachable!(),
         }
     }
     /// Returns true if the Expression may load from contract storage using StorageLoad
@@ -267,6 +268,7 @@ impl Expression {
                 false
             }
             Expression::Poison => false,
+            Expression::Unreachable => false,
         }
     }
 }
@@ -3886,7 +3888,14 @@ fn function_call_with_positional_arguments(
                 },
             );
 
-            return Ok((Expression::Poison, resolver::Type::Undef));
+            return Ok((
+                if func.noreturn {
+                    Expression::Unreachable
+                } else {
+                    Expression::Poison
+                },
+                resolver::Type::Undef,
+            ));
         }
     }
 
@@ -4032,7 +4041,14 @@ fn function_with_named_args(
                 },
             );
 
-            return Ok((Expression::Poison, resolver::Type::Undef));
+            return Ok((
+                if func.noreturn {
+                    Expression::Unreachable
+                } else {
+                    Expression::Poison
+                },
+                resolver::Type::Undef,
+            ));
         }
     }
 

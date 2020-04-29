@@ -429,6 +429,7 @@ pub struct FunctionDecl {
     pub visibility: ast::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
+    pub noreturn: bool,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
@@ -466,6 +467,7 @@ impl FunctionDecl {
             visibility,
             params,
             returns,
+            noreturn: false,
             cfg: None,
         }
     }

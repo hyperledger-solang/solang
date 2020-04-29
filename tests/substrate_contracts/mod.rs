@@ -314,7 +314,6 @@ fn revert_external_call() {
             }
             function get_x(int32 t) public returns (int32) {
                 revert("The reason why");
-                return 0;
             }
         }"##,
     );

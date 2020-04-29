@@ -328,6 +328,8 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
         ns,
     );
 
+    revert.noreturn = true;
+
     let mut errors = Vec::new();
     let mut vartab = Vartable::new();
     let mut cfg = ControlFlowGraph::new();
@@ -373,6 +375,8 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
         vec![],
         ns,
     );
+
+    revert.noreturn = true;
 
     let mut errors = Vec::new();
     let mut vartab = Vartable::new();
