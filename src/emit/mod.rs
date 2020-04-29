@@ -1629,6 +1629,7 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::Poison => unreachable!(),
+            Expression::Unreachable => unreachable!(),
         }
     }
 

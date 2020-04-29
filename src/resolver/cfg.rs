@@ -376,6 +376,7 @@ impl ControlFlowGraph {
             Expression::Complement(_, e) => format!("~{}", self.expr_to_string(contract, ns, e)),
             Expression::UnaryMinus(_, e) => format!("-{}", self.expr_to_string(contract, ns, e)),
             Expression::Poison => "☠".to_string(),
+            Expression::Unreachable => "❌".to_string(),
             Expression::AllocDynamicArray(_, ty, size, None) => format!(
                 "(alloc {} len {})",
                 ty.to_string(ns),
@@ -923,13 +924,18 @@ fn statement(
             let (expr, _) =
                 expression(expr, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
-            if let Expression::Poison = expr {
-                // ignore
-            } else {
-                cfg.add(vartab, Instr::Eval { expr });
-            }
+            match expr {
+                Expression::Poison => {
+                    // ignore
+                    Ok(true)
+                }
+                Expression::Unreachable => Ok(false),
+                _ => {
+                    cfg.add(vartab, Instr::Eval { expr });
 
-            Ok(true)
+                    Ok(true)
+                }
+            }
         }
         ast::Statement::If(cond, then_stmt, None) => if_then(
             cond,
