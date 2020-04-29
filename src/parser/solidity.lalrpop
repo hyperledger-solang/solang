@@ -108,9 +108,7 @@ EventParameter: EventParameter = {
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <d:DocComments> "event" <n:Identifier> "(" <v:(<EventParameter> ",")*> <e:EventParameter> ")" <a:"anonymous"?> ";" => {
-        let mut v = v;
-        v.push(e);
+    <d:DocComments> "event" <n:Identifier> "(" <v:CommaOne<EventParameter>> ")" <a:"anonymous"?> ";" => {
         Box::new(EventDefinition{
             doc: d, name: n, fields: v, anonymous: match a { Some(_) => true, _ => false}
         })
@@ -266,9 +264,7 @@ Precedence0: Expression = {
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
-    <a:@L> "[" <v:(<Expression> ",")*> <e:Expression> "]" <b:@R> => {
-        let mut v = v;
-        v.push(e);
+    <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc(a, b), v)
     },
     <i:Identifier> => Expression::Variable(i),
@@ -305,12 +301,7 @@ Parameter: Parameter = {
 }
 
 ParameterList: Vec<Parameter> = {
-    "(" ")" => Vec::new(),
-    "(" <v:(<Parameter> ",")*> <e:Parameter> ")" => {
-        let mut v = v;
-        v.push(e);
-        v
-    }
+    "(" <Comma<Parameter>> ")" => <>
 }
 
 StateMutability: StateMutability = {
@@ -449,22 +440,23 @@ NonIfStatement: Statement = {
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
         Statement::Return(Loc(l, r), vec!(e))
     },
-    <l:@L> "return" "(" <v:(<Expression> ",")+> <e:Expression> ")" <r:@R> ";" => {
-        let mut v = v;
-        v.push(e);
+    <l:@L> "return" "(" <v:CommaTwo<Expression>> ")" <r:@R> ";" => {
         Statement::Return(Loc(l, r), v)
     },
-    "throw" ";" => {
-        Statement::Throw
+    "try" <e:Expression> <r:("returns" <ParameterList>)?>
+    "catch" "(" <p:Parameter> ")" <b:BlockStatement> => {
+        Statement::Try(e, r.unwrap_or(Vec::new()), None, Box::new((p, Statement::BlockStatement(b))))
     },
-    "emit" <n:Identifier> "(" ")" ";" => {
-        Statement::Emit(n, Vec::new())
+    "try" <e:Expression> <r:("returns" <ParameterList>)?>
+    "catch" <i:Identifier> "(" <pe:Parameter> ")" <be:BlockStatement>
+    "catch" "(" <pa:Parameter> ")" <ba:BlockStatement> => {
+        Statement::Try(e, r.unwrap_or(Vec::new()),
+            Some(Box::new((i, pe, Statement::BlockStatement(be)))),
+            Box::new((pa, Statement::BlockStatement(ba))))
     },
-    "emit" <n:Identifier> "(" <v:(<Expression> ",")+> <e:Expression> ")" ";" => {
-        let mut v = v;
-        v.push(e);
+    "emit" <n:Identifier> "(" <v:CommaOne<Expression>> ")" ";" => {
         Statement::Emit(n, v)
-    }
+    },
 }
 
 Comma<T>: Vec<T> = {
@@ -475,6 +467,22 @@ Comma<T>: Vec<T> = {
             v.push(e);
             v
         }
+    }
+};
+
+CommaOne<T>: Vec<T> = {
+    <v:(<T> ",")*> <e:T> => {
+        let mut v = v;
+        v.push(e);
+        v
+    }
+};
+
+CommaTwo<T>: Vec<T> = {
+    <v:(<T> ",")+> <e:T> => {
+        let mut v = v;
+        v.push(e);
+        v
     }
 };
 
@@ -581,6 +589,8 @@ extern {
         "anonymous" => Token::Anonymous,
         "indexed" => Token::Indexed,
         "mapping" => Token::Mapping,
+        "try" => Token::Try,
+        "catch" => Token::Catch,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }
