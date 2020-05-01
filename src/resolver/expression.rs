@@ -1859,41 +1859,32 @@ pub fn expression(
                 _ => {}
             }
 
-            match ty {
-                ast::ComplexType::Unresolved(expr) => {
-                    if let ast::Expression::MemberAccess(_, member, func) = expr.as_ref() {
-                        method_call_with_named_args(
-                            loc,
-                            member,
-                            func,
-                            args,
-                            cfg,
-                            contract_no,
-                            ns,
-                            vartab,
-                            errors,
-                        )
-                    } else {
-                        let (_namespace, id, dimensions) = ns.expr_to_type(expr, errors)?;
-
-                        if !dimensions.is_empty() {
-                            errors.push(Output::error(*loc, "unexpected array type".to_string()));
-                            return Err(());
-                        }
-
-                        function_with_named_args(
-                            loc,
-                            &id,
-                            args,
-                            cfg,
-                            contract_no,
-                            ns,
-                            vartab,
-                            errors,
-                        )
-                    }
+            match ty.as_ref() {
+                ast::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
+                    loc,
+                    member,
+                    func,
+                    args,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    errors,
+                ),
+                ast::Expression::Variable(id) => {
+                    function_with_named_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
                 }
-                _ => unreachable!(),
+                ast::Expression::ArraySubscript(_, _, _) => {
+                    errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
+                    Err(())
+                }
+                _ => {
+                    errors.push(Output::error(
+                        ty.loc(),
+                        "expression not expected here".to_string(),
+                    ));
+                    Err(())
+                }
             }
         }
         ast::Expression::New(loc, ty, args) => {
@@ -1940,41 +1931,39 @@ pub fn expression(
                 Err(_) => {}
             }
 
-            match ty {
-                ast::ComplexType::Unresolved(expr) => {
-                    if let ast::Expression::MemberAccess(_, member, func) = expr.as_ref() {
-                        method_call(
-                            loc,
-                            member,
-                            func,
-                            args,
-                            cfg,
-                            contract_no,
-                            ns,
-                            vartab,
-                            errors,
-                        )
-                    } else {
-                        let (_namespace, id, dimensions) = ns.expr_to_type(expr, errors)?;
-
-                        if !dimensions.is_empty() {
-                            errors.push(Output::error(*loc, "unexpected array type".to_string()));
-                            return Err(());
-                        }
-
-                        function_call_with_positional_arguments(
-                            loc,
-                            &id,
-                            args,
-                            cfg,
-                            contract_no,
-                            ns,
-                            vartab,
-                            errors,
-                        )
-                    }
+            match ty.as_ref() {
+                ast::Expression::MemberAccess(_, member, func) => method_call(
+                    loc,
+                    member,
+                    func,
+                    args,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    errors,
+                ),
+                ast::Expression::Variable(id) => function_call_with_positional_arguments(
+                    loc,
+                    &id,
+                    args,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    errors,
+                ),
+                ast::Expression::ArraySubscript(_, _, _) => {
+                    errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
+                    Err(())
                 }
-                _ => unreachable!(),
+                _ => {
+                    errors.push(Output::error(
+                        ty.loc(),
+                        "expression not expected here".to_string(),
+                    ));
+                    Err(())
+                }
             }
         }
         ast::Expression::ArraySubscript(loc, _, None) => {
@@ -2319,6 +2308,17 @@ pub fn expression(
             cfg.set_basic_block(end_and);
 
             Ok((Expression::Variable(*loc, pos), boolty))
+        }
+        ast::Expression::Type(loc, _) => {
+            errors.push(Output::error(*loc, "type not expected".to_owned()));
+            Err(())
+        }
+        ast::Expression::List(loc, _) => {
+            errors.push(Output::error(
+                *loc,
+                "lists only permitted in destructure statements".to_owned(),
+            ));
+            Err(())
         }
     }
 }
@@ -2680,7 +2680,7 @@ fn constructor_named_args(
 /// Resolve an new expression
 fn new(
     loc: &ast::Loc,
-    ty: &ast::ComplexType,
+    ty: &ast::Expression,
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,

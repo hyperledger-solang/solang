@@ -105,6 +105,15 @@ pub fn function_decl(
     };
 
     for p in &f.params {
+        let p = match p {
+            (_, Some(p)) => p,
+            (loc, None) => {
+                errors.push(Output::error(*loc, "missing parameter type".to_owned()));
+                success = false;
+                continue;
+            }
+        };
+
         match ns.resolve_type(Some(contract_no), &p.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
@@ -154,6 +163,15 @@ pub fn function_decl(
     }
 
     for r in &f.returns {
+        let r = match r {
+            (_, Some(p)) => p,
+            (loc, None) => {
+                errors.push(Output::error(*loc, "missing return type".to_owned()));
+                success = false;
+                continue;
+            }
+        };
+
         match ns.resolve_type(Some(contract_no), &r.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {

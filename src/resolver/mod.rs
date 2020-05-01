@@ -532,16 +532,18 @@ impl FunctionDecl {
     }
 }
 
-impl From<ast::Type> for Type {
-    fn from(p: ast::Type) -> Type {
+impl From<&ast::Type> for Type {
+    fn from(p: &ast::Type) -> Type {
         match p {
             ast::Type::Bool => Type::Bool,
             ast::Type::Address => Type::Address,
-            ast::Type::Int(n) => Type::Int(n),
-            ast::Type::Uint(n) => Type::Uint(n),
-            ast::Type::Bytes(n) => Type::Bytes(n),
+            ast::Type::Int(n) => Type::Int(*n),
+            ast::Type::Uint(n) => Type::Uint(*n),
+            ast::Type::Bytes(n) => Type::Bytes(*n),
             ast::Type::String => Type::String,
             ast::Type::DynamicBytes => Type::DynamicBytes,
+            // needs special casing
+            ast::Type::Mapping(_, _, _) => unimplemented!(),
         }
     }
 }
@@ -880,7 +882,7 @@ impl Namespace {
     pub fn resolve_type(
         &self,
         contract_no: Option<usize>,
-        id: &ast::ComplexType,
+        id: &ast::Expression,
         errors: &mut Vec<Output>,
     ) -> Result<Type, ()> {
         fn resolve_dimensions(
@@ -889,12 +891,12 @@ impl Namespace {
         ) -> Result<Vec<Option<BigInt>>, ()> {
             let mut dimensions = Vec::new();
 
-            for d in ast_dimensions.iter() {
+            for d in ast_dimensions.iter().rev() {
                 if let Some((loc, n)) = d {
                     if n.is_zero() {
                         errors.push(Output::decl_error(
                             *loc,
-                            "zero size of array declared".to_string(),
+                            "zero size array not permitted".to_string(),
                         ));
                         return Err(());
                     } else if n.is_negative() {
@@ -913,26 +915,12 @@ impl Namespace {
             Ok(dimensions)
         }
 
-        match id {
-            ast::ComplexType::Primitive(_, p, dimensions) if dimensions.is_empty() => {
-                Ok(Type::from(*p))
-            }
-            ast::ComplexType::Primitive(_, p, exprs) => {
-                let mut dimensions = Vec::new();
+        let (contract_name, id, dimensions) = self.expr_to_type(&id, errors)?;
 
-                for expr in exprs {
-                    dimensions.push(match expr {
-                        Some(e) => self.resolve_array_dimension(e, errors)?,
-                        None => None,
-                    });
-                }
+        if let ast::Expression::Type(_, ty) = &id {
+            assert_eq!(contract_name, None);
 
-                Ok(Type::Array(
-                    Box::new(Type::from(*p)),
-                    resolve_dimensions(&dimensions, errors)?,
-                ))
-            }
-            ast::ComplexType::Mapping(_, k, v) => {
+            let ty = if let ast::Type::Mapping(_, k, v) = ty {
                 let key = self.resolve_type(contract_no, k, errors)?;
                 let value = self.resolve_type(contract_no, v, errors)?;
 
@@ -942,116 +930,129 @@ impl Namespace {
                             k.loc(),
                             "key of mapping cannot be another mapping type".to_string(),
                         ));
-                        Err(())
+                        return Err(());
                     }
                     Type::Struct(_) => {
                         errors.push(Output::decl_error(
                             k.loc(),
                             "key of mapping cannot be struct type".to_string(),
                         ));
-                        Err(())
+                        return Err(());
                     }
                     Type::Array(_, _) => {
                         errors.push(Output::decl_error(
                             k.loc(),
                             "key of mapping cannot be array type".to_string(),
                         ));
-                        Err(())
+                        return Err(());
                     }
-                    _ => Ok(Type::Mapping(Box::new(key), Box::new(value))),
+                    _ => Type::Mapping(Box::new(key), Box::new(value)),
+                }
+            } else {
+                Type::from(ty)
+            };
+
+            return if dimensions.is_empty() {
+                Ok(ty)
+            } else {
+                Ok(Type::Array(
+                    Box::new(ty),
+                    resolve_dimensions(&dimensions, errors)?,
+                ))
+            };
+        }
+
+        let id = match id {
+            ast::Expression::Variable(id) => id,
+            _ => unreachable!(),
+        };
+
+        let contract_no = if let Some(contract_name) = contract_name {
+            match self.symbols.get(&(None, contract_name.name)) {
+                None => {
+                    errors.push(Output::decl_error(
+                        id.loc,
+                        format!("contract type ‘{}’ not found", id.name),
+                    ));
+                    return Err(());
+                }
+                Some(Symbol::Contract(_, n)) => Some(*n),
+                Some(Symbol::Function(_)) => {
+                    errors.push(Output::decl_error(
+                        id.loc,
+                        format!("‘{}’ is a function", id.name),
+                    ));
+                    return Err(());
+                }
+                Some(Symbol::Variable(_, _)) => {
+                    errors.push(Output::decl_error(
+                        id.loc,
+                        format!("‘{}’ is a contract variable", id.name),
+                    ));
+                    return Err(());
+                }
+                Some(Symbol::Struct(_, _)) => {
+                    errors.push(Output::decl_error(
+                        id.loc,
+                        format!("‘{}’ is a struct", id.name),
+                    ));
+                    return Err(());
+                }
+                Some(Symbol::Enum(_, _)) => {
+                    errors.push(Output::decl_error(
+                        id.loc,
+                        format!("‘{}’ is an enum variable", id.name),
+                    ));
+                    return Err(());
                 }
             }
-            ast::ComplexType::Unresolved(expr) => {
-                let (contract_name, id, dimensions) = self.expr_to_type(&expr, errors)?;
+        } else {
+            contract_no
+        };
 
-                let contract_no = if let Some(contract_name) = contract_name {
-                    match self.symbols.get(&(None, contract_name.name)) {
-                        None => {
-                            errors.push(Output::decl_error(
-                                id.loc,
-                                format!("contract type ‘{}’ not found", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Some(Symbol::Contract(_, n)) => Some(*n),
-                        Some(Symbol::Function(_)) => {
-                            errors.push(Output::decl_error(
-                                id.loc,
-                                format!("‘{}’ is a function", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Some(Symbol::Variable(_, _)) => {
-                            errors.push(Output::decl_error(
-                                id.loc,
-                                format!("‘{}’ is a contract variable", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Some(Symbol::Struct(_, _)) => {
-                            errors.push(Output::decl_error(
-                                id.loc,
-                                format!("‘{}’ is a struct", id.name),
-                            ));
-                            return Err(());
-                        }
-                        Some(Symbol::Enum(_, _)) => {
-                            errors.push(Output::decl_error(
-                                id.loc,
-                                format!("‘{}’ is an enum variable", id.name),
-                            ));
-                            return Err(());
-                        }
-                    }
-                } else {
-                    contract_no
-                };
+        let mut s = self.symbols.get(&(contract_no, id.name.to_owned()));
 
-                let mut s = self.symbols.get(&(contract_no, id.name.to_owned()));
+        // try global scope
+        if s.is_none() && contract_no.is_some() {
+            s = self.symbols.get(&(None, id.name.to_owned()));
+        }
 
-                // try global scope
-                if s.is_none() && contract_no.is_some() {
-                    s = self.symbols.get(&(None, id.name.to_owned()));
-                }
-
-                match s {
-                    None => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("type ‘{}’ not found", id.name),
-                        ));
-                        Err(())
-                    }
-                    Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
-                    Some(Symbol::Enum(_, n)) => Ok(Type::Array(
-                        Box::new(Type::Enum(*n)),
-                        resolve_dimensions(&dimensions, errors)?,
-                    )),
-                    Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
-                    Some(Symbol::Struct(_, n)) => Ok(Type::Array(
-                        Box::new(Type::Struct(*n)),
-                        resolve_dimensions(&dimensions, errors)?,
-                    )),
-                    Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
-                    Some(Symbol::Contract(_, n)) => Ok(Type::Array(
-                        Box::new(Type::Contract(*n)),
-                        resolve_dimensions(&dimensions, errors)?,
-                    )),
-                    Some(Symbol::Function(_)) => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("‘{}’ is a function", id.name),
-                        ));
-                        Err(())
-                    }
-                    Some(Symbol::Variable(_, _)) => {
-                        errors.push(Output::decl_error(
-                            id.loc,
-                            format!("‘{}’ is a contract variable", id.name),
-                        ));
-                        Err(())
-                    }
-                }
+        match s {
+            None => {
+                errors.push(Output::decl_error(
+                    id.loc,
+                    format!("type ‘{}’ not found", id.name),
+                ));
+                Err(())
+            }
+            Some(Symbol::Enum(_, n)) if dimensions.is_empty() => Ok(Type::Enum(*n)),
+            Some(Symbol::Enum(_, n)) => Ok(Type::Array(
+                Box::new(Type::Enum(*n)),
+                resolve_dimensions(&dimensions, errors)?,
+            )),
+            Some(Symbol::Struct(_, n)) if dimensions.is_empty() => Ok(Type::Struct(*n)),
+            Some(Symbol::Struct(_, n)) => Ok(Type::Array(
+                Box::new(Type::Struct(*n)),
+                resolve_dimensions(&dimensions, errors)?,
+            )),
+            Some(Symbol::Contract(_, n)) if dimensions.is_empty() => Ok(Type::Contract(*n)),
+            Some(Symbol::Contract(_, n)) => Ok(Type::Array(
+                Box::new(Type::Contract(*n)),
+                resolve_dimensions(&dimensions, errors)?,
+            )),
+            Some(Symbol::Function(_)) => {
+                errors.push(Output::decl_error(
+                    id.loc,
+                    format!("‘{}’ is a function", id.name),
+                ));
+                Err(())
+            }
+            Some(Symbol::Variable(_, _)) => {
+                errors.push(Output::decl_error(
+                    id.loc,
+                    format!("‘{}’ is a contract variable", id.name),
+                ));
+                Err(())
             }
         }
     }
@@ -1066,7 +1067,7 @@ impl Namespace {
     ) -> Result<
         (
             Option<ast::Identifier>,
-            ast::Identifier,
+            ast::Expression,
             Vec<ArrayDimension>,
         ),
         (),
@@ -1086,10 +1087,16 @@ impl Namespace {
 
                     &*r
                 }
-                ast::Expression::Variable(id) => return Ok((None, id.clone(), dimensions)),
+                ast::Expression::Variable(_) | ast::Expression::Type(_, _) => {
+                    return Ok((None, expr.clone(), dimensions))
+                }
                 ast::Expression::MemberAccess(_, namespace, id) => {
                     if let ast::Expression::Variable(namespace) = namespace.as_ref() {
-                        return Ok((Some(namespace.clone()), id.clone(), dimensions));
+                        return Ok((
+                            Some(namespace.clone()),
+                            ast::Expression::Variable(id.clone()),
+                            dimensions,
+                        ));
                     } else {
                         errors.push(Output::decl_error(
                             namespace.loc(),
