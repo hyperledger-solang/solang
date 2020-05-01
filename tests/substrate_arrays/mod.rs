@@ -509,7 +509,7 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "zero size of array declared");
+    assert_eq!(first_error(errors), "zero size array not permitted");
 
     let (_, errors) = parse_and_resolve(
         r#"
@@ -519,7 +519,7 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "zero size of array declared");
+    assert_eq!(first_error(errors), "zero size array not permitted");
 
     let (_, errors) = parse_and_resolve(
         r#"
@@ -529,7 +529,7 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "zero size of array declared");
+    assert_eq!(first_error(errors), "zero size array not permitted");
 
     let (_, errors) = parse_and_resolve(
         r#"

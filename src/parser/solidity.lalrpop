@@ -40,20 +40,14 @@ Type: Type = {
     Uint => Type::Uint(<>),
     Int => Type::Int(<>),
     Bytes => Type::Bytes(<>),
+    <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
+        Type::Mapping(Loc(l, r), Box::new(k), Box::new(v))
+    }
 }
 
 ArrayDimension: Option<Expression> = {
     "[" "]" => None,
-    "[" <e:Expression> "]" => Some(e)
-}
-
-ComplexType: ComplexType = {
-    <l:@L> <p:Type> <r:@R> => ComplexType::Primitive(Loc(l, r), p, Vec::new()),
-    <l:@L> <p:Type> <d:ArrayDimension+> <r:@R>=> ComplexType::Primitive(Loc(l, r), p, d),
-    <l:@L> "mapping" "(" <k:ComplexType> "=>" <v:ComplexType> ")" <r:@R> => {
-        ComplexType::Mapping(Loc(l, r), Box::new(k), Box::new(v))
-    },
-    Precedence0 => ComplexType::Unresolved(Box::new(<>)),
+    "[" <Expression> "]" => Some(<>)
 }
 
 StorageLocation: StorageLocation = {
@@ -67,17 +61,17 @@ Identifier: Identifier = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <t:ComplexType> <s:StorageLocation> <i:Identifier> => VariableDeclaration {
-        ty: t, storage: Some(s), name: i
+    <ty:Precedence0> <s:StorageLocation> <name:Identifier> => VariableDeclaration {
+        ty, storage: Some(s), name
     },
-    <t:ComplexType> <i:Identifier> => VariableDeclaration {
-        ty: t, storage: None, name: i
+    <ty:Precedence0> <name:Identifier> => VariableDeclaration {
+        ty, storage: None, name
     }
 }
 
 StructDefinition: Box<StructDefinition> = {
-    <d:DocComments> "struct" <n:Identifier> "{" <v:(<VariableDeclaration> ";")*> "}" => {
-        Box::new(StructDefinition{doc: d, name: n, fields: v})
+    <doc:DocComments> "struct" <name:Identifier> "{" <fields:(<VariableDeclaration> ";")*> "}" => {
+        Box::new(StructDefinition{doc, name, fields})
     }
 }
 
@@ -96,35 +90,35 @@ ContractPart: ContractPart = {
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <d:DocComments> <l:@L> <t:ContractType> <n:Identifier> "{" <p:(<ContractPart>)+> "}" <r:@R> => {
-        Box::new(ContractDefinition{doc: d, loc: Loc(l, r), ty: t, name: n, parts: p})
+    <doc:DocComments> <l:@L> <ty:ContractType> <name:Identifier> "{" <parts:(<ContractPart>)+> "}" <r:@R> => {
+        Box::new(ContractDefinition{doc, loc: Loc(l, r), ty, name, parts})
     }
 }
 
 EventParameter: EventParameter = {
-    <t:ComplexType> <i:"indexed"?> <n:Identifier?> => EventParameter{
-        ty: t, indexed: match i { Some(_) => true, _ => false }, name:n
+    <ty:Precedence0> <i:"indexed"?> <name:Identifier?> => EventParameter{
+        ty, indexed: i.is_some(), name
     }
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <d:DocComments> "event" <n:Identifier> "(" <v:CommaOne<EventParameter>> ")" <a:"anonymous"?> ";" => {
+    <doc:DocComments> "event" <name:Identifier> "(" <v:CommaOne<EventParameter>> ")" <a:"anonymous"?> ";" => {
         Box::new(EventDefinition{
-            doc: d, name: n, fields: v, anonymous: match a { Some(_) => true, _ => false}
+            doc, name, fields: v, anonymous: a.is_some()
         })
     },
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    <d:DocComments> "enum" <n:Identifier> "{" <v:Comma<Identifier>> "}" => {
-        Box::new(EnumDefinition{doc: d, name: n, values: v})
+    <doc:DocComments> "enum" <name:Identifier> "{" <values:Comma<Identifier>> "}" => {
+        Box::new(EnumDefinition{doc, name, values})
     }
 }
 
 ContractVariableDefinition: Box<ContractVariableDefinition> = {
-    <d:DocComments> <l:@L> <t:ComplexType> <a:VariableAttribute*> <i:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <doc:DocComments> <l:@L> <ty:Precedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
         Box::new(ContractVariableDefinition{
-            doc: d, loc: Loc(l, r), ty: t, attrs: a, name: i, initializer: e,
+            doc, loc: Loc(l, r), ty, attrs, name, initializer: e,
         })
     }
 }
@@ -237,38 +231,38 @@ Precedence2: Expression = {
     <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc(a, b), Box::new(e)),
     <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc(a, b), Box::new(e)),
     Precedence1,
-    Precedence0,
 }
 
 NamedArgument: NamedArgument = {
-    <i:Identifier> ":" <e:Expression> => NamedArgument { name: i, expr: e }
+    <name:Identifier> ":" <expr:Expression> => NamedArgument{ name, expr }
 }
 
 Precedence1: Expression = {
-    <a:@L> <i:ComplexType> "(" <v:Comma<Expression>> ")" <b:@R> => {
-        Expression::FunctionCall(Loc(a, b), i, v)
+    <a:@L> <i:Precedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
+        Expression::FunctionCall(Loc(a, b), Box::new(i), v)
     },
-    <a:@L> <i:ComplexType> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
-        Expression::NamedFunctionCall(Loc(a, b), i, v)
+    <a:@L> <i:Precedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
+        Expression::NamedFunctionCall(Loc(a, b), Box::new(i), v)
     },
+    Precedence0,
 }
 
 Precedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
-    <a:@L> "new" <t:ComplexType> <b:@R> "(" <v:Comma<Expression>> ")" => Expression::New(Loc(a, b), t, v),
-    <a:@L> "new" <t:ComplexType> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => Expression::NewNamed(Loc(a, b), t, v),
+    <a:@L> "new" <t:Precedence0> <b:@R> "(" <v:Comma<Expression>> ")" => Expression::New(Loc(a, b), Box::new(t), v),
+    <a:@L> "new" <t:Precedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => Expression::NewNamed(Loc(a, b), Box::new(t), v),
     <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
+    <l:@L> <ty:Type> <r:@R> => Expression::Type(Loc(l, r), ty),
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc(a, b), v)
     },
-    <i:Identifier> => Expression::Variable(i),
-    "(" <e:Expression> ")" => e,
+    <Identifier> => Expression::Variable(<>),
     <l:@L> <n:LexNumber> <r:@R> => {
         let s: String = n.chars().filter(|v| *v != '_').collect();
 
@@ -276,12 +270,22 @@ Precedence0: Expression = {
     },
     <l:@L> <n:LexHexNumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc(l, r), n.to_owned())
+    },
+    <l:@L> <a:ParameterList> <r:@R> => {
+        if a.len() == 1 {
+            if let Some(Parameter{ ty, storage: None, name: None }) = &a[0].1 {
+                // this means "(" Expression ")"
+                return ty.clone();
+            }
+        }
+
+        Expression::List(Loc(l, r), a)
     }
 }
 
 StringLiteral: StringLiteral = {
     <l:@L> <s:LexStringLiteral> <r:@R> => {
-        StringLiteral{ loc: Loc(l, r), string: s.replace("\\\n", "") }
+        StringLiteral{ loc: Loc(l, r), string: s.to_string() }
     }
 }
 
@@ -294,14 +298,29 @@ HexLiteral: HexLiteral = {
     }
 }
 
+// A parameter list is used for function arguments, returns, and destructuring statements.
+// In destructuring statements, parameters can be optional. So, we make parameters optional
+// and as an added bonus we can generate error messages about missing parameters/returns
+// to functions
 Parameter: Parameter = {
-    <e:ComplexType> <s:StorageLocation?> <i:Identifier?> => {
-        Parameter{ty: e, storage: s, name: i}
+    <ty:Expression> <storage:StorageLocation?> <name:Identifier?> => {
+        Parameter{ty, storage, name}
     }
 }
 
-ParameterList: Vec<Parameter> = {
-    "(" <Comma<Parameter>> ")" => <>
+OptParameter: (Loc, Option<Parameter>) = {
+    <l:@L> <p:Parameter> <r:@R> => (Loc(l, r), Some(p)),
+    <l:@L> <r:@R> => (Loc(l, r), None),
+}
+
+TwoParametersList: Vec<(Loc, Option<Parameter>)> = {
+    CommaTwo<OptParameter> => <>
+}
+
+ParameterList: Vec<(Loc, Option<Parameter>)> = {
+    "(" ")" => Vec::new(),
+    "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc(l, r), Some(p))),
+    "(" <TwoParametersList> ")" => <>,
 }
 
 StateMutability: StateMutability = {
@@ -435,13 +454,10 @@ NonIfStatement: Statement = {
         Statement::Break
     },
     <l:@L> "return" <r:@R> ";" => {
-        Statement::Return(Loc(l, r), Vec::new())
+        Statement::Return(Loc(l, r), None)
     },
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
-        Statement::Return(Loc(l, r), vec!(e))
-    },
-    <l:@L> "return" "(" <v:CommaTwo<Expression>> ")" <r:@R> ";" => {
-        Statement::Return(Loc(l, r), v)
+        Statement::Return(Loc(l, r), Some(e))
     },
     "try" <e:Expression> <r:("returns" <ParameterList>)?>
     "catch" "(" <p:Parameter> ")" <b:BlockStatement> => {
@@ -460,28 +476,22 @@ NonIfStatement: Statement = {
 }
 
 Comma<T>: Vec<T> = {
-    <v:(<T> ",")*> <e:T?> => match e {
-        None => v,
-        Some(e) => {
-            let mut v = v;
-            v.push(e);
-            v
-        }
-    }
+    => Vec::new(),
+    CommaOne<T> => <>,
 };
 
 CommaOne<T>: Vec<T> = {
-    <v:(<T> ",")*> <e:T> => {
+    <e:T> <v:("," <T>)*>  => {
         let mut v = v;
-        v.push(e);
+        v.insert(0, e);
         v
     }
 };
 
 CommaTwo<T>: Vec<T> = {
-    <v:(<T> ",")+> <e:T> => {
+    <e:T> <v:("," <T>)+>  => {
         let mut v = v;
-        v.push(e);
+        v.insert(0, e);
         v
     }
 };

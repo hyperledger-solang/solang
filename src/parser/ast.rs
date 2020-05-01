@@ -22,7 +22,7 @@ pub enum SourceUnitPart {
     StructDefinition(Box<StructDefinition>),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Type {
     Address,
     Bool,
@@ -31,6 +31,7 @@ pub enum Type {
     Uint(u16),
     Bytes(u8),
     DynamicBytes,
+    Mapping(Loc, Box<Expression>, Box<Expression>),
 }
 
 impl fmt::Display for Type {
@@ -43,28 +44,12 @@ impl fmt::Display for Type {
             Type::Uint(n) => write!(f, "uint{}", n),
             Type::Bytes(n) => write!(f, "bytes{}", n),
             Type::DynamicBytes => write!(f, "bytes"),
+            Type::Mapping(_, _, _) => write!(f, "mapping(key => value)"),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum ComplexType {
-    Primitive(Loc, Type, Vec<Option<Expression>>),
-    Mapping(Loc, Box<ComplexType>, Box<ComplexType>),
-    Unresolved(Box<Expression>),
-}
-
-impl ComplexType {
-    pub fn loc(&self) -> Loc {
-        match self {
-            ComplexType::Primitive(loc, _, _) => *loc,
-            ComplexType::Mapping(loc, _, _) => *loc,
-            ComplexType::Unresolved(e) => e.loc(),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum StorageLocation {
     Memory(Loc),
     Storage(Loc),
@@ -93,7 +78,7 @@ impl fmt::Display for StorageLocation {
 
 #[derive(Debug, PartialEq)]
 pub struct VariableDeclaration {
-    pub ty: ComplexType,
+    pub ty: Expression,
     pub storage: Option<StorageLocation>,
     pub name: Identifier,
 }
@@ -133,7 +118,7 @@ pub struct ContractDefinition {
 
 #[derive(Debug, PartialEq)]
 pub struct EventParameter {
-    pub ty: ComplexType,
+    pub ty: Expression,
     pub indexed: bool,
     pub name: Option<Identifier>,
 }
@@ -163,7 +148,7 @@ pub enum VariableAttribute {
 pub struct ContractVariableDefinition {
     pub doc: Vec<String>,
     pub loc: Loc,
-    pub ty: ComplexType,
+    pub ty: Expression,
     pub attrs: Vec<VariableAttribute>,
     pub name: Identifier,
     pub initializer: Option<Expression>,
@@ -191,12 +176,12 @@ pub struct NamedArgument {
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
-    New(Loc, ComplexType, Vec<Expression>),
-    NewNamed(Loc, ComplexType, Vec<NamedArgument>),
+    New(Loc, Box<Expression>, Vec<Expression>),
+    NewNamed(Loc, Box<Expression>, Vec<NamedArgument>),
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
-    FunctionCall(Loc, ComplexType, Vec<Expression>),
-    NamedFunctionCall(Loc, ComplexType, Vec<NamedArgument>),
+    FunctionCall(Loc, Box<Expression>, Vec<Expression>),
+    NamedFunctionCall(Loc, Box<Expression>, Vec<NamedArgument>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),
     Delete(Loc, Box<Expression>),
@@ -239,8 +224,10 @@ pub enum Expression {
     NumberLiteral(Loc, BigInt),
     HexNumberLiteral(Loc, String),
     StringLiteral(Vec<StringLiteral>),
+    Type(Loc, Type),
     HexLiteral(Vec<HexLiteral>),
     Variable(Identifier),
+    List(Loc, Vec<(Loc, Option<Parameter>)>),
     ArrayLiteral(Loc, Vec<Expression>),
 }
 
@@ -297,6 +284,8 @@ impl Expression {
             | Expression::NumberLiteral(loc, _)
             | Expression::HexNumberLiteral(loc, _)
             | Expression::ArrayLiteral(loc, _)
+            | Expression::List(loc, _)
+            | Expression::Type(loc, _)
             | Expression::Variable(Identifier { loc, .. }) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
@@ -304,9 +293,9 @@ impl Expression {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Parameter {
-    pub ty: ComplexType,
+    pub ty: Expression,
     pub storage: Option<StorageLocation>,
     pub name: Option<Identifier>,
 }
@@ -376,9 +365,9 @@ pub struct FunctionDefinition {
     pub loc: Loc,
     pub constructor: bool,
     pub name: Option<Identifier>,
-    pub params: Vec<Parameter>,
+    pub params: Vec<(Loc, Option<Parameter>)>,
     pub attributes: Vec<FunctionAttribute>,
-    pub returns: Vec<Parameter>,
+    pub returns: Vec<(Loc, Option<Parameter>)>,
     pub body: Statement,
 }
 
@@ -403,11 +392,11 @@ pub enum Statement {
     DoWhile(Box<Statement>, Expression),
     Continue,
     Break,
-    Return(Loc, Vec<Expression>),
+    Return(Loc, Option<Expression>),
     Emit(Identifier, Vec<Expression>),
     Try(
         Expression,
-        Vec<Parameter>,
+        Vec<(Loc, Option<Parameter>)>,
         Option<Box<(Identifier, Parameter, Statement)>>,
         Box<(Parameter, Statement)>,
     ),

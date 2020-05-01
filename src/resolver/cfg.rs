@@ -633,6 +633,7 @@ pub fn generate_cfg(
 
     // first add function parameters
     for (i, p) in ast_f.params.iter().enumerate() {
+        let p = p.1.as_ref().unwrap();
         if let Some(ref name) = p.name {
             if let Some(pos) = vartab.add(name, resolve_f.params[i].ty.clone(), errors) {
                 ns.check_shadowing(contract_no, name, errors);
@@ -645,11 +646,15 @@ pub fn generate_cfg(
     // If any of the return values are named, then the return statement can be omitted at
     // the end of the function, and return values may be omitted too. Create variables to
     // store the return values
-    if ast_f.returns.iter().any(|v| v.name.is_some()) {
+    if ast_f
+        .returns
+        .iter()
+        .any(|v| v.1.as_ref().unwrap().name.is_some())
+    {
         let mut returns = Vec::new();
 
         for (i, p) in ast_f.returns.iter().enumerate() {
-            returns.push(if let Some(ref name) = p.name {
+            returns.push(if let Some(ref name) = p.1.as_ref().unwrap().name {
                 if let Some(pos) = vartab.add(name, resolve_f.returns[i].ty.clone(), errors) {
                     ns.check_shadowing(contract_no, name, errors);
 
@@ -847,7 +852,7 @@ fn statement(
 
             Ok(reachable)
         }
-        ast::Statement::Return(loc, returns) if returns.is_empty() => {
+        ast::Statement::Return(loc, None) => {
             let no_returns = f.returns.len();
 
             if vartab.returns.len() != no_returns {
@@ -874,51 +879,8 @@ fn statement(
 
             Ok(false)
         }
-        ast::Statement::Return(loc, returns) => {
-            let no_returns = f.returns.len();
-
-            if no_returns > 0 && returns.is_empty() {
-                errors.push(Output::error(
-                    *loc,
-                    format!(
-                        "missing return value, {} return values expected",
-                        no_returns
-                    ),
-                ));
-                return Err(());
-            }
-
-            if no_returns == 0 && !returns.is_empty() {
-                errors.push(Output::error(
-                    *loc,
-                    "function has no return values".to_string(),
-                ));
-                return Err(());
-            }
-
-            if no_returns != returns.len() {
-                errors.push(Output::error(
-                    *loc,
-                    format!(
-                        "incorrect number of return values, expected {} but got {}",
-                        no_returns,
-                        returns.len()
-                    ),
-                ));
-                return Err(());
-            }
-
-            let mut exprs = Vec::new();
-
-            for (i, r) in returns.iter().enumerate() {
-                let (e, ty) = expression(r, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
-
-                exprs.push(cast(&r.loc(), e, &ty, &f.returns[i].ty, true, ns, errors)?);
-            }
-
-            cfg.add(vartab, Instr::Return { value: exprs });
-
-            Ok(false)
+        ast::Statement::Return(loc, Some(returns)) => {
+            return_with_values(returns, loc, f, cfg, contract_no, ns, vartab, errors)
         }
         ast::Statement::Expression(expr) => {
             let (expr, _) =
@@ -1275,6 +1237,104 @@ fn statement(
         }
         _ => panic!("not implemented"),
     }
+}
+
+/// Parse return statement with values
+fn return_with_values(
+    returns: &ast::Expression,
+    loc: &ast::Loc,
+    f: &resolver::FunctionDecl,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    ns: &resolver::Namespace,
+    vartab: &mut Vartable,
+    errors: &mut Vec<output::Output>,
+) -> Result<bool, ()> {
+    let returns = if let ast::Expression::List(_, v) = &returns {
+        let mut returns = Vec::new();
+        let mut broken = false;
+
+        for e in v {
+            match &e.1 {
+                None => {
+                    errors.push(Output::error(e.0, "stray comma".to_string()));
+                    broken = true;
+                }
+                Some(ast::Parameter {
+                    name: Some(name), ..
+                }) => {
+                    errors.push(Output::error(name.loc, "single value expected".to_string()));
+                    broken = true;
+                }
+                Some(ast::Parameter {
+                    storage: Some(storage),
+                    ..
+                }) => {
+                    errors.push(Output::error(
+                        *storage.loc(),
+                        "storage specified not permitted here".to_string(),
+                    ));
+                    broken = true;
+                }
+                Some(ast::Parameter { ty, .. }) => {
+                    returns.push(ty);
+                }
+            }
+        }
+
+        if broken {
+            return Ok(false);
+        }
+
+        returns
+    } else {
+        vec![returns]
+    };
+
+    let no_returns = f.returns.len();
+
+    if no_returns > 0 && returns.is_empty() {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "missing return value, {} return values expected",
+                no_returns
+            ),
+        ));
+        return Err(());
+    }
+
+    if no_returns == 0 && !returns.is_empty() {
+        errors.push(Output::error(
+            *loc,
+            "function has no return values".to_string(),
+        ));
+        return Err(());
+    }
+
+    if no_returns != returns.len() {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "incorrect number of return values, expected {} but got {}",
+                no_returns,
+                returns.len()
+            ),
+        ));
+        return Err(());
+    }
+
+    let mut exprs = Vec::new();
+
+    for (i, r) in returns.iter().enumerate() {
+        let (e, ty) = expression(r, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
+
+        exprs.push(cast(&r.loc(), e, &ty, &f.returns[i].ty, true, ns, errors)?);
+    }
+
+    cfg.add(vartab, Instr::Return { value: exprs });
+
+    Ok(false)
 }
 
 /// Parse if-then-no-else
