@@ -1463,4 +1463,34 @@ fn destructure() {
     runtime.function("test", Vec::new());
 
     runtime.function("swap", Vec::new());
+
+    // The minus sign can be a unary negative or subtract.
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                // test one
+                (int32 a, int32 b) = (102, 3);
+        
+                assert(b == 3 && a == 102);
+
+                // test missing one
+                (a, , b) = (1, 2, 3);
+                
+                assert(a == 1 && b == 3);
+
+                // test single one
+                (a) = 5;
+        
+                assert(a == 5);
+        
+                // or like so
+                (a) = (105);
+        
+                assert(a == 105);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
 }

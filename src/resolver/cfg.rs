@@ -759,6 +759,56 @@ fn check_return(
     }
 }
 
+/// Resolve the type of a variable declaration
+pub fn resolve_var_decl_ty(
+    ty: &ast::Expression,
+    storage: &Option<ast::StorageLocation>,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    errors: &mut Vec<output::Output>,
+) -> Result<resolver::Type, ()> {
+    let mut var_ty = ns.resolve_type(contract_no, &ty, errors)?;
+
+    if let Some(storage) = storage {
+        if !var_ty.can_have_data_location() {
+            errors.push(Output::error(
+                *storage.loc(),
+                format!(
+                    "data location ‘{}’ only allowed for array, struct or mapping type",
+                    storage
+                ),
+            ));
+            return Err(());
+        }
+
+        if let ast::StorageLocation::Storage(_) = storage {
+            var_ty = resolver::Type::StorageRef(Box::new(var_ty));
+        }
+
+        // Note we are completely ignoring memory or calldata data locations. Everything
+        // will be stored in memory.
+    }
+
+    if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
+        errors.push(Output::error(
+            ty.loc(),
+            "mapping only allowed in storage".to_string(),
+        ));
+        return Err(());
+    }
+
+    if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
+        errors.push(Output::error(
+            ty.loc(),
+            "type to large to fit into memory".to_string(),
+        ));
+        return Err(());
+    }
+
+    Ok(var_ty)
+}
+
+/// Resolve a statement, which might be a block of statements or an entire body of a function
 fn statement(
     stmt: &ast::Statement,
     f: &resolver::FunctionDecl,
@@ -771,43 +821,8 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         ast::Statement::VariableDefinition(decl, init) => {
-            let mut var_ty = ns.resolve_type(Some(contract_no), &decl.ty, errors)?;
-
-            if let Some(storage) = &decl.storage {
-                if !var_ty.can_have_data_location() {
-                    errors.push(Output::error(
-                        *storage.loc(),
-                        format!(
-                            "data location ‘{}’ only allowed for array, struct or mapping type",
-                            storage
-                        ),
-                    ));
-                    return Err(());
-                }
-
-                if let ast::StorageLocation::Storage(_) = storage {
-                    var_ty = resolver::Type::StorageRef(Box::new(var_ty));
-                }
-
-                // Note we are completely ignoring memory or calldata data locations. Everything
-                // will be stored in memory.
-            }
-
-            if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
-                errors.push(Output::error(
-                    decl.ty.loc(),
-                    "mapping only allowed in storage".to_string(),
-                ));
-                return Err(());
-            }
-
-            if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
-                errors.push(Output::error(
-                    stmt.loc(),
-                    "type to large to fit into memory".to_string(),
-                ));
-                return Err(());
-            }
+            let var_ty =
+                resolve_var_decl_ty(&decl.ty, &decl.storage, Some(contract_no), ns, errors)?;
 
             let e_t = if let Some(init) = init {
                 let (expr, init_ty) =
