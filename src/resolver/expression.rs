@@ -18,7 +18,7 @@ use parser::ast;
 use parser::ast::Loc;
 use resolver;
 use resolver::address::to_hexstr_eip55;
-use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
+use resolver::cfg::{resolve_var_decl_ty, ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::eval::eval_number_expression;
 use resolver::storage::{
     array_offset, array_pop, array_push, bytes_pop, bytes_push, delete, mapping_subscript,
@@ -3223,7 +3223,29 @@ fn destructuring(
                     return Err(());
                 }
             }
-            Some(_) => unimplemented!(),
+            Some(ast::Parameter {
+                ty,
+                storage,
+                name: Some(name),
+            }) => {
+                let var_ty = resolve_var_decl_ty(&ty, &storage, contract_no, ns, errors)?;
+
+                let expr = cast(
+                    &e.0,
+                    args.remove(0),
+                    &args_ty.remove(0),
+                    &var_ty,
+                    true,
+                    ns,
+                    errors,
+                )?;
+
+                if let Some(pos) = vartab.add(&name, var_ty, errors) {
+                    ns.check_shadowing(contract_no.unwrap(), &name, errors);
+
+                    cfg.add(vartab, Instr::Set { res: pos, expr });
+                }
+            }
         }
     }
 
