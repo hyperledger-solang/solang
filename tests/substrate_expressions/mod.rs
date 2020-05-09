@@ -1351,3 +1351,116 @@ fn div() {
 
     runtime.function("test2", Vec::new());
 }
+
+#[test]
+fn destructure() {
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foo(uint bar) public {
+                int a;
+                int b;
+
+                (a, b) = (1, 2, 3);
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "destructuring assignment has 2 values on the left and 3 on the right"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foo(uint bar) public {
+                int a;
+                int b;
+
+                (c, b) = (1, 2);
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "`c\' is not declared");
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foo(uint bar) public {
+                int a;
+                int b;
+
+                (a memory, b) = (1, 2);
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "storage modifier ‘memory’ not permitted on assignment"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        "contract test {
+            function foo(uint bar) public {
+                int a;
+                int b;
+
+                (a , b) = (1, );
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "stray comma");
+
+    // The minus sign can be a unary negative or subtract.
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                int a;
+                int b;
+        
+                // test one
+                (a, b) = (102, 3);
+        
+                assert(b == 3 && a == 102);
+
+                // test missing one
+                (a, , b) = (1, 2, 3);
+                
+                assert(a == 1 && b == 3);
+
+                // test single one
+                (a) = 5;
+        
+                assert(a == 5);
+        
+                // or like so
+                (a) = (105);
+        
+                assert(a == 105);
+            }
+
+            function swap() public {
+                int32 a;
+                int32 b;
+
+                // test one
+                (a, b) = (102, 3);
+        
+                // test swap
+                (b, a) = (a, b);
+        
+                assert(a == 3 && b == 102);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    runtime.function("swap", Vec::new());
+}

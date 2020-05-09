@@ -61,12 +61,9 @@ Identifier: Identifier = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <ty:Precedence0> <s:StorageLocation> <name:Identifier> => VariableDeclaration {
-        ty, storage: Some(s), name
+    <ty:Precedence0> <storage:StorageLocation?> <name:Identifier> => VariableDeclaration {
+        ty, storage, name
     },
-    <ty:Precedence0> <name:Identifier> => VariableDeclaration {
-        ty, storage: None, name
-    }
 }
 
 StructDefinition: Box<StructDefinition> = {
@@ -309,18 +306,13 @@ Parameter: Parameter = {
 }
 
 OptParameter: (Loc, Option<Parameter>) = {
-    <l:@L> <p:Parameter> <r:@R> => (Loc(l, r), Some(p)),
-    <l:@L> <r:@R> => (Loc(l, r), None),
-}
-
-TwoParametersList: Vec<(Loc, Option<Parameter>)> = {
-    CommaTwo<OptParameter> => <>
+    <l:@L> <p:Parameter?> <r:@R> => (Loc(l, r), p),
 }
 
 ParameterList: Vec<(Loc, Option<Parameter>)> = {
     "(" ")" => Vec::new(),
     "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc(l, r), Some(p))),
-    "(" <TwoParametersList> ")" => <>,
+    "(" <CommaTwo<OptParameter>> ")" => <>,
 }
 
 StateMutability: StateMutability = {

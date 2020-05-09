@@ -9,7 +9,9 @@ use output;
 use output::Output;
 use parser::ast;
 use resolver;
-use resolver::expression::{cast, expression, Expression, StringLocation};
+use resolver::expression::{
+    cast, expression, parameter_list_to_expr_list, Expression, StringLocation,
+};
 
 pub enum Instr {
     FuncArg {
@@ -1250,46 +1252,7 @@ fn return_with_values(
     vartab: &mut Vartable,
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
-    let returns = if let ast::Expression::List(_, v) = &returns {
-        let mut returns = Vec::new();
-        let mut broken = false;
-
-        for e in v {
-            match &e.1 {
-                None => {
-                    errors.push(Output::error(e.0, "stray comma".to_string()));
-                    broken = true;
-                }
-                Some(ast::Parameter {
-                    name: Some(name), ..
-                }) => {
-                    errors.push(Output::error(name.loc, "single value expected".to_string()));
-                    broken = true;
-                }
-                Some(ast::Parameter {
-                    storage: Some(storage),
-                    ..
-                }) => {
-                    errors.push(Output::error(
-                        *storage.loc(),
-                        "storage specified not permitted here".to_string(),
-                    ));
-                    broken = true;
-                }
-                Some(ast::Parameter { ty, .. }) => {
-                    returns.push(ty);
-                }
-            }
-        }
-
-        if broken {
-            return Ok(false);
-        }
-
-        returns
-    } else {
-        vec![returns]
-    };
+    let returns = parameter_list_to_expr_list(returns, errors)?;
 
     let no_returns = f.returns.len();
 
