@@ -439,7 +439,7 @@ impl TestRuntime {
             .expect("failed to call function")
         {
             if ret != 0 {
-                panic!("non zero return")
+                panic!(format!("non zero return: {}", ret));
             }
         }
     }

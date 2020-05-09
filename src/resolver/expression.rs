@@ -2969,8 +2969,38 @@ fn assign(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
+    // is it a destructuring assignment
+    if let ast::Expression::List(_, var) = var {
+        destructuring(loc, var, e, cfg, contract_no, ns, vartab, errors)
+    } else {
+        let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
+        assign_single(
+            loc,
+            var,
+            expr,
+            expr_type,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            errors,
+        )
+    }
+}
+
+/// Resolve an assignment
+fn assign_single(
+    loc: &ast::Loc,
+    var: &ast::Expression,
+    expr: Expression,
+    expr_type: resolver::Type,
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
     match var {
         ast::Expression::Variable(id) => {
             let vartab = match vartab {
@@ -3109,7 +3139,98 @@ fn assign(
     }
 }
 
-/// Resolve an assignment
+/// Resolve an destructuring assignment
+fn destructuring(
+    loc: &ast::Loc,
+    var: &[(ast::Loc, Option<ast::Parameter>)],
+    e: &ast::Expression,
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    let mut args = Vec::new();
+    let mut args_ty = Vec::new();
+
+    let list = parameter_list_to_expr_list(e, errors)?;
+
+    let vartab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => {
+            errors.push(Output::error(
+                *loc,
+                "assignment not allowed in constant context".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    for e in list {
+        let (expr, ty) = expression(e, cfg, contract_no, ns, &mut Some(vartab), errors)?;
+
+        let pos = vartab.temp_anonymous(&ty);
+
+        cfg.add(vartab, Instr::Set { res: pos, expr });
+
+        args.push(Expression::Variable(e.loc(), pos));
+        args_ty.push(ty);
+    }
+
+    if args.len() != var.len() {
+        errors.push(Output::error(
+            *loc,
+            format!(
+                "destructuring assignment has {} values on the left and {} on the right",
+                var.len(),
+                args.len()
+            ),
+        ));
+        return Err(());
+    }
+
+    for e in var {
+        match &e.1 {
+            None => {
+                // nothing to do
+                args.remove(0);
+                args_ty.remove(0);
+            }
+            Some(ast::Parameter {
+                ty,
+                storage,
+                name: None,
+            }) => {
+                // so this is a simple assignment, e.g. "(foo, bar) = (1, 2);"
+                // both foo and bar should be declared
+                assign_single(
+                    &e.0,
+                    &ty,
+                    args.remove(0),
+                    args_ty.remove(0),
+                    cfg,
+                    contract_no,
+                    ns,
+                    &mut Some(vartab),
+                    errors,
+                )?;
+
+                if let Some(storage) = storage {
+                    errors.push(Output::error(
+                        *storage.loc(),
+                        format!("storage modifier ‘{}’ not permitted on assignment", storage),
+                    ));
+                    return Err(());
+                }
+            }
+            Some(_) => unimplemented!(),
+        }
+    }
+
+    Ok((Expression::Poison, resolver::Type::Undef))
+}
+
+/// Resolve an assignment with an operator
 fn assign_expr(
     loc: &ast::Loc,
     var: &ast::Expression,
@@ -4673,4 +4794,52 @@ fn check_subarrays<'a>(
     }
 
     Ok(())
+}
+
+/// The parser generates parameter lists for lists. Sometimes this needs to be a
+/// simple expression list.
+pub fn parameter_list_to_expr_list<'a>(
+    e: &'a ast::Expression,
+    errors: &mut Vec<output::Output>,
+) -> Result<Vec<&'a ast::Expression>, ()> {
+    if let ast::Expression::List(_, v) = &e {
+        let mut list = Vec::new();
+        let mut broken = false;
+
+        for e in v {
+            match &e.1 {
+                None => {
+                    errors.push(Output::error(e.0, "stray comma".to_string()));
+                    broken = true;
+                }
+                Some(ast::Parameter {
+                    name: Some(name), ..
+                }) => {
+                    errors.push(Output::error(name.loc, "single value expected".to_string()));
+                    broken = true;
+                }
+                Some(ast::Parameter {
+                    storage: Some(storage),
+                    ..
+                }) => {
+                    errors.push(Output::error(
+                        *storage.loc(),
+                        "storage specified not permitted here".to_string(),
+                    ));
+                    broken = true;
+                }
+                Some(ast::Parameter { ty, .. }) => {
+                    list.push(ty);
+                }
+            }
+        }
+
+        if !broken {
+            Ok(list)
+        } else {
+            Err(())
+        }
+    } else {
+        Ok(vec![e])
+    }
 }
