@@ -668,3 +668,64 @@ fn print() {
 
     runtime.function("test", Vec::new());
 }
+
+#[test]
+fn destructuring_call() {
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function func1() public returns (int32, bool) {
+                return (102, true);
+            }
+        
+            function test() public {
+                (int32 a, bool b) = func1();
+        
+                assert(a == 102 && b == true);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function func1(int32 x) public returns (int32, bool) {
+                return (102 + x, true);
+            }
+        
+            function test() public {
+                (int32 a, bool b) = func1({x: 5});
+        
+                assert(a == 107 && b == true);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                b x = new b();
+                (int32 a, bool b) = x.func1({x: 5});
+        
+                assert(a == 107 && b == true);
+
+                (a, b) = x.func1(-1);
+        
+                assert(a == 101 && b == true);
+            }
+        }
+        
+        contract b {
+            function func1(int32 x) public returns (int32, bool) {
+                return (102 + x, true);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+}
