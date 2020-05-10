@@ -4847,6 +4847,7 @@ fn emit_function_call(
             cfg.add(
                 tab,
                 Instr::ExternalCall {
+                    success: None,
                     address: *address,
                     contract_no,
                     function_no,

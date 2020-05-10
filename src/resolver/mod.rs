@@ -72,7 +72,7 @@ impl Type {
             Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
             Type::Ref(r) => r.to_string(ns),
-            Type::StorageRef(ty) => format!("storage {}", ty.to_string(ns)),
+            Type::StorageRef(ty) => format!("{} storage", ty.to_string(ns)),
             Type::Undef => "undefined".to_owned(),
         }
     }

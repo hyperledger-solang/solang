@@ -332,7 +332,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
             None => vec!(),
             Some(v) => v,
         };
-        
+
         Box::new(FunctionDefinition{
             doc: d,
             loc: Loc(l, e),
@@ -349,7 +349,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
             None => vec!(),
             Some(v) => v,
         };
-        
+
         Box::new(FunctionDefinition{
             doc: d,
             loc: Loc(l, e),
@@ -366,7 +366,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
             None => vec!(),
             Some(v) => v,
         };
-        
+
         Box::new(FunctionDefinition{
             doc: d,
             loc: Loc(l, e),
@@ -452,13 +452,19 @@ NonIfStatement: Statement = {
         Statement::Return(Loc(l, r), Some(e))
     },
     "try" <e:Expression> <r:("returns" <ParameterList>)?>
+    <ok:BlockStatement>
     "catch" "(" <p:Parameter> ")" <b:BlockStatement> => {
-        Statement::Try(e, r.unwrap_or(Vec::new()), None, Box::new((p, Statement::BlockStatement(b))))
+        Statement::Try(e, r.unwrap_or(Vec::new()),
+            Box::new(Statement::BlockStatement(ok)),
+            None,
+            Box::new((p, Statement::BlockStatement(b))))
     },
     "try" <e:Expression> <r:("returns" <ParameterList>)?>
+    <ok:BlockStatement>
     "catch" <i:Identifier> "(" <pe:Parameter> ")" <be:BlockStatement>
     "catch" "(" <pa:Parameter> ")" <ba:BlockStatement> => {
         Statement::Try(e, r.unwrap_or(Vec::new()),
+            Box::new(Statement::BlockStatement(ok)),
             Some(Box::new((i, pe, Statement::BlockStatement(be)))),
             Box::new((pa, Statement::BlockStatement(ba))))
     },

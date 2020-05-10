@@ -216,3 +216,170 @@ fn input_wrong_size() {
 
     runtime.function_expect_return("test", b"ABCDE".to_vec(), 3);
 }
+
+#[test]
+fn try_catch() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "try returns list has 2 entries while function returns 1 values"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32, int[2] storage) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "type ‘int256[2] storage’ does not match return value of function ‘bool’"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32 y, bool) {
+                    x = y;
+                } catch (bytes) {
+                    x = 2;
+                }
+                assert(x == 102);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32 y, bool) {
+                    x = y;
+                } catch (bytes c) {
+                    assert(c == hex"a079c3080c666f6f");
+                    x = 2;
+                }
+                assert(x == 2);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                revert("foo");
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32, bool) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "catch can only take ‘bytes memory’, not ‘string’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32 x, bool) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "x is already declared");
+}
