@@ -1231,7 +1231,7 @@ fn storage_dynamic_array_pop() {
 
     assert_eq!(
         first_error(errors),
-        "conversion from struct foo.s to storage struct foo.s not possible"
+        "conversion from struct foo.s to struct foo.s storage not possible"
     );
 }
 

@@ -397,6 +397,7 @@ pub enum Statement {
     Try(
         Expression,
         Vec<(Loc, Option<Parameter>)>,
+        Box<Statement>,
         Option<Box<(Identifier, Parameter, Statement)>>,
         Box<(Parameter, Statement)>,
     ),

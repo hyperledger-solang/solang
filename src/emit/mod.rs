@@ -2769,6 +2769,7 @@ impl<'a> Contract<'a> {
                         );
                     }
                     cfg::Instr::ExternalCall {
+                        success,
                         address,
                         contract_no,
                         function_no,
@@ -2809,22 +2810,30 @@ impl<'a> Contract<'a> {
 
                         let ret = runtime.external_call(self, payload, payload_len, addr);
 
-                        let success = self.builder.build_int_compare(
+                        let is_success = self.builder.build_int_compare(
                             IntPredicate::EQ,
                             ret,
                             self.context.i32_type().const_zero(),
                             "success",
                         );
 
-                        let success_block = self.context.append_basic_block(function, "success");
-                        let bail_block = self.context.append_basic_block(function, "bail");
-                        self.builder
-                            .build_conditional_branch(success, success_block, bail_block);
-                        self.builder.position_at_end(bail_block);
+                        if let Some(success) = success {
+                            w.vars[*success].value = is_success.into();
+                        } else {
+                            let success_block =
+                                self.context.append_basic_block(function, "success");
+                            let bail_block = self.context.append_basic_block(function, "bail");
+                            self.builder.build_conditional_branch(
+                                is_success,
+                                success_block,
+                                bail_block,
+                            );
+                            self.builder.position_at_end(bail_block);
 
-                        self.builder.build_return(Some(&ret));
+                            self.builder.build_return(Some(&ret));
 
-                        self.builder.position_at_end(success_block);
+                            self.builder.position_at_end(success_block);
+                        }
                     }
                     cfg::Instr::AbiDecode { res, tys, data } => {
                         let v = self

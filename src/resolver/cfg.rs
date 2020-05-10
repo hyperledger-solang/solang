@@ -10,7 +10,8 @@ use output::Output;
 use parser::ast;
 use resolver;
 use resolver::expression::{
-    cast, expression, parameter_list_to_expr_list, Expression, StringLocation,
+    cast, expression, function_call_expr, named_function_call_expr, parameter_list_to_expr_list,
+    Expression, StringLocation,
 };
 
 pub enum Instr {
@@ -76,6 +77,7 @@ pub enum Instr {
         args: Vec<Expression>,
     },
     ExternalCall {
+        success: Option<usize>,
         address: Expression,
         contract_no: usize,
         function_no: usize,
@@ -549,12 +551,17 @@ impl ControlFlowGraph {
                 }
             ),
             Instr::ExternalCall {
+                success,
                 address,
                 contract_no,
                 function_no,
                 args,
             } => format!(
-                "external call address:{} signature:{} func:{}.{} {}",
+                "{} = external call address:{} signature:{} func:{}.{} {}",
+                match success {
+                    Some(i) => format!("%{}", self.vars[*i].id.name),
+                    None => "_".to_string(),
+                },
                 self.expr_to_string(contract, ns, address),
                 ns.contracts[*contract_no].functions[*function_no].signature,
                 ns.contracts[*contract_no].name,
@@ -1283,6 +1290,9 @@ fn statement(
 
             Ok(true)
         }
+        ast::Statement::Try(_, _, _, _, _) => {
+            try_catch(stmt, f, cfg, contract_no, ns, vartab, loops, errors)
+        }
         _ => panic!("not implemented"),
     }
 }
@@ -1466,6 +1476,239 @@ fn if_then_else(
     cfg.set_basic_block(endif);
 
     Ok(then_reachable || else_reachable)
+}
+
+/// Resolve try catch statement
+fn try_catch(
+    try: &ast::Statement,
+    f: &resolver::FunctionDecl,
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    ns: &resolver::Namespace,
+    vartab: &mut Vartable,
+    loops: &mut LoopScopes,
+    errors: &mut Vec<output::Output>,
+) -> Result<bool, ()> {
+    let (expr, returns, ok, catch) = if let ast::Statement::Try(expr, returns, ok, _, catch) = &try
+    {
+        (expr, returns, ok, catch)
+    } else {
+        unreachable!()
+    };
+
+    let fcall = match expr {
+        ast::Expression::FunctionCall(loc, ty, args) => function_call_expr(
+            loc,
+            ty,
+            args,
+            cfg,
+            Some(contract_no),
+            ns,
+            &mut Some(vartab),
+            errors,
+        )?,
+        ast::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
+            loc,
+            ty,
+            args,
+            cfg,
+            Some(contract_no),
+            ns,
+            &mut Some(vartab),
+            errors,
+        )?,
+        _ => {
+            errors.push(Output::error(
+                expr.loc(),
+                "try only supports external calls or constructor calls".to_string(),
+            ));
+            return Err(());
+        }
+    };
+
+    match fcall.0 {
+        Expression::ExternalFunctionCall(_, contract_no, function_no, address, args) => {
+            let ftype = &ns.contracts[contract_no].functions[function_no];
+
+            let success = vartab.temp(
+                &ast::Identifier {
+                    loc: ast::Loc(0, 0),
+                    name: "success".to_owned(),
+                },
+                &resolver::Type::Bool,
+            );
+
+            cfg.add(
+                vartab,
+                Instr::ExternalCall {
+                    success: Some(success),
+                    address: *address,
+                    contract_no,
+                    function_no,
+                    args,
+                },
+            );
+
+            let success_block = cfg.new_basic_block("success".to_string());
+            let catch_block = cfg.new_basic_block("catch".to_string());
+            let finally_block = cfg.new_basic_block("finally".to_string());
+
+            cfg.add(
+                vartab,
+                Instr::BranchCond {
+                    cond: Expression::Variable(ast::Loc(0, 0), success),
+                    true_: success_block,
+                    false_: catch_block,
+                },
+            );
+
+            cfg.set_basic_block(success_block);
+
+            if returns.len() != ftype.returns.len() {
+                errors.push(Output::error(
+                    expr.loc(),
+                    format!(
+                        "try returns list has {} entries while function returns {} values",
+                        ftype.returns.len(),
+                        returns.len()
+                    ),
+                ));
+                return Err(());
+            }
+
+            let mut args = if !ftype.returns.is_empty() {
+                let mut returns = Vec::new();
+                let mut res = Vec::new();
+
+                for ret in &ftype.returns {
+                    let id = ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: "".to_owned(),
+                    };
+                    let temp_pos = vartab.temp(&id, &ret.ty);
+                    res.push(temp_pos);
+                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+                }
+
+                cfg.add(
+                    vartab,
+                    Instr::AbiDecode {
+                        res,
+                        tys: ftype.returns.clone(),
+                        data: Expression::ReturnData(ast::Loc(0, 0)),
+                    },
+                );
+
+                returns
+            } else {
+                Vec::new()
+            };
+
+            vartab.new_scope();
+            vartab.new_dirty_tracker();
+
+            let mut broken = false;
+            for param in returns.iter() {
+                let (arg, arg_ty) = args.remove(0);
+
+                match &param.1 {
+                    Some(ast::Parameter { ty, storage, name }) => {
+                        let ret_ty =
+                            resolve_var_decl_ty(&ty, &storage, Some(contract_no), ns, errors)?;
+
+                        if arg_ty != ret_ty {
+                            errors.push(Output::error(
+                                ty.loc(),
+                                format!(
+                                    "type ‘{}’ does not match return value of function ‘{}’",
+                                    ret_ty.to_string(ns),
+                                    arg_ty.to_string(ns)
+                                ),
+                            ));
+                            broken = true;
+                        }
+
+                        if let Some(name) = name {
+                            if let Some(pos) = vartab.add(&name, ret_ty, errors) {
+                                ns.check_shadowing(contract_no, &name, errors);
+
+                                cfg.add(
+                                    vartab,
+                                    Instr::Set {
+                                        res: pos,
+                                        expr: arg,
+                                    },
+                                );
+                            }
+                        }
+                    }
+                    None => (),
+                }
+            }
+
+            if broken {
+                return Err(());
+            }
+
+            let mut reachable = statement(&ok, f, cfg, contract_no, ns, vartab, loops, errors)?;
+
+            cfg.add(vartab, Instr::Branch { bb: finally_block });
+
+            vartab.leave_scope();
+
+            cfg.set_basic_block(catch_block);
+
+            let catch_ty =
+                resolve_var_decl_ty(&catch.0.ty, &catch.0.storage, Some(contract_no), ns, errors)?;
+
+            if catch_ty != resolver::Type::DynamicBytes {
+                errors.push(Output::error(
+                    catch.0.ty.loc(),
+                    format!(
+                        "catch can only take ‘bytes memory’, not ‘{}’",
+                        catch_ty.to_string(ns)
+                    ),
+                ));
+                return Err(());
+            }
+
+            vartab.new_scope();
+
+            if let Some(name) = &catch.0.name {
+                if let Some(pos) = vartab.add(&name, catch_ty, errors) {
+                    ns.check_shadowing(contract_no, &name, errors);
+
+                    cfg.add(
+                        vartab,
+                        Instr::Set {
+                            res: pos,
+                            expr: Expression::ReturnData(ast::Loc(0, 0)),
+                        },
+                    );
+                }
+            }
+
+            reachable &= statement(&catch.1, f, cfg, contract_no, ns, vartab, loops, errors)?;
+
+            cfg.add(vartab, Instr::Branch { bb: finally_block });
+
+            vartab.leave_scope();
+
+            let set = vartab.pop_dirty_tracker();
+            cfg.set_phis(finally_block, set);
+
+            cfg.set_basic_block(finally_block);
+
+            Ok(reachable)
+        }
+        _ => {
+            errors.push(Output::error(
+                expr.loc(),
+                "try only supports external calls or constructor calls".to_string(),
+            ));
+            Err(())
+        }
+    }
 }
 
 // Vartable
