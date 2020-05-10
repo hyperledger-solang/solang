@@ -1859,33 +1859,19 @@ pub fn expression(
                 _ => {}
             }
 
-            match ty.as_ref() {
-                ast::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
-                    loc,
-                    member,
-                    func,
-                    args,
-                    cfg,
-                    contract_no,
-                    ns,
-                    vartab,
-                    errors,
-                ),
-                ast::Expression::Variable(id) => {
-                    function_with_named_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
-                }
-                ast::Expression::ArraySubscript(_, _, _) => {
-                    errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
-                    Err(())
-                }
-                _ => {
-                    errors.push(Output::error(
-                        ty.loc(),
-                        "expression not expected here".to_string(),
-                    ));
-                    Err(())
-                }
+            let mut returns =
+                named_function_call_expr(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
+            if returns.len() > 1 {
+                errors.push(Output::error(
+                    *loc,
+                    "in expression context a function cannot return more than one value"
+                        .to_string(),
+                ));
+                return Err(());
             }
+
+            Ok(returns.remove(0))
         }
         ast::Expression::New(loc, ty, args) => {
             new(loc, ty, args, cfg, contract_no, ns, vartab, errors)
@@ -1931,40 +1917,19 @@ pub fn expression(
                 Err(_) => {}
             }
 
-            match ty.as_ref() {
-                ast::Expression::MemberAccess(_, member, func) => method_call(
-                    loc,
-                    member,
-                    func,
-                    args,
-                    cfg,
-                    contract_no,
-                    ns,
-                    vartab,
-                    errors,
-                ),
-                ast::Expression::Variable(id) => function_call_with_positional_arguments(
-                    loc,
-                    &id,
-                    args,
-                    cfg,
-                    contract_no,
-                    ns,
-                    vartab,
-                    errors,
-                ),
-                ast::Expression::ArraySubscript(_, _, _) => {
-                    errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
-                    Err(())
-                }
-                _ => {
-                    errors.push(Output::error(
-                        ty.loc(),
-                        "expression not expected here".to_string(),
-                    ));
-                    Err(())
-                }
+            let mut returns =
+                function_call_expr(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
+            if returns.len() > 1 {
+                errors.push(Output::error(
+                    *loc,
+                    "in expression context a function cannot return more than one value"
+                        .to_string(),
+                ));
+                return Err(());
             }
+
+            Ok(returns.remove(0))
         }
         ast::Expression::ArraySubscript(loc, _, None) => {
             errors.push(Output::error(
@@ -3150,11 +3115,6 @@ fn destructuring(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let mut args = Vec::new();
-    let mut args_ty = Vec::new();
-
-    let list = parameter_list_to_expr_list(e, errors)?;
-
     let vartab = match vartab {
         &mut Some(ref mut tab) => tab,
         None => {
@@ -3166,16 +3126,43 @@ fn destructuring(
         }
     };
 
-    for e in list {
-        let (expr, ty) = expression(e, cfg, contract_no, ns, &mut Some(vartab), errors)?;
+    let mut args = match e {
+        ast::Expression::FunctionCall(loc, ty, args) => function_call_expr(
+            loc,
+            ty,
+            args,
+            cfg,
+            contract_no,
+            ns,
+            &mut Some(vartab),
+            errors,
+        )?,
+        ast::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
+            loc,
+            ty,
+            args,
+            cfg,
+            contract_no,
+            ns,
+            &mut Some(vartab),
+            errors,
+        )?,
+        _ => {
+            let mut list = Vec::new();
 
-        let pos = vartab.temp_anonymous(&ty);
+            for e in parameter_list_to_expr_list(e, errors)? {
+                let (expr, ty) = expression(e, cfg, contract_no, ns, &mut Some(vartab), errors)?;
 
-        cfg.add(vartab, Instr::Set { res: pos, expr });
+                // we need to copy the arguments into temps in case there is a swap involved
+                // we're assuming that llvm will optimize these away if possible
+                let pos = vartab.temp_anonymous(&ty);
+                cfg.add(vartab, Instr::Set { res: pos, expr });
+                list.push((Expression::Variable(e.loc(), pos), ty));
+            }
 
-        args.push(Expression::Variable(e.loc(), pos));
-        args_ty.push(ty);
-    }
+            list
+        }
+    };
 
     if args.len() != var.len() {
         errors.push(Output::error(
@@ -3190,11 +3177,11 @@ fn destructuring(
     }
 
     for e in var {
+        let (arg, arg_ty) = args.remove(0);
+
         match &e.1 {
             None => {
                 // nothing to do
-                args.remove(0);
-                args_ty.remove(0);
             }
             Some(ast::Parameter {
                 ty,
@@ -3206,8 +3193,8 @@ fn destructuring(
                 assign_single(
                     &e.0,
                     &ty,
-                    args.remove(0),
-                    args_ty.remove(0),
+                    arg,
+                    arg_ty,
                     cfg,
                     contract_no,
                     ns,
@@ -3230,15 +3217,7 @@ fn destructuring(
             }) => {
                 let var_ty = resolve_var_decl_ty(&ty, &storage, contract_no, ns, errors)?;
 
-                let expr = cast(
-                    &e.0,
-                    args.remove(0),
-                    &args_ty.remove(0),
-                    &var_ty,
-                    true,
-                    ns,
-                    errors,
-                )?;
+                let expr = cast(&e.0, arg, &arg_ty, &var_ty, true, ns, errors)?;
 
                 if let Some(pos) = vartab.add(&name, var_ty, errors) {
                     ns.check_shadowing(contract_no.unwrap(), &name, errors);
@@ -3914,7 +3893,7 @@ fn struct_literal(
 }
 
 /// Resolve a function call with positional arguments
-fn function_call_with_positional_arguments(
+fn function_call_pos_args(
     loc: &ast::Loc,
     id: &ast::Identifier,
     args: &[ast::Expression],
@@ -3923,7 +3902,7 @@ fn function_call_with_positional_arguments(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<(Expression, resolver::Type), ()> {
+) -> Result<Vec<(Expression, resolver::Type)>, ()> {
     // Try to resolve as a function call
     let funcs = ns.resolve_func(contract_no.unwrap(), &id, errors)?;
 
@@ -3994,33 +3973,30 @@ fn function_call_with_positional_arguments(
             continue;
         }
 
-        // .. what about return value?
-        if func.returns.len() > 1 {
-            errors.push(Output::error(
-                *loc,
-                "in expression context a function cannot return more than one value".to_string(),
-            ));
-            return Err(());
-        }
-
         if !func.returns.is_empty() {
-            let ty = &func.returns[0].ty;
-            let id = ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "".to_owned(),
-            };
-            let temp_pos = tab.temp(&id, ty);
+            let mut returns = Vec::new();
+            let mut res = Vec::new();
+
+            for ret in &func.returns {
+                let id = ast::Identifier {
+                    loc: ast::Loc(0, 0),
+                    name: "".to_owned(),
+                };
+                let temp_pos = tab.temp(&id, &ret.ty);
+                res.push(temp_pos);
+                returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+            }
 
             cfg.add(
                 tab,
                 Instr::Call {
-                    res: vec![temp_pos],
+                    res,
                     func: f.1,
                     args: cast_args,
                 },
             );
 
-            return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+            return Ok(returns);
         } else {
             cfg.add(
                 tab,
@@ -4031,14 +4007,14 @@ fn function_call_with_positional_arguments(
                 },
             );
 
-            return Ok((
+            return Ok(vec![(
                 if func.noreturn {
                     Expression::Unreachable
                 } else {
                     Expression::Poison
                 },
                 resolver::Type::Undef,
-            ));
+            )]);
         }
     }
 
@@ -4055,7 +4031,7 @@ fn function_call_with_positional_arguments(
 }
 
 /// Resolve a function call with named arguments
-fn function_with_named_args(
+fn function_call_with_named_args(
     loc: &ast::Loc,
     id: &ast::Identifier,
     args: &[ast::NamedArgument],
@@ -4064,7 +4040,7 @@ fn function_with_named_args(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<(Expression, resolver::Type), ()> {
+) -> Result<Vec<(Expression, resolver::Type)>, ()> {
     // Try to resolve as a function call
     let funcs = ns.resolve_func(contract_no.unwrap(), &id, errors)?;
 
@@ -4147,33 +4123,30 @@ fn function_with_named_args(
             continue;
         }
 
-        // .. what about return value?
-        if func.returns.len() > 1 {
-            errors.push(Output::error(
-                *loc,
-                "in expression context a function cannot return more than one value".to_string(),
-            ));
-            return Err(());
-        }
-
         if !func.returns.is_empty() {
-            let ty = &func.returns[0].ty;
-            let id = ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "".to_owned(),
-            };
-            let temp_pos = tab.temp(&id, ty);
+            let mut res = Vec::new();
+            let mut returns = Vec::new();
+
+            for ret in &func.returns {
+                let id = ast::Identifier {
+                    loc: ast::Loc(0, 0),
+                    name: "".to_owned(),
+                };
+                let temp_pos = tab.temp(&id, &ret.ty);
+                res.push(temp_pos);
+                returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+            }
 
             cfg.add(
                 tab,
                 Instr::Call {
-                    res: vec![temp_pos],
+                    res,
                     func: f.1,
                     args: cast_args,
                 },
             );
 
-            return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+            return Ok(returns);
         } else {
             cfg.add(
                 tab,
@@ -4184,14 +4157,14 @@ fn function_with_named_args(
                 },
             );
 
-            return Ok((
+            return Ok(vec![(
                 if func.noreturn {
                     Expression::Unreachable
                 } else {
                     Expression::Poison
                 },
                 resolver::Type::Undef,
-            ));
+            )]);
         }
     }
 
@@ -4265,7 +4238,7 @@ fn named_struct_literal(
 }
 
 /// Resolve a method call with positional arguments
-fn method_call(
+fn method_call_pos_args(
     loc: &ast::Loc,
     var: &ast::Expression,
     func: &ast::Identifier,
@@ -4275,7 +4248,7 @@ fn method_call(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<(Expression, resolver::Type), ()> {
+) -> Result<Vec<(Expression, resolver::Type)>, ()> {
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
@@ -4408,26 +4381,26 @@ fn method_call(
             if !matches {
                 continue;
             }
-            // .. what about return value?
-            if ftype.returns.len() > 1 {
-                errors.push(Output::error(
-                    *loc,
-                    "in expression context a function cannot return more than one value"
-                        .to_string(),
-                ));
-                return Err(());
-            }
+
             if !ftype.returns.is_empty() {
-                let ty = &ftype.returns[0].ty;
-                let id = ast::Identifier {
-                    loc: ast::Loc(0, 0),
-                    name: "".to_owned(),
-                };
-                let temp_pos = tab.temp(&id, ty);
+                let mut returns = Vec::new();
+                let mut res = Vec::new();
+
+                for ret in &ftype.returns {
+                    let id = ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: "".to_owned(),
+                    };
+                    let temp_pos = tab.temp(&id, &ret.ty);
+
+                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+                    res.push(temp_pos);
+                }
+
                 cfg.add(
                     tab,
                     Instr::ExternalCall {
-                        res: vec![temp_pos],
+                        res,
                         address: cast(
                             &var.loc(),
                             var_expr,
@@ -4442,7 +4415,7 @@ fn method_call(
                         args: cast_args,
                     },
                 );
-                return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+                return Ok(returns);
             } else {
                 cfg.add(
                     tab,
@@ -4462,7 +4435,7 @@ fn method_call(
                         args: cast_args,
                     },
                 );
-                return Ok((Expression::Poison, resolver::Type::Undef));
+                return Ok(vec![(Expression::Poison, resolver::Type::Undef)]);
             }
         }
 
@@ -4496,7 +4469,7 @@ fn method_call_with_named_args(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<(Expression, resolver::Type), ()> {
+) -> Result<Vec<(Expression, resolver::Type)>, ()> {
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::Contract(external_contract_no) = &var_ty.deref() {
@@ -4582,27 +4555,25 @@ fn method_call_with_named_args(
             if !matches {
                 continue;
             }
-            // .. what about return value?
-            if func.returns.len() > 1 {
-                errors.push(Output::error(
-                    *loc,
-                    "in expression context a function cannot return more than one value"
-                        .to_string(),
-                ));
-                return Err(());
-            }
 
             if !func.returns.is_empty() {
-                let ty = &func.returns[0].ty;
-                let id = ast::Identifier {
-                    loc: ast::Loc(0, 0),
-                    name: "".to_owned(),
-                };
-                let temp_pos = tab.temp(&id, ty);
+                let mut res = Vec::new();
+                let mut returns = Vec::new();
+
+                for ret in &func.returns {
+                    let id = ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: "".to_owned(),
+                    };
+                    let temp_pos = tab.temp(&id, &ret.ty);
+                    res.push(temp_pos);
+                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+                }
+
                 cfg.add(
                     tab,
                     Instr::ExternalCall {
-                        res: vec![temp_pos],
+                        res,
                         address: cast(
                             &var.loc(),
                             var_expr,
@@ -4617,7 +4588,7 @@ fn method_call_with_named_args(
                         args: cast_args,
                     },
                 );
-                return Ok((Expression::Variable(id.loc, temp_pos), ty.clone()));
+                return Ok(returns);
             } else {
                 cfg.add(
                     tab,
@@ -4637,7 +4608,7 @@ fn method_call_with_named_args(
                         args: cast_args,
                     },
                 );
-                return Ok((Expression::Poison, resolver::Type::Undef));
+                return Ok(vec![(Expression::Poison, resolver::Type::Undef)]);
             }
         }
 
@@ -4863,5 +4834,85 @@ pub fn parameter_list_to_expr_list<'a>(
         }
     } else {
         Ok(vec![e])
+    }
+}
+
+/// Resolve function call
+pub fn function_call_expr(
+    loc: &ast::Loc,
+    ty: &ast::Expression,
+    args: &[ast::Expression],
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+    match ty {
+        ast::Expression::MemberAccess(_, member, func) => method_call_pos_args(
+            loc,
+            member,
+            func,
+            args,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            errors,
+        ),
+        ast::Expression::Variable(id) => {
+            function_call_pos_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
+        }
+        ast::Expression::ArraySubscript(_, _, _) => {
+            errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
+            Err(())
+        }
+        _ => {
+            errors.push(Output::error(
+                ty.loc(),
+                "expression not expected here".to_string(),
+            ));
+            Err(())
+        }
+    }
+}
+
+/// Resolve function call expression with named arguments
+pub fn named_function_call_expr(
+    loc: &ast::Loc,
+    ty: &ast::Expression,
+    args: &[ast::NamedArgument],
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+    match ty {
+        ast::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
+            loc,
+            member,
+            func,
+            args,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            errors,
+        ),
+        ast::Expression::Variable(id) => {
+            function_call_with_named_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
+        }
+        ast::Expression::ArraySubscript(_, _, _) => {
+            errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
+            Err(())
+        }
+        _ => {
+            errors.push(Output::error(
+                ty.loc(),
+                "expression not expected here".to_string(),
+            ));
+            Err(())
+        }
     }
 }
