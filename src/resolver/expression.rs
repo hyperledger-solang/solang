@@ -4047,6 +4047,13 @@ fn function_call_with_named_args(
     let mut arguments = HashMap::new();
 
     for arg in args {
+        if arguments.contains_key(&arg.name.name) {
+            errors.push(Output::error(
+                arg.name.loc,
+                format!("duplicate argument with name ‘{}’", arg.name.name),
+            ));
+            return Err(());
+        }
         arguments.insert(
             arg.name.name.to_string(),
             expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?,
@@ -4476,6 +4483,13 @@ fn method_call_with_named_args(
         let mut arguments = HashMap::new();
 
         for arg in args {
+            if arguments.contains_key(&arg.name.name) {
+                errors.push(Output::error(
+                    arg.name.loc,
+                    format!("duplicate argument with name ‘{}’", arg.name.name),
+                ));
+                return Err(());
+            }
             arguments.insert(
                 arg.name.name.to_string(),
                 expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?,

@@ -531,6 +531,20 @@ fn named_argument_call() {
         }
 
         function bar() private {
+            foo({ arg1: false, arg1: 203 });
+        }
+    }";
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(first_error(errors), "duplicate argument with name ‘arg1’");
+
+    let src = "
+    contract args {
+        function foo(bool arg1, uint arg2) public {
+        }
+
+        function bar() private {
             foo({ arg1: false, arg3: 1 });
         }
     }";
