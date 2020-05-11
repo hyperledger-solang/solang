@@ -83,6 +83,8 @@ pub enum Expression {
 
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
+    LocalFunctionCall(Loc, usize, Vec<Expression>),
+    ExternalFunctionCall(Loc, usize, usize, Box<Expression>, Vec<Expression>),
 
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
@@ -154,6 +156,8 @@ impl Expression {
             | Expression::StringConcat(loc, _, _)
             | Expression::Keccak256(loc, _)
             | Expression::ReturnData(loc)
+            | Expression::LocalFunctionCall(loc, _, _)
+            | Expression::ExternalFunctionCall(loc, _, _, _, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison | Expression::Unreachable => unreachable!(),
         }
@@ -255,6 +259,10 @@ impl Expression {
             | Expression::StorageBytesPop(_, _)
             | Expression::StorageBytesLength(_, _) => true,
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
+            Expression::LocalFunctionCall(_, _, args)
+            | Expression::ExternalFunctionCall(_, _, _, _, args) => {
+                args.iter().any(|a| a.reads_contract_storage())
+            }
             Expression::Keccak256(_, e) => e.iter().any(|e| e.0.reads_contract_storage()),
             Expression::And(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
             Expression::Or(_, l, r) => l.reads_contract_storage() || r.reads_contract_storage(),
@@ -1837,6 +1845,14 @@ pub fn expression(
             assign_expr(loc, var, expr, e, cfg, contract_no, ns, vartab, errors)
         }
         ast::Expression::NamedFunctionCall(loc, ty, args) => {
+            if vartab.is_none() {
+                errors.push(Output::error(
+                    expr.loc(),
+                    "cannot call function in constant expression".to_string(),
+                ));
+                return Err(());
+            }
+
             let mut blackhole = Vec::new();
 
             match ns.resolve_type(contract_no, ty, &mut blackhole) {
@@ -1862,8 +1878,11 @@ pub fn expression(
                 _ => {}
             }
 
-            let mut returns =
+            let expr =
                 named_function_call_expr(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
+            let mut returns =
+                emit_function_call(expr.0, expr.1, contract_no.unwrap(), cfg, ns, vartab);
 
             if returns.len() > 1 {
                 errors.push(Output::error(
@@ -1920,8 +1939,18 @@ pub fn expression(
                 Err(_) => {}
             }
 
+            if vartab.is_none() {
+                errors.push(Output::error(
+                    expr.loc(),
+                    "cannot call function in constant expression".to_string(),
+                ));
+                return Err(());
+            }
+
+            let expr = function_call_expr(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
             let mut returns =
-                function_call_expr(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+                emit_function_call(expr.0, expr.1, contract_no.unwrap(), cfg, ns, vartab);
 
             if returns.len() > 1 {
                 errors.push(Output::error(
@@ -3130,26 +3159,48 @@ fn destructuring(
     };
 
     let mut args = match e {
-        ast::Expression::FunctionCall(loc, ty, args) => function_call_expr(
-            loc,
-            ty,
-            args,
-            cfg,
-            contract_no,
-            ns,
-            &mut Some(vartab),
-            errors,
-        )?,
-        ast::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
-            loc,
-            ty,
-            args,
-            cfg,
-            contract_no,
-            ns,
-            &mut Some(vartab),
-            errors,
-        )?,
+        ast::Expression::FunctionCall(loc, ty, args) => {
+            let expr = function_call_expr(
+                loc,
+                ty,
+                args,
+                cfg,
+                contract_no,
+                ns,
+                &mut Some(vartab),
+                errors,
+            )?;
+
+            emit_function_call(
+                expr.0,
+                expr.1,
+                contract_no.unwrap(),
+                cfg,
+                ns,
+                &mut Some(vartab),
+            )
+        }
+        ast::Expression::NamedFunctionCall(loc, ty, args) => {
+            let expr = named_function_call_expr(
+                loc,
+                ty,
+                args,
+                cfg,
+                contract_no,
+                ns,
+                &mut Some(vartab),
+                errors,
+            )?;
+
+            emit_function_call(
+                expr.0,
+                expr.1,
+                contract_no.unwrap(),
+                cfg,
+                ns,
+                &mut Some(vartab),
+            )
+        }
         _ => {
             let mut list = Vec::new();
 
@@ -3905,7 +3956,7 @@ fn function_call_pos_args(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
     let funcs = ns.resolve_func(contract_no.unwrap(), &id, errors)?;
 
@@ -3918,17 +3969,6 @@ fn function_call_pos_args(
         resolved_args.push(Box::new(expr));
         resolved_types.push(expr_type);
     }
-
-    let tab = match vartab {
-        &mut Some(ref mut tab) => tab,
-        None => {
-            errors.push(Output::error(
-                *loc,
-                "cannot call function in constant expression".to_string(),
-            ));
-            return Err(());
-        }
-    };
 
     let mut temp_errors = Vec::new();
 
@@ -3972,52 +4012,11 @@ fn function_call_pos_args(
             }
         }
 
-        if !matches {
-            continue;
-        }
-
-        if !func.returns.is_empty() {
-            let mut returns = Vec::new();
-            let mut res = Vec::new();
-
-            for ret in &func.returns {
-                let id = ast::Identifier {
-                    loc: ast::Loc(0, 0),
-                    name: "".to_owned(),
-                };
-                let temp_pos = tab.temp(&id, &ret.ty);
-                res.push(temp_pos);
-                returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
-            }
-
-            cfg.add(
-                tab,
-                Instr::Call {
-                    res,
-                    func: f.1,
-                    args: cast_args,
-                },
-            );
-
-            return Ok(returns);
-        } else {
-            cfg.add(
-                tab,
-                Instr::Call {
-                    res: Vec::new(),
-                    func: f.1,
-                    args: cast_args,
-                },
-            );
-
-            return Ok(vec![(
-                if func.noreturn {
-                    Expression::Unreachable
-                } else {
-                    Expression::Poison
-                },
+        if matches {
+            return Ok((
+                Expression::LocalFunctionCall(*loc, f.1, cast_args),
                 resolver::Type::Undef,
-            )]);
+            ));
         }
     }
 
@@ -4043,7 +4042,7 @@ fn function_call_with_named_args(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     // Try to resolve as a function call
     let funcs = ns.resolve_func(contract_no.unwrap(), &id, errors)?;
 
@@ -4062,17 +4061,6 @@ fn function_call_with_named_args(
             expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?,
         );
     }
-
-    let tab = match vartab {
-        &mut Some(ref mut tab) => tab,
-        None => {
-            errors.push(Output::error(
-                *loc,
-                "cannot call function in constant expression".to_string(),
-            ));
-            return Err(());
-        }
-    };
 
     let mut temp_errors = Vec::new();
 
@@ -4129,52 +4117,11 @@ fn function_call_with_named_args(
             }
         }
 
-        if !matches {
-            continue;
-        }
-
-        if !func.returns.is_empty() {
-            let mut res = Vec::new();
-            let mut returns = Vec::new();
-
-            for ret in &func.returns {
-                let id = ast::Identifier {
-                    loc: ast::Loc(0, 0),
-                    name: "".to_owned(),
-                };
-                let temp_pos = tab.temp(&id, &ret.ty);
-                res.push(temp_pos);
-                returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
-            }
-
-            cfg.add(
-                tab,
-                Instr::Call {
-                    res,
-                    func: f.1,
-                    args: cast_args,
-                },
-            );
-
-            return Ok(returns);
-        } else {
-            cfg.add(
-                tab,
-                Instr::Call {
-                    res: Vec::new(),
-                    func: f.1,
-                    args: cast_args,
-                },
-            );
-
-            return Ok(vec![(
-                if func.noreturn {
-                    Expression::Unreachable
-                } else {
-                    Expression::Poison
-                },
+        if matches {
+            return Ok((
+                Expression::LocalFunctionCall(*loc, f.1, cast_args),
                 resolver::Type::Undef,
-            )]);
+            ));
         }
     }
 
@@ -4258,7 +4205,7 @@ fn method_call_pos_args(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
@@ -4331,17 +4278,6 @@ fn method_call_pos_args(
             resolved_types.push(expr_type);
         }
 
-        let tab = match vartab {
-            &mut Some(ref mut tab) => tab,
-            None => {
-                errors.push(Output::error(
-                    *loc,
-                    "cannot call function in constant expression".to_string(),
-                ));
-                return Err(());
-            }
-        };
-
         let mut temp_errors = Vec::new();
 
         let mut name_match = 0;
@@ -4388,53 +4324,25 @@ fn method_call_pos_args(
                     }
                 }
             }
-            if !matches {
-                continue;
-            }
-
-            cfg.add(
-                tab,
-                Instr::ExternalCall {
-                    address: cast(
-                        &var.loc(),
-                        var_expr,
-                        &var_ty,
-                        &resolver::Type::Address,
-                        true,
-                        ns,
-                        errors,
-                    )?,
-                    contract_no: *contract_no,
-                    function_no: n,
-                    args: cast_args,
-                },
-            );
-
-            if !ftype.returns.is_empty() {
-                let mut returns = Vec::new();
-                let mut res = Vec::new();
-
-                for ret in &ftype.returns {
-                    let id = ast::Identifier {
-                        loc: ast::Loc(0, 0),
-                        name: "".to_owned(),
-                    };
-                    let temp_pos = tab.temp(&id, &ret.ty);
-                    res.push(temp_pos);
-                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
-                }
-
-                cfg.add(
-                    tab,
-                    Instr::AbiDecode {
-                        res,
-                        tys: ftype.returns.clone(),
-                        data: Expression::ReturnData(*loc),
-                    },
-                );
-                return Ok(returns);
-            } else {
-                return Ok(vec![(Expression::Poison, resolver::Type::Undef)]);
+            if matches {
+                return Ok((
+                    Expression::ExternalFunctionCall(
+                        *loc,
+                        *contract_no,
+                        n,
+                        Box::new(cast(
+                            &var.loc(),
+                            var_expr,
+                            &var_ty,
+                            &resolver::Type::Address,
+                            true,
+                            ns,
+                            errors,
+                        )?),
+                        cast_args,
+                    ),
+                    resolver::Type::Undef,
+                ));
             }
         }
 
@@ -4468,7 +4376,7 @@ fn method_call_with_named_args(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::Contract(external_contract_no) = &var_ty.deref() {
@@ -4487,16 +4395,7 @@ fn method_call_with_named_args(
                 expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?,
             );
         }
-        let tab = match vartab {
-            &mut Some(ref mut tab) => tab,
-            None => {
-                errors.push(Output::error(
-                    *loc,
-                    "cannot call function in constant expression".to_string(),
-                ));
-                return Err(());
-            }
-        };
+
         let mut temp_errors = Vec::new();
 
         let mut name_match = 0;
@@ -4558,53 +4457,26 @@ fn method_call_with_named_args(
                     }
                 }
             }
-            if !matches {
-                continue;
-            }
 
-            cfg.add(
-                tab,
-                Instr::ExternalCall {
-                    address: cast(
-                        &var.loc(),
-                        var_expr,
-                        &var_ty,
-                        &resolver::Type::Address,
-                        true,
-                        ns,
-                        errors,
-                    )?,
-                    contract_no: *external_contract_no,
-                    function_no: func_no,
-                    args: cast_args,
-                },
-            );
-
-            if !func.returns.is_empty() {
-                let mut res = Vec::new();
-                let mut returns = Vec::new();
-
-                for ret in &func.returns {
-                    let id = ast::Identifier {
-                        loc: ast::Loc(0, 0),
-                        name: "".to_owned(),
-                    };
-                    let temp_pos = tab.temp(&id, &ret.ty);
-                    res.push(temp_pos);
-                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
-                }
-
-                cfg.add(
-                    tab,
-                    Instr::AbiDecode {
-                        res,
-                        tys: func.returns.clone(),
-                        data: Expression::ReturnData(*loc),
-                    },
-                );
-                return Ok(returns);
-            } else {
-                return Ok(vec![(Expression::Poison, resolver::Type::Undef)]);
+            if matches {
+                return Ok((
+                    Expression::ExternalFunctionCall(
+                        *loc,
+                        *external_contract_no,
+                        func_no,
+                        Box::new(cast(
+                            &var.loc(),
+                            var_expr,
+                            &var_ty,
+                            &resolver::Type::Address,
+                            true,
+                            ns,
+                            errors,
+                        )?),
+                        cast_args,
+                    ),
+                    resolver::Type::Undef,
+                ));
             }
         }
 
@@ -4843,7 +4715,7 @@ pub fn function_call_expr(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     match ty {
         ast::Expression::MemberAccess(_, member, func) => method_call_pos_args(
             loc,
@@ -4883,7 +4755,7 @@ pub fn named_function_call_expr(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     match ty {
         ast::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
             loc,
@@ -4910,5 +4782,106 @@ pub fn named_function_call_expr(
             ));
             Err(())
         }
+    }
+}
+
+/// Convert a function call expression to CFG in expression context
+fn emit_function_call(
+    expr: Expression,
+    expr_ty: resolver::Type,
+    contract_no: usize,
+    cfg: &mut ControlFlowGraph,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+) -> Vec<(Expression, resolver::Type)> {
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => unreachable!(),
+    };
+
+    match expr {
+        Expression::LocalFunctionCall(_, func, args) => {
+            let ftype = &ns.contracts[contract_no].functions[func];
+
+            if !ftype.returns.is_empty() {
+                let mut res = Vec::new();
+                let mut returns = Vec::new();
+
+                for ret in &ftype.returns {
+                    let id = ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: ret.name.to_owned(),
+                    };
+
+                    let temp_pos = tab.temp(&id, &ret.ty);
+                    res.push(temp_pos);
+                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+                }
+
+                cfg.add(tab, Instr::Call { res, func, args });
+
+                returns
+            } else {
+                cfg.add(
+                    tab,
+                    Instr::Call {
+                        res: Vec::new(),
+                        func,
+                        args,
+                    },
+                );
+
+                vec![(
+                    if ftype.noreturn {
+                        Expression::Unreachable
+                    } else {
+                        Expression::Poison
+                    },
+                    resolver::Type::Undef,
+                )]
+            }
+        }
+        Expression::ExternalFunctionCall(loc, contract_no, function_no, address, args) => {
+            let ftype = &ns.contracts[contract_no].functions[function_no];
+
+            cfg.add(
+                tab,
+                Instr::ExternalCall {
+                    address: *address,
+                    contract_no,
+                    function_no,
+                    args,
+                },
+            );
+
+            if !ftype.returns.is_empty() {
+                let mut returns = Vec::new();
+                let mut res = Vec::new();
+
+                for ret in &ftype.returns {
+                    let id = ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: "".to_owned(),
+                    };
+                    let temp_pos = tab.temp(&id, &ret.ty);
+                    res.push(temp_pos);
+                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
+                }
+
+                cfg.add(
+                    tab,
+                    Instr::AbiDecode {
+                        res,
+                        tys: ftype.returns.clone(),
+                        data: Expression::ReturnData(loc),
+                    },
+                );
+
+                returns
+            } else {
+                vec![(Expression::Poison, resolver::Type::Undef)]
+            }
+        }
+        _ => vec![(expr, expr_ty)],
     }
 }

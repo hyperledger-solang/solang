@@ -418,6 +418,24 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Expression::LocalFunctionCall(_, f, args) => format!(
+                "(call {} ({})",
+                contract.functions[*f].name,
+                args.iter()
+                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::ExternalFunctionCall(_, contract_no, f, address, args) => format!(
+                "(external call address:{} {}.{} ({})",
+                self.expr_to_string(contract, ns, address),
+                ns.contracts[*contract_no].name,
+                contract.functions[*f].name,
+                args.iter()
+                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Expression::ReturnData(_) => "(external call return data)".to_string(),
         }
     }

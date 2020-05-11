@@ -1630,8 +1630,7 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::ReturnData(_) => runtime.return_data(self).into(),
-            Expression::Poison => unreachable!(),
-            Expression::Unreachable => unreachable!(),
+            _ => unreachable!(),
         }
     }
 

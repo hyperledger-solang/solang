@@ -116,7 +116,7 @@ pub fn array_push(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     let tab = match vartab {
         &mut Some(ref mut tab) => tab,
         None => {
@@ -224,9 +224,9 @@ pub fn array_push(
     );
 
     if args.is_empty() {
-        Ok(vec![(Expression::Variable(*loc, entry_pos), elem_ty)])
+        Ok((Expression::Variable(*loc, entry_pos), elem_ty))
     } else {
-        Ok(vec![(Expression::Poison, resolver::Type::Undef)])
+        Ok((Expression::Poison, resolver::Type::Undef))
     }
 }
 
@@ -241,7 +241,7 @@ pub fn array_pop(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     let tab = match vartab {
         &mut Some(ref mut tab) => tab,
         None => {
@@ -359,7 +359,7 @@ pub fn array_pop(
         },
     );
 
-    Ok(vec![(Expression::Variable(*loc, res_pos), elem_ty)])
+    Ok((Expression::Variable(*loc, res_pos), elem_ty))
 }
 
 /// Push() method on dynamic bytes in storage
@@ -373,7 +373,7 @@ pub fn bytes_push(
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     let tab = match vartab {
         &mut Some(ref mut tab) => tab,
         None => {
@@ -413,15 +413,15 @@ pub fn bytes_push(
     };
 
     if args.is_empty() {
-        Ok(vec![(
+        Ok((
             Expression::StorageBytesPush(*loc, Box::new(var_expr), Box::new(val)),
             resolver::Type::Bytes(1),
-        )])
+        ))
     } else {
-        Ok(vec![(
+        Ok((
             Expression::StorageBytesPush(*loc, Box::new(var_expr), Box::new(val)),
             resolver::Type::Undef,
-        )])
+        ))
     }
 }
 
@@ -433,7 +433,7 @@ pub fn bytes_pop(
     args: &[ast::Expression],
     cfg: &mut ControlFlowGraph,
     errors: &mut Vec<Output>,
-) -> Result<Vec<(Expression, resolver::Type)>, ()> {
+) -> Result<(Expression, resolver::Type), ()> {
     cfg.writes_contract_storage = true;
 
     if !args.is_empty() {
@@ -444,10 +444,10 @@ pub fn bytes_pop(
         return Err(());
     }
 
-    Ok(vec![(
+    Ok((
         Expression::StorageBytesPop(*loc, Box::new(var_expr)),
         resolver::Type::Bytes(1),
-    )])
+    ))
 }
 
 /// Calculate storage subscript
