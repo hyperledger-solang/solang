@@ -184,7 +184,8 @@ pub trait TargetRuntime {
         address: PointerValue<'b>,
     ) -> IntValue<'b>;
 
-    fn return_data<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, IntValue<'b>);
+    /// Return the return data from an external call (either revert error or return values)
+    fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b>;
 }
 
 pub struct Contract<'a> {
@@ -1628,6 +1629,7 @@ impl<'a> Contract<'a> {
                     )
                     .into()
             }
+            Expression::ReturnData(_) => runtime.return_data(self).into(),
             Expression::Poison => unreachable!(),
             Expression::Unreachable => unreachable!(),
         }
@@ -2772,7 +2774,6 @@ impl<'a> Contract<'a> {
                         contract_no,
                         function_no,
                         args,
-                        res,
                     } => {
                         let dest_func = &self.ns.contracts[*contract_no].functions[*function_no];
                         let (payload, payload_len) = runtime.abi_encode(
@@ -2825,24 +2826,49 @@ impl<'a> Contract<'a> {
                         self.builder.build_return(Some(&ret));
 
                         self.builder.position_at_end(success_block);
+                    }
+                    cfg::Instr::AbiDecode { res, tys, data } => {
+                        let v = self
+                            .expression(data, &w.vars, function, runtime)
+                            .into_pointer_value();
 
-                        if !dest_func.returns.is_empty() {
-                            let (return_data, return_size) = runtime.return_data(self);
+                        let data = unsafe {
+                            self.builder.build_gep(
+                                v,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(2, false),
+                                ],
+                                "data",
+                            )
+                        };
 
-                            let mut returns = Vec::new();
+                        let data_len = unsafe {
+                            self.builder.build_gep(
+                                v,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_zero(),
+                                ],
+                                "data_len",
+                            )
+                        };
 
-                            runtime.abi_decode(
-                                self,
-                                function,
-                                &mut returns,
-                                return_data,
-                                return_size,
-                                &dest_func.returns,
-                            );
+                        let mut returns = Vec::new();
 
-                            for (i, ret) in returns.into_iter().enumerate() {
-                                w.vars[res[i]].value = ret;
-                            }
+                        runtime.abi_decode(
+                            self,
+                            function,
+                            &mut returns,
+                            data,
+                            self.builder
+                                .build_load(data_len, "data_len")
+                                .into_int_value(),
+                            &tys,
+                        );
+
+                        for (i, ret) in returns.into_iter().enumerate() {
+                            w.vars[res[i]].value = ret;
                         }
                     }
                 }
