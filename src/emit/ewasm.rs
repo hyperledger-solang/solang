@@ -5,6 +5,7 @@ use std::str;
 use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
 use inkwell::module::Linkage;
+use inkwell::types::BasicType;
 use inkwell::types::{BasicTypeEnum, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
@@ -1129,7 +1130,7 @@ impl TargetRuntime for EwasmTarget {
             .into_int_value()
     }
 
-    fn return_data<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, IntValue<'b>) {
+    fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
         let length = contract
             .builder
             .build_call(
@@ -1139,13 +1140,26 @@ impl TargetRuntime for EwasmTarget {
             )
             .try_as_basic_value()
             .left()
-            .unwrap();
+            .unwrap()
+            .into_int_value();
 
-        let return_data = contract
+        let malloc_length = contract.builder.build_int_add(
+            length,
+            contract
+                .module
+                .get_type("struct.vector")
+                .unwrap()
+                .size_of()
+                .unwrap()
+                .const_cast(contract.context.i32_type(), false),
+            "size",
+        );
+
+        let p = contract
             .builder
             .build_call(
                 contract.module.get_function("__malloc").unwrap(),
-                &[length],
+                &[malloc_length.into()],
                 "",
             )
             .try_as_basic_value()
@@ -1153,16 +1167,70 @@ impl TargetRuntime for EwasmTarget {
             .unwrap()
             .into_pointer_value();
 
+        let v = contract.builder.build_pointer_cast(
+            p,
+            contract
+                .module
+                .get_type("struct.vector")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "string",
+        );
+
+        let data_len = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_zero(),
+                ],
+                "data_len",
+            )
+        };
+
+        contract.builder.build_store(data_len, length);
+
+        let data_size = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(1, false),
+                ],
+                "data_size",
+            )
+        };
+
+        contract.builder.build_store(data_size, length);
+
+        let data = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(2, false),
+                ],
+                "data",
+            )
+        };
+
         contract.builder.build_call(
             contract.module.get_function("returnDataCopy").unwrap(),
             &[
-                return_data.into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        data,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
                 contract.context.i32_type().const_zero().into(),
-                length,
+                length.into(),
             ],
             "",
         );
 
-        (return_data, length.into_int_value())
+        v
     }
 }

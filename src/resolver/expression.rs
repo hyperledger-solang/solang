@@ -86,6 +86,7 @@ pub enum Expression {
 
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
+    ReturnData(Loc),
     Poison,
     Unreachable,
 }
@@ -152,6 +153,7 @@ impl Expression {
             | Expression::StringCompare(loc, _, _)
             | Expression::StringConcat(loc, _, _)
             | Expression::Keccak256(loc, _)
+            | Expression::ReturnData(loc)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison | Expression::Unreachable => unreachable!(),
         }
@@ -267,6 +269,7 @@ impl Expression {
                 }
                 false
             }
+            Expression::ReturnData(_) => false,
             Expression::Poison => false,
             Expression::Unreachable => false,
         }
@@ -4389,6 +4392,24 @@ fn method_call_pos_args(
                 continue;
             }
 
+            cfg.add(
+                tab,
+                Instr::ExternalCall {
+                    address: cast(
+                        &var.loc(),
+                        var_expr,
+                        &var_ty,
+                        &resolver::Type::Address,
+                        true,
+                        ns,
+                        errors,
+                    )?,
+                    contract_no: *contract_no,
+                    function_no: n,
+                    args: cast_args,
+                },
+            );
+
             if !ftype.returns.is_empty() {
                 let mut returns = Vec::new();
                 let mut res = Vec::new();
@@ -4399,49 +4420,20 @@ fn method_call_pos_args(
                         name: "".to_owned(),
                     };
                     let temp_pos = tab.temp(&id, &ret.ty);
-
-                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
                     res.push(temp_pos);
+                    returns.push((Expression::Variable(id.loc, temp_pos), ret.ty.clone()));
                 }
 
                 cfg.add(
                     tab,
-                    Instr::ExternalCall {
+                    Instr::AbiDecode {
                         res,
-                        address: cast(
-                            &var.loc(),
-                            var_expr,
-                            &var_ty,
-                            &resolver::Type::Address,
-                            true,
-                            ns,
-                            errors,
-                        )?,
-                        contract_no: *contract_no,
-                        function_no: n,
-                        args: cast_args,
+                        tys: ftype.returns.clone(),
+                        data: Expression::ReturnData(*loc),
                     },
                 );
                 return Ok(returns);
             } else {
-                cfg.add(
-                    tab,
-                    Instr::ExternalCall {
-                        res: Vec::new(),
-                        address: cast(
-                            &var.loc(),
-                            var_expr,
-                            &var_ty,
-                            &resolver::Type::Address,
-                            true,
-                            ns,
-                            errors,
-                        )?,
-                        contract_no: *contract_no,
-                        function_no: n,
-                        args: cast_args,
-                    },
-                );
                 return Ok(vec![(Expression::Poison, resolver::Type::Undef)]);
             }
         }
@@ -4570,6 +4562,24 @@ fn method_call_with_named_args(
                 continue;
             }
 
+            cfg.add(
+                tab,
+                Instr::ExternalCall {
+                    address: cast(
+                        &var.loc(),
+                        var_expr,
+                        &var_ty,
+                        &resolver::Type::Address,
+                        true,
+                        ns,
+                        errors,
+                    )?,
+                    contract_no: *external_contract_no,
+                    function_no: func_no,
+                    args: cast_args,
+                },
+            );
+
             if !func.returns.is_empty() {
                 let mut res = Vec::new();
                 let mut returns = Vec::new();
@@ -4586,42 +4596,14 @@ fn method_call_with_named_args(
 
                 cfg.add(
                     tab,
-                    Instr::ExternalCall {
+                    Instr::AbiDecode {
                         res,
-                        address: cast(
-                            &var.loc(),
-                            var_expr,
-                            &var_ty,
-                            &resolver::Type::Address,
-                            true,
-                            ns,
-                            errors,
-                        )?,
-                        contract_no: *external_contract_no,
-                        function_no: func_no,
-                        args: cast_args,
+                        tys: func.returns.clone(),
+                        data: Expression::ReturnData(*loc),
                     },
                 );
                 return Ok(returns);
             } else {
-                cfg.add(
-                    tab,
-                    Instr::ExternalCall {
-                        res: Vec::new(),
-                        address: cast(
-                            &var.loc(),
-                            var_expr,
-                            &var_ty,
-                            &resolver::Type::Address,
-                            true,
-                            ns,
-                            errors,
-                        )?,
-                        contract_no: *external_contract_no,
-                        function_no: func_no,
-                        args: cast_args,
-                    },
-                );
                 return Ok(vec![(Expression::Poison, resolver::Type::Undef)]);
             }
         }

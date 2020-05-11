@@ -76,11 +76,15 @@ pub enum Instr {
         args: Vec<Expression>,
     },
     ExternalCall {
-        res: Vec<usize>,
         address: Expression,
         contract_no: usize,
         function_no: usize,
         args: Vec<Expression>,
+    },
+    AbiDecode {
+        res: Vec<usize>,
+        tys: Vec<resolver::Parameter>,
+        data: Expression,
     },
 }
 
@@ -414,6 +418,7 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Expression::ReturnData(_) => "(external call return data)".to_string(),
         }
     }
 
@@ -526,21 +531,12 @@ impl ControlFlowGraph {
                 }
             ),
             Instr::ExternalCall {
-                res,
                 address,
                 contract_no,
                 function_no,
                 args,
             } => format!(
-                "{} = external call address:{} signature:{} func:{}.{} {}",
-                {
-                    let s: Vec<String> = res
-                        .iter()
-                        .map(|local| format!("%{}", self.vars[*local].id.name))
-                        .collect();
-
-                    s.join(", ")
-                },
+                "external call address:{} signature:{} func:{}.{} {}",
                 self.expr_to_string(contract, ns, address),
                 ns.contracts[*contract_no].functions[*function_no].signature,
                 ns.contracts[*contract_no].name,
@@ -553,6 +549,23 @@ impl ControlFlowGraph {
 
                     s.join(", ")
                 }
+            ),
+            Instr::AbiDecode { res, tys, data } => format!(
+                "{} = (abidecode:(%{}, ({}))",
+                {
+                    let s: Vec<String> = res
+                        .iter()
+                        .map(|local| format!("%{}", self.vars[*local].id.name))
+                        .collect();
+
+                    s.join(", ")
+                },
+                self.expr_to_string(contract, ns, data),
+                {
+                    let s: Vec<String> = tys.iter().map(|ty| ty.ty.to_string(ns)).collect();
+
+                    s.join(", ")
+                },
             ),
             Instr::Store { dest, pos } => format!(
                 "store {}, {}",
