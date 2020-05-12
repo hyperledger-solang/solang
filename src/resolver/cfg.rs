@@ -464,20 +464,14 @@ impl ControlFlowGraph {
         instr: &Instr,
     ) -> String {
         match instr {
-            Instr::Return { value } => {
-                let mut s = String::from("return ");
-                let mut first = true;
-
-                for arg in value {
-                    if !first {
-                        s.push_str(", ");
-                    }
-                    first = false;
-                    s.push_str(&self.expr_to_string(contract, ns, arg));
-                }
-
-                s
-            }
+            Instr::Return { value } => format!(
+                "return {}",
+                value
+                    .iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Instr::Set { res, expr } => format!(
                 "ty:{} %{} = {}",
                 self.vars[*res].ty.to_string(ns),
@@ -531,24 +525,16 @@ impl ControlFlowGraph {
             }
             Instr::Call { res, func, args } => format!(
                 "{} = call {} {} {}",
-                {
-                    let s: Vec<String> = res
-                        .iter()
-                        .map(|local| format!("%{}", self.vars[*local].id.name))
-                        .collect();
-
-                    s.join(", ")
-                },
+                res.iter()
+                    .map(|local| format!("%{}", self.vars[*local].id.name))
+                    .collect::<Vec<String>>()
+                    .join(", "),
                 *func,
                 contract.functions[*func].name.to_owned(),
-                {
-                    let s: Vec<String> = args
-                        .iter()
-                        .map(|expr| self.expr_to_string(contract, ns, expr))
-                        .collect();
-
-                    s.join(", ")
-                }
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
             ),
             Instr::ExternalCall {
                 success,
@@ -566,31 +552,22 @@ impl ControlFlowGraph {
                 ns.contracts[*contract_no].functions[*function_no].signature,
                 ns.contracts[*contract_no].name,
                 ns.contracts[*contract_no].functions[*function_no].name,
-                {
-                    let s: Vec<String> = args
-                        .iter()
-                        .map(|expr| self.expr_to_string(contract, ns, expr))
-                        .collect();
-
-                    s.join(", ")
-                }
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
             ),
             Instr::AbiDecode { res, tys, data } => format!(
                 "{} = (abidecode:(%{}, ({}))",
-                {
-                    let s: Vec<String> = res
-                        .iter()
-                        .map(|local| format!("%{}", self.vars[*local].id.name))
-                        .collect();
-
-                    s.join(", ")
-                },
+                res.iter()
+                    .map(|local| format!("%{}", self.vars[*local].id.name))
+                    .collect::<Vec<String>>()
+                    .join(", "),
                 self.expr_to_string(contract, ns, data),
-                {
-                    let s: Vec<String> = tys.iter().map(|ty| ty.ty.to_string(ns)).collect();
-
-                    s.join(", ")
-                },
+                tys.iter()
+                    .map(|ty| ty.ty.to_string(ns))
+                    .collect::<Vec<String>>()
+                    .join(", "),
             ),
             Instr::Store { dest, pos } => format!(
                 "store {}, {}",
@@ -608,14 +585,10 @@ impl ControlFlowGraph {
                 self.vars[*res].id.name,
                 ns.contracts[*contract_no].name,
                 constructor_no,
-                {
-                    let s: Vec<String> = args
-                        .iter()
-                        .map(|expr| self.expr_to_string(contract, ns, expr))
-                        .collect();
-
-                    s.join(", ")
-                }
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
             ),
         }
     }
