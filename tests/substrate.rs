@@ -250,7 +250,7 @@ impl Externals for TestRuntime {
 
                 let s = String::from_utf8_lossy(&buf);
 
-                println!("{}", s);
+                println!("ext_print: {}", s);
 
                 self.printbuf.push_str(&s);
 

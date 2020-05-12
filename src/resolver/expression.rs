@@ -4810,6 +4810,8 @@ fn emit_function_call(
                     tab,
                     Instr::AbiDecode {
                         res,
+                        selector: None,
+                        exception: None,
                         tys: ftype.returns.clone(),
                         data: Expression::ReturnData(loc),
                     },
