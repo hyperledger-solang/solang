@@ -382,6 +382,124 @@ fn try_catch_external_calls() {
     );
 
     assert_eq!(first_error(errors), "x is already declared");
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32 bla, bool) {
+                    x = bla;
+                } catch Foo(bytes memory f) {
+                    x = 105;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "only catch ‘Error’ is supported, not ‘Foo’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                int32 x = 0;
+                try o.test() returns (int32 bla, bool) {
+                    x = bla;
+                } catch Error(bytes memory f) {
+                    x = 105;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "catch Error(...) can only take ‘string memory’, not ‘bytes’"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+
+                try o.test(1) {
+                    print("shouldn't be here");
+                    assert(false);
+                } catch Error(string foo) {
+                    print(foo);
+                    assert(foo == "yes");
+                } catch (bytes c) {
+                    print("shouldn't be here");
+                    assert(false);
+                }
+
+                try o.test(2) {
+                    print("shouldn't be here");
+                    assert(false);
+                } catch Error(string foo) {
+                    print(foo);
+                    assert(foo == "no");
+                } catch (bytes c) {
+                    print("shouldn't be here");
+                    assert(false);
+                }
+
+                try o.test(3) {
+                    print("shouldn't be here");
+                    assert(false);
+                } catch Error(string foo) {
+                    print("shouldn't be here");
+                    assert(false);
+                } catch (bytes c) {
+                    assert(c.length == 0);
+                }
+            }
+        }
+        
+        contract other {
+            function test(int x) public {
+                if (x == 1) {
+                    revert("yes");
+                } else if (x == 2) {
+                    revert("no");
+                } else {
+                    revert();
+                }
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
 }
 
 #[test]

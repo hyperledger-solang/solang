@@ -2847,12 +2847,18 @@ impl<'a> Contract<'a> {
                             self.builder.position_at_end(success_block);
                         }
                     }
-                    cfg::Instr::AbiDecode { res, tys, data } => {
+                    cfg::Instr::AbiDecode {
+                        res,
+                        selector,
+                        exception,
+                        tys,
+                        data,
+                    } => {
                         let v = self
                             .expression(data, &w.vars, function, runtime)
                             .into_pointer_value();
 
-                        let data = unsafe {
+                        let mut data = unsafe {
                             self.builder.build_gep(
                                 v,
                                 &[
@@ -2863,33 +2869,115 @@ impl<'a> Contract<'a> {
                             )
                         };
 
-                        let data_len = unsafe {
-                            self.builder.build_gep(
-                                v,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
+                        let mut data_len = self
+                            .builder
+                            .build_load(
+                                unsafe {
+                                    self.builder.build_gep(
+                                        v,
+                                        &[
+                                            self.context.i32_type().const_zero(),
+                                            self.context.i32_type().const_zero(),
+                                        ],
+                                        "data_len",
+                                    )
+                                },
                                 "data_len",
                             )
-                        };
+                            .into_int_value();
+
+                        if let Some(selector) = selector {
+                            let exception = exception.unwrap();
+
+                            let pos = self.builder.get_insert_block().unwrap();
+
+                            blocks.entry(exception).or_insert({
+                                work.push_back(Work {
+                                    bb_no: exception,
+                                    vars: w.vars.clone(),
+                                });
+
+                                create_bb(exception)
+                            });
+
+                            self.builder.position_at_end(pos);
+
+                            let exception_block = blocks.get(&exception).unwrap();
+
+                            let has_selector = self.builder.build_int_compare(
+                                IntPredicate::UGT,
+                                data_len,
+                                self.context.i32_type().const_int(4, false),
+                                "has_selector",
+                            );
+
+                            let ok1 = self.context.append_basic_block(function, "ok1");
+
+                            self.builder.build_conditional_branch(
+                                has_selector,
+                                ok1,
+                                exception_block.bb,
+                            );
+                            self.builder.position_at_end(ok1);
+
+                            let selector_data = self
+                                .builder
+                                .build_load(
+                                    self.builder.build_pointer_cast(
+                                        data,
+                                        self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                        "selector",
+                                    ),
+                                    "selector",
+                                )
+                                .into_int_value();
+
+                            let correct_selector = self.builder.build_int_compare(
+                                IntPredicate::EQ,
+                                selector_data,
+                                self.context.i32_type().const_int(*selector as u64, false),
+                                "correct_selector",
+                            );
+
+                            let ok2 = self.context.append_basic_block(function, "ok2");
+
+                            self.builder.build_conditional_branch(
+                                correct_selector,
+                                ok2,
+                                exception_block.bb,
+                            );
+
+                            self.builder.position_at_end(ok2);
+
+                            data_len = self.builder.build_int_sub(
+                                data_len,
+                                self.context.i32_type().const_int(4, false),
+                                "data_len",
+                            );
+
+                            data = unsafe {
+                                self.builder.build_gep(
+                                    self.builder.build_pointer_cast(
+                                        data,
+                                        self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                        "data",
+                                    ),
+                                    &[self.context.i32_type().const_int(4, false)],
+                                    "data",
+                                )
+                            };
+                        }
 
                         let mut returns = Vec::new();
 
-                        runtime.abi_decode(
-                            self,
-                            function,
-                            &mut returns,
-                            data,
-                            self.builder
-                                .build_load(data_len, "data_len")
-                                .into_int_value(),
-                            &tys,
-                        );
+                        runtime.abi_decode(self, function, &mut returns, data, data_len, &tys);
 
                         for (i, ret) in returns.into_iter().enumerate() {
                             w.vars[res[i]].value = ret;
                         }
+                    }
+                    cfg::Instr::Unreachable => {
+                        self.builder.build_unreachable();
                     }
                 }
             }
