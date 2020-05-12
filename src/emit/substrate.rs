@@ -1870,6 +1870,7 @@ impl TargetRuntime for SubstrateTarget {
         &self,
         contract: &Contract<'b>,
         function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: usize,
         address: PointerValue<'b>,
@@ -1929,7 +1930,7 @@ impl TargetRuntime for SubstrateTarget {
             .unwrap()
             .into_int_value();
 
-        let success = contract.builder.build_int_compare(
+        let is_success = contract.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
             contract.context.i32_type().const_zero(),
@@ -1940,11 +1941,8 @@ impl TargetRuntime for SubstrateTarget {
         let bail_block = contract.context.append_basic_block(function, "bail");
         contract
             .builder
-            .build_conditional_branch(success, success_block, bail_block);
+            .build_conditional_branch(is_success, success_block, bail_block);
 
-        contract.builder.position_at_end(bail_block);
-
-        contract.builder.build_return(Some(&ret));
         contract.builder.position_at_end(success_block);
 
         // scratch buffer contains address
@@ -1961,6 +1959,26 @@ impl TargetRuntime for SubstrateTarget {
             ],
             "",
         );
+
+        if let Some(success) = success {
+            // we're in the try path. This means:
+            // return success or not in success variable
+            // do not abort execution
+            //
+            *success = is_success.into();
+
+            let done_block = contract.context.append_basic_block(function, "done");
+            contract.builder.build_unconditional_branch(done_block);
+            contract.builder.position_at_end(bail_block);
+            contract.builder.build_unconditional_branch(done_block);
+            contract.builder.position_at_end(done_block);
+        } else {
+            contract.builder.position_at_end(bail_block);
+
+            contract.builder.build_return(Some(&ret));
+
+            contract.builder.position_at_end(success_block);
+        }
     }
 
     /// Call external contract

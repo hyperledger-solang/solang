@@ -169,6 +169,7 @@ pub trait TargetRuntime {
         &self,
         contract: &Contract<'b>,
         function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: usize,
         address: PointerValue<'b>,
@@ -2747,25 +2748,36 @@ impl<'a> Contract<'a> {
                         }
                     }
                     cfg::Instr::Constructor {
+                        success,
                         res,
                         contract_no,
                         constructor_no,
                         args,
                     } => {
+                        let args = &args
+                            .iter()
+                            .map(|a| self.expression(&a, &w.vars, function, runtime))
+                            .collect::<Vec<BasicValueEnum>>();
+
+                        let address = self.builder.build_pointer_cast(
+                            w.vars[*res].value.into_pointer_value(),
+                            self.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address",
+                        );
+
+                        let success = match success {
+                            Some(n) => Some(&mut w.vars[*n].value),
+                            None => None,
+                        };
+
                         runtime.create_contract(
                             &self,
                             function,
+                            success,
                             *contract_no,
                             *constructor_no,
-                            self.builder.build_pointer_cast(
-                                w.vars[*res].value.into_pointer_value(),
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            ),
-                            &args
-                                .iter()
-                                .map(|a| self.expression(&a, &w.vars, function, runtime))
-                                .collect::<Vec<BasicValueEnum>>(),
+                            address,
+                            args,
                         );
                     }
                     cfg::Instr::ExternalCall {
