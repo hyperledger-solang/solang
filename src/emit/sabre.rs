@@ -733,6 +733,7 @@ impl TargetRuntime for SabreTarget {
         &self,
         _contract: &Contract<'b>,
         _function: FunctionValue,
+        _success: Option<&mut BasicValueEnum<'b>>,
         _contract_no: usize,
         _constructor_no: usize,
         _address: PointerValue<'b>,

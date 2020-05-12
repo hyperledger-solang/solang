@@ -1012,6 +1012,7 @@ impl TargetRuntime for EwasmTarget {
         &self,
         contract: &Contract<'b>,
         function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: usize,
         address: PointerValue<'b>,
@@ -1072,32 +1073,36 @@ impl TargetRuntime for EwasmTarget {
             .unwrap()
             .into_int_value();
 
-        let success = contract.builder.build_int_compare(
+        let is_success = contract.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
             contract.context.i32_type().const_zero(),
             "success",
         );
 
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(success, success_block, bail_block);
-
-        contract.builder.position_at_end(bail_block);
-
-        self.assert_failure(
-            contract,
+        if let Some(success) = success {
+            *success = is_success.into();
+        } else {
+            let success_block = contract.context.append_basic_block(function, "success");
+            let bail_block = contract.context.append_basic_block(function, "bail");
             contract
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            contract.context.i32_type().const_zero(),
-        );
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
 
-        contract.builder.position_at_end(success_block);
+            contract.builder.position_at_end(bail_block);
+
+            self.assert_failure(
+                contract,
+                contract
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                contract.context.i32_type().const_zero(),
+            );
+
+            contract.builder.position_at_end(success_block);
+        }
     }
 
     fn external_call<'b>(

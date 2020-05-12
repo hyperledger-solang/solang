@@ -85,6 +85,7 @@ pub enum Expression {
     And(Loc, Box<Expression>, Box<Expression>),
     LocalFunctionCall(Loc, usize, Vec<Expression>),
     ExternalFunctionCall(Loc, usize, usize, Box<Expression>, Vec<Expression>),
+    Constructor(Loc, usize, usize, Vec<Expression>),
 
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
@@ -158,6 +159,7 @@ impl Expression {
             | Expression::ReturnData(loc)
             | Expression::LocalFunctionCall(loc, _, _)
             | Expression::ExternalFunctionCall(loc, _, _, _, _)
+            | Expression::Constructor(loc, _, _, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison | Expression::Unreachable => unreachable!(),
         }
@@ -260,6 +262,7 @@ impl Expression {
             | Expression::StorageBytesLength(_, _) => true,
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
             Expression::LocalFunctionCall(_, _, args)
+            | Expression::Constructor(_, _, _, args)
             | Expression::ExternalFunctionCall(_, _, _, _, args) => {
                 args.iter().any(|a| a.reads_contract_storage())
             }
@@ -1896,19 +1899,15 @@ pub fn expression(
             Ok(returns.remove(0))
         }
         ast::Expression::New(loc, ty, args) => {
-            new(loc, ty, args, cfg, contract_no, ns, vartab, errors)
+            let (expr, expr_ty) = new(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
+            Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
         }
         ast::Expression::NewNamed(loc, ty, args) => {
-            match ns.resolve_type(contract_no, ty, errors) {
-                Ok(resolver::Type::Contract(n)) => {
-                    constructor_named_args(loc, n, args, cfg, contract_no, ns, vartab, errors)
-                }
-                Ok(_) => {
-                    errors.push(Output::error(*loc, "contract expected".to_string()));
-                    Err(())
-                }
-                _ => Err(()),
-            }
+            let (expr, expr_ty) =
+                constructor_named_args(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
+            Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
         }
         ast::Expression::Delete(loc, var) => delete(loc, var, cfg, contract_no, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
@@ -2383,19 +2382,7 @@ fn constructor(
         resolved_types.push(expr_type);
     }
 
-    let tab = match vartab {
-        &mut Some(ref mut tab) => tab,
-        None => {
-            errors.push(Output::error(
-                *loc,
-                "cannot call constructor in constant expression".to_string(),
-            ));
-            return Err(());
-        }
-    };
-
     let mut temp_errors = Vec::new();
-    let address_res = tab.temp_anonymous(&resolver::Type::Contract(no));
 
     // constructor call
     for (constructor_no, func) in ns.contracts[no].constructors.iter().enumerate() {
@@ -2435,42 +2422,19 @@ fn constructor(
             }
         }
 
-        if !matches {
-            continue;
+        if matches {
+            return Ok((
+                Expression::Constructor(*loc, no, constructor_no, cast_args),
+                resolver::Type::Contract(no),
+            ));
         }
-
-        cfg.add(
-            tab,
-            Instr::Constructor {
-                res: address_res,
-                contract_no: no,
-                constructor_no,
-                args: cast_args,
-            },
-        );
-
-        return Ok((
-            Expression::Variable(*loc, address_res),
-            resolver::Type::Contract(no),
-        ));
     }
 
     match ns.contracts[no].constructors.len() {
-        0 => {
-            cfg.add(
-                tab,
-                Instr::Constructor {
-                    res: address_res,
-                    contract_no: no,
-                    constructor_no: 0,
-                    args: Vec::new(),
-                },
-            );
-            Ok((
-                Expression::Variable(*loc, address_res),
-                resolver::Type::Contract(no),
-            ))
-        }
+        0 => Ok((
+            Expression::Constructor(*loc, no, 0, Vec::new()),
+            resolver::Type::Contract(no),
+        )),
         1 => {
             errors.append(&mut temp_errors);
 
@@ -2499,9 +2463,9 @@ fn circular_reference(from: usize, to: usize, ns: &resolver::Namespace) -> bool 
 }
 
 /// Resolve an new contract expression with named arguments
-fn constructor_named_args(
+pub fn constructor_named_args(
     loc: &ast::Loc,
-    no: usize,
+    ty: &ast::Expression,
     args: &[ast::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
@@ -2509,6 +2473,14 @@ fn constructor_named_args(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let no = match ns.resolve_type(contract_no, ty, errors)? {
+        resolver::Type::Contract(n) => n,
+        _ => {
+            errors.push(Output::error(*loc, "contract expected".to_string()));
+            return Err(());
+        }
+    };
+
     // The current contract cannot be constructed with new. In order to create
     // the contract, we need the code hash of the contract. Part of that code
     // will be code we're emitted here. So we end up with a crypto puzzle.
@@ -2560,19 +2532,7 @@ fn constructor_named_args(
         );
     }
 
-    let tab = match vartab {
-        &mut Some(ref mut tab) => tab,
-        None => {
-            errors.push(Output::error(
-                *loc,
-                "cannot create contract in constant expression".to_string(),
-            ));
-            return Err(());
-        }
-    };
-
     let mut temp_errors = Vec::new();
-    let address_res = tab.temp_anonymous(&resolver::Type::Contract(no));
 
     // constructor call
     for (constructor_no, func) in ns.contracts[no].constructors.iter().enumerate() {
@@ -2622,42 +2582,19 @@ fn constructor_named_args(
             }
         }
 
-        if !matches {
-            continue;
+        if matches {
+            return Ok((
+                Expression::Constructor(*loc, no, constructor_no, cast_args),
+                resolver::Type::Contract(no),
+            ));
         }
-
-        cfg.add(
-            tab,
-            Instr::Constructor {
-                res: address_res,
-                contract_no: no,
-                constructor_no,
-                args: cast_args,
-            },
-        );
-
-        return Ok((
-            Expression::Variable(*loc, address_res),
-            resolver::Type::Contract(no),
-        ));
     }
 
     match ns.contracts[no].constructors.len() {
-        0 => {
-            cfg.add(
-                tab,
-                Instr::Constructor {
-                    res: address_res,
-                    contract_no: no,
-                    constructor_no: 0,
-                    args: Vec::new(),
-                },
-            );
-            Ok((
-                Expression::Variable(*loc, address_res),
-                resolver::Type::Contract(no),
-            ))
-        }
+        0 => Ok((
+            Expression::Constructor(*loc, no, 0, Vec::new()),
+            resolver::Type::Contract(no),
+        )),
         1 => {
             errors.append(&mut temp_errors);
 
@@ -2675,7 +2612,7 @@ fn constructor_named_args(
 }
 
 /// Resolve an new expression
-fn new(
+pub fn new(
     loc: &ast::Loc,
     ty: &ast::Expression,
     args: &[ast::Expression],
@@ -4884,5 +4821,41 @@ fn emit_function_call(
             }
         }
         _ => vec![(expr, expr_ty)],
+    }
+}
+
+/// Convert a constructor call expression to CFG in expression context
+fn emit_constructor_call(
+    expr: Expression,
+    expr_ty: resolver::Type,
+    cfg: &mut ControlFlowGraph,
+    vartab: &mut Option<&mut Vartable>,
+) -> (Expression, resolver::Type) {
+    let tab = match vartab {
+        &mut Some(ref mut tab) => tab,
+        None => unreachable!(),
+    };
+
+    match expr {
+        Expression::Constructor(loc, contract_no, constructor_no, args) => {
+            let address_res = tab.temp_anonymous(&resolver::Type::Contract(contract_no));
+
+            cfg.add(
+                tab,
+                Instr::Constructor {
+                    success: None,
+                    res: address_res,
+                    contract_no,
+                    constructor_no,
+                    args,
+                },
+            );
+
+            (
+                Expression::Variable(loc, address_res),
+                resolver::Type::Contract(contract_no),
+            )
+        }
+        _ => (expr, expr_ty),
     }
 }

@@ -218,7 +218,7 @@ fn input_wrong_size() {
 }
 
 #[test]
-fn try_catch() {
+fn try_catch_external_calls() {
     let (_, errors) = parse_and_resolve(
         r##"
         contract c {
@@ -382,4 +382,165 @@ fn try_catch() {
     );
 
     assert_eq!(first_error(errors), "x is already declared");
+}
+
+#[test]
+fn try_catch_constructor() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                try new other() returns (int32) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "type ‘int32’ does not match return value of function ‘contract other’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                try new other() returns (int32, int[2] storage) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "constructor returns single contract, not 2 values"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                int x;
+                try new other()  {
+                    x = 102;
+                } catch (bytes) {
+                    x = 2;
+                }
+                assert(x == 102);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                int x;
+                try new other({foo: true}) returns (other o) {
+                    (x, bool yata) = o.test();
+                } catch (bytes) {
+                    x = 2;
+                }
+                assert(x == 102);
+            }
+        }
+        
+        contract other {
+            constructor(bool foo) public {
+                //
+            }
+
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                int32 x = 0;
+                try new other(true) {
+                    x = 1;
+                } catch (bytes c) {
+                    assert(c == hex"a079c3080c666f6f");
+                    x = 2;
+                }
+                assert(x == 2);
+            }
+        }
+        
+        contract other {
+            constructor(bool foo) public {
+                revert("foo");
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                try new int32[](2) returns (int32, bool) {
+                    x = 1;
+                } catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public returns (int32, bool) {
+                return (102, true);
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "try only supports external calls or constructor calls"
+    );
 }
