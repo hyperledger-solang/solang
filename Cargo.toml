@@ -10,17 +10,17 @@ description = "Solang Solidity Compiler"
 keywords = [ "solidity", "compiler", "ewasm", "llvm", "substrate" ]
 
 [build-dependencies]
-lalrpop = "0.18"
+lalrpop = "0.19"
 
 [dependencies]
-lalrpop-util = "0.18"
+lalrpop-util = "0.19"
 regex = "1"
 num-bigint = "0.2"
-num-traits = "0.2.6"
+num-traits = "0.2"
 num-derive = "0.3"
 parity-wasm = "0.41"
 clap = "2.33"
-lazy_static = "1.2.0"
+lazy_static = "1.4"
 hex = "0.4"
 tiny-keccak = "1.5"
 serde_json = "1.0"
@@ -32,10 +32,10 @@ phf = { version = "0.8", features = ["macros"] }
 unicode-xid = "0.2.0"
 
 [dev-dependencies]
-parity-scale-codec-derive = "1.1.0"
-parity-scale-codec = "1.1.0"
-ethabi = "12.0.0"
-ethereum-types = "0.9.0"
+parity-scale-codec-derive = "1.2"
+parity-scale-codec = "1.3"
+ethabi = "12.0"
+ethereum-types = "0.9"
 wasmi = "0.6"
 rand = "0.7"
 
