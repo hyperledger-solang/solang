@@ -704,6 +704,36 @@ it is not possible to do a ``delete`` on an mapping, but an entry can be deleted
 
   Any suggestions for solving this are very welcome!
 
+Contract Types
+______________
+
+In Solidity, other smart contracts can be called and created. So, there is a type to hold the
+address of a contract. This is in fact simply the address of the contract, with some syntax
+sugar for calling functions on the contract.
+
+A contract can be created with the new statment, followed by the name of the contract. The
+arguments to the constructor must be provided.
+
+  .. code-block:: javascript
+
+    contract child {
+        function announce() public {
+            print("Greetings from child contract");
+        }
+    }
+
+    contract creator {
+        function test() public {
+            child c = new child();
+
+            c.announce();
+        }
+    }
+
+Since child does not have a constructor, no arguments are needed for the new statement. The variable
+`c` of the contract `child` type, which simply holds its address. Functions can be called on
+this type. The contract type can be cast to and from address, provided an explicit cast is used.
+
 Storage References
 __________________
 
