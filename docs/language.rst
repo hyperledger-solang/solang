@@ -353,6 +353,35 @@ an errors because the field type does no match; setting a ``suit`` enum field wi
 is not permitted. However, if both fields were the of the same type, then the compiler would have no
 way of knowing if the fields are in the intended order.
 
+Struct definitions from other contracts can be used, by referring to them with the `contractname.`
+prefix. Struct definitions can appear outside of contract definitions, in which case they can be used
+in any contract without the prefix.
+
+.. code-block:: javascript
+
+    struct user {
+        string name;
+        bool active;
+    }
+
+    contract auth {
+        function authenticate(string name, db.users storage users) public returns (bool) {
+            // ...
+        }
+    }
+
+    contract db {
+        struct users {
+            user[] field1;
+            int32 count;
+        }
+    }
+
+The `users` struct contains an array of `user`, which is another struct. The `users` struct is
+defined in contract `db`, and can be used in another contract with the type name `db.users`. Astute
+readers may have noticed that the `db.users` struct is used before it is declared. In Solidity,
+types can be always be used before their declaration.
+
 Structs can be contract storage variables. Structs in contract storage can be assigned to structs
 in memory and vice versa, like in the *set_card1()* function. Copying structs is expensive; code has
 to be generated for each field and executed.
