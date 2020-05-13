@@ -1052,7 +1052,7 @@ A constructor must be declared ``public``.
 Instantiation using new
 _______________________
 
-Contracts can be created using the `new` keyword. The contract that is being created might have
+Contracts can be created using the ``new`` keyword. The contract that is being created might have
 constructor arguments, which need to be provided.
 
 .. code-block:: javascript
@@ -1145,7 +1145,7 @@ by name, arguments can be in any order. However, functions with anonymous argume
     }
 
 If the function has a single return value, this can be assigned to a variable. If
-the function has multiple return values, these can be assigned using the destructuring
+the function has multiple return values, these can be assigned using the :ref:`destructuring`
 assignment statement:
 
 .. code-block:: javascript
@@ -1429,6 +1429,42 @@ repeat infinitely (or until all gas is spent):
       }
   }
 
+.. _destructuring:
+
+Destructing Statement
+_____________________
+
+The destructuring statement can be used for making function calls to functions that have
+multiple return values. The list can contain either:
+
+1. The name of an existing variable. The type must match the type of the return value.
+2. A variable declaration with a type. The type must match the type of the return value.
+3. Empty; this return value is not used or accessible.
+
+.. code-block:: javascript
+
+    contract destructure {
+        function func() internal returns (bool, int32, string) {
+            return (true, 5, "abcd")
+        }
+
+        function test() public {
+            string s;
+            (bool b, _, s) = func();
+        }
+    }
+
+The right hand side may also be a list of expressions. This type can be useful for swapping
+values, for example.
+
+.. code-block:: javascript
+
+    function test() public {
+        (int32 a, int32 b, int32 c) = (1, 2, 3);
+
+        (b, , a) = (a, 5, b);
+    }
+
 .. _try-catch:
 
 Try Catch Statement
@@ -1453,7 +1489,7 @@ be passed a reason code, which can be inspected using the ``catch Error(string)`
 
     contract runner {
         function test() public {
-            try new aborting() returning (aborting a) {
+            try new aborting() returns (aborting a) {
                 // new succeeded; a holds the a reference to the new contract
             } 
             catch Error(string x) {
@@ -1467,7 +1503,9 @@ be passed a reason code, which can be inspected using the ``catch Error(string)`
         }
     }
 
-The same statement can be used for calling external functions.
+The same statement can be used for calling external functions. The ``returns (...)``
+part must match the return types for the function. If no name is provided, that
+return value is not accessible.
 
 .. code-block:: javascript
 
@@ -1481,7 +1519,7 @@ The same statement can be used for calling external functions.
         function test() public {
             aborting abort = new aborting();
 
-            try new abort.abort() returning (int32 a, bool b) {
+            try new abort.abort() returns (int32 a, bool b) {
                 // call succeeded; return values are in a and b
             } 
             catch Error(string x) {
@@ -1510,7 +1548,7 @@ might be useful when no error string is expected, and will generate shorter code
         function test() public {
             aborting abort = new aborting();
 
-            try new abort.abort() returning (int32 a, bool b) {
+            try new abort.abort() returns (int32 a, bool b) {
                 // call succeeded; return values are in a and b
             } 
             catch (bytes raw) {
