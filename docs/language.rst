@@ -1263,8 +1263,47 @@ repeat infinitely (or until all gas is spent):
 Builtin Functions
 -----------------
 
-assert()
-________
+revert() or revert(string)
+__________________________
+
+revert aborts execution of the current contract, and returns to the caller. revert()
+can be called with no arguments, or a single `string` argument, which is called the
+`ReasonCode`. This function can be called at any point, either in a constructor or
+a function.
+
+If the caller is another contract, it can use the `ReasonCode` in a try catch
+statement.
+
+.. code-block:: javascript
+
+    contract x {
+        constructor(address foobar) public {
+            if (a == address(0)) {
+                revert("foobar must a valid address");
+            }
+        }
+    }
+
+require(bool) or require(bool, string)
+______________________________________
+
+This function is used to check that a condition holds true, or abort execution otherwise. So,
+if the first `bool` argument is `true`, this function does nothing, however
+if the `bool` arguments is `false`, then execution is aborted. There is an optional second
+`string` argument which is called the `ReasonCode`, which can be used by the caller
+to identify what the problem is.
+
+.. code-block:: javascript
+
+    contract x {
+        constructor(address foobar) public {
+            require(foobar != address(0), ,"foobar must a valid address");
+        }
+    }
+
+
+assert(bool)
+____________
 
 Assert takes a boolean argument. If that evaluates to false, execution is aborted.
 
@@ -1277,8 +1316,8 @@ Assert takes a boolean argument. If that evaluates to false, execution is aborte
         }
     }
 
-print()
-_______
+print(string)
+_____________
 
 print() takes a string argument.
 
