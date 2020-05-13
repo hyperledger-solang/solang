@@ -190,8 +190,10 @@ is always the length of the type itself.
 Address Type
 ____________
 
-The ``address`` type holds the address of an account. It can be initialized with a particular
-hexidecimal number, called an address literal. Here is an example:
+The ``address`` type holds the address of an account. The length of an ``address`` type depends on
+the target being compiled for. On ewasm, an address is 20 bytes. Substrate has an address length
+of 32 bytes. It can be initialized with a particular
+hexidecimal number, called an address literal. Here is an example on ewasm:
 
 .. code-block:: javascript
 
@@ -222,6 +224,11 @@ bytes types and integer types and ``==`` and ``!=`` works for comparing two addr
 .. code-block:: javascript
 
   address foo = address(0);
+
+.. note::
+
+    Substrate can be built with a different type for Address. If you need support for
+    a different length than the default, please get in touch.
 
 Enums
 _____
