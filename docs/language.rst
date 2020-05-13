@@ -1014,8 +1014,8 @@ not allowed to call functions or read variables in the initializer:
       uint constant byzantium_block = 4_370_000;
   }
 
-Constructors
-------------
+Constructors and contract instantiation
+---------------------------------------
 
 When a contract is deployed, the contract storage is initialized to the initializer values provided,
 and any constructor is called. A constructor is not required for a contract. A constructor is defined
@@ -1049,8 +1049,34 @@ A constructor must be declared ``public``.
   The Ethereum Foundation Solidity compiler allows constructors to be declared ``internal`` if
   for abstract contracts. Since Solang does not support abstract contracts, this is not possible yet.
 
-Declaring Functions
--------------------
+Instantiation using new
+_______________________
+
+Contracts can be created using the `new` keyword. The contract that is being created might have
+constructor arguments, which need to be provided.
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) public {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling("luna");
+        }
+    }
+
+The constructor might fail for various reasons, for example `require()` might fail here. This can
+be hanlded using the :ref:`try-catch` statement, else errors are passed on the caller.
+
+Functions
+---------
 
 Functions can be declared and called as follow:
 
@@ -1107,16 +1133,65 @@ by name, arguments can be in any order. However, functions with anonymous argume
 
 .. code-block:: javascript
 
-  contract foo {
-      function bar(uint32 x, bool y) {
-          // ...
-      }
+    contract foo {
+        function bar(uint32 x, bool y) public {
+            // ...
+        }
 
-      function test() {
-          bar(102, false);
-          bar({ y: true, x: 302 });
-      }
-  }
+        function test() public {
+            bar(102, false);
+            bar({ y: true, x: 302 });
+        }
+    }
+
+If the function has a single return value, this can be assigned to a variable. If
+the function has multiple return values, these can be assigned using the destructuring
+assignment statement:
+
+.. code-block:: javascript
+
+    contract foo {
+        function bar1(uint32 x, bool y) public returns (address, byte32) {
+            return (address(3), hex"01020304");
+        }
+
+        function bar2(uint32 x, bool y) public returns (bool) {
+            return !y;
+        }
+
+        function test() public {
+            (address f1, bytes32 f2) = bar1(102, false);
+            bool f3 = bar2({x: 255, y: true})
+        }
+    }
+
+It is also possible to call functions on other contracts, which is also known as calling
+external functions. The called function must be declared public, else the call will fail.
+Calling external functions requires ABI encoding the arguments, and ABI decoding the
+return values. This much more costly than an internal function call.
+
+.. code-block:: javascript
+
+    contract foo {
+        function bar1(uint32 x, bool y) public returns (address, byte32) {
+            return (address(3), hex"01020304");
+        }
+
+        function bar2(uint32 x, bool y) public returns (bool) {
+            return !y;
+        }
+    }
+
+    contract bar {
+        function test(foo f) public {
+            (address f1, bytes32 f2) = f.bar1(102, false);
+            bool f3 = f.bar2({x: 255, y: true})
+        }
+    }
+
+The syntax for calling external call is the same as the external call, except for
+that it must be done on a contract type variable. Any error in an external call can
+be handled with :ref:`try-catch`.
 
 Function overloading
 ____________________
@@ -1194,8 +1269,8 @@ fallback function:
       }
   }
 
-Writing Functions
------------------
+Statements
+----------
 
 In functions, you can declare variables with the types or an enum. If the name is the same as
 an existing function, enum type, or another variable, then the compiler will generate a
@@ -1354,6 +1429,96 @@ repeat infinitely (or until all gas is spent):
       }
   }
 
+.. _try-catch:
+
+Try Catch Statement
+___________________
+
+Sometimes execution gets reverted due to a ``revert()`` or ``require()``. These types of problems
+usually cause the entire chain of execution to be aborted. However, it is possible to catch
+some of these problems and continue execution.
+
+This is only possible for contract instantiation through new, and external function calls.
+Internal function call cannot be handing this way. Not all problems can be handled either,
+for example, out of gas cannot be caught. The ``revert()`` and ``require()`` builtins may
+be passed a reason code, which can be inspected using the ``catch Error(string)`` syntax.
+
+.. code-block:: javascript
+
+    contract aborting {
+        constructor() public {
+            revert("bar");
+        }
+    }
+
+    contract runner {
+        function test() public {
+            try new aborting() returning (aborting a) {
+                // new succeeded; a holds the a reference to the new contract
+            } 
+            catch Error(string x) {
+                if (x == "bar") {
+                    // "bar" revert or require was executed
+                }
+            }
+            catch (bytes raw) {
+                // if no error string could decoding, we end up here with the raw data
+            }
+        }
+    }
+
+The same statement can be used for calling external functions.
+
+.. code-block:: javascript
+
+    contract aborting {
+        function abort() public returns (int32, bool) {
+            revert("bar");
+        }
+    }
+
+    contract runner {
+        function test() public {
+            aborting abort = new aborting();
+
+            try new abort.abort() returning (int32 a, bool b) {
+                // call succeeded; return values are in a and b
+            } 
+            catch Error(string x) {
+                if (x == "bar") {
+                    // "bar" revert or require was executed
+                }
+            }
+            catch (bytes raw) {
+                // if no error string could decoding, we end up here with the raw data
+            }
+        }
+    }
+
+There is an alternate syntax which avoids the abi decoding by leaving that part out. This
+might be useful when no error string is expected, and will generate shorter code.
+
+.. code-block:: javascript
+
+    contract aborting {
+        function abort() public returns (int32, bool) {
+            revert("bar");
+        }
+    }
+
+    contract runner {
+        function test() public {
+            aborting abort = new aborting();
+
+            try new abort.abort() returning (int32 a, bool b) {
+                // call succeeded; return values are in a and b
+            } 
+            catch (bytes raw) {
+                // call failed with raw error in raw
+            }
+        }
+    }
+
 Builtin Functions
 -----------------
 
@@ -1365,7 +1530,7 @@ can be called with no arguments, or a single `string` argument, which is called 
 `ReasonCode`. This function can be called at any point, either in a constructor or
 a function.
 
-If the caller is another contract, it can use the `ReasonCode` in a try catch
+If the caller is another contract, it can use the `ReasonCode` in a :ref:`try-catch`
 statement.
 
 .. code-block:: javascript
