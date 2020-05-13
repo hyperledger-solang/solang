@@ -2932,10 +2932,17 @@ impl<'a> Contract<'a> {
                                 )
                                 .into_int_value();
 
+                            // ewasm stores the selector little endian
+                            let selector = if self.ns.target == crate::Target::Ewasm {
+                                (*selector).to_be()
+                            } else {
+                                *selector
+                            };
+
                             let correct_selector = self.builder.build_int_compare(
                                 IntPredicate::EQ,
                                 selector_data,
-                                self.context.i32_type().const_int(*selector as u64, false),
+                                self.context.i32_type().const_int(selector as u64, false),
                                 "correct_selector",
                             );
 

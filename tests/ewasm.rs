@@ -362,14 +362,20 @@ impl Externals for TestRuntime {
 
                 let module = self.create_module(&code);
 
-                match module.invoke_export("main", &[], self) {
+                let ret = match module.invoke_export("main", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                        TrapKind::Host(_) => {}
+                        TrapKind::Host(kind) => {
+                            if format!("{}", kind) == "revert" {
+                                1
+                            } else {
+                                0
+                            }
+                        }
                         _ => panic!("fail to invoke main via create: {}", trap),
                     },
-                    Ok(_) => {}
+                    Ok(_) => 0,
                     Err(e) => panic!("fail to invoke main via create: {}", e),
-                }
+                };
 
                 let res = self.vm.last().unwrap().output.clone();
 
@@ -384,7 +390,7 @@ impl Externals for TestRuntime {
                     .set(address_ptr, &addr[..])
                     .expect("copy key from wasm memory");
 
-                Ok(Some(RuntimeValue::I32(0)))
+                Ok(Some(RuntimeValue::I32(ret)))
             }
             _ => panic!("external {} unknown", index),
         }
@@ -1852,4 +1858,56 @@ fn external_call() {
         ret,
         vec!(ethabi::Token::Int(ethereum_types::U256::from(1020)))
     );
+}
+
+#[test]
+fn try_catch() {
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            int32 x;
+
+            constructor(int32 a) public {
+                x = a;
+            }
+
+            function get_x(int32 t) public returns (int32) {
+                if (t == 0) {
+                    revert("cannot be zero");
+                }
+                return x * t;
+            }
+        }
+
+        contract c {
+            b x;
+        
+            constructor() public {
+                x = new b(102);
+            }
+
+            function test() public returns (int32) {
+                int32 state = 0;
+                try x.get_x(0) returns (int32 l) {
+                    state = 1;
+                } catch Error(string err) {
+                    if (err == "cannot be zero") {
+                        state = 2;
+                    } else {
+                        state = 3;
+                    }
+                } catch (bytes ) {
+                    state = 4;
+                }
+
+                return state;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    let ret = runtime.function("test", &[]);
+
+    assert_eq!(ret, vec!(ethabi::Token::Int(ethereum_types::U256::from(2))));
 }
