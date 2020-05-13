@@ -250,6 +250,41 @@ in the ABI.
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
 is numbered from 0, like in C and Rust.
 
+If enum is declared in another contract, it can be refered to with the `contractname.` prefix. The enum
+declaration does not have to appear in a contract, in which case it can be used without the contract name
+prefix in every contract.
+
+.. code-block:: javascript
+
+    enum planets { Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune }
+
+    contract timeofday {
+        enum time { Night, Day, Dawn, Dusk }
+    }
+
+    contract stargazing {
+        function look_for(timeofday.time when) public returns (planets[]) {
+            if (when == timeofday.time.Dawn || when == timeofday.time.Dusk) {
+                planets[] x = new planets[](2);
+                x[0] = planets.Mercury;
+                x[1] = planets.Venus;
+                return x;
+            } else if (when == timeofday.time.Night) {
+                planets[] x = new planets[](5);
+                x[0] = planets.Mars;
+                x[1] = planets.Jupiter;
+                x[2] = planets.Saturn;
+                x[3] = planets.Uranus;
+                x[4] = planets.Neptune;
+                return x;
+            } else {
+                planets[] x = new planets[](1);
+                x[0] = planets.Earth;
+                return x;
+            }
+        }
+    }
+
 Struct Type
 ___________
 
