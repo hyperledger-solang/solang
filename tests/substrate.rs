@@ -64,7 +64,7 @@ enum SubstrateExternal {
     ext_get_storage,
     ext_return,
     ext_hash_keccak_256,
-    ext_print,
+    ext_println,
     ext_call,
     ext_instantiate,
 }
@@ -237,7 +237,7 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
-            Some(SubstrateExternal::ext_print) => {
+            Some(SubstrateExternal::ext_println) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
 
@@ -245,12 +245,12 @@ impl Externals for TestRuntime {
                 buf.resize(len as usize, 0u8);
 
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
-                    panic!("ext_print: {}", e);
+                    panic!("ext_println: {}", e);
                 }
 
                 let s = String::from_utf8_lossy(&buf);
 
-                println!("ext_print: {}", s);
+                println!("ext_println: {}", s);
 
                 self.printbuf.push_str(&s);
 
@@ -380,7 +380,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_clear_storage" => SubstrateExternal::ext_clear_storage,
             "ext_return" => SubstrateExternal::ext_return,
             "ext_hash_keccak_256" => SubstrateExternal::ext_hash_keccak_256,
-            "ext_print" => SubstrateExternal::ext_print,
+            "ext_println" => SubstrateExternal::ext_println,
             "ext_call" => SubstrateExternal::ext_call,
             "ext_instantiate" => SubstrateExternal::ext_instantiate,
             _ => {

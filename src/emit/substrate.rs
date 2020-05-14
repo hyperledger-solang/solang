@@ -43,7 +43,7 @@ impl SubstrateTarget {
             "ext_clear_storage",
             "ext_hash_keccak_256",
             "ext_return",
-            "ext_print",
+            "ext_println",
             "ext_instantiate",
             "ext_call",
         ]);
@@ -202,7 +202,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_print",
+            "ext_println",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -1860,7 +1860,7 @@ impl TargetRuntime for SubstrateTarget {
 
     fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_print").unwrap(),
+            contract.module.get_function("ext_println").unwrap(),
             &[string_ptr.into(), string_len.into()],
             "",
         );
