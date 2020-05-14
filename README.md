@@ -14,7 +14,8 @@ Solang targets Substrate, ewasm, and Sawtooth.
 
 Solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at
-[our documentation](https://solang.readthedocs.io/en/latest/).
+[our documentation](https://solang.readthedocs.io/en/latest/) and find us on
+[Hyperledger Chat](https://chat.hyperledger.org/channel/solang).
 
 ## Simple example
 
