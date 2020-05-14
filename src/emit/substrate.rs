@@ -1889,8 +1889,20 @@ impl TargetRuntime for SubstrateTarget {
             &constructor.params,
         );
 
-        // balance is a u64
-        let balance = contract.emit_global_string("balance", &[0u8; 4], true);
+        // balance is a u128, make sure it's enough to cover existential_deposit
+        // TODO: this is hardcoded for now. This needs to implemented so that:
+        //
+        // contractx x = new contractx{value: 102}();
+        //
+        // is supported.
+        let balance = contract.emit_global_string(
+            "balance",
+            &[
+                0u8, 0u8, 0u8, 0u8, 0xffu8, 0xffu8, 0xffu8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
+                0u8,
+            ],
+            true,
+        );
 
         // wasm
         let target_contract = Contract::build(
@@ -1919,7 +1931,7 @@ impl TargetRuntime for SubstrateTarget {
                     contract.context.i32_type().const_int(32, false).into(),
                     contract.context.i64_type().const_zero().into(),
                     balance.into(),
-                    contract.context.i32_type().const_int(8, false).into(),
+                    contract.context.i32_type().const_int(16, false).into(),
                     input.into(),
                     input_len.into(),
                 ],
@@ -1989,8 +2001,8 @@ impl TargetRuntime for SubstrateTarget {
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
     ) -> IntValue<'b> {
-        // balance is a u64
-        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+        // balance is a u128
+        let balance = contract.emit_global_string("balance", &[0u8; 16], true);
 
         // call create
         contract
@@ -2006,7 +2018,7 @@ impl TargetRuntime for SubstrateTarget {
                         .into(),
                     contract.context.i64_type().const_zero().into(),
                     balance.into(),
-                    contract.context.i32_type().const_int(8, false).into(),
+                    contract.context.i32_type().const_int(16, false).into(),
                     payload.into(),
                     payload_len.into(),
                 ],
