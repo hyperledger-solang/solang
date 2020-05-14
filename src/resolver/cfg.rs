@@ -1722,9 +1722,11 @@ fn try_catch(
             return Err(());
         }
 
-        let mut reachable = statement(&ok, f, cfg, contract_no, ns, vartab, loops, errors)?;
+        let mut finally_reachable = statement(&ok, f, cfg, contract_no, ns, vartab, loops, errors)?;
 
-        cfg.add(vartab, Instr::Branch { bb: finally_block });
+        if finally_reachable {
+            cfg.add(vartab, Instr::Branch { bb: finally_block });
+        }
 
         vartab.leave_scope();
 
@@ -1793,7 +1795,7 @@ fn try_catch(
                 }
             }
 
-            reachable &= statement(
+            let reachable = statement(
                 &error_stmt.2,
                 f,
                 cfg,
@@ -1804,7 +1806,11 @@ fn try_catch(
                 errors,
             )?;
 
-            cfg.add(vartab, Instr::Branch { bb: finally_block });
+            if reachable {
+                cfg.add(vartab, Instr::Branch { bb: finally_block });
+            }
+
+            finally_reachable &= reachable;
 
             vartab.leave_scope();
 
@@ -1846,7 +1852,7 @@ fn try_catch(
             }
         }
 
-        reachable &= statement(
+        let reachable = statement(
             &catch_stmt.1,
             f,
             cfg,
@@ -1857,7 +1863,11 @@ fn try_catch(
             errors,
         )?;
 
-        cfg.add(vartab, Instr::Branch { bb: finally_block });
+        if reachable {
+            cfg.add(vartab, Instr::Branch { bb: finally_block });
+        }
+
+        finally_reachable &= reachable;
 
         vartab.leave_scope();
 
@@ -1866,7 +1876,7 @@ fn try_catch(
 
         cfg.set_basic_block(finally_block);
 
-        Ok(reachable)
+        Ok(finally_reachable)
     } else {
         unreachable!()
     }

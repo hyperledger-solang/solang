@@ -500,6 +500,66 @@ fn try_catch_external_calls() {
     );
 
     runtime.function("test", Vec::new());
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(u32);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract dominator {
+            child c;
+        
+            function create_child() public {
+                c = new child();
+            }
+        
+            function call_child() public pure returns (int64) {
+                return c.get_a();
+            }
+        
+            function test() public pure returns (int32) {
+                try c.go_bang() returns (int32 l) {
+                    print("try call success");
+                    return 8000;
+                }
+                catch Error(string l) {
+                    print("try error path");
+                    print(l);
+                    return 4000;
+                }
+                catch (bytes) {
+                    print("try catch path");
+                    return 2000;
+                }
+        
+            }
+        }
+
+        contract child {
+            int64 a;
+            constructor() public {
+                a = 102;
+            }
+        
+            function get_a() public view returns (int64) {
+                return a;
+            }
+        
+            function set_a(int64 l) public {
+                a = l;
+            }
+        
+            function go_bang() public pure returns (int32) {
+                revert("gone bang in child");
+            }
+        }"##,
+    );
+
+    runtime.function("create_child", Vec::new());
+
+    runtime.function("test", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(4000).encode());
 }
 
 #[test]
