@@ -48,6 +48,9 @@ although it this might be convenient.
 When compiling this, Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI
 files for each contract.
 
+Pragmas
+_______
+
 Often, Solidity source files start with a ``pragma solidity`` which specifies the Ethereum
 Foundation Solidity compiler version which is permitted to compile this code. Solang does
 not follow the Ethereum Foundation Solidity compiler version numbering scheme, so these
@@ -56,15 +59,17 @@ when using Solang.
 
 .. code-block:: javascript
 
-  pragma solidity >=0.4.0 <0.4.8;
+    pragma solidity >=0.4.0 <0.4.8;
+    pragma experimental ABIEncoderV2;
 
-All other pragma statements are ignored, but generate warnings. Pragma must be terminated with
-a semicolon.
+The `ABIEncoderV2` pragma is not needed with Solang; structures can always be ABI encoded or
+decoded. All other pragma statements are ignored, but generate warnings. A pragma must be
+terminated with a semicolon.
 
 .. note::
 
-  The Ethereum Foundation Solidity compiler can also contain other other elements other than
-  contracts: ``import``, ``library``, ``interface``. These are not supported yet.
+    The Ethereum Foundation Solidity compiler can also contain elements other than contracts and
+    pragmas: ``import``, ``library``, ``interface``. These are not supported yet.
 
 Types
 -----
@@ -90,7 +95,7 @@ _____________
 
 ``uintN``
   These represent shorter single unsigned integers of width ``N``. ``N`` can be anything
-  between 8 and 256 bits.
+  between 8 and 256 bits and a multiple of 8, e.g. ``uint24``.
 
 ``int``
   This represents a single signed integer of 256 bits wide. Values can be for example
@@ -102,7 +107,7 @@ _____________
 
 ``intN``
   These represent shorter single signed integers of width ``N``. ``N`` can be anything
-  between 8 and 256 bits.
+  between 8 and 256 bits and a multiple of 8, e.g. ``int128``.
 
 Underscores ``_`` are allowed in numbers, as long as the number does not start with
 an underscore. This means that ``1_000`` is allowed but ``_1000`` is not. Similarly
@@ -146,7 +151,7 @@ a text string.
   bytes4 foo = "ABCD";
   bytes4 bar = hex"41_42_43_44";
 
-The ascii value for ``A`` is 41, when written in hexidecimal. So, in this case, foo and bar
+The ascii value for ``A`` is 41, when written in hexadecimal. So, in this case, foo and bar
 are initialized to the same value. Underscores are allowed in hex strings; they exist for
 readability. If the string is shorter than the type, it is padded with zeros. For example:
 
@@ -157,7 +162,7 @@ readability. If the string is shorter than the type, it is padded with zeros. Fo
 
 String literals can be concatenated like they can in C or C++. Here the types are longer than
 the initializers; this means they are padded at the end with zeros. foo will contain the following
-bytes in hexidecimal ``41 42 43 44 00 00`` and bar will be ``41 00 00 00 00``.
+bytes in hexadecimal ``41 42 43 44 00 00`` and bar will be ``41 00 00 00 00``.
 
 These types can be used with all the bitwise operators, ``~``, ``|``, ``&``, ``^``, ``<<``, and
 ``>>``. When these operators are used, the type behaves like an unsigned integer type. In this case
@@ -193,13 +198,13 @@ ____________
 The ``address`` type holds the address of an account. The length of an ``address`` type depends on
 the target being compiled for. On ewasm, an address is 20 bytes. Substrate has an address length
 of 32 bytes. It can be initialized with a particular
-hexidecimal number, called an address literal. Here is an example on ewasm:
+hexadecimal number, called an address literal. Here is an example on ewasm:
 
 .. code-block:: javascript
 
   address foo = 0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91;
 
-The hexidecimal string has to have 40 characters, and not contain any underscores.
+The hexadecimal string has to have 40 characters, and not contain any underscores.
 The capitalization, i.e. whether ``a`` to ``f`` values are capitalized, is important.
 It is defined in
 `EIP-55 <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md>`_. For example,
@@ -209,9 +214,9 @@ when compiling:
 
   address foo = 0xe9430d8C01C4E4Bb33E44fd7748942085D82fC91;
 
-Since the hexidecimal string is 40 characters without underscores, and the string does
+Since the hexadecimal string is 40 characters without underscores, and the string does
 not match the EIP-55 encoding, the compiler will refused to compile this. To make this
-a regular hexidecimal number, not an address, add some leading zeros or some underscores.
+a regular hexadecimal number, not an address, add some leading zeros or some underscores.
 To make this an address, the compiler error message will give the correct capitalization:
 
 .. code-block:: none
@@ -233,9 +238,9 @@ bytes types and integer types and ``==`` and ``!=`` works for comparing two addr
 Enums
 _____
 
-Solidity enums types have to be defined on the contract level. An enum has a type name, and a list of
-unique values. Enum types can used in public functions, but the value is represented as a ``uint8``
-in the ABI.
+Solidity enums types need to have a definition which lists the possible values it can hold. An enum
+has a type name, and a list of unique values. Enum types can used in public functions, but the value
+is represented as a ``uint8`` in the ABI.
 
 .. code-block:: javascript
 
@@ -383,8 +388,8 @@ readers may have noticed that the `db.users` struct is used before it is declare
 types can be always be used before their declaration.
 
 Structs can be contract storage variables. Structs in contract storage can be assigned to structs
-in memory and vice versa, like in the *set_card1()* function. Copying structs is expensive; code has
-to be generated for each field and executed.
+in memory and vice versa, like in the *set_card1()* function. Copying structs between storage
+and memory is expensive; code has to be generated for each field and executed.
 
 - The function argument ``c`` has to ABI decoded (1 copy + decoding overhead)
 - The ``card1`` has to load from contract storage (1 copy + contract storage overhead)
@@ -431,7 +436,7 @@ Fixed Length Arrays
 ___________________
 
 Arrays can be declared by adding [length] to the type name, where length is a
-constant. Any type can be made into an array, including arrays themselves (also
+constant expression. Any type can be made into an array, including arrays themselves (also
 known as arrays of arrays). For example:
 
 .. code-block:: javascript
@@ -527,6 +532,12 @@ expression requires a single unsigned integer argument. The length can be read u
         }
     }
 
+
+.. note::
+
+    There is a `bounty available <https://github.com/hyperledger-labs/solang/issues/177>`_
+    to make memory arrays have push() and pop() functions.
+
 Storage dynamic memory arrays do not have to be allocated. By default, the have a
 length of zero and elements can be added and removed using the ``push()`` and ``pop()``
 methods. 
@@ -595,6 +606,9 @@ concatenated and compared; no other operations are allowed on them.
         }
     }
 
+Strings can be cast to `bytes`. This cast has no runtime cost, since both types use
+the same underlying data structure.
+
 Dynamic Length Bytes
 ____________________
 
@@ -616,7 +630,8 @@ the ``new`` operator, or from an string or hex initializer.
 
 If the ``bytes`` variable is a storage variable, there is a ``push()`` and ``pop()``
 method available to add and remove bytes from the array. Array elements in a
-memory ``bytes`` can be modified, but no elements can be removed or added.
+memory ``bytes`` can be modified, but no elements can be removed or added, in other
+words, ``push()`` and ``pop()`` are not available when ``bytes`` is stored in memory.
 
 A ``string`` type can be cast to ``bytes``. This way, the string can be modified or
 characters can be read. Note this will access the string by byte, not character, so
@@ -893,10 +908,10 @@ after incrementing.
 Casting
 _______
 
-Solidity is strict about the sign of operations, and whether an assignment can truncate a value;
-these are errors and Solang will refuse to compile it. You can force the compiler to
-accept truncations or differences in sign by adding a cast, but this is best avoided. Often
-changing the parameters or return value of a function will avoid the need for casting.
+Solidity is very strict about the sign of operations, and whether an assignment can truncate a
+value. You can force the compiler to accept truncations or differences in sign by adding a cast,
+but this is best avoided. Often changing the parameters or return value of a function will avoid
+the need for casting.
 
 Some examples:
 
@@ -955,9 +970,9 @@ Since ``byte`` is array of one byte, a conversion from ``byte`` to ``uint8`` req
 Contract Storage
 ----------------
 
-Any variables declared at the contract level (so not contained in a function or constructor),
-then these will automatically become contract storage. Contract storage is maintained between
-calls on-chain. These are declared so:
+Any variables declared at the contract level (so not declared in a function or constructor),
+will automatically become contract storage. Contract storage is maintained on chain, so they
+retain their values between calls. These are declared so:
 
 .. code-block:: javascript
 
@@ -1073,12 +1088,17 @@ constructor arguments, which need to be provided.
     }
 
 The constructor might fail for various reasons, for example `require()` might fail here. This can
-be hanlded using the :ref:`try-catch` statement, else errors are passed on the caller.
+be handled using the :ref:`try-catch` statement, else errors are passed on the caller.
+
+.. note::
+
+    On Parity Substrate, only one instance of a contract can be created per account. We are working
+    on a fix for this.
 
 Functions
 ---------
 
-Functions can be declared and called as follow:
+Functions can be declared and called as follows:
 
 .. code-block:: javascript
 
@@ -1431,8 +1451,8 @@ repeat infinitely (or until all gas is spent):
 
 .. _destructuring:
 
-Destructing Statement
-_____________________
+Destructuring Statement
+_______________________
 
 The destructuring statement can be used for making function calls to functions that have
 multiple return values. The list can contain either:
@@ -1524,7 +1544,7 @@ return value is not accessible.
             } 
             catch Error(string x) {
                 if (x == "bar") {
-                    // "bar" revert or require was executed
+                    // "bar" reason code was provided through revert() or require()
                 }
             }
             catch (bytes raw) {

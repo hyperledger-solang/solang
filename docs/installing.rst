@@ -2,13 +2,14 @@ Installing Solang
 =================
 
 The Solang compiler is a single binary. It can be installed in many different
-ways, so please use whichever method suits your needs.
+ways, so the method that suits your needs.
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
 New images are automatically made available on
-`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. Simply pull the latest docker image using:
+`docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. 
+Simply pull the `latest` tag docker image using:
 
 .. code-block:: bash
 
@@ -20,7 +21,7 @@ And if you are using podman:
 
 	podman image pull hyperlederlabs/solang
 
-The solang binary is in ``/usr/bin/solang`` in this image. The latest tag
+The Solang binary is in ``/usr/bin/solang`` in this image. The `latest` tag
 gets updated each time there is a commit to the master branch of the solang
 git repository.
 
