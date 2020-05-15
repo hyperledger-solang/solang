@@ -1090,11 +1090,6 @@ constructor arguments, which need to be provided.
 The constructor might fail for various reasons, for example `require()` might fail here. This can
 be handled using the :ref:`try-catch` statement, else errors are passed on the caller.
 
-.. note::
-
-    On Parity Substrate, only one instance of a contract can be created per account. We are working
-    on a fix for this.
-
 Functions
 ---------
 
