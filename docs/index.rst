@@ -19,8 +19,9 @@ for `Substrate <https://substrate.dev/>`_,
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler.
 Where differences exists, this is noted in the documentation.
 
-Many language features are not implemented yet. Anything which is documented
-is supported. The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_.
+Many language features are not implemented yet, however anything documented
+is supported. The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_
+and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/channel/solang>`_.
 
 .. toctree::
    :maxdepth: 3
