@@ -766,3 +766,25 @@ fn try_catch_constructor() {
         "try only supports external calls or constructor calls"
     );
 }
+
+#[test]
+fn local_destructure_call() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                (, bytes32 b, string s) = foo();
+
+                assert(b == "0123");
+                assert(s == "abcd");
+            }
+
+            function foo() public returns (bool, bytes32, string) {
+                return (true, "0123", "abcd");
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+}
