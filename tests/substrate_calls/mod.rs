@@ -218,6 +218,50 @@ fn input_wrong_size() {
 }
 
 #[test]
+fn external_call_not_exist() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                other o = address(102);
+
+                o.test();
+            }
+        }
+        
+        contract other {
+            function test() public {
+
+            }
+        }"##,
+    );
+
+    runtime.function_expect_return("test", Vec::new(), 4);
+}
+
+#[test]
+fn contract_already_exists() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+
+                other t = new other();
+            }
+        }
+        
+        contract other {
+            function test() public {
+
+            }
+        }"##,
+    );
+
+    runtime.function_expect_return("test", Vec::new(), 4);
+}
+
+#[test]
 fn try_catch_external_calls() {
     let (_, errors) = parse_and_resolve(
         r##"

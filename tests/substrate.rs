@@ -272,6 +272,11 @@ impl Externals for TestRuntime {
                     panic!("ext_call: {}", e);
                 }
 
+                if !self.accounts.contains_key(&address) {
+                    // substrate would return TRAP_RETURN_CODE (0x0100)
+                    return Ok(Some(RuntimeValue::I32(0x100)));
+                }
+
                 let mut input = Vec::new();
                 input.resize(input_len as usize, 0u8);
 
@@ -322,7 +327,21 @@ impl Externals for TestRuntime {
                     panic!("ext_instantiate: {}", e);
                 }
 
-                let address = address_new();
+                let mut input = Vec::new();
+                input.resize(input_len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(input_ptr, &mut input) {
+                    panic!("ext_instantiate: {}", e);
+                }
+
+                let mut address = [0u8; 32];
+
+                address.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &input).as_bytes());
+
+                if self.accounts.contains_key(&address) {
+                    // substrate would return TRAP_RETURN_CODE (0x0100)
+                    return Ok(Some(RuntimeValue::I32(0x100)));
+                }
 
                 let code = self
                     .contracts
@@ -455,6 +474,11 @@ impl TestRuntime {
             .invoke_export("call", &[], self)
             .expect("failed to call function")
         {
+            println!(
+                "function_expected_return: got {} expected {}",
+                ret, expected_ret
+            );
+
             if expected_ret != ret {
                 panic!("non one return")
             }
