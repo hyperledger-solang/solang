@@ -1922,6 +1922,10 @@ impl TargetRuntime for SubstrateTarget {
             true,
         );
 
+        // ext_instantiate returns 0x0100 if the contract cannot be instantiated
+        // due to insufficient funds, etc. If the return value is < 0x100, then
+        // this is return value from the constructor (or deploy function) of
+        // the contract
         let ret = contract
             .builder
             .build_call(
@@ -1987,6 +1991,28 @@ impl TargetRuntime for SubstrateTarget {
         } else {
             contract.builder.position_at_end(bail_block);
 
+            // if ext_instantiate returned 0x100, we cannot return that here. This is because
+            // only the lower 8 bits of our return value are taken.
+
+            // ext_call can return 0x100 if the call cannot be made. We cannot return this value
+            // from the smart contract, so replace it with 4.
+            let call_not_made = contract.builder.build_int_compare(
+                IntPredicate::EQ,
+                ret,
+                contract.context.i32_type().const_int(0x100, false),
+                "success",
+            );
+
+            let ret = contract
+                .builder
+                .build_select(
+                    call_not_made,
+                    contract.context.i32_type().const_int(4, false),
+                    ret,
+                    "return_value",
+                )
+                .into_int_value();
+
             contract.builder.build_return(Some(&ret));
 
             contract.builder.position_at_end(success_block);
@@ -2004,8 +2030,8 @@ impl TargetRuntime for SubstrateTarget {
         // balance is a u128
         let balance = contract.emit_global_string("balance", &[0u8; 16], true);
 
-        // call create
-        contract
+        // do the actual call
+        let ret = contract
             .builder
             .build_call(
                 contract.module.get_function("ext_call").unwrap(),
@@ -2027,6 +2053,24 @@ impl TargetRuntime for SubstrateTarget {
             .try_as_basic_value()
             .left()
             .unwrap()
+            .into_int_value();
+        // ext_call can return 0x100 if the call cannot be made. We cannot return this value
+        // from the smart contract, so replace it with 4.
+        let call_not_made = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i32_type().const_int(0x100, false),
+            "success",
+        );
+
+        contract
+            .builder
+            .build_select(
+                call_not_made,
+                contract.context.i32_type().const_int(4, false),
+                ret,
+                "return_value",
+            )
             .into_int_value()
     }
 
