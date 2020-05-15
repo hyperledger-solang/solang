@@ -17,7 +17,7 @@ COPY src src/src/
 COPY stdlib src/stdlib/
 COPY build.rs Cargo.toml src/
 WORKDIR /src/stdlib/
-RUN clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c
+RUN clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c
 
 WORKDIR /src/
 RUN cargo build --release
