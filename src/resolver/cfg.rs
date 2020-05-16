@@ -811,7 +811,7 @@ pub fn resolve_var_decl_ty(
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<resolver::Type, ()> {
-    let mut var_ty = ns.resolve_type(contract_no, &ty, errors)?;
+    let mut var_ty = ns.resolve_type(contract_no, false, &ty, errors)?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {

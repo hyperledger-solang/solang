@@ -1891,7 +1891,7 @@ pub fn expression(
 
             let mut blackhole = Vec::new();
 
-            match ns.resolve_type(contract_no, ty, &mut blackhole) {
+            match ns.resolve_type(contract_no, true, ty, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
                     return named_struct_literal(
                         loc,
@@ -1946,7 +1946,7 @@ pub fn expression(
         ast::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
 
-            match ns.resolve_type(contract_no, ty, &mut blackhole) {
+            match ns.resolve_type(contract_no, true, ty, &mut blackhole) {
                 Ok(resolver::Type::Struct(n)) => {
                     return struct_literal(loc, n, args, cfg, contract_no, ns, vartab, errors);
                 }
@@ -2506,7 +2506,7 @@ pub fn constructor_named_args(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let no = match ns.resolve_type(contract_no, ty, errors)? {
+    let no = match ns.resolve_type(contract_no, false, ty, errors)? {
         resolver::Type::Contract(n) => n,
         _ => {
             errors.push(Output::error(*loc, "contract expected".to_string()));
@@ -2655,7 +2655,7 @@ pub fn new(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let ty = ns.resolve_type(contract_no, ty, errors)?;
+    let ty = ns.resolve_type(contract_no, false, ty, errors)?;
 
     match &ty {
         resolver::Type::Array(ty, dim) => {

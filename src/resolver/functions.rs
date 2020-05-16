@@ -114,7 +114,7 @@ pub fn function_decl(
             }
         };
 
-        match ns.resolve_type(Some(contract_no), &p.ty, errors) {
+        match ns.resolve_type(Some(contract_no), false, &p.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
@@ -172,7 +172,7 @@ pub fn function_decl(
             }
         };
 
-        match ns.resolve_type(Some(contract_no), &r.ty, errors) {
+        match ns.resolve_type(Some(contract_no), false, &r.ty, errors) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {

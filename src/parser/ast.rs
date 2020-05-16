@@ -24,7 +24,9 @@ pub enum SourceUnitPart {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Type {
-    Address(bool),
+    Address,
+    AddressPayable,
+    Payable,
     Bool,
     String,
     Int(u16),
@@ -37,8 +39,9 @@ pub enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Address(false) => write!(f, "address"),
-            Type::Address(true) => write!(f, "address payable"),
+            Type::Address => write!(f, "address"),
+            Type::Payable => write!(f, "payable"),
+            Type::AddressPayable => write!(f, "address payable"),
             Type::Bool => write!(f, "bool"),
             Type::String => write!(f, "string"),
             Type::Int(n) => write!(f, "int{}", n),

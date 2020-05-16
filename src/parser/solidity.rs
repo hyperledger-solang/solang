@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.19.0"
-// sha256: 2ae969338db3dfd36522c3a7a103da987f21c2146af936f5f899e11fbc4edb
+// sha256: 71c1e9114555035305473583580168cbc7ee94cd03b1d668fd2a8bfdd7d75
 use std::str::FromStr;
 use num_bigint::BigInt;
 use parser::ast::*;
@@ -10197,7 +10197,7 @@ fn __action11<
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
-    Type::Address(false)
+    Type::Address
 }
 
 #[allow(unused_variables)]
@@ -10209,7 +10209,7 @@ fn __action12<
     (_, __1, _): (usize, Token<'input>, usize),
 ) -> Type
 {
-    Type::Address(true)
+    Type::AddressPayable
 }
 
 #[allow(unused_variables)]
@@ -10220,7 +10220,7 @@ fn __action13<
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
-    Type::Address(true)
+    Type::Payable
 }
 
 #[allow(unused_variables)]

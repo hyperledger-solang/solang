@@ -34,9 +34,10 @@ DocComments: Vec<String> = {
 
 Type: Type = {
     "bool" => Type::Bool,
-    "address" => Type::Address(false),
-    "address" "payable" => Type::Address(true),
-    "payable" => Type::Address(true),
+    "address" => Type::Address,
+    "address" "payable" => Type::AddressPayable,
+    // payable is only used as a cast in solc
+    "payable" => Type::Payable,
     "string" => Type::String,
     "bytes" => Type::DynamicBytes,
     Uint => Type::Uint(<>),

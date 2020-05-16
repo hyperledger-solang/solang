@@ -439,4 +439,32 @@ fn address_payable_type() {
     );
 
     no_errors(errors);
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(payable a) public {
+                address b = a;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "‘payable’ cannot be used for type declarations, only casting. use ‘address payable’"
+    );
+
+    // note: this is not possible in solc yet
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(address a) public {
+                address payable b = address payable(a);
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    no_errors(errors);
 }

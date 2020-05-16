@@ -40,7 +40,7 @@ fn var_decl(
     vartab: &mut Vartable,
     errors: &mut Vec<Output>,
 ) -> bool {
-    let ty = match ns.resolve_type(Some(contract_no), &s.ty, errors) {
+    let ty = match ns.resolve_type(Some(contract_no), false, &s.ty, errors) {
         Ok(s) => s,
         Err(()) => {
             return false;
