@@ -34,7 +34,9 @@ DocComments: Vec<String> = {
 
 Type: Type = {
     "bool" => Type::Bool,
-    "address" => Type::Address,
+    "address" => Type::Address(false),
+    "address" "payable" => Type::Address(true),
+    "payable" => Type::Address(true),
     "string" => Type::String,
     "bytes" => Type::DynamicBytes,
     Uint => Type::Uint(<>),

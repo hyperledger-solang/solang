@@ -3820,7 +3820,7 @@ impl<'a> Contract<'a> {
             resolver::Type::Int(n) | resolver::Type::Uint(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
             }
-            resolver::Type::Contract(_) | resolver::Type::Address => BasicTypeEnum::IntType(
+            resolver::Type::Contract(_) | resolver::Type::Address(_) => BasicTypeEnum::IntType(
                 self.context
                     .custom_width_int_type(self.ns.address_length as u32 * 8),
             ),
@@ -3907,7 +3907,7 @@ impl resolver::Type {
             resolver::Type::Bool
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Bytes(_) => !self.stack_based(),
             resolver::Type::Enum(_) => true,
             resolver::Type::Struct(_) => true,
@@ -3928,7 +3928,7 @@ impl resolver::Type {
             resolver::Type::Bool => false,
             resolver::Type::Int(n) => *n > 64,
             resolver::Type::Uint(n) => *n > 64,
-            resolver::Type::Contract(_) | resolver::Type::Address => true,
+            resolver::Type::Contract(_) | resolver::Type::Address(_) => true,
             resolver::Type::Bytes(n) => *n > 8,
             resolver::Type::Enum(_) => false,
             resolver::Type::Struct(_) => true,

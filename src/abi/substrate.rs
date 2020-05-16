@@ -516,7 +516,7 @@ fn ty_to_abi(ty: &resolver::Type, ns: &resolver::Namespace, registry: &mut Regis
         resolver::Type::Bool
         | resolver::Type::Uint(_)
         | resolver::Type::Int(_)
-        | resolver::Type::Address
+        | resolver::Type::Address(_)
         | resolver::Type::Contract(_) => {
             let scalety = primitive_to_string(ty.clone());
 
@@ -562,7 +562,7 @@ fn primitive_to_string(ty: resolver::Type) -> String {
         resolver::Type::Bool => "bool".into(),
         resolver::Type::Uint(n) => format!("u{}", n),
         resolver::Type::Int(n) => format!("i{}", n),
-        resolver::Type::Contract(_) | resolver::Type::Address => "address".into(),
+        resolver::Type::Contract(_) | resolver::Type::Address(_) => "address".into(),
         _ => unreachable!(),
     }
 }

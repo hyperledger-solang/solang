@@ -403,7 +403,7 @@ fn signatures() {
             },
             Parameter {
                 name: "".to_string(),
-                ty: Type::Address,
+                ty: Type::Address(false),
             },
         ],
         Vec::new(),

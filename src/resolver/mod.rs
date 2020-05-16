@@ -30,7 +30,7 @@ pub type ArrayDimension = Option<(ast::Loc, BigInt)>;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
-    Address,
+    Address(bool),
     Bool,
     Int(u16),
     Uint(u16),
@@ -51,7 +51,8 @@ impl Type {
     pub fn to_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
-            Type::Address => "address".to_string(),
+            Type::Address(false) => "address".to_string(),
+            Type::Address(true) => "address payable".to_string(),
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
             Type::Bytes(n) => format!("bytes{}", n),
@@ -81,7 +82,7 @@ impl Type {
     pub fn is_primitive(&self) -> bool {
         match self {
             Type::Bool => true,
-            Type::Address => true,
+            Type::Address(_) => true,
             Type::Int(_) => true,
             Type::Uint(_) => true,
             Type::Bytes(_) => true,
@@ -94,7 +95,7 @@ impl Type {
     pub fn to_signature_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
-            Type::Contract(_) | Type::Address => "address".to_string(),
+            Type::Contract(_) | Type::Address(_) => "address".to_string(),
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
             Type::Bytes(n) => format!("bytes{}", n),
@@ -174,7 +175,7 @@ impl Type {
         match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
-            Type::Contract(_) | Type::Address => BigInt::from(ns.address_length),
+            Type::Contract(_) | Type::Address(_) => BigInt::from(ns.address_length),
             Type::Bytes(n) => BigInt::from(*n),
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Array(ty, dims) => {
@@ -200,7 +201,7 @@ impl Type {
 
     pub fn bits(&self, ns: &Namespace) -> u16 {
         match self {
-            Type::Address => ns.address_length as u16 * 8,
+            Type::Address(_) => ns.address_length as u16 * 8,
             Type::Bool => 1,
             Type::Int(n) => *n,
             Type::Uint(n) => *n,
@@ -262,7 +263,7 @@ impl Type {
     pub fn is_reference_type(&self) -> bool {
         match self {
             Type::Bool => false,
-            Type::Address => false,
+            Type::Address(_) => false,
             Type::Int(_) => false,
             Type::Uint(_) => false,
             Type::Bytes(_) => false,
@@ -495,7 +496,7 @@ impl FunctionDecl {
                 fn type_to_wasm_name(ty: &Type, ns: &Namespace) -> String {
                     match ty {
                         Type::Bool => "bool".to_string(),
-                        Type::Address => "address".to_string(),
+                        Type::Address(_) => "address".to_string(),
                         Type::Int(n) => format!("int{}", n),
                         Type::Uint(n) => format!("uint{}", n),
                         Type::Bytes(n) => format!("bytes{}", n),
@@ -537,7 +538,7 @@ impl From<&ast::Type> for Type {
     fn from(p: &ast::Type) -> Type {
         match p {
             ast::Type::Bool => Type::Bool,
-            ast::Type::Address => Type::Address,
+            ast::Type::Address(payable) => Type::Address(*payable),
             ast::Type::Int(n) => Type::Int(*n),
             ast::Type::Uint(n) => Type::Uint(*n),
             ast::Type::Bytes(n) => Type::Bytes(*n),

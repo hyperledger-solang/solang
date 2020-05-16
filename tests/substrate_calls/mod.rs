@@ -109,7 +109,7 @@ fn contract_type() {
             }
 
             function test2(address x) public {
-                printer y = x;
+                printer y = printer(x);
             }
         }"#,
         Target::Substrate,
@@ -121,7 +121,7 @@ fn contract_type() {
         r#"
         contract printer {
             function test() public {
-                printer x = address(102);
+                printer x = printer(address(102));
             }
         }"#,
         Target::Substrate,
@@ -223,7 +223,7 @@ fn external_call_not_exist() {
         r##"
         contract c {
             function test() public {
-                other o = address(102);
+                other o = other(address(102));
 
                 o.test();
             }

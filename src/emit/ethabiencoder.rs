@@ -26,7 +26,7 @@ impl EthAbiEncoder {
     ) {
         match &ty {
             resolver::Type::Bool
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Contract(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
@@ -462,13 +462,13 @@ impl EthAbiEncoder {
                 contract.builder.build_store(dest, arg);
             }
             resolver::Type::Contract(_)
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Int(_)
                 if load =>
             {
                 let n = match ty {
-                    resolver::Type::Contract(_) | resolver::Type::Address => {
+                    resolver::Type::Contract(_) | resolver::Type::Address(_) => {
                         contract.ns.address_length as u16 * 8
                     }
                     resolver::Type::Uint(b) => *b,
@@ -549,13 +549,13 @@ impl EthAbiEncoder {
                 );
             }
             resolver::Type::Contract(_)
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Int(_)
                 if !load =>
             {
                 let n = match ty {
-                    resolver::Type::Contract(_) | resolver::Type::Address => {
+                    resolver::Type::Contract(_) | resolver::Type::Address(_) => {
                         contract.ns.address_length as u16 * 8
                     }
                     resolver::Type::Uint(b) => *b,
@@ -887,7 +887,7 @@ impl EthAbiEncoder {
         match ty {
             resolver::Type::Bool
             | resolver::Type::Contract(_)
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Bytes(_) => 32,
@@ -1000,7 +1000,7 @@ impl EthAbiEncoder {
 
                 val
             }
-            resolver::Type::Address | resolver::Type::Contract(_) => {
+            resolver::Type::Address(_) | resolver::Type::Contract(_) => {
                 let int_type = contract
                     .context
                     .custom_width_int_type(contract.ns.address_length as u32 * 8);
