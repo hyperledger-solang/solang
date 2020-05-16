@@ -364,10 +364,18 @@ pub enum FunctionAttribute {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum FunctionTy {
+    Constructor,
+    Function,
+    Fallback,
+    Receive,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct FunctionDefinition {
     pub doc: Vec<String>,
     pub loc: Loc,
-    pub constructor: bool,
+    pub ty: FunctionTy,
     pub name: Option<Identifier>,
     pub params: Vec<(Loc, Option<Parameter>)>,
     pub attributes: Vec<FunctionAttribute>,

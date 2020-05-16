@@ -27,13 +27,13 @@ pub fn function_decl(
 
     // The parser allows constructors to have return values. This is so that we can give a
     // nicer error message than "returns unexpected"
-    if f.constructor && !f.returns.is_empty() {
+    if f.ty == ast::FunctionTy::Constructor && !f.returns.is_empty() {
         errors.push(Output::warning(
             f.loc,
             "constructor cannot have return values".to_string(),
         ));
         return false;
-    } else if !f.constructor && f.name == None {
+    } else if f.ty != ast::FunctionTy::Constructor && f.name == None {
         if !f.returns.is_empty() {
             errors.push(Output::warning(
                 f.loc,
@@ -242,7 +242,7 @@ pub fn function_decl(
 
     let (name, fallback) = match f.name {
         Some(ref n) => (n.name.to_owned(), false),
-        None => ("".to_owned(), !f.constructor),
+        None => ("".to_owned(), f.ty != ast::FunctionTy::Constructor),
     };
 
     let fdecl = FunctionDecl::new(
@@ -258,7 +258,7 @@ pub fn function_decl(
         ns,
     );
 
-    if f.constructor {
+    if f.ty == ast::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
         if ns.target == Target::Ewasm && !ns.contracts[contract_no].constructors.is_empty() {
             let prev = &ns.contracts[contract_no].constructors[i];
