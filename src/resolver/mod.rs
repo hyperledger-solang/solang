@@ -1409,7 +1409,7 @@ fn resolve_contract_bodies(
                                 }
                             }
                             Some(ast::StateMutability::Payable(_)) => {
-                                unimplemented!();
+                                //
                             }
                             None => {
                                 let loc = &ns.contracts[contract_no].functions[f].loc;
