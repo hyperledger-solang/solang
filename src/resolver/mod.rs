@@ -538,7 +538,9 @@ impl From<&ast::Type> for Type {
     fn from(p: &ast::Type) -> Type {
         match p {
             ast::Type::Bool => Type::Bool,
-            ast::Type::Address(payable) => Type::Address(*payable),
+            ast::Type::Address => Type::Address(false),
+            ast::Type::AddressPayable => Type::Address(true),
+            ast::Type::Payable => Type::Address(true),
             ast::Type::Int(n) => Type::Int(*n),
             ast::Type::Uint(n) => Type::Uint(*n),
             ast::Type::Bytes(n) => Type::Bytes(*n),
@@ -881,9 +883,12 @@ impl Namespace {
     }
 
     /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
+    /// The type for address payable is "address payble" used as a type, and "payable" when
+    /// casting. So, we need to know what we are resolving for.
     pub fn resolve_type(
         &self,
         contract_no: Option<usize>,
+        casting: bool,
         id: &ast::Expression,
         errors: &mut Vec<Output>,
     ) -> Result<Type, ()> {
@@ -922,36 +927,49 @@ impl Namespace {
         if let ast::Expression::Type(_, ty) = &id {
             assert_eq!(contract_name, None);
 
-            let ty = if let ast::Type::Mapping(_, k, v) = ty {
-                let key = self.resolve_type(contract_no, k, errors)?;
-                let value = self.resolve_type(contract_no, v, errors)?;
+            let ty = match ty {
+                ast::Type::Mapping(_, k, v) => {
+                    let key = self.resolve_type(contract_no, false, k, errors)?;
+                    let value = self.resolve_type(contract_no, false, v, errors)?;
 
-                match key {
-                    Type::Mapping(_, _) => {
-                        errors.push(Output::decl_error(
-                            k.loc(),
-                            "key of mapping cannot be another mapping type".to_string(),
-                        ));
-                        return Err(());
+                    match key {
+                        Type::Mapping(_, _) => {
+                            errors.push(Output::decl_error(
+                                k.loc(),
+                                "key of mapping cannot be another mapping type".to_string(),
+                            ));
+                            return Err(());
+                        }
+                        Type::Struct(_) => {
+                            errors.push(Output::decl_error(
+                                k.loc(),
+                                "key of mapping cannot be struct type".to_string(),
+                            ));
+                            return Err(());
+                        }
+                        Type::Array(_, _) => {
+                            errors.push(Output::decl_error(
+                                k.loc(),
+                                "key of mapping cannot be array type".to_string(),
+                            ));
+                            return Err(());
+                        }
+                        _ => Type::Mapping(Box::new(key), Box::new(value)),
                     }
-                    Type::Struct(_) => {
-                        errors.push(Output::decl_error(
-                            k.loc(),
-                            "key of mapping cannot be struct type".to_string(),
-                        ));
-                        return Err(());
-                    }
-                    Type::Array(_, _) => {
-                        errors.push(Output::decl_error(
-                            k.loc(),
-                            "key of mapping cannot be array type".to_string(),
-                        ));
-                        return Err(());
-                    }
-                    _ => Type::Mapping(Box::new(key), Box::new(value)),
                 }
-            } else {
-                Type::from(ty)
+                ast::Type::Payable => {
+                    if !casting {
+                        errors.push(Output::decl_error(
+                            id.loc(),
+                            "‘payable’ cannot be used for type declarations, only casting. use ‘address payable’"
+                                .to_string(),
+                        ));
+                        return Err(());
+                    } else {
+                        Type::Address(true)
+                    }
+                }
+                _ => Type::from(ty),
             };
 
             return if dimensions.is_empty() {
