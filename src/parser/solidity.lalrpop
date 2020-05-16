@@ -329,58 +329,35 @@ FunctionAttribute: FunctionAttribute = {
     Visibility => FunctionAttribute::Visibility(<>),
 }
 
+FunctionTy: FunctionTy = {
+    "constructor" => FunctionTy::Constructor,
+    "fallback" => FunctionTy::Fallback,
+    "receive" => FunctionTy::Receive,
+    "function" => FunctionTy::Function,
+}
+
+BlockStatementOrSemiColon: Statement = {
+    ";" => Statement::Empty,
+    BlockStatement => Statement::BlockStatement(<>),
+}
+
 FunctionDefinition: Box<FunctionDefinition> = {
-    <d:DocComments> <l:@L> "constructor" <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
-        let returns = match r {
-            None => vec!(),
-            Some(v) => v,
-        };
+    <doc:DocComments> <l:@L> <ty:FunctionTy> <name:Identifier?> <params:ParameterList>
+    <attributes:FunctionAttribute*>
+    <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+        let returns = returns.unwrap_or(Vec::new());
 
         Box::new(FunctionDefinition{
-            doc: d,
-            loc: Loc(l, e),
-            constructor: true,
-            name: None,
-            params: a,
-            attributes: t,
-            returns: returns,
-            body: Statement::BlockStatement(b),
+            doc,
+            loc: Loc(l, r),
+            ty,
+            name,
+            params,
+            attributes,
+            returns,
+            body,
         })
     },
-    <d:DocComments> <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> ";" <e:@R> => {
-        let returns = match r {
-            None => vec!(),
-            Some(v) => v,
-        };
-
-        Box::new(FunctionDefinition{
-            doc: d,
-            loc: Loc(l, e),
-            constructor: false,
-            name: n,
-            params: a,
-            attributes: t,
-            returns: returns,
-            body: Statement::Empty,
-        })
-    },
-    <d:DocComments> <l:@L> "function" <n:Identifier?> <a:ParameterList> <t:FunctionAttribute*> <r:("returns" <ParameterList>)?> <b:BlockStatement> <e:@R> => {
-        let returns = match r {
-            None => vec!(),
-            Some(v) => v,
-        };
-
-        Box::new(FunctionDefinition{
-            doc: d,
-            loc: Loc(l, e),
-            constructor: false,
-            name: n,
-            params: a,
-            attributes: t,
-            returns: returns,
-            body: Statement::BlockStatement(b),
-        })
-    }
 }
 
 BlockStatement: BlockStatement = {
@@ -602,6 +579,8 @@ extern {
         "mapping" => Token::Mapping,
         "try" => Token::Try,
         "catch" => Token::Catch,
+        "receive" => Token::Receive,
+        "fallback" => Token::Fallback,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

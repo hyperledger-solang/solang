@@ -147,6 +147,9 @@ pub enum Token<'input> {
 
     Try,
     Catch,
+
+    Receive,
+    Fallback,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -254,6 +257,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Arrow => write!(f, "=>"),
             Token::Try => write!(f, "try"),
             Token::Catch => write!(f, "catch"),
+            Token::Receive => write!(f, "receive"),
+            Token::Fallback => write!(f, "fallback"),
         }
     }
 }
@@ -452,6 +457,8 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "while" => Token::While,
     "try" => Token::Try,
     "catch" => Token::Catch,
+    "receive" => Token::Receive,
+    "fallback" => Token::Fallback,
 };
 
 impl<'input> Lexer<'input> {
