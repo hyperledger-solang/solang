@@ -2133,7 +2133,7 @@ impl resolver::Type {
                 Expression::NumberLiteral(ast::Loc(0, 0), *b, BigInt::from(0))
             }
             resolver::Type::Bool => Expression::BoolLiteral(ast::Loc(0, 0), false),
-            resolver::Type::Address => Expression::NumberLiteral(
+            resolver::Type::Address(_) => Expression::NumberLiteral(
                 ast::Loc(0, 0),
                 ns.address_length as u16 * 8,
                 BigInt::from(0),

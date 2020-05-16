@@ -353,3 +353,90 @@ fn address() {
 
     runtime.function("check_param", val);
 }
+
+#[test]
+fn address_payable_type() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(address payable a) public {
+                address b = a;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion to address from address payable not allowed"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(address a) public {
+                other b = a;
+            }
+        }
+        
+        contract other {
+            function test() public {
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion to contract other from address not allowed"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(address payable a) public {
+                other b = a;
+            }
+        }
+        
+        contract other {
+            function test() public {
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion to contract other from address payable not allowed"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(address payable a) public {
+                other b = other(a);
+            }
+        }
+        
+        contract other {
+            function test() public {
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    no_errors(errors);
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(address payable a) public {
+                address b = address(a);
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    no_errors(errors);
+}

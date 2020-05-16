@@ -688,6 +688,23 @@ pub fn cast(
         _ => (),
     };
 
+    cast_types(
+        loc, expr, from_conv, to_conv, from, to, implicit, ns, errors,
+    )
+}
+
+/// Do casting between types (no literals)
+fn cast_types(
+    loc: &ast::Loc,
+    expr: Expression,
+    from_conv: resolver::Type,
+    to_conv: resolver::Type,
+    from: &resolver::Type,
+    to: &resolver::Type,
+    implicit: bool,
+    ns: &resolver::Namespace,
+    errors: &mut Vec<output::Output>,
+) -> Result<Expression, ()> {
     let address_bits = ns.address_length as u16 * 8;
 
     #[allow(clippy::comparison_chain)]
@@ -777,8 +794,8 @@ pub fn cast(
             }
         }
         // Casting int to address
-        (resolver::Type::Uint(from_len), resolver::Type::Address)
-        | (resolver::Type::Int(from_len), resolver::Type::Address) => {
+        (resolver::Type::Uint(from_len), resolver::Type::Address(_))
+        | (resolver::Type::Int(from_len), resolver::Type::Address(_)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -797,8 +814,8 @@ pub fn cast(
             }
         }
         // Casting int address to int
-        (resolver::Type::Address, resolver::Type::Uint(to_len))
-        | (resolver::Type::Address, resolver::Type::Int(to_len)) => {
+        (resolver::Type::Address(_), resolver::Type::Uint(to_len))
+        | (resolver::Type::Address(_), resolver::Type::Int(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -917,7 +934,7 @@ pub fn cast(
         }
         // Explicit conversion from bytesN to address only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
-        (resolver::Type::Bytes(from_len), resolver::Type::Address) => {
+        (resolver::Type::Bytes(from_len), resolver::Type::Address(_)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -942,12 +959,28 @@ pub fn cast(
                 Ok(expr)
             }
         }
-        // Implicit conversion between address and contract is allowed
-        (resolver::Type::Address, resolver::Type::Contract(_))
-        | (resolver::Type::Contract(_), resolver::Type::Address) => Ok(expr),
+        // Implicit conversion between contract and address is allowed
+        (resolver::Type::Contract(_), resolver::Type::Address(false)) => Ok(expr),
+        (resolver::Type::Address(_), resolver::Type::Contract(_))
+        | (resolver::Type::Contract(_), resolver::Type::Address(true))
+        | (resolver::Type::Address(_), resolver::Type::Address(_)) => {
+            if implicit {
+                errors.push(Output::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion to {} from {} not allowed",
+                        to.to_string(ns),
+                        from.to_string(ns)
+                    ),
+                ));
+                Err(())
+            } else {
+                Ok(expr)
+            }
+        }
         // Explicit conversion to bytesN from int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
-        (resolver::Type::Address, resolver::Type::Bytes(to_len)) => {
+        (resolver::Type::Address(_), resolver::Type::Bytes(to_len)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -1097,7 +1130,7 @@ pub fn expression(
                             ns.address_length as u16 * 8,
                             BigInt::from_str_radix(&s, 16).unwrap(),
                         ),
-                        resolver::Type::Address,
+                        resolver::Type::Address(false),
                     ))
                 } else {
                     errors.push(Output::error(
@@ -4271,7 +4304,8 @@ fn method_call_pos_args(
                             &var.loc(),
                             var_expr,
                             &var_ty,
-                            &resolver::Type::Address,
+                            // FIXME: make payable if function is payable
+                            &resolver::Type::Address(false),
                             true,
                             ns,
                             errors,
@@ -4405,7 +4439,8 @@ fn method_call_with_named_args(
                             &var.loc(),
                             var_expr,
                             &var_ty,
-                            &resolver::Type::Address,
+                            // FIXME: make payable if function is payable
+                            &resolver::Type::Address(false),
                             true,
                             ns,
                             errors,

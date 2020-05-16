@@ -382,7 +382,7 @@ impl SubstrateTarget {
                 (val.into(), 1)
             }
             resolver::Type::Contract(_)
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Int(_) => {
                 let bits = match ty {
@@ -491,7 +491,7 @@ impl SubstrateTarget {
     ) -> BasicValueEnum<'b> {
         match &ty {
             resolver::Type::Bool
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Contract(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
@@ -767,7 +767,7 @@ impl SubstrateTarget {
                 1
             }
             resolver::Type::Contract(_)
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Uint(_)
             | resolver::Type::Int(_) => {
                 let len = match ty {
@@ -848,7 +848,7 @@ impl SubstrateTarget {
     ) {
         match &ty {
             resolver::Type::Bool
-            | resolver::Type::Address
+            | resolver::Type::Address(_)
             | resolver::Type::Contract(_)
             | resolver::Type::Int(_)
             | resolver::Type::Uint(_)
@@ -1063,7 +1063,7 @@ impl SubstrateTarget {
                 contract.context.i32_type().const_int(*n as u64 / 8, false)
             }
             resolver::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
-            resolver::Type::Address | resolver::Type::Contract(_) => contract
+            resolver::Type::Address(_) | resolver::Type::Contract(_) => contract
                 .context
                 .i32_type()
                 .const_int(contract.ns.address_length as u64, false),
