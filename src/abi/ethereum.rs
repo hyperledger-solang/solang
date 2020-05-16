@@ -17,13 +17,13 @@ pub struct ABIParam {
 
 #[derive(Serialize)]
 pub struct ABI {
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub name: String,
     #[serde(rename = "type")]
     pub ty: String,
     pub inputs: Vec<ABIParam>,
+    // outputs should be skipped if ty is constructor
     pub outputs: Vec<ABIParam>,
-    pub constant: bool,
-    pub payable: bool,
     #[serde(rename = "stateMutability")]
     pub mutability: &'static str,
 }
@@ -64,17 +64,9 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         .iter()
         .map(|f| ABI {
             name: "".to_owned(),
-            constant: match &f.cfg {
-                Some(cfg) => !cfg.writes_contract_storage,
-                None => false,
-            },
             mutability: match &f.mutability {
                 Some(n) => n.to_string(),
                 None => "nonpayable",
-            },
-            payable: match &f.mutability {
-                Some(ast::StateMutability::Payable(_)) => true,
-                _ => false,
             },
             ty: "constructor".to_owned(),
             inputs: f
@@ -101,17 +93,9 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                 })
                 .map(|f| ABI {
                     name: f.name.to_owned(),
-                    constant: match &f.cfg {
-                        Some(cfg) => !cfg.writes_contract_storage,
-                        None => false,
-                    },
                     mutability: match &f.mutability {
                         Some(n) => n.to_string(),
                         None => "nonpayable",
-                    },
-                    payable: match &f.mutability {
-                        Some(ast::StateMutability::Payable(_)) => true,
-                        _ => false,
                     },
                     ty: if f.name == "" {
                         "fallback".to_owned()
