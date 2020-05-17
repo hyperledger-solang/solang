@@ -603,6 +603,7 @@ pub struct Namespace {
     pub structs: Vec<StructDecl>,
     pub contracts: Vec<Contract>,
     pub address_length: usize,
+    pub value_length: usize,
     symbols: HashMap<(Option<usize>, String), Symbol>,
 }
 
@@ -614,6 +615,7 @@ impl Namespace {
             structs: Vec::new(),
             contracts: Vec::new(),
             address_length,
+            value_length: 128,
             symbols: HashMap::new(),
         }
     }
@@ -1201,9 +1203,20 @@ impl Contract {
         }
     }
 
+    /// Return the index of the fallback function, if any
     pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
             if f.ty == ast::FunctionTy::Fallback {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    /// Return the index of the receive function, if any
+    pub fn receive_function(&self) -> Option<usize> {
+        for (i, f) in self.functions.iter().enumerate() {
+            if f.ty == ast::FunctionTy::Receive {
                 return Some(i);
             }
         }

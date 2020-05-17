@@ -63,6 +63,7 @@ pub enum Extern {
     call,
     returnDataCopy,
     getReturnDataSize,
+    getCallValue,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -392,6 +393,20 @@ impl Externals for TestRuntime {
 
                 Ok(Some(RuntimeValue::I32(ret)))
             }
+            Some(Extern::getCallValue) => {
+                let value_ptr: u32 = args.nth_checked(0)?;
+
+                let value = [0u8; 16];
+
+                self.vm
+                    .last()
+                    .unwrap()
+                    .memory
+                    .set(value_ptr, &value)
+                    .expect("set value");
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -413,6 +428,7 @@ impl ModuleImportResolver for TestRuntime {
             "call" => Extern::call,
             "returnDataCopy" => Extern::returnDataCopy,
             "getReturnDataSize" => Extern::getReturnDataSize,
+            "getCallValue" => Extern::getCallValue,
             _ => {
                 panic!("{} not implemented", field_name);
             }

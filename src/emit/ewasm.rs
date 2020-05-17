@@ -85,6 +85,7 @@ impl EwasmTarget {
             "create",
             "getReturnDataSize",
             "returnDataCopy",
+            "getCallValue",
         ]);
 
         deploy_code
@@ -98,6 +99,11 @@ impl EwasmTarget {
         let entry = contract.context.append_basic_block(function, "entry");
 
         contract.builder.position_at_end(entry);
+
+        // first thing to do is abort value transfers if we're not payable
+        if contract.abort_all_value_transfers {
+            contract.abort_if_value_transfer(self, function);
+        }
 
         // init our heap
         contract.builder.build_call(
@@ -157,6 +163,16 @@ impl EwasmTarget {
         let entry = contract.context.append_basic_block(function, "entry");
 
         contract.builder.position_at_end(entry);
+
+        // first thing to do is abort value transfers if constructors not payable
+        if !contract
+            .contract
+            .functions
+            .iter()
+            .any(|f| f.is_constructor() && f.is_payable())
+        {
+            contract.abort_if_value_transfer(self, function);
+        }
 
         // init our heap
         contract.builder.build_call(
@@ -376,6 +392,21 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
 
+        contract.module.add_function(
+            "getCallValue",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // value_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
         let noreturn = contract
             .context
             .create_enum_attribute(Attribute::get_named_enum_kind_id("noreturn"), 0);
@@ -435,6 +466,7 @@ impl EwasmTarget {
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
 
+        // ewasm only allows one constructor, hence find()
         if let Some((i, con)) = contract
             .contract
             .functions
@@ -482,8 +514,6 @@ impl EwasmTarget {
 
         let (argsdata, argslen) = self.runtime_prelude(contract, function);
 
-        let fallback_block = contract.context.append_basic_block(function, "fallback");
-
         contract.emit_function_dispatch(
             &contract.contract.functions,
             ast::FunctionTy::Function,
@@ -491,25 +521,9 @@ impl EwasmTarget {
             argsdata,
             argslen,
             function,
-            fallback_block,
+            None,
             self,
         );
-
-        // emit fallback code
-        contract.builder.position_at_end(fallback_block);
-
-        match contract.contract.fallback_function() {
-            Some(f) => {
-                contract.builder.build_call(contract.functions[f], &[], "");
-
-                contract
-                    .builder
-                    .build_return(Some(&contract.context.i32_type().const_zero()));
-            }
-            None => {
-                contract.builder.build_unreachable();
-            }
-        }
     }
 
     fn encode<'b>(
@@ -954,9 +968,9 @@ impl TargetRuntime for EwasmTarget {
             "",
         );
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
+        // since finish is marked noreturn, this should be optimized away
+        // however it is needed to create valid LLVM IR
+        contract.builder.build_unreachable();
     }
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
@@ -966,9 +980,22 @@ impl TargetRuntime for EwasmTarget {
             "",
         );
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
+        // since finish is marked noreturn, this should be optimized away
+        // however it is needed to create valid LLVM IR
+        contract.builder.build_unreachable();
+    }
+
+    // ewasm main cannot return any value
+    fn return_u32<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, len: IntValue) {
@@ -1068,20 +1095,15 @@ impl TargetRuntime for EwasmTarget {
             params,
         );
 
-        // balance is a u128
-        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+        // value is a u128
+        let value = contract.emit_global_string("value", &[0u8; 8], true);
 
         // call create
         let ret = contract
             .builder
             .build_call(
                 contract.module.get_function("create").unwrap(),
-                &[
-                    balance.into(),
-                    input.into(),
-                    input_len.into(),
-                    address.into(),
-                ],
+                &[value.into(), input.into(), input_len.into(), address.into()],
                 "",
             )
             .try_as_basic_value()
@@ -1128,8 +1150,8 @@ impl TargetRuntime for EwasmTarget {
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
     ) -> IntValue<'b> {
-        // balance is a u128
-        let balance = contract.emit_global_string("balance", &[0u8; 8], true);
+        // value is a u128
+        let value = contract.emit_global_string("value", &[0u8; 8], true);
 
         // call create
         contract
@@ -1139,7 +1161,7 @@ impl TargetRuntime for EwasmTarget {
                 &[
                     contract.context.i64_type().const_zero().into(),
                     address.into(),
-                    balance.into(),
+                    value.into(),
                     payload.into(),
                     payload_len.into(),
                 ],
@@ -1253,5 +1275,30 @@ impl TargetRuntime for EwasmTarget {
         );
 
         v
+    }
+
+    /// ewasm value is always 128 bits
+    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
+        let value = contract
+            .builder
+            .build_alloca(contract.value_type(), "value_transferred");
+
+        contract.builder.build_call(
+            contract.module.get_function("getCallValue").unwrap(),
+            &[contract
+                .builder
+                .build_pointer_cast(
+                    value,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
+            "value_transferred",
+        );
+
+        contract
+            .builder
+            .build_load(value, "value_transferred")
+            .into_int_value()
     }
 }

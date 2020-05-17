@@ -204,8 +204,6 @@ impl SabreTarget {
 
         contract.builder.position_at_end(function_block);
 
-        let fallback_block = contract.context.append_basic_block(function, "fallback");
-
         contract.emit_function_dispatch(
             &contract.contract.functions,
             ast::FunctionTy::Function,
@@ -213,29 +211,9 @@ impl SabreTarget {
             argsdata,
             argslen,
             function,
-            fallback_block,
+            None,
             self,
         );
-
-        // emit fallback code
-        contract.builder.position_at_end(fallback_block);
-
-        match contract.contract.fallback_function() {
-            Some(f) => {
-                contract.builder.build_call(contract.functions[f], &[], "");
-
-                // return 1 for success
-                contract
-                    .builder
-                    .build_return(Some(&contract.context.i32_type().const_int(1, false)));
-            }
-            None => {
-                // return -3 for failure
-                contract.builder.build_return(Some(
-                    &contract.context.i32_type().const_int(-3i64 as u64, true),
-                ));
-            }
-        }
     }
 }
 
@@ -764,5 +742,14 @@ impl TargetRuntime for SabreTarget {
     /// Get return buffer for external call
     fn return_data<'b>(&self, _contract: &Contract<'b>) -> PointerValue<'b> {
         panic!("Sabre cannot call other contracts");
+    }
+
+    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
+        contract.builder.build_return(Some(&ret));
+    }
+
+    /// Sabre does not know about balances
+    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
+        contract.value_type().const_zero()
     }
 }

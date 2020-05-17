@@ -47,6 +47,7 @@ impl SubstrateTarget {
             "ext_println",
             "ext_instantiate",
             "ext_call",
+            "ext_value_transferred",
         ]);
 
         c
@@ -56,6 +57,7 @@ impl SubstrateTarget {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
+        abort_value_transfers: bool,
     ) -> (PointerValue<'a>, IntValue<'a>) {
         let entry = contract.context.append_basic_block(function, "entry");
 
@@ -107,6 +109,11 @@ impl SubstrateTarget {
             contract.context.i32_type().ptr_type(AddressSpace::Generic),
             "",
         );
+
+        // after copying stratch, first thing to do is abort value transfers if constructors not payable
+        if abort_value_transfers {
+            contract.abort_if_value_transfer(self, function);
+        }
 
         (args, args_length.into_int_value())
     }
@@ -286,6 +293,12 @@ impl SubstrateTarget {
             ),
             Some(Linkage::External),
         );
+
+        contract.module.add_function(
+            "ext_value_transferred",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
     }
 
     fn emit_deploy(&self, contract: &Contract) {
@@ -298,7 +311,15 @@ impl SubstrateTarget {
             None,
         );
 
-        let (deploy_args, deploy_args_length) = self.public_function_prelude(contract, function);
+        let (deploy_args, deploy_args_length) = self.public_function_prelude(
+            contract,
+            function,
+            contract
+                .contract
+                .functions
+                .iter()
+                .all(|f| f.is_constructor() && !f.is_payable()),
+        );
 
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
@@ -312,7 +333,7 @@ impl SubstrateTarget {
             deploy_args,
             deploy_args_length,
             function,
-            fallback_block,
+            Some(fallback_block),
             self,
         );
 
@@ -331,9 +352,8 @@ impl SubstrateTarget {
             None,
         );
 
-        let (call_args, call_args_length) = self.public_function_prelude(contract, function);
-
-        let fallback_block = contract.context.append_basic_block(function, "fallback");
+        let (call_args, call_args_length) =
+            self.public_function_prelude(contract, function, contract.abort_all_value_transfers);
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
@@ -342,26 +362,9 @@ impl SubstrateTarget {
             call_args,
             call_args_length,
             function,
-            fallback_block,
+            None,
             self,
         );
-
-        // emit fallback code
-        contract.builder.position_at_end(fallback_block);
-
-        if let Some(fallback) = contract.contract.fallback_function() {
-            contract
-                .builder
-                .build_call(contract.functions[fallback], &[], "");
-
-            contract
-                .builder
-                .build_return(Some(&contract.context.i32_type().const_zero()));
-        } else {
-            contract
-                .builder
-                .build_return(Some(&contract.context.i32_type().const_int(2, false)));
-        }
     }
 
     /// ABI decode a single primitive
@@ -1673,6 +1676,10 @@ impl TargetRuntime for SubstrateTarget {
             .build_return(Some(&contract.context.i32_type().const_zero()));
     }
 
+    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
+        contract.builder.build_return(Some(&ret));
+    }
+
     /// Call the  keccak256 host function
     fn keccak256_hash(
         &self,
@@ -2184,5 +2191,47 @@ impl TargetRuntime for SubstrateTarget {
         );
 
         v
+    }
+
+    /// Substrate value is usually 128 bits
+    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
+        let value = contract
+            .builder
+            .build_alloca(contract.value_type(), "value_transferred");
+
+        contract.builder.build_call(
+            contract
+                .module
+                .get_function("ext_value_transferred")
+                .unwrap(),
+            &[],
+            "value_transferred",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_read").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        value,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_zero().into(),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.value_length as u64 / 8, false)
+                    .into(),
+            ],
+            "value_transferred",
+        );
+
+        contract
+            .builder
+            .build_load(value, "value_transferred")
+            .into_int_value()
     }
 }
