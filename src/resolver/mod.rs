@@ -424,7 +424,7 @@ pub struct FunctionDecl {
     pub doc: Vec<String>,
     pub loc: ast::Loc,
     pub name: String,
-    pub fallback: bool,
+    pub ty: ast::FunctionTy,
     pub signature: String,
     pub ast_index: Option<usize>,
     pub mutability: Option<ast::StateMutability>,
@@ -440,7 +440,7 @@ impl FunctionDecl {
         loc: ast::Loc,
         name: String,
         doc: Vec<String>,
-        fallback: bool,
+        ty: ast::FunctionTy,
         ast_index: Option<usize>,
         mutability: Option<ast::StateMutability>,
         visibility: ast::Visibility,
@@ -462,7 +462,7 @@ impl FunctionDecl {
             doc,
             loc,
             name,
-            fallback,
+            ty,
             signature,
             ast_index,
             mutability,
@@ -481,6 +481,19 @@ impl FunctionDecl {
         u32::from_le_bytes([res[0], res[1], res[2], res[3]])
     }
 
+    /// Is this a constructor
+    pub fn is_constructor(&self) -> bool {
+        self.ty == ast::FunctionTy::Constructor
+    }
+
+    /// Is this a constructor
+    pub fn is_payable(&self) -> bool {
+        if let Some(ast::StateMutability::Payable(_)) = self.mutability {
+            true
+        } else {
+            false
+        }
+    }
     /// Return a unique string for this function which is a valid wasm symbol
     pub fn wasm_symbol(&self, ns: &Namespace) -> String {
         let mut sig = self.name.to_owned();
@@ -1166,7 +1179,6 @@ pub struct Contract {
     pub doc: Vec<String>,
     pub name: String,
     // events
-    pub constructors: Vec<FunctionDecl>,
     pub functions: Vec<FunctionDecl>,
     pub variables: Vec<ContractVariable>,
     pub constants: Vec<Expression>,
@@ -1180,7 +1192,6 @@ impl Contract {
         Contract {
             name: name.to_owned(),
             doc: Vec::new(),
-            constructors: Vec::new(),
             functions: Vec::new(),
             variables: Vec::new(),
             constants: Vec::new(),
@@ -1192,7 +1203,7 @@ impl Contract {
 
     pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
-            if f.fallback {
+            if f.ty == ast::FunctionTy::Fallback {
                 return Some(i);
             }
         }
@@ -1216,20 +1227,8 @@ impl Contract {
         out += "# storage initializer\n";
         out += &self.initializer.to_string(self, ns);
 
-        for func in &self.constructors {
-            out += &format!("# constructor {}\n", func.signature);
-
-            if let Some(ref cfg) = func.cfg {
-                out += &cfg.to_string(self, ns);
-            }
-        }
-
-        for (i, func) in self.functions.iter().enumerate() {
-            if func.name != "" {
-                out += &format!("\n# function({}) {}\n", i, func.signature);
-            } else {
-                out += &format!("\n# fallback({})\n", i);
-            }
+        for func in self.functions.iter() {
+            out += &format!("\n# {} {}\n", func.ty, func.signature);
 
             if let Some(ref cfg) = func.cfg {
                 out += &cfg.to_string(self, ns);
@@ -1309,12 +1308,17 @@ fn resolve_contract_declarations(
     }
 
     // Substrate requires one constructor
-    if ns.contracts[contract_no].constructors.is_empty() && target == Target::Substrate {
+    if !ns.contracts[contract_no]
+        .functions
+        .iter()
+        .any(|f| f.is_constructor())
+        && target == Target::Substrate
+    {
         let mut fdecl = FunctionDecl::new(
             ast::Loc(0, 0),
             "".to_owned(),
             vec![],
-            false,
+            ast::FunctionTy::Constructor,
             None,
             None,
             ast::Visibility::Public(ast::Loc(0, 0)),
@@ -1331,7 +1335,7 @@ fn resolve_contract_declarations(
 
         fdecl.cfg = Some(Box::new(cfg));
 
-        ns.contracts[contract_no].constructors.push(fdecl);
+        ns.contracts[contract_no].functions.push(fdecl);
     }
 
     broken
@@ -1344,24 +1348,6 @@ fn resolve_contract_bodies(
     ns: &mut Namespace,
 ) -> bool {
     let mut broken = false;
-
-    // resolve constructor bodies
-    for f in 0..ns.contracts[contract_no].constructors.len() {
-        if let Some(ast_index) = ns.contracts[contract_no].constructors[f].ast_index {
-            if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                match cfg::generate_cfg(
-                    ast_f,
-                    &ns.contracts[contract_no].constructors[f],
-                    contract_no,
-                    &ns,
-                    errors,
-                ) {
-                    Ok(c) => ns.contracts[contract_no].constructors[f].cfg = Some(c),
-                    Err(_) => broken = true,
-                }
-            }
-        }
-    }
 
     // resolve function bodies
     for f in 0..ns.contracts[contract_no].functions.len() {

@@ -87,6 +87,27 @@ fn constructor_wrong_selector() {
 
 #[test]
 fn fallback() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract test {
+            int64 result = 102;
+
+            function get() public returns (int64) {
+                return result;
+            }
+
+            function() external {
+                result = 356;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?"
+    );
+
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val(u64);
 
@@ -100,7 +121,7 @@ fn fallback() {
                 return result;
             }
 
-            function() external {
+            fallback() external {
                 result = 356;
             }
         }",
@@ -742,4 +763,109 @@ fn destructuring_call() {
     );
 
     runtime.function("test", Vec::new());
+}
+
+#[test]
+fn payable() {
+    let src = r##"
+        pragma solidity 0;
+
+        contract c {
+            int32 i = 0;
+        
+            function test() payable internal {
+                i = 2;
+            }
+        }"##;
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "internal or private function cannot be payable"
+    );
+
+    let src = r##"
+        pragma solidity 0;
+
+        contract c {
+            int32 i = 0;
+        
+            function test() payable private {
+                i = 2;
+            }
+        }"##;
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "internal or private function cannot be payable"
+    );
+
+    let src = r##"
+        pragma solidity 0;
+
+        contract c {
+            int32 i = 0;
+        
+            receive() external {
+                i = 2;
+            }
+        }"##;
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "receive function must be declared payable"
+    );
+
+    let src = r##"
+        pragma solidity 0;
+
+        contract c {
+            int32 i = 0;
+        
+            fallback() external payable {
+                i = 2;
+            }
+        }"##;
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "fallback function must not be declare payable, use ‘receive() external payable’ instead"
+    );
+
+    let src = r##"
+        contract c {
+            constructor() public payable {
+            }
+            constructor(int32 x) public {
+            }
+        }"##;
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "all constructors should be defined ‘payable’ or not"
+    );
+
+    let src = r##"
+        contract c {
+            constructor() public {
+            }
+            constructor(int32 x) public payable {
+            }
+        }"##;
+
+    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(
+        first_error(errors),
+        "all constructors should be defined ‘payable’ or not"
+    );
 }

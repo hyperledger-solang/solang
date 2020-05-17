@@ -198,7 +198,6 @@ pub struct Contract<'a> {
     triple: TargetTriple,
     contract: &'a resolver::Contract,
     ns: &'a resolver::Namespace,
-    constructors: Vec<FunctionValue<'a>>,
     functions: Vec<FunctionValue<'a>>,
     wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
@@ -358,7 +357,6 @@ impl<'a> Contract<'a> {
             context,
             contract,
             ns,
-            constructors: Vec::new(),
             functions: Vec::new(),
             wasm: RefCell::new(Vec::new()),
             opt,
@@ -586,30 +584,24 @@ impl<'a> Contract<'a> {
         *data_ref = data_phi.as_basic_value().into_pointer_value();
     }
 
-    /// Emit all functions and constructors. First emit the functions, then the bodies
+    /// Emit all functions, constructors, fallback and receiver
     fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
         let mut defines = Vec::new();
 
         for resolver_func in &self.contract.functions {
-            let name = if resolver_func.name != "" {
-                format!("sol::function::{}", resolver_func.wasm_symbol(self.ns))
-            } else {
-                "sol::fallback".to_owned()
+            let name = match resolver_func.ty {
+                ast::FunctionTy::Function => {
+                    format!("sol::function::{}", resolver_func.wasm_symbol(self.ns))
+                }
+                ast::FunctionTy::Constructor => {
+                    format!("sol::constructor{}", resolver_func.wasm_symbol(self.ns))
+                }
+                _ => format!("sol::{}", resolver_func.ty),
             };
 
             let func_decl = self.declare_function(&name, resolver_func);
             self.functions.push(func_decl);
 
-            defines.push((func_decl, resolver_func));
-        }
-
-        for resolver_func in &self.contract.constructors {
-            let func_decl = self.declare_function(
-                &format!("sol::constructor{}", resolver_func.wasm_symbol(self.ns)),
-                resolver_func,
-            );
-
-            self.constructors.push(func_decl);
             defines.push((func_decl, resolver_func));
         }
 
@@ -2994,6 +2986,7 @@ impl<'a> Contract<'a> {
     pub fn emit_function_dispatch(
         &self,
         resolver_functions: &[resolver::FunctionDecl],
+        function_ty: ast::FunctionTy,
         functions: &[FunctionValue<'a>],
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
@@ -3037,16 +3030,16 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (i, f) in resolver_functions.iter().enumerate() {
+        for (i, f) in resolver_functions
+            .iter()
+            .enumerate()
+            .filter(|f| f.1.ty == function_ty)
+        {
             match &f.visibility {
                 ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
                     continue;
                 }
                 _ => (),
-            }
-
-            if f.fallback {
-                continue;
             }
 
             let bb = self.context.append_basic_block(function, "");

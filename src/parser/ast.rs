@@ -363,12 +363,23 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FunctionTy {
     Constructor,
     Function,
     Fallback,
     Receive,
+}
+
+impl fmt::Display for FunctionTy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FunctionTy::Constructor => write!(f, "constructor"),
+            FunctionTy::Function => write!(f, "function"),
+            FunctionTy::Fallback => write!(f, "fallback"),
+            FunctionTy::Receive => write!(f, "receive"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -377,6 +388,7 @@ pub struct FunctionDefinition {
     pub loc: Loc,
     pub ty: FunctionTy,
     pub name: Option<Identifier>,
+    pub name_loc: Loc,
     pub params: Vec<(Loc, Option<Parameter>)>,
     pub attributes: Vec<FunctionAttribute>,
     pub returns: Vec<(Loc, Option<Parameter>)>,

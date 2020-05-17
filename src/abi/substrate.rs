@@ -405,8 +405,9 @@ pub fn gen_abi(contract_no: usize, ns: &resolver::Namespace) -> Metadata {
     };
 
     let constructors = ns.contracts[contract_no]
-        .constructors
+        .functions
         .iter()
+        .filter(|f| f.is_constructor())
         .map(|f| Constructor {
             name: registry.string("new"),
             selector: render_selector(f),
@@ -422,12 +423,11 @@ pub fn gen_abi(contract_no: usize, ns: &resolver::Namespace) -> Metadata {
     let messages = ns.contracts[contract_no]
         .functions
         .iter()
-        .filter(|f| {
-            if let ast::Visibility::Public(_) = f.visibility {
-                true
-            } else {
-                false
+        .filter(|f| match f.visibility {
+            ast::Visibility::Public(_) | ast::Visibility::External(_) => {
+                f.ty == ast::FunctionTy::Function
             }
+            _ => false,
         })
         .map(|f| Message {
             name: registry.string(&f.name),

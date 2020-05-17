@@ -103,7 +103,7 @@ fn bad_mapping_declares() {
 
     assert_eq!(
         first_error(errors),
-        "return type containing mapping  must be of type ‘storage’"
+        "return type containing mapping must be of type ‘storage’"
     );
 
     let (_, errors) = parse_and_resolve(

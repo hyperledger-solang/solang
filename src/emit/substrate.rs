@@ -1,3 +1,4 @@
+use parser::ast;
 use resolver;
 
 use blake2_rfc;
@@ -305,8 +306,9 @@ impl SubstrateTarget {
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(
-            &contract.contract.constructors,
-            &contract.constructors,
+            &contract.contract.functions,
+            ast::FunctionTy::Constructor,
+            &contract.functions,
             deploy_args,
             deploy_args_length,
             function,
@@ -335,6 +337,7 @@ impl SubstrateTarget {
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
+            ast::FunctionTy::Function,
             &contract.functions,
             call_args,
             call_args_length,
@@ -1877,7 +1880,12 @@ impl TargetRuntime for SubstrateTarget {
         args: &[BasicValueEnum<'b>],
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
-        let constructor = &resolver_contract.constructors[constructor_no];
+        let constructor = &resolver_contract
+            .functions
+            .iter()
+            .filter(|f| f.is_constructor())
+            .nth(constructor_no)
+            .unwrap();
 
         // input
         let (input, input_len) = self.abi_encode(
