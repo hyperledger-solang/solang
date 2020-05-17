@@ -1,3 +1,4 @@
+use parser::ast;
 use resolver;
 use std::cell::RefCell;
 use std::str;
@@ -434,7 +435,13 @@ impl EwasmTarget {
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
 
-        if let Some(con) = contract.contract.constructors.get(0) {
+        if let Some((i, con)) = contract
+            .contract
+            .functions
+            .iter()
+            .enumerate()
+            .find(|f| f.1.is_constructor())
+        {
             let mut args = Vec::new();
 
             // insert abi decode
@@ -443,7 +450,7 @@ impl EwasmTarget {
 
             contract
                 .builder
-                .build_call(contract.constructors[0], &args, "");
+                .build_call(contract.functions[i], &args, "");
         }
 
         // the deploy code should return the runtime wasm code
@@ -479,6 +486,7 @@ impl EwasmTarget {
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
+            ast::FunctionTy::Function,
             &contract.functions,
             argsdata,
             argslen,
@@ -1037,6 +1045,18 @@ impl TargetRuntime for EwasmTarget {
             true,
         );
 
+        assert_eq!(constructor_no, 0);
+
+        let params = if let Some(f) = resolver_contract
+            .functions
+            .iter()
+            .find(|f| f.is_constructor())
+        {
+            f.params.as_slice()
+        } else {
+            &[]
+        };
+
         // input
         let (input, input_len) = self.encode(
             contract,
@@ -1045,11 +1065,7 @@ impl TargetRuntime for EwasmTarget {
             false,
             function,
             args,
-            if resolver_contract.constructors.is_empty() {
-                &[]
-            } else {
-                &resolver_contract.constructors[constructor_no].params
-            },
+            params,
         );
 
         // balance is a u128

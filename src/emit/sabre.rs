@@ -1,3 +1,4 @@
+use parser::ast;
 use resolver;
 use std::str;
 
@@ -172,7 +173,13 @@ impl SabreTarget {
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
 
-        if let Some(con) = contract.contract.constructors.get(0) {
+        if let Some((i, con)) = contract
+            .contract
+            .functions
+            .iter()
+            .enumerate()
+            .find(|f| f.1.is_constructor())
+        {
             let mut args = Vec::new();
 
             // insert abi decode
@@ -187,7 +194,7 @@ impl SabreTarget {
 
             contract
                 .builder
-                .build_call(contract.constructors[0], &args, "");
+                .build_call(contract.functions[i], &args, "");
         }
 
         // return 1 for success
@@ -201,6 +208,7 @@ impl SabreTarget {
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
+            ast::FunctionTy::Function,
             &contract.functions,
             argsdata,
             argslen,

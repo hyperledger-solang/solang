@@ -60,15 +60,19 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
     }
 
     ns.contracts[contract_no]
-        .constructors
+        .functions
         .iter()
+        .filter(|f| match f.visibility {
+            ast::Visibility::Public(_) | ast::Visibility::External(_) => true,
+            _ => false,
+        })
         .map(|f| ABI {
-            name: "".to_owned(),
+            name: f.name.to_owned(),
             mutability: match &f.mutability {
-                Some(n) => n.to_string(),
+                Some(m) => m.to_string(),
                 None => "nonpayable",
             },
-            ty: "constructor".to_owned(),
+            ty: f.ty.to_string(),
             inputs: f
                 .params
                 .iter()
@@ -80,39 +84,5 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
                 .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
                 .collect(),
         })
-        .chain(
-            ns.contracts[contract_no]
-                .functions
-                .iter()
-                .filter(|f| {
-                    if let ast::Visibility::Public(_) = f.visibility {
-                        true
-                    } else {
-                        false
-                    }
-                })
-                .map(|f| ABI {
-                    name: f.name.to_owned(),
-                    mutability: match &f.mutability {
-                        Some(n) => n.to_string(),
-                        None => "nonpayable",
-                    },
-                    ty: if f.name == "" {
-                        "fallback".to_owned()
-                    } else {
-                        "function".to_owned()
-                    },
-                    inputs: f
-                        .params
-                        .iter()
-                        .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
-                        .collect(),
-                    outputs: f
-                        .returns
-                        .iter()
-                        .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
-                        .collect(),
-                }),
-        )
         .collect()
 }

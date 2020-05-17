@@ -342,7 +342,7 @@ BlockStatementOrSemiColon: Statement = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    <doc:DocComments> <l:@L> <ty:FunctionTy> <name:Identifier?> <params:ParameterList>
+    <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:Identifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
         let returns = returns.unwrap_or(Vec::new());
@@ -352,6 +352,7 @@ FunctionDefinition: Box<FunctionDefinition> = {
             loc: Loc(l, r),
             ty,
             name,
+            name_loc: Loc(nl, nr),
             params,
             attributes,
             returns,

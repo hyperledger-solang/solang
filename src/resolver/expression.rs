@@ -2418,7 +2418,12 @@ fn constructor(
     let mut temp_errors = Vec::new();
 
     // constructor call
-    for (constructor_no, func) in ns.contracts[no].constructors.iter().enumerate() {
+    for (constructor_no, func) in ns.contracts[no]
+        .functions
+        .iter()
+        .filter(|f| f.is_constructor())
+        .enumerate()
+    {
         if func.params.len() != args.len() {
             temp_errors.push(Output::error(
                 *loc,
@@ -2463,7 +2468,12 @@ fn constructor(
         }
     }
 
-    match ns.contracts[no].constructors.len() {
+    match ns.contracts[no]
+        .functions
+        .iter()
+        .filter(|f| f.is_constructor())
+        .count()
+    {
         0 => Ok((
             Expression::Constructor(*loc, no, 0, Vec::new()),
             resolver::Type::Contract(no),
@@ -2568,7 +2578,12 @@ pub fn constructor_named_args(
     let mut temp_errors = Vec::new();
 
     // constructor call
-    for (constructor_no, func) in ns.contracts[no].constructors.iter().enumerate() {
+    for (constructor_no, func) in ns.contracts[no]
+        .functions
+        .iter()
+        .filter(|f| f.is_constructor())
+        .enumerate()
+    {
         if func.params.len() != args.len() {
             temp_errors.push(Output::error(
                 *loc,
@@ -2623,7 +2638,12 @@ pub fn constructor_named_args(
         }
     }
 
-    match ns.contracts[no].constructors.len() {
+    match ns.contracts[no]
+        .functions
+        .iter()
+        .filter(|f| f.is_constructor())
+        .count()
+    {
         0 => Ok((
             Expression::Constructor(*loc, no, 0, Vec::new()),
             resolver::Type::Contract(no),
