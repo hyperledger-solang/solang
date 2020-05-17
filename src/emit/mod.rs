@@ -158,6 +158,9 @@ pub trait TargetRuntime {
     /// Return success without any result
     fn return_empty_abi(&self, contract: &Contract);
 
+    /// Return failure code
+    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>);
+
     /// Return success with the ABI encoded result
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue);
 
@@ -187,12 +190,16 @@ pub trait TargetRuntime {
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b>;
+
+    /// Return the value we received
+    fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b>;
 }
 
 pub struct Contract<'a> {
     pub name: String,
     pub module: Module<'a>,
     pub runtime: Option<Box<Contract<'a>>>,
+    abort_all_value_transfers: bool,
     builder: Builder<'a>,
     context: &'a Context,
     triple: TargetTriple,
@@ -348,10 +355,18 @@ impl<'a> Contract<'a> {
         let intr = load_stdlib(&context, &ns.target);
         module.link_in_module(intr).unwrap();
 
+        // if there is no payable function, fallback or receive then abort all value transfers at the top
+        // note that receive() is always payable so this just checkes for presence.
+        let abort_all_value_transfers = !contract
+            .functions
+            .iter()
+            .any(|f| !f.is_constructor() && f.is_payable());
+
         Contract {
             name: contract.name.to_owned(),
             module,
             runtime,
+            abort_all_value_transfers,
             builder: context.create_builder(),
             triple,
             context,
@@ -362,6 +377,47 @@ impl<'a> Contract<'a> {
             opt,
             code_size: RefCell::new(None),
         }
+    }
+
+    /// llvm value type, as in chain currency (usually 128 bits int)
+    fn value_type(&self) -> IntType<'a> {
+        self.context
+            .custom_width_int_type(self.ns.value_length as u32)
+    }
+
+    /// If we receive a value transfer, and we are "payable", abort with revert
+    fn abort_if_value_transfer(&self, runtime: &dyn TargetRuntime, function: FunctionValue) {
+        let value = runtime.value_transferred(&self);
+
+        let got_value = self.builder.build_int_compare(
+            IntPredicate::NE,
+            value,
+            self.value_type().const_zero(),
+            "is_value_transfer",
+        );
+
+        let not_value_transfer = self
+            .context
+            .append_basic_block(function, "not_value_transfer");
+        let abort_value_transfer = self
+            .context
+            .append_basic_block(function, "abort_value_transfer");
+
+        self.builder
+            .build_conditional_branch(got_value, abort_value_transfer, not_value_transfer);
+
+        self.builder.position_at_end(abort_value_transfer);
+
+        runtime.assert_failure(
+            self,
+            self.context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            self.context.i32_type().const_zero(),
+        );
+
+        self.builder.position_at_end(not_value_transfer);
     }
 
     /// Creates global string in the llvm module with initializer
@@ -2339,6 +2395,17 @@ impl<'a> Contract<'a> {
         function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) {
+        let entry = self.context.append_basic_block(function, "entry");
+        self.builder.position_at_end(entry);
+
+        // abort value transfers for functions which are not payable, and
+        // if value transfers aren't aborted globally
+        if let Some(fdecl) = resolver_function {
+            if !self.abort_all_value_transfers && !fdecl.is_payable() {
+                self.abort_if_value_transfer(runtime, function);
+            }
+        }
+
         // recurse through basic blocks
         struct BasicBlock<'a> {
             bb: inkwell::basic_block::BasicBlock<'a>,
@@ -2357,6 +2424,10 @@ impl<'a> Contract<'a> {
             let mut phis = HashMap::new();
 
             let bb = self.context.append_basic_block(function, &cfg_bb.name);
+
+            if bb_no == 0 {
+                self.builder.build_unconditional_branch(bb);
+            }
 
             self.builder.position_at_end(bb);
 
@@ -2593,6 +2664,7 @@ impl<'a> Contract<'a> {
                             .expression(offset, &w.vars, function, runtime)
                             .into_int_value();
                         let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
+                        self.builder.build_store(slot_ptr, slot);
 
                         runtime.set_storage_bytes_subscript(
                             self,
@@ -2780,9 +2852,16 @@ impl<'a> Contract<'a> {
                         args,
                     } => {
                         let dest_func = &self.ns.contracts[*contract_no].functions[*function_no];
+
+                        let selector = dest_func.selector();
+
                         let (payload, payload_len) = runtime.abi_encode(
                             self,
-                            Some(dest_func.selector()),
+                            Some(if self.ns.target == crate::Target::Ewasm {
+                                selector.to_be()
+                            } else {
+                                selector
+                            }),
                             false,
                             function,
                             &args
@@ -2983,6 +3062,10 @@ impl<'a> Contract<'a> {
         }
     }
 
+    /// Create function dispatch based on abi encoded argsdata. The dispatcher loads the leading function selector,
+    /// and dispatches based on that. If no function matches this, or no selector is in the argsdata, then fallback
+    /// code is executed. This is either a fallback block provided to this function, or it automatically dispatches
+    /// to the fallback function or receive function, if any.
     pub fn emit_function_dispatch(
         &self,
         resolver_functions: &[resolver::FunctionDecl],
@@ -2991,10 +3074,17 @@ impl<'a> Contract<'a> {
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
         function: inkwell::values::FunctionValue<'a>,
-        fallback_block: inkwell::basic_block::BasicBlock,
+        fallback: Option<inkwell::basic_block::BasicBlock>,
         runtime: &dyn TargetRuntime,
     ) {
         // create start function
+        let no_function_matched = match fallback {
+            Some(block) => block,
+            None => self
+                .context
+                .append_basic_block(function, "no_function_matched"),
+        };
+
         let switch_block = self.context.append_basic_block(function, "switch");
 
         let not_fallback = self.builder.build_int_compare(
@@ -3004,10 +3094,8 @@ impl<'a> Contract<'a> {
             "",
         );
 
-        let nomatch = self.context.append_basic_block(function, "nomatch");
-
         self.builder
-            .build_conditional_branch(not_fallback, switch_block, nomatch);
+            .build_conditional_branch(not_fallback, switch_block, no_function_matched);
 
         self.builder.position_at_end(switch_block);
 
@@ -3111,7 +3199,7 @@ impl<'a> Contract<'a> {
 
             self.builder.position_at_end(bail_block);
 
-            self.builder.build_return(Some(&ret));
+            runtime.return_u32(self, ret.into_int_value());
 
             cases.push((self.context.i32_type().const_int(id as u64, false), bb));
         }
@@ -3119,18 +3207,67 @@ impl<'a> Contract<'a> {
         self.builder.position_at_end(switch_block);
 
         self.builder
-            .build_switch(fid.into_int_value(), fallback_block, &cases);
+            .build_switch(fid.into_int_value(), no_function_matched, &cases);
 
-        self.builder.position_at_end(nomatch);
+        if fallback.is_some() {
+            return; // caller will generate fallback code
+        }
 
-        runtime.assert_failure(
-            &self,
-            self.context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            self.context.i32_type().const_zero(),
-        );
+        // emit fallback code
+        self.builder.position_at_end(no_function_matched);
+
+        if self.contract.fallback_function().is_none() && self.contract.receive_function().is_none()
+        {
+            // no need to check value transferred; we will abort either way
+            runtime.return_u32(self, self.context.i32_type().const_int(2, false));
+
+            return;
+        }
+
+        let got_value = if self.abort_all_value_transfers {
+            self.context.bool_type().const_zero()
+        } else {
+            let value = runtime.value_transferred(self);
+
+            self.builder.build_int_compare(
+                IntPredicate::NE,
+                value,
+                self.value_type().const_zero(),
+                "is_value_transfer",
+            )
+        };
+
+        let fallback_block = self.context.append_basic_block(function, "fallback");
+        let receive_block = self.context.append_basic_block(function, "receive");
+
+        self.builder
+            .build_conditional_branch(got_value, receive_block, fallback_block);
+
+        self.builder.position_at_end(fallback_block);
+
+        match self.contract.fallback_function() {
+            Some(f) => {
+                self.builder.build_call(self.functions[f], &[], "");
+
+                runtime.return_empty_abi(self);
+            }
+            None => {
+                runtime.return_u32(self, self.context.i32_type().const_int(2, false));
+            }
+        }
+
+        self.builder.position_at_end(receive_block);
+
+        match self.contract.receive_function() {
+            Some(f) => {
+                self.builder.build_call(self.functions[f], &[], "");
+
+                runtime.return_empty_abi(self);
+            }
+            None => {
+                runtime.return_u32(self, self.context.i32_type().const_int(2, false));
+            }
+        }
     }
 
     // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which

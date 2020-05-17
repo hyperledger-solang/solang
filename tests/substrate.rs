@@ -67,6 +67,7 @@ enum SubstrateExternal {
     ext_println,
     ext_call,
     ext_instantiate,
+    ext_value_transferred,
 }
 
 pub struct VM {
@@ -383,6 +384,13 @@ impl Externals for TestRuntime {
 
                 Ok(ret)
             }
+            Some(SubstrateExternal::ext_value_transferred) => {
+                self.vm.scratch = [0u8; 16].to_vec();
+
+                println!("ext_value_transferred: 0");
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -402,6 +410,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_println" => SubstrateExternal::ext_println,
             "ext_call" => SubstrateExternal::ext_call,
             "ext_instantiate" => SubstrateExternal::ext_instantiate,
+            "ext_value_transferred" => SubstrateExternal::ext_value_transferred,
             _ => {
                 panic!("{} not implemented", field_name);
             }
