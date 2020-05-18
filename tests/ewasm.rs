@@ -39,12 +39,26 @@ struct VM {
     returndata: Vec<u8>,
 }
 
+impl VM {
+    fn new(code: Vec<u8>, address: Address) -> Self {
+        VM {
+            memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
+            input: Vec::new(),
+            output: Vec::new(),
+            returndata: Vec::new(),
+            code,
+            cur: address,
+        }
+    }
+}
+
 struct TestRuntime {
     abi: ethabi::Contract,
     contracts: Vec<Vec<u8>>,
-    accounts: HashMap<Address, Vec<u8>>,
+    value: u128,
+    accounts: HashMap<Address, (Vec<u8>, u128)>,
     store: HashMap<(Address, [u8; 32]), [u8; 32]>,
-    vm: Vec<VM>,
+    vm: VM,
 }
 
 #[derive(FromPrimitive)]
@@ -95,28 +109,23 @@ impl Externals for TestRuntime {
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
         match FromPrimitive::from_usize(index) {
-            Some(Extern::getCallDataSize) => Ok(Some(RuntimeValue::I32(
-                self.vm.last().unwrap().input.len() as i32,
-            ))),
-            Some(Extern::getCodeSize) => Ok(Some(RuntimeValue::I32(
-                self.vm.last().unwrap().code.len() as i32,
-            ))),
-            Some(Extern::getReturnDataSize) => Ok(Some(RuntimeValue::I32(
-                self.vm.last().unwrap().returndata.len() as i32,
-            ))),
+            Some(Extern::getCallDataSize) => {
+                Ok(Some(RuntimeValue::I32(self.vm.input.len() as i32)))
+            }
+            Some(Extern::getCodeSize) => Ok(Some(RuntimeValue::I32(self.vm.code.len() as i32))),
+            Some(Extern::getReturnDataSize) => {
+                Ok(Some(RuntimeValue::I32(self.vm.returndata.len() as i32)))
+            }
             Some(Extern::callDataCopy) => {
                 let dest = args.nth_checked::<u32>(0)?;
                 let input_offset = args.nth_checked::<u32>(1)? as usize;
                 let input_len = args.nth_checked::<u32>(2)? as usize;
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .set(
                         dest,
-                        &self.vm.last().unwrap().input
-                            [input_offset as usize..input_offset + input_len],
+                        &self.vm.input[input_offset as usize..input_offset + input_len],
                     )
                     .expect("calldatacopy should work");
 
@@ -127,14 +136,11 @@ impl Externals for TestRuntime {
                 let code_offset = args.nth_checked::<u32>(1)? as usize;
                 let code_len = args.nth_checked::<u32>(2)? as usize;
 
-                let data =
-                    &self.vm.last().unwrap().code[code_offset as usize..code_offset + code_len];
+                let data = &self.vm.code[code_offset as usize..code_offset + code_len];
 
                 println!("codeCopy {} {}", code_len, hex::encode(data));
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .set(dest, data)
                     .expect("codeCopy should work");
@@ -146,14 +152,11 @@ impl Externals for TestRuntime {
                 let data_offset = args.nth_checked::<u32>(1)? as usize;
                 let data_len = args.nth_checked::<u32>(2)? as usize;
 
-                let data = &self.vm.last().unwrap().returndata
-                    [data_offset as usize..data_offset + data_len];
+                let data = &self.vm.returndata[data_offset as usize..data_offset + data_len];
 
                 println!("returnDataCopy {} {}", data_len, hex::encode(data));
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .set(dest, data)
                     .expect("returnDataCopy should work");
@@ -164,13 +167,14 @@ impl Externals for TestRuntime {
                 let src: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
 
-                let vm = self.vm.last_mut().unwrap();
+                let mut output = Vec::new();
+                output.resize(len as usize, 0);
 
-                vm.output.resize(len as usize, 0);
+                self.vm.memory.get_into(src, &mut output).unwrap();
 
-                vm.memory.get_into(src, &mut vm.output).unwrap();
+                println!("finish: {} {}", len, hex::encode(&output));
 
-                println!("finish: {} {}", len, hex::encode(&vm.output));
+                self.vm.output = output;
 
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeFinish {}))))
             }
@@ -178,16 +182,16 @@ impl Externals for TestRuntime {
                 let src: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
 
-                let vm = self.vm.last_mut().unwrap();
+                let mut output = Vec::new();
+                output.resize(len as usize, 0);
 
-                vm.output.resize(len as usize, 0);
-
-                vm.memory.get_into(src, &mut vm.output).unwrap();
+                self.vm.memory.get_into(src, &mut output).unwrap();
+                self.vm.output = output;
 
                 println!(
                     "revert {} {}",
-                    self.vm.last().unwrap().output.len(),
-                    hex::encode(&self.vm.last().unwrap().output)
+                    self.vm.output.len(),
+                    hex::encode(&self.vm.output)
                 );
 
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeRevert {}))))
@@ -199,20 +203,16 @@ impl Externals for TestRuntime {
                 let mut key = [0u8; 32];
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .get_into(key_ptr, &mut key)
                     .expect("copy key from wasm memory");
 
-                let res = if let Some(v) = self.store.get(&(self.vm.last().unwrap().cur, key)) {
+                let res = if let Some(v) = self.store.get(&(self.vm.cur, key)) {
                     v
                 } else {
                     &[0u8; 32]
                 };
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .set(data_ptr, res)
                     .expect("copy key from wasm memory");
@@ -227,23 +227,19 @@ impl Externals for TestRuntime {
                 let mut data = [0u8; 32];
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .get_into(key_ptr, &mut key)
                     .expect("copy key from wasm memory");
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .get_into(data_ptr, &mut data)
                     .expect("copy key from wasm memory");
 
                 if data.iter().any(|n| *n != 0) {
-                    self.store.insert((self.vm.last().unwrap().cur, key), data);
+                    self.store.insert((self.vm.cur, key), data);
                 } else {
-                    self.store.remove(&(self.vm.last().unwrap().cur, key));
+                    self.store.remove(&(self.vm.cur, key));
                 }
                 Ok(None)
             }
@@ -254,7 +250,7 @@ impl Externals for TestRuntime {
                 let mut buf = Vec::new();
                 buf.resize(len as usize, 0u8);
 
-                if let Err(e) = self.vm.last().unwrap().memory.get_into(data_ptr, &mut buf) {
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
                     panic!("printMem: {}", e);
                 }
 
@@ -271,7 +267,7 @@ impl Externals for TestRuntime {
                 let mut buf = Vec::new();
                 buf.resize(input_len as usize, 0u8);
 
-                if let Err(e) = self.vm.last().unwrap().memory.get_into(input_ptr, &mut buf) {
+                if let Err(e) = self.vm.memory.get_into(input_ptr, &mut buf) {
                     panic!("create: {}", e);
                 }
 
@@ -290,7 +286,9 @@ impl Externals for TestRuntime {
                     .unwrap()
                     .clone();
 
-                self.push_vm(buf, addr);
+                let mut vm = VM::new(buf, addr);
+
+                std::mem::swap(&mut self.vm, &mut vm);
 
                 let module = self.create_module(&code);
 
@@ -303,17 +301,15 @@ impl Externals for TestRuntime {
                     Err(e) => panic!("fail to invoke main via create: {}", e),
                 }
 
-                let res = self.vm.last().unwrap().output.clone();
+                let res = self.vm.output.clone();
 
                 println!("create returns: {}", hex::encode(&res));
 
-                self.pop_vm();
+                std::mem::swap(&mut self.vm, &mut vm);
 
-                self.accounts.insert(addr, res);
+                self.accounts.insert(addr, (res, 0));
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .set(address_ptr, &addr[..])
                     .expect("copy key from wasm memory");
@@ -330,19 +326,13 @@ impl Externals for TestRuntime {
                 let mut buf = Vec::new();
                 buf.resize(input_len as usize, 0u8);
 
-                if let Err(e) = self.vm.last().unwrap().memory.get_into(input_ptr, &mut buf) {
+                if let Err(e) = self.vm.memory.get_into(input_ptr, &mut buf) {
                     panic!("call: {}", e);
                 }
 
                 let mut addr = [0u8; 20];
 
-                if let Err(e) = self
-                    .vm
-                    .last()
-                    .unwrap()
-                    .memory
-                    .get_into(address_ptr, &mut addr)
-                {
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut addr) {
                     panic!("call: {}", e);
                 }
 
@@ -355,11 +345,13 @@ impl Externals for TestRuntime {
                 // when ewasm creates a contract, the abi encoded args are concatenated to the
                 // code. So, find which code is was and use that instead. Otherwise, the
                 // wasm validator will trip
-                let code = self.accounts.get(&addr).unwrap().clone();
+                let (code, _) = self.accounts.get(&addr).unwrap().clone();
 
-                self.push_vm(code.to_vec(), addr);
+                let mut vm = VM::new(code.to_vec(), addr);
 
-                self.vm.last_mut().unwrap().input = buf;
+                std::mem::swap(&mut self.vm, &mut vm);
+
+                self.vm.input = buf;
 
                 let module = self.create_module(&code);
 
@@ -378,15 +370,13 @@ impl Externals for TestRuntime {
                     Err(e) => panic!("fail to invoke main via create: {}", e),
                 };
 
-                let res = self.vm.last().unwrap().output.clone();
+                let res = self.vm.output.clone();
 
-                self.pop_vm();
+                std::mem::swap(&mut self.vm, &mut vm);
 
-                self.vm.last_mut().unwrap().returndata = res;
+                self.vm.returndata = res;
 
                 self.vm
-                    .last()
-                    .unwrap()
                     .memory
                     .set(address_ptr, &addr[..])
                     .expect("copy key from wasm memory");
@@ -396,14 +386,9 @@ impl Externals for TestRuntime {
             Some(Extern::getCallValue) => {
                 let value_ptr: u32 = args.nth_checked(0)?;
 
-                let value = [0u8; 16];
+                let value = self.value.to_le_bytes();
 
-                self.vm
-                    .last()
-                    .unwrap()
-                    .memory
-                    .set(value_ptr, &value)
-                    .expect("set value");
+                self.vm.memory.set(value_ptr, &value).expect("set value");
 
                 Ok(None)
             }
@@ -442,7 +427,7 @@ impl ModuleImportResolver for TestRuntime {
         _field_name: &str,
         _memory_type: &MemoryDescriptor,
     ) -> Result<MemoryRef, Error> {
-        Ok(self.vm.last().unwrap().memory.clone())
+        Ok(self.vm.memory.clone())
     }
 }
 
@@ -465,11 +450,11 @@ impl TestRuntime {
             Err(x) => panic!(format!("{}", x)),
         };
 
-        let module = self.create_module(&self.accounts[&self.vm.last().unwrap().cur]);
+        let module = self.create_module(&self.accounts[&self.vm.cur].0);
 
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
-        self.vm.last_mut().unwrap().input = calldata;
+        self.vm.input = calldata;
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -483,13 +468,10 @@ impl TestRuntime {
             _ => panic!("fail to invoke main, unknown"),
         }
 
-        println!(
-            "RETURNDATA: {}",
-            hex::encode(&self.vm.last().unwrap().output)
-        );
+        println!("RETURNDATA: {}", hex::encode(&self.vm.output));
 
         self.abi.functions[name][0]
-            .decode_output(&self.vm.last().unwrap().output)
+            .decode_output(&self.vm.output)
             .unwrap()
     }
 
@@ -501,11 +483,11 @@ impl TestRuntime {
 
         patch(&mut calldata);
 
-        let module = self.create_module(&self.accounts[&self.vm.last().unwrap().cur]);
+        let module = self.create_module(&self.accounts[&self.vm.cur].0);
 
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
-        self.vm.last_mut().unwrap().input = calldata;
+        self.vm.input = calldata;
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -526,11 +508,11 @@ impl TestRuntime {
             Err(x) => panic!(format!("{}", x)),
         };
 
-        let module = self.create_module(&self.accounts[&self.vm.last().unwrap().cur]);
+        let module = self.create_module(&self.accounts[&self.vm.cur].0);
 
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
-        self.vm.last_mut().unwrap().input = calldata;
+        self.vm.input = calldata;
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -542,24 +524,15 @@ impl TestRuntime {
             _ => panic!("fail to invoke main"),
         }
 
-        println!(
-            "RETURNDATA: {}",
-            hex::encode(&self.vm.last().unwrap().output)
-        );
+        println!("RETURNDATA: {}", hex::encode(&self.vm.output));
 
-        if self.vm.last().unwrap().output.is_empty() {
+        if self.vm.output.is_empty() {
             return None;
         }
 
-        assert_eq!(
-            self.vm.last().unwrap().output[..4],
-            0x08c3_79a0u32.to_be_bytes()
-        );
+        assert_eq!(self.vm.output[..4], 0x08c3_79a0u32.to_be_bytes());
 
-        if let Ok(v) = decode(
-            &[ethabi::ParamType::String],
-            &self.vm.last().unwrap().output[4..],
-        ) {
+        if let Ok(v) = decode(&[ethabi::ParamType::String], &self.vm.output[4..]) {
             assert_eq!(v.len(), 1);
 
             if let ethabi::Token::String(r) = &v[0] {
@@ -581,8 +554,8 @@ impl TestRuntime {
 
         println!("CONSTRUCTOR CALLDATA: {}", hex::encode(&calldata));
 
-        self.vm.last_mut().unwrap().code.extend(calldata);
-        self.vm.last_mut().unwrap().cur = address_new();
+        self.vm.code.extend(calldata);
+        self.vm.cur = address_new();
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -595,31 +568,12 @@ impl TestRuntime {
 
         println!(
             "DEPLOYER RETURNS: {} {}",
-            self.vm.last().unwrap().output.len(),
-            hex::encode(&self.vm.last().unwrap().output)
+            self.vm.output.len(),
+            hex::encode(&self.vm.output)
         );
 
-        self.accounts.insert(
-            self.vm.last().unwrap().cur,
-            self.vm.last().unwrap().output.clone(),
-        );
-    }
-
-    fn push_vm(&mut self, code: Vec<u8>, address: Address) {
-        let vm = VM {
-            memory: MemoryInstance::alloc(Pages(2), Some(Pages(2))).unwrap(),
-            input: Vec::new(),
-            output: Vec::new(),
-            returndata: Vec::new(),
-            code,
-            cur: address,
-        };
-
-        self.vm.push(vm);
-    }
-
-    fn pop_vm(&mut self) {
-        self.vm.pop();
+        self.accounts
+            .insert(self.vm.cur, (self.vm.output.clone(), 0));
     }
 }
 
@@ -642,17 +596,14 @@ fn build_solidity(src: &'static str) -> TestRuntime {
     // resolve
     let (bc, abi) = res.last().unwrap().clone();
 
-    let mut t = TestRuntime {
+    TestRuntime {
         accounts: HashMap::new(),
-        vm: Vec::new(),
+        vm: VM::new(bc, [0u8; 20]),
+        value: 0,
         store: HashMap::new(),
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         contracts: res.into_iter().map(|v| v.0).collect(),
-    };
-
-    t.push_vm(bc, [0u8; 20]);
-
-    t
+    }
 }
 
 #[test]
