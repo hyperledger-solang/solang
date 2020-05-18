@@ -294,7 +294,11 @@ impl Externals for TestRuntime {
 
                 match module.invoke_export("main", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                        TrapKind::Host(_) => {}
+                        TrapKind::Host(host_error) => {
+                            if host_error.downcast_ref::<HostCodeRevert>().is_some() {
+                                panic!("revert executed");
+                            }
+                        }
                         _ => panic!("fail to invoke main via create: {}", trap),
                     },
                     Ok(_) => {}
@@ -387,6 +391,8 @@ impl Externals for TestRuntime {
                 let value_ptr: u32 = args.nth_checked(0)?;
 
                 let value = self.value.to_le_bytes();
+
+                println!("getCallValue: {}", hex::encode(&value));
 
                 self.vm.memory.set(value_ptr, &value).expect("set value");
 
@@ -516,7 +522,11 @@ impl TestRuntime {
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(_) => {}
+                TrapKind::Host(host_error) => {
+                    if host_error.downcast_ref::<HostCodeFinish>().is_some() {
+                        panic!("function was suppose to revert, not finish")
+                    }
+                }
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(Some(RuntimeValue::I32(1))) => {}
@@ -543,7 +553,15 @@ impl TestRuntime {
         panic!("failed to decode");
     }
 
+    fn constructor_expect_revert(&mut self, args: &[Token]) {
+        assert!(!self.do_constructor(args));
+    }
+
     fn constructor(&mut self, args: &[Token]) {
+        assert!(self.do_constructor(args));
+    }
+
+    fn do_constructor(&mut self, args: &[Token]) -> bool {
         let calldata = if let Some(constructor) = &self.abi.constructor {
             constructor.encode_input(Vec::new(), args).unwrap()
         } else {
@@ -559,7 +577,11 @@ impl TestRuntime {
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
-                TrapKind::Host(_) => {}
+                TrapKind::Host(host_error) => {
+                    if host_error.downcast_ref::<HostCodeRevert>().is_some() {
+                        return false;
+                    }
+                }
                 _ => panic!("fail to invoke main: {}", trap),
             },
             Ok(_) => {}
@@ -574,6 +596,8 @@ impl TestRuntime {
 
         self.accounts
             .insert(self.vm.cur, (self.vm.output.clone(), 0));
+
+        true
     }
 }
 
@@ -1877,4 +1901,81 @@ fn try_catch() {
     let ret = runtime.function("test", &[]);
 
     assert_eq!(ret, vec!(ethabi::Token::Int(ethereum_types::U256::from(2))));
+}
+
+#[test]
+fn payables() {
+    // no contructors means can't send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.value = 1;
+    runtime.constructor_expect_revert(&[]);
+
+    // contructors w/o payable means can't send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            constructor() public {
+                int32 a = 0;
+            }
+
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.value = 1;
+    runtime.constructor_expect_revert(&[]);
+
+    // contructors w/ payable means can send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            constructor() public payable {
+                int32 a = 0;
+            }
+
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.value = 1;
+    runtime.constructor(&[]);
+
+    // function w/o payable means can't send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+    runtime.value = 1;
+    runtime.function_revert("test", &[]);
+
+    // test both
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() payable public {
+            }
+            function test2() public {
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+    runtime.value = 1;
+    runtime.function_revert("test2", &[]);
+    runtime.value = 1;
+    runtime.function("test", &[]);
 }
