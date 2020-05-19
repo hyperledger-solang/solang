@@ -101,7 +101,7 @@ impl EwasmTarget {
         contract.builder.position_at_end(entry);
 
         // first thing to do is abort value transfers if we're not payable
-        if contract.abort_all_value_transfers {
+        if contract.function_abort_value_transfers {
             contract.abort_if_value_transfer(self, function);
         }
 
@@ -165,12 +165,7 @@ impl EwasmTarget {
         contract.builder.position_at_end(entry);
 
         // first thing to do is abort value transfers if constructors not payable
-        if !contract
-            .contract
-            .functions
-            .iter()
-            .any(|f| f.is_constructor() && f.is_payable())
-        {
+        if contract.constructor_abort_value_transfers {
             contract.abort_if_value_transfer(self, function);
         }
 

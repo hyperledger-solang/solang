@@ -199,7 +199,8 @@ pub struct Contract<'a> {
     pub name: String,
     pub module: Module<'a>,
     pub runtime: Option<Box<Contract<'a>>>,
-    abort_all_value_transfers: bool,
+    function_abort_value_transfers: bool,
+    constructor_abort_value_transfers: bool,
     builder: Builder<'a>,
     context: &'a Context,
     triple: TargetTriple,
@@ -357,16 +358,22 @@ impl<'a> Contract<'a> {
 
         // if there is no payable function, fallback or receive then abort all value transfers at the top
         // note that receive() is always payable so this just checkes for presence.
-        let abort_all_value_transfers = !contract
+        let function_abort_value_transfers = !contract
             .functions
             .iter()
             .any(|f| !f.is_constructor() && f.is_payable());
+
+        let constructor_abort_value_transfers = !contract
+            .functions
+            .iter()
+            .any(|f| f.is_constructor() && f.is_payable());
 
         Contract {
             name: contract.name.to_owned(),
             module,
             runtime,
-            abort_all_value_transfers,
+            function_abort_value_transfers,
+            constructor_abort_value_transfers,
             builder: context.create_builder(),
             triple,
             context,
@@ -2401,7 +2408,7 @@ impl<'a> Contract<'a> {
         // abort value transfers for functions which are not payable, and
         // if value transfers aren't aborted globally
         if let Some(fdecl) = resolver_function {
-            if !self.abort_all_value_transfers && !fdecl.is_payable() {
+            if !self.function_abort_value_transfers && !fdecl.is_payable() {
                 self.abort_if_value_transfer(runtime, function);
             }
         }
@@ -3224,7 +3231,7 @@ impl<'a> Contract<'a> {
             return;
         }
 
-        let got_value = if self.abort_all_value_transfers {
+        let got_value = if self.function_abort_value_transfers {
             self.context.bool_type().const_zero()
         } else {
             let value = runtime.value_transferred(self);

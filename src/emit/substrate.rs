@@ -314,11 +314,7 @@ impl SubstrateTarget {
         let (deploy_args, deploy_args_length) = self.public_function_prelude(
             contract,
             function,
-            contract
-                .contract
-                .functions
-                .iter()
-                .all(|f| f.is_constructor() && !f.is_payable()),
+            contract.constructor_abort_value_transfers,
         );
 
         // init our storage vars
@@ -352,8 +348,11 @@ impl SubstrateTarget {
             None,
         );
 
-        let (call_args, call_args_length) =
-            self.public_function_prelude(contract, function, contract.abort_all_value_transfers);
+        let (call_args, call_args_length) = self.public_function_prelude(
+            contract,
+            function,
+            contract.function_abort_value_transfers,
+        );
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
