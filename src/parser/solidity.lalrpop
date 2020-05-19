@@ -226,11 +226,12 @@ Precedence2: Expression = {
     <a:@L> "!" <b:@R> <e:Precedence2> => Expression::Not(Loc(a, b), Box::new(e)),
     <a:@L> "~" <b:@R> <e:Precedence2> => Expression::Complement(Loc(a, b), Box::new(e)),
     <a:@L> "delete" <b:@R> <e:Precedence2> => Expression::Delete(Loc(a, b), Box::new(e)),
+    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc(a, b), Box::new(call)),
     <a:@L> "++" <b:@R> <e:Precedence2> => Expression::PreIncrement(Loc(a, b), Box::new(e)),
     <a:@L> "--" <b:@R> <e:Precedence2> => Expression::PreDecrement(Loc(a, b), Box::new(e)),
     <a:@L> "+" <b:@R> <e:Precedence2> => Expression::UnaryPlus(Loc(a, b), Box::new(e)),
     <a:@L> "-" <b:@R> <e:Precedence2> => Expression::UnaryMinus(Loc(a, b), Box::new(e)),
-    Precedence1,
+    Precedence0,
 }
 
 NamedArgument: NamedArgument = {
@@ -246,17 +247,17 @@ FunctionCall: Expression = {
     },
 }
 
-Precedence1: Expression = {
-    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc(a, b), Box::new(call)),
-    Precedence0
-}
-
 Precedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
     <FunctionCall> => <>,
     <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
+    // Solidity has ".address" members on external function types. Address is a keyword, so special casing needed
+    <a:@L> <e:Precedence0> "." <al:@L> "address" <b:@R> => {
+        Expression::MemberAccess(Loc(a, b), Box::new(e),
+            Identifier { loc: Loc(al, b), name: "address".to_string() })
+    },
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
