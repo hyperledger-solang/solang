@@ -180,8 +180,7 @@ pub struct NamedArgument {
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
-    New(Loc, Box<Expression>, Vec<Expression>),
-    NewNamed(Loc, Box<Expression>, Vec<NamedArgument>),
+    New(Loc, Box<Expression>),
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, Box<Expression>, Vec<Expression>),
@@ -240,8 +239,7 @@ impl Expression {
         match self {
             Expression::PostIncrement(loc, _)
             | Expression::PostDecrement(loc, _)
-            | Expression::New(loc, _, _)
-            | Expression::NewNamed(loc, _, _)
+            | Expression::New(loc, _)
             | Expression::ArraySubscript(loc, _, _)
             | Expression::MemberAccess(loc, _, _)
             | Expression::FunctionCall(loc, _, _)
