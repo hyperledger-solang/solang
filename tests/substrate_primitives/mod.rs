@@ -468,3 +468,75 @@ fn address_payable_type() {
 
     no_errors(errors);
 }
+
+#[test]
+fn type_name() {
+    // parse
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            function foo() public returns (uint32) {
+                assert(type(foobar).name == "foobar");
+                assert(type(uint8).min == 0);
+                assert(type(uint128).min == 0);
+                assert(type(uint256).min == 0);
+                assert(type(uint48).min == 0);
+                return 2;
+            }
+        }
+
+        contract foobar {
+            int32 a;
+        }"##,
+    );
+
+    runtime.function("foo", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            function min() public returns (uint32) {
+                assert(type(int8).min == -128);
+                assert(type(int16).min == -32768);
+                assert(type(int64).min == -9223372036854775808);
+                assert(type(int48).min == -140737488355328);
+                return 2;
+            }
+
+            function max_int() public returns (uint32) {
+                assert(type(int8).max == 127);
+                assert(type(int16).max == 32767);
+                assert(type(int64).max == 9223372036854775807);
+                assert(type(int48).max == 140737488355327);
+                return 2;
+            }
+
+            function max_uint() public returns (uint32) {
+                assert(type(uint8).max == 255);
+                assert(type(uint16).max == 65535);
+                assert(type(uint64).max == 18446744073709551615);
+                assert(type(uint48).max == 281474976710655);
+                return 2;
+            }
+        }"##,
+    );
+
+    runtime.function("min", Vec::new());
+    runtime.function("max_int", Vec::new());
+    runtime.function("max_uint", Vec::new());
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                int32 x = type(bool).max;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "type ‘bool’ does not have type function max"
+    );
+}
