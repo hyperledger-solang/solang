@@ -447,3 +447,86 @@ fn external_datatypes() {
 
     assert_eq!(runtime.vm.scratch, Ret(1020).encode());
 }
+
+#[test]
+fn creation_code() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract a {
+            function test() public {
+                    bytes code = type(b).creationCode;
+            }
+        }
+        
+        contract b {
+                int x;
+        
+                function test() public {
+                        a f = new a();
+                }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "circular reference creating contract ‘a’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract a {
+            function test() public {
+                    bytes code = type(a).runtimeCode;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "containing our own contract code for ‘a’ would generate infinite size contract"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public returns (bytes) {
+                bytes runtime = type(b).runtimeCode;
+             
+                assert(runtime[0] == 0);
+                assert(runtime[1] == 0x61); // a
+                assert(runtime[2] == 0x73); // s
+                assert(runtime[3] == 0x6d); // m
+
+                bytes creation = type(b).creationCode;
+
+                // on Substrate, they are the same
+                assert(creation == runtime);
+
+                return creation;
+            }
+        }
+
+        contract b {
+            int x;
+            constructor(int a) public {
+                x = a;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("test", Vec::new());
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(Vec<u8>);
+
+    // return value should be the code for the second contract
+    assert_eq!(
+        runtime.vm.scratch,
+        Ret(runtime.contracts[1].0.clone()).encode()
+    );
+}

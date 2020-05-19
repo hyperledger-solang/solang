@@ -30,6 +30,7 @@ use resolver::storage::{
 pub enum Expression {
     BoolLiteral(Loc, bool),
     BytesLiteral(Loc, Vec<u8>),
+    CodeLiteral(Loc, usize, bool),
     NumberLiteral(Loc, u16, BigInt),
     StructLiteral(Loc, resolver::Type, Vec<Expression>),
     ArrayLiteral(Loc, resolver::Type, Vec<u32>, Vec<Expression>),
@@ -108,6 +109,7 @@ impl Expression {
         match self {
             Expression::BoolLiteral(loc, _)
             | Expression::BytesLiteral(loc, _)
+            | Expression::CodeLiteral(loc, _, _)
             | Expression::NumberLiteral(loc, _, _)
             | Expression::StructLiteral(loc, _, _)
             | Expression::ArrayLiteral(loc, _, _, _)
@@ -172,6 +174,7 @@ impl Expression {
             Expression::StorageLoad(_, _, _) => true,
             Expression::BoolLiteral(_, _)
             | Expression::BytesLiteral(_, _)
+            | Expression::CodeLiteral(_, _, _)
             | Expression::NumberLiteral(_, _, _) => false,
             Expression::StructLiteral(_, _, exprs) => {
                 exprs.iter().any(|e| e.reads_contract_storage())
@@ -2724,6 +2727,56 @@ pub fn type_name_expr(
             Expression::BytesLiteral(*loc, ns.contracts[*n].name.as_bytes().to_vec()),
             resolver::Type::String,
         )),
+        (resolver::Type::Contract(no), "creationCode")
+        | (resolver::Type::Contract(no), "runtimeCode") => {
+            let contract_no = match contract_no {
+                Some(contract_no) => contract_no,
+                None => {
+                    errors.push(Output::error(
+                        *loc,
+                        format!(
+                            "type().{} not permitted outside of contract code",
+                            field.name
+                        ),
+                    ));
+                    return Err(());
+                }
+            };
+
+            // check for circular references
+            if *no == contract_no {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "containing our own contract code for ‘{}’ would generate infinite size contract",
+                        ns.contracts[*no].name
+                    ),
+                ));
+                return Err(());
+            }
+
+            if circular_reference(*no, contract_no, ns) {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "circular reference creating contract code for ‘{}’",
+                        ns.contracts[*no].name
+                    ),
+                ));
+                return Err(());
+            }
+
+            let mut creates = ns.contracts[contract_no].creates.borrow_mut();
+
+            if !creates.contains(no) {
+                creates.push(*no);
+            }
+
+            Ok((
+                Expression::CodeLiteral(*loc, *no, field.name == "runtimeCode"),
+                resolver::Type::DynamicBytes,
+            ))
+        }
         _ => {
             errors.push(Output::error(
                 *loc,
