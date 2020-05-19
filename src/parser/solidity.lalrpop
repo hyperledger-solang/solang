@@ -237,21 +237,24 @@ NamedArgument: NamedArgument = {
     <name:Identifier> ":" <expr:Expression> => NamedArgument{ name, expr }
 }
 
-Precedence1: Expression = {
+FunctionCall: Expression = {
     <a:@L> <i:Precedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), Box::new(i), v)
     },
     <a:@L> <i:Precedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
         Expression::NamedFunctionCall(Loc(a, b), Box::new(i), v)
     },
-    Precedence0,
+}
+
+Precedence1: Expression = {
+    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc(a, b), Box::new(call)),
+    Precedence0
 }
 
 Precedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(a, b), Box::new(e)),
-    <a:@L> "new" <t:Precedence0> <b:@R> "(" <v:Comma<Expression>> ")" => Expression::New(Loc(a, b), Box::new(t), v),
-    <a:@L> "new" <t:Precedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => Expression::NewNamed(Loc(a, b), Box::new(t), v),
+    <FunctionCall> => <>,
     <a:@L> <e:Precedence0> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i)),
     <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc(a, b), Box::new(e), i),
     <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc(a, b), true),

@@ -1931,17 +1931,21 @@ pub fn expression(
 
             Ok(returns.remove(0))
         }
-        ast::Expression::New(loc, ty, args) => {
-            let (expr, expr_ty) = new(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
 
-            Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
-        }
-        ast::Expression::NewNamed(loc, ty, args) => {
-            let (expr, expr_ty) =
-                constructor_named_args(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+        ast::Expression::New(loc, call) => match call.as_ref() {
+            ast::Expression::FunctionCall(_, ty, args) => {
+                let (expr, expr_ty) = new(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
 
-            Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
-        }
+                Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
+            }
+            ast::Expression::NamedFunctionCall(_, ty, args) => {
+                let (expr, expr_ty) =
+                    constructor_named_args(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
+
+                Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
+            }
+            _ => unreachable!(),
+        },
         ast::Expression::Delete(loc, var) => delete(loc, var, cfg, contract_no, ns, vartab, errors),
         ast::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
