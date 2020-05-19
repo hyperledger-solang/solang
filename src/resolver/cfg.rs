@@ -441,6 +441,15 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Expression::CodeLiteral(_, contract_no, runtime) => format!(
+                "({} code contract {})",
+                if *runtime {
+                    "runtimeCode"
+                } else {
+                    "creationCode"
+                },
+                ns.contracts[*contract_no].name,
+            ),
             Expression::ExternalFunctionCall(_, contract_no, f, address, args) => format!(
                 "(external call address:{} {}.{} ({})",
                 self.expr_to_string(contract, ns, address),

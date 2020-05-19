@@ -745,6 +745,59 @@ impl<'a> Contract<'a> {
                     .unwrap()
                     .into()
             }
+            Expression::CodeLiteral(_, contract_no, runtime) => {
+                let resolver_contract = &self.ns.contracts[*contract_no];
+
+                let target_contract =
+                    Contract::build(self.context, &resolver_contract, self.ns, "", self.opt);
+
+                // wasm
+                let wasm = if *runtime && target_contract.runtime.is_some() {
+                    target_contract
+                        .runtime
+                        .unwrap()
+                        .wasm(true)
+                        .expect("compile should succeeed")
+                } else {
+                    target_contract.wasm(true).expect("compile should succeeed")
+                };
+
+                let size = self.context.i32_type().const_int(wasm.len() as u64, false);
+
+                let elem_size = self.context.i32_type().const_int(1, false);
+
+                let init = self.emit_global_string(
+                    &format!(
+                        "code_{}_{}",
+                        if *runtime { "runtime" } else { "deployer" },
+                        &resolver_contract.name
+                    ),
+                    &wasm,
+                    false,
+                );
+
+                let v = self
+                    .builder
+                    .build_call(
+                        self.module.get_function("vector_new").unwrap(),
+                        &[size.into(), elem_size.into(), init.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                self.builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        self.module
+                            .get_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
+            }
             Expression::Add(_, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
