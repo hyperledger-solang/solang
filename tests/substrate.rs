@@ -89,6 +89,7 @@ impl VM {
 pub struct TestRuntime {
     pub store: HashMap<(Address, StorageKey), Vec<u8>>,
     pub contracts: Vec<(Vec<u8>, String)>,
+    pub value: u128,
     pub printbuf: String,
     pub accounts: HashMap<Address, Vec<u8>>,
     pub abi: abi::substrate::Metadata,
@@ -385,9 +386,9 @@ impl Externals for TestRuntime {
                 Ok(ret)
             }
             Some(SubstrateExternal::ext_value_transferred) => {
-                self.vm.scratch = [0u8; 16].to_vec();
+                self.vm.scratch = self.value.to_le_bytes().to_vec();
 
-                println!("ext_value_transferred: 0");
+                println!("ext_value_transferred: {}", hex::encode(&self.vm.scratch));
 
                 Ok(None)
             }
@@ -455,6 +456,28 @@ impl TestRuntime {
         }
     }
 
+    pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
+        let m = &self.abi.contract.constructors[index];
+
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+
+        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("deploy", &[], self)
+            .expect("failed to call function")
+        {
+            println!(
+                "function_expected_return: got {} expected {}",
+                ret, expected_ret
+            );
+
+            if expected_ret != ret {
+                panic!("non one return")
+            }
+        }
+    }
+
     pub fn function(&mut self, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
@@ -509,6 +532,23 @@ impl TestRuntime {
         }
     }
 
+    pub fn raw_function_return(&mut self, expect_ret: i32, input: Vec<u8>) {
+        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+
+        self.vm.scratch = input;
+
+        if let Some(RuntimeValue::I32(ret)) = module
+            .invoke_export("call", &[], self)
+            .expect("failed to call function")
+        {
+            println!("got {} expected {}", ret, expect_ret);
+
+            if ret != expect_ret {
+                panic!("return not expected")
+            }
+        }
+    }
+
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
         let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
 
@@ -544,6 +584,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
     let mut t = TestRuntime {
         accounts: HashMap::new(),
         printbuf: String::new(),
+        value: 0,
         store: HashMap::new(),
         contracts: res,
         vm: VM::new(address),

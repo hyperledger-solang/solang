@@ -788,3 +788,246 @@ fn local_destructure_call() {
 
     runtime.function("test", Vec::new());
 }
+
+#[test]
+fn payable_constructors() {
+    // no contructors means can't send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.value = 1;
+    runtime.constructor_expect_return(0, 1, Vec::new());
+
+    // contructors w/o payable means can't send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            constructor() public {
+                int32 a = 0;
+            }
+
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.value = 1;
+    runtime.constructor_expect_return(0, 1, Vec::new());
+
+    // contructors w/ payable means can send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            constructor() public payable {
+                int32 a = 0;
+            }
+
+            function test(string a) public {
+            }
+        }"##,
+    );
+
+    runtime.value = 1;
+    runtime.constructor(0, Vec::new());
+}
+
+#[test]
+fn payable_functions() {
+    // function w/o payable means can't send value
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.value = 1;
+    runtime.function_expect_return("test", Vec::new(), 1);
+
+    // test both
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() payable public {
+            }
+            function test2() public {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.value = 1;
+    runtime.function_expect_return("test2", Vec::new(), 1);
+    runtime.value = 1;
+    runtime.function("test", Vec::new());
+
+    // test fallback and receive
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(u32);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            int32 x;
+
+            function get_x() public returns (int32) {
+                return x;
+            }
+
+            function test() payable public {
+                x = 1;
+            }
+
+            fallback() external {
+                x = 2;
+            }
+
+            receive() payable external {
+                x = 3;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.value = 1;
+    runtime.raw_function(b"abde".to_vec());
+    runtime.value = 0;
+    runtime.function("get_x", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(3).encode());
+
+    runtime.value = 0;
+    runtime.raw_function(b"abde".to_vec());
+    runtime.function("get_x", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(2).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            int32 x;
+
+            function get_x() public returns (int32) {
+                return x;
+            }
+
+            function test() payable public {
+                x = 1;
+            }
+
+            receive() payable external {
+                x = 3;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.value = 1;
+    runtime.raw_function(b"abde".to_vec());
+    runtime.value = 0;
+    runtime.function("get_x", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(3).encode());
+
+    runtime.value = 0;
+    runtime.raw_function_return(2, b"abde".to_vec());
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            int32 x;
+
+            function get_x() public returns (int32) {
+                return x;
+            }
+
+            function test() payable public {
+                x = 1;
+            }
+
+            fallback() external {
+                x = 2;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.value = 1;
+    runtime.raw_function_return(2, b"abde".to_vec());
+
+    runtime.value = 0;
+    runtime.raw_function(b"abde".to_vec());
+    runtime.function("get_x", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(2).encode());
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            receive() public {
+
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "receive function must be declared external"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            receive() external  {
+
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "receive function must be declared payable"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            fallback() payable external {
+
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "fallback function must not be declare payable, use ‘receive() external payable’ instead"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            fallback() public {
+
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "fallback function must be declared external"
+    );
+}
