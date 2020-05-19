@@ -10,6 +10,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Mul;
+use std::ops::Shl;
+use std::ops::Sub;
 
 use hex;
 use output;
@@ -2069,6 +2071,15 @@ pub fn expression(
                 }
             }
 
+            // is of the form "type(x).field", like type(c).min
+            if let ast::Expression::FunctionCall(_, name, args) = e.as_ref() {
+                if let ast::Expression::Variable(func_name) = name.as_ref() {
+                    if func_name.name == "type" {
+                        return type_name_expr(loc, args, id, contract_no, ns, errors);
+                    }
+                }
+            }
+
             let (expr, expr_ty) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
             // Dereference if need to. This could be struct-in-struct for
@@ -2663,6 +2674,65 @@ pub fn constructor_named_args(
                 "cannot find overloaded constructor which matches signature".to_string(),
             ));
 
+            Err(())
+        }
+    }
+}
+
+/// Resolve type(x).foo
+pub fn type_name_expr(
+    loc: &ast::Loc,
+    args: &[ast::Expression],
+    field: &ast::Identifier,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    if args.is_empty() {
+        errors.push(Output::error(
+            *loc,
+            "missing argument to type()".to_string(),
+        ));
+        return Err(());
+    }
+
+    if args.len() > 1 {
+        errors.push(Output::error(
+            *loc,
+            format!("got {} arguments to type(), only one expected", args.len(),),
+        ));
+        return Err(());
+    }
+
+    let ty = ns.resolve_type(contract_no, false, &args[0], errors)?;
+
+    match (&ty, field.name.as_str()) {
+        (resolver::Type::Uint(_), "min") => bigint_to_expression(loc, &BigInt::zero(), errors),
+        (resolver::Type::Uint(bits), "max") => {
+            let max = BigInt::one().shl(*bits as usize).sub(1);
+            bigint_to_expression(loc, &max, errors)
+        }
+        (resolver::Type::Int(bits), "min") => {
+            let min = BigInt::zero().sub(BigInt::one().shl(*bits as usize - 1));
+            bigint_to_expression(loc, &min, errors)
+        }
+        (resolver::Type::Int(bits), "max") => {
+            let max = BigInt::one().shl(*bits as usize - 1).sub(1);
+            bigint_to_expression(loc, &max, errors)
+        }
+        (resolver::Type::Contract(n), "name") => Ok((
+            Expression::BytesLiteral(*loc, ns.contracts[*n].name.as_bytes().to_vec()),
+            resolver::Type::String,
+        )),
+        _ => {
+            errors.push(Output::error(
+                *loc,
+                format!(
+                    "type ‘{}’ does not have type function {}",
+                    ty.to_string(ns),
+                    field.name
+                ),
+            ));
             Err(())
         }
     }
