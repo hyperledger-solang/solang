@@ -791,7 +791,8 @@ fn local_destructure_call() {
 
 #[test]
 fn payable_constructors() {
-    // no contructors means can't send value
+    // no contructors means constructor is not payable
+    // however there is no check for value transfers on constructor so endowment can be received
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -801,9 +802,10 @@ fn payable_constructors() {
     );
 
     runtime.value = 1;
-    runtime.constructor_expect_return(0, 1, Vec::new());
+    runtime.constructor(0, Vec::new());
 
     // contructors w/o payable means can't send value
+    // however there is no check for value transfers on constructor so endowment can be received
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -817,7 +819,7 @@ fn payable_constructors() {
     );
 
     runtime.value = 1;
-    runtime.constructor_expect_return(0, 1, Vec::new());
+    runtime.constructor(0, Vec::new());
 
     // contructors w/ payable means can send value
     let mut runtime = build_solidity(
