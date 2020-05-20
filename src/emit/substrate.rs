@@ -311,11 +311,9 @@ impl SubstrateTarget {
             None,
         );
 
-        let (deploy_args, deploy_args_length) = self.public_function_prelude(
-            contract,
-            function,
-            contract.constructor_abort_value_transfers,
-        );
+        // deploy always receives an endowment so no value check here
+        let (deploy_args, deploy_args_length) =
+            self.public_function_prelude(contract, function, false);
 
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
