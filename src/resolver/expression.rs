@@ -964,6 +964,12 @@ fn cast_types(
                 Ok(expr)
             }
         }
+        // Implicit conversion to bytesN from int/uint is allowed
+        (resolver::Type::Uint(from_len), resolver::Type::Bytes(to_len))
+        | (resolver::Type::Int(from_len), resolver::Type::Bytes(to_len)) => Ok(expr),
+        // Implicit conversion from bytesN to int/uint is allowed
+        (resolver::Type::Bytes(from_len), resolver::Type::Uint(to_len))
+        | (resolver::Type::Bytes(from_len), resolver::Type::Int(to_len)) => Ok(expr),
         // Implicit conversion between contract and address is allowed
         (resolver::Type::Contract(_), resolver::Type::Address(false)) => Ok(expr),
         (resolver::Type::Address(_), resolver::Type::Contract(_))
