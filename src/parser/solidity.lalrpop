@@ -1,4 +1,3 @@
-
 use std::str::FromStr;
 use num_bigint::BigInt;
 use parser::ast::*;
@@ -413,6 +412,12 @@ SimpleStatement: Statement = {
     }
 }
 
+CatchError: (Identifier, Parameter, Statement) = {
+    "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> => {
+        (id, param, Statement::BlockStatement(block))
+    }
+}
+
 NonIfStatement: Statement = {
     BlockStatement => {
         Statement::BlockStatement(<>)
@@ -438,20 +443,12 @@ NonIfStatement: Statement = {
     },
     "try" <e:Expression> <r:("returns" <ParameterList>)?>
     <ok:BlockStatement>
+    <error:CatchError?>
     "catch" "(" <p:Parameter> ")" <b:BlockStatement> => {
         Statement::Try(e, r.unwrap_or(Vec::new()),
             Box::new(Statement::BlockStatement(ok)),
-            None,
+            box_option(error),
             Box::new((p, Statement::BlockStatement(b))))
-    },
-    "try" <e:Expression> <r:("returns" <ParameterList>)?>
-    <ok:BlockStatement>
-    "catch" <i:Identifier> "(" <pe:Parameter> ")" <be:BlockStatement>
-    "catch" "(" <pa:Parameter> ")" <ba:BlockStatement> => {
-        Statement::Try(e, r.unwrap_or(Vec::new()),
-            Box::new(Statement::BlockStatement(ok)),
-            Some(Box::new((i, pe, Statement::BlockStatement(be)))),
-            Box::new((pa, Statement::BlockStatement(ba))))
     },
     "emit" <n:Identifier> "(" <v:CommaOne<Expression>> ")" ";" => {
         Statement::Emit(n, v)
