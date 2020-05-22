@@ -432,7 +432,12 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::Constructor(_, contract_no, constructor_no, args) => format!(
+            Expression::Constructor {
+                contract_no,
+                constructor_no,
+                args,
+                ..
+            } => format!(
                 "(constructor:{} ({}) ({})",
                 ns.contracts[*contract_no].name,
                 ns.contracts[*contract_no].functions[*constructor_no].signature,
@@ -450,11 +455,17 @@ impl ControlFlowGraph {
                 },
                 ns.contracts[*contract_no].name,
             ),
-            Expression::ExternalFunctionCall(_, contract_no, f, address, args) => format!(
+            Expression::ExternalFunctionCall {
+                function_no,
+                contract_no,
+                address,
+                args,
+                ..
+            } => format!(
                 "(external call address:{} {}.{} ({})",
                 self.expr_to_string(contract, ns, address),
                 ns.contracts[*contract_no].name,
-                contract.functions[*f].name,
+                contract.functions[*function_no].name,
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
@@ -1647,7 +1658,13 @@ fn try_catch(
         let finally_block = cfg.new_basic_block("finally".to_string());
 
         let mut args = match fcall.0 {
-            Expression::ExternalFunctionCall(_, contract_no, function_no, address, args) => {
+            Expression::ExternalFunctionCall {
+                contract_no,
+                function_no,
+                address,
+                args,
+                ..
+            } => {
                 cfg.add(
                     vartab,
                     Instr::ExternalCall {
@@ -1711,7 +1728,13 @@ fn try_catch(
                     Vec::new()
                 }
             }
-            Expression::Constructor(loc, contract_no, constructor_no, args) => {
+            Expression::Constructor {
+                loc,
+                contract_no,
+                constructor_no,
+                args,
+                ..
+            } => {
                 let ty = resolver::Type::Contract(contract_no);
                 let address_res = vartab.temp_anonymous(&resolver::Type::Contract(contract_no));
 
