@@ -1,5 +1,6 @@
 # solang - A Solidity to wasm compiler written in rust
 
+[![Rocket.Chat](https://open.rocket.chat/images/join-chat.svg)](https://chat.hyperledger.org/channel/solang)
 [![CI](https://github.com/hyperledger-labs/solang/workflows/test/badge.svg)](https://github.com/hyperledger-labs/solang/actions)
 [![Documentation Status](https://readthedocs.org/projects/solang/badge/?version=latest)](https://solang.readthedocs.io/en/latest/?badge=latest)
 [![LoC](https://tokei.rs/b1/github/hyperledger-labs/solang?category=lines)](https://github.com/hyperledger-labs/solang)
@@ -14,8 +15,7 @@ Solang targets Substrate, ewasm, and Sawtooth.
 
 Solang is under active development right now, and should be documented at
 the same time as the implementation. Please have a look at
-[our documentation](https://solang.readthedocs.io/en/latest/) and find us on
-[Hyperledger Chat](https://chat.hyperledger.org/channel/solang).
+[our documentation](https://solang.readthedocs.io/en/latest/).
 
 ## Simple example
 
