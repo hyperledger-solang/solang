@@ -87,9 +87,24 @@ pub enum Expression {
     Or(Loc, Box<Expression>, Box<Expression>),
     And(Loc, Box<Expression>, Box<Expression>),
     LocalFunctionCall(Loc, usize, Vec<Expression>),
-    ExternalFunctionCall(Loc, usize, usize, Box<Expression>, Vec<Expression>),
-    Constructor(Loc, usize, usize, Vec<Expression>),
-
+    ExternalFunctionCall {
+        loc: ast::Loc,
+        contract_no: usize,
+        function_no: usize,
+        address: Box<Expression>,
+        args: Vec<Expression>,
+        value: Box<Expression>,
+        gas: Box<Expression>,
+    },
+    Constructor {
+        loc: Loc,
+        contract_no: usize,
+        constructor_no: usize,
+        args: Vec<Expression>,
+        value: Box<Expression>,
+        gas: Box<Expression>,
+        salt: Box<Expression>,
+    },
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
     ReturnData(Loc),
@@ -162,8 +177,8 @@ impl Expression {
             | Expression::Keccak256(loc, _)
             | Expression::ReturnData(loc)
             | Expression::LocalFunctionCall(loc, _, _)
-            | Expression::ExternalFunctionCall(loc, _, _, _, _)
-            | Expression::Constructor(loc, _, _, _)
+            | Expression::ExternalFunctionCall { loc, .. }
+            | Expression::Constructor { loc, .. }
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison | Expression::Unreachable => unreachable!(),
         }
@@ -267,8 +282,8 @@ impl Expression {
             | Expression::StorageBytesLength(_, _) => true,
             Expression::StructMember(_, s, _) => s.reads_contract_storage(),
             Expression::LocalFunctionCall(_, _, args)
-            | Expression::Constructor(_, _, _, args)
-            | Expression::ExternalFunctionCall(_, _, _, _, args) => {
+            | Expression::Constructor { args, .. }
+            | Expression::ExternalFunctionCall { args, .. } => {
                 args.iter().any(|a| a.reads_contract_storage())
             }
             Expression::Keccak256(_, e) => e.iter().any(|e| e.0.reads_contract_storage()),
@@ -2379,6 +2394,7 @@ fn constructor(
     loc: &ast::Loc,
     no: usize,
     args: &[ast::Expression],
+    call_args: CallArgs,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -2484,7 +2500,15 @@ fn constructor(
 
         if matches {
             return Ok((
-                Expression::Constructor(*loc, no, constructor_no, cast_args),
+                Expression::Constructor {
+                    loc: *loc,
+                    contract_no: no,
+                    constructor_no,
+                    args: cast_args,
+                    value: Box::new(call_args.value),
+                    gas: Box::new(call_args.gas),
+                    salt: Box::new(call_args.salt),
+                },
                 resolver::Type::Contract(no),
             ));
         }
@@ -2497,7 +2521,15 @@ fn constructor(
         .count()
     {
         0 => Ok((
-            Expression::Constructor(*loc, no, 0, Vec::new()),
+            Expression::Constructor {
+                loc: *loc,
+                contract_no: no,
+                constructor_no: 0,
+                args: Vec::new(),
+                value: Box::new(call_args.value),
+                gas: Box::new(call_args.gas),
+                salt: Box::new(call_args.salt),
+            },
             resolver::Type::Contract(no),
         )),
         1 => {
@@ -2538,6 +2570,10 @@ pub fn constructor_named_args(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (ty, call_args, _) = collect_call_args(ty, errors)?;
+
+    let call_args = parse_call_args(call_args, false, cfg, contract_no, ns, vartab, errors)?;
+
     let no = match ns.resolve_type(contract_no, false, ty, errors)? {
         resolver::Type::Contract(n) => n,
         _ => {
@@ -2654,7 +2690,15 @@ pub fn constructor_named_args(
 
         if matches {
             return Ok((
-                Expression::Constructor(*loc, no, constructor_no, cast_args),
+                Expression::Constructor {
+                    loc: *loc,
+                    contract_no: no,
+                    constructor_no,
+                    args: cast_args,
+                    gas: Box::new(call_args.gas),
+                    value: Box::new(call_args.value),
+                    salt: Box::new(call_args.salt),
+                },
                 resolver::Type::Contract(no),
             ));
         }
@@ -2667,7 +2711,15 @@ pub fn constructor_named_args(
         .count()
     {
         0 => Ok((
-            Expression::Constructor(*loc, no, 0, Vec::new()),
+            Expression::Constructor {
+                loc: *loc,
+                contract_no: no,
+                constructor_no: 0,
+                args: Vec::new(),
+                gas: Box::new(call_args.gas),
+                value: Box::new(call_args.value),
+                salt: Box::new(call_args.salt),
+            },
             resolver::Type::Contract(no),
         )),
         1 => {
@@ -2806,6 +2858,8 @@ pub fn new(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (ty, call_args, call_args_loc) = collect_call_args(ty, errors)?;
+
     let ty = ns.resolve_type(contract_no, false, ty, errors)?;
 
     match &ty {
@@ -2831,7 +2885,20 @@ pub fn new(
         }
         resolver::Type::String | resolver::Type::DynamicBytes => {}
         resolver::Type::Contract(n) => {
-            return constructor(loc, *n, args, cfg, contract_no, ns, vartab, errors);
+            let call_args =
+                parse_call_args(call_args, false, cfg, contract_no, ns, vartab, errors)?;
+
+            return constructor(
+                loc,
+                *n,
+                args,
+                call_args,
+                cfg,
+                contract_no,
+                ns,
+                vartab,
+                errors,
+            );
         }
         _ => {
             errors.push(Output::error(
@@ -2841,6 +2908,14 @@ pub fn new(
             return Err(());
         }
     };
+
+    if let Some(loc) = call_args_loc {
+        errors.push(Output::error(
+            loc,
+            "constructor arguments not permitted for allocation".to_string(),
+        ));
+        return Err(());
+    }
 
     if args.len() != 1 {
         errors.push(Output::error(
@@ -4327,9 +4402,19 @@ fn method_call_pos_args(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (var, call_args, call_args_loc) = collect_call_args(var, errors)?;
+
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
+        if let Some(loc) = call_args_loc {
+            errors.push(Output::error(
+                loc,
+                "call arguments not allowed on storage methods".to_string(),
+            ));
+            return Err(());
+        }
+
         match ty.as_ref() {
             resolver::Type::Array(_, dim) => {
                 if func.name == "push" {
@@ -4390,6 +4475,9 @@ fn method_call_pos_args(
     }
 
     if let resolver::Type::Contract(contract_no) = &var_ty.deref() {
+        let call_args =
+            parse_call_args(call_args, true, cfg, Some(*contract_no), ns, vartab, errors)?;
+
         let mut resolved_args = Vec::new();
         let mut resolved_types = Vec::new();
 
@@ -4400,8 +4488,8 @@ fn method_call_pos_args(
         }
 
         let mut temp_errors = Vec::new();
-
         let mut name_match = 0;
+
         for (n, ftype) in ns.contracts[*contract_no].functions.iter().enumerate() {
             if func.name != ftype.name {
                 continue;
@@ -4447,11 +4535,11 @@ fn method_call_pos_args(
             }
             if matches {
                 return Ok((
-                    Expression::ExternalFunctionCall(
-                        *loc,
-                        *contract_no,
-                        n,
-                        Box::new(cast(
+                    Expression::ExternalFunctionCall {
+                        loc: *loc,
+                        contract_no: *contract_no,
+                        function_no: n,
+                        address: Box::new(cast(
                             &var.loc(),
                             var_expr,
                             &var_ty,
@@ -4461,8 +4549,10 @@ fn method_call_pos_args(
                             ns,
                             errors,
                         )?),
-                        cast_args,
-                    ),
+                        args: cast_args,
+                        value: Box::new(call_args.value),
+                        gas: Box::new(call_args.gas),
+                    },
                     resolver::Type::Undef,
                 ));
             }
@@ -4499,9 +4589,13 @@ fn method_call_with_named_args(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (var, call_args, _) = collect_call_args(var, errors)?;
+
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::Contract(external_contract_no) = &var_ty.deref() {
+        let call_args = parse_call_args(call_args, true, cfg, contract_no, ns, vartab, errors)?;
+
         let mut arguments = HashMap::new();
 
         for arg in args {
@@ -4582,11 +4676,11 @@ fn method_call_with_named_args(
 
             if matches {
                 return Ok((
-                    Expression::ExternalFunctionCall(
-                        *loc,
-                        *external_contract_no,
-                        func_no,
-                        Box::new(cast(
+                    Expression::ExternalFunctionCall {
+                        loc: *loc,
+                        contract_no: *external_contract_no,
+                        function_no: func_no,
+                        address: Box::new(cast(
                             &var.loc(),
                             var_expr,
                             &var_ty,
@@ -4596,8 +4690,10 @@ fn method_call_with_named_args(
                             ns,
                             errors,
                         )?),
-                        cast_args,
-                    ),
+                        args: cast_args,
+                        value: Box::new(call_args.value),
+                        gas: Box::new(call_args.gas),
+                    },
                     resolver::Type::Undef,
                 ));
             }
@@ -4828,6 +4924,128 @@ pub fn parameter_list_to_expr_list<'a>(
     }
 }
 
+/// Function call arguments
+pub fn collect_call_args<'a>(
+    expr: &'a ast::Expression,
+    errors: &mut Vec<Output>,
+) -> Result<
+    (
+        &'a ast::Expression,
+        Vec<&'a ast::NamedArgument>,
+        Option<ast::Loc>,
+    ),
+    (),
+> {
+    let mut named_arguments = Vec::new();
+    let mut expr = expr;
+    let mut loc: Option<ast::Loc> = None;
+
+    while let ast::Expression::FunctionCallBlock(_, e, block) = expr {
+        if let ast::Statement::Args(_, args) = block.as_ref() {
+            if let Some(l) = loc {
+                loc = Some(ast::Loc(l.0, block.loc().1));
+            } else {
+                loc = Some(block.loc());
+            }
+
+            named_arguments.extend(args);
+        } else {
+            errors.push(Output::error(
+                block.loc(),
+                "code block found where list of call arguments expected, like ‘{gas: 5000}’"
+                    .to_string(),
+            ));
+            return Err(());
+        }
+
+        expr = e;
+    }
+
+    Ok((expr, named_arguments, loc))
+}
+
+struct CallArgs {
+    gas: Expression,
+    salt: Expression,
+    value: Expression,
+}
+
+/// Parse call arguments for external calls
+fn parse_call_args(
+    call_args: Vec<&ast::NamedArgument>,
+    external_call: bool,
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<Output>,
+) -> Result<CallArgs, ()> {
+    let mut args: HashMap<&String, &ast::NamedArgument> = HashMap::new();
+
+    for arg in call_args {
+        if let Some(prev) = args.get(&arg.name.name) {
+            errors.push(Output::error_with_note(
+                arg.loc,
+                format!("‘{}’ specified multiple times", arg.name.name),
+                prev.loc,
+                format!("location of previous declaration of ‘{}’", arg.name.name),
+            ));
+            return Err(());
+        }
+
+        args.insert(&arg.name.name, arg);
+    }
+
+    let mut res = CallArgs {
+        value: Expression::NumberLiteral(ast::Loc(0, 0), ns.value_length as u16, BigInt::zero()),
+        gas: Expression::NumberLiteral(ast::Loc(0, 0), 64, BigInt::zero()),
+        salt: Expression::NumberLiteral(ast::Loc(0, 0), 256, BigInt::zero()),
+    };
+
+    for arg in args.values() {
+        match arg.name.name.as_str() {
+            "value" => {
+                let (expr, expr_ty) = expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?;
+
+                let ty = resolver::Type::Uint(ns.value_length as u16);
+
+                res.value = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
+            }
+            "gas" => {
+                let (expr, expr_ty) = expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?;
+
+                let ty = resolver::Type::Uint(64);
+
+                res.gas = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
+            }
+            "salt" => {
+                if external_call {
+                    errors.push(Output::error(
+                        arg.loc,
+                        "‘salt’ not valid for external calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                let (expr, expr_ty) = expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?;
+
+                let ty = resolver::Type::Uint(256);
+
+                res.salt = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
+            }
+            _ => {
+                errors.push(Output::error(
+                    arg.loc,
+                    format!("‘{}’ not a valid parameter", arg.name.name),
+                ));
+                return Err(());
+            }
+        }
+    }
+
+    Ok(res)
+}
+
 /// Resolve function call
 pub fn function_call_expr(
     loc: &ast::Loc,
@@ -4852,6 +5070,16 @@ pub fn function_call_expr(
             errors,
         ),
         ast::Expression::Variable(id) => {
+            let (_, _, call_args_loc) = collect_call_args(ty, errors)?;
+
+            if let Some(loc) = call_args_loc {
+                errors.push(Output::error(
+                    loc,
+                    "call arguments not permitted for internal calls".to_string(),
+                ));
+                return Err(());
+            }
+
             function_call_pos_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
         }
         ast::Expression::ArraySubscript(_, _, _) => {
@@ -4892,6 +5120,16 @@ pub fn named_function_call_expr(
             errors,
         ),
         ast::Expression::Variable(id) => {
+            let (_, _, call_args_loc) = collect_call_args(ty, errors)?;
+
+            if let Some(loc) = call_args_loc {
+                errors.push(Output::error(
+                    loc,
+                    "call arguments not permitted for internal calls".to_string(),
+                ));
+                return Err(());
+            }
+
             function_call_with_named_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
         }
         ast::Expression::ArraySubscript(_, _, _) => {
@@ -4964,7 +5202,14 @@ fn emit_function_call(
                 )]
             }
         }
-        Expression::ExternalFunctionCall(loc, contract_no, function_no, address, args) => {
+        Expression::ExternalFunctionCall {
+            loc,
+            contract_no,
+            function_no,
+            address,
+            args,
+            ..
+        } => {
             let ftype = &ns.contracts[contract_no].functions[function_no];
 
             cfg.add(
@@ -5025,7 +5270,13 @@ fn emit_constructor_call(
     };
 
     match expr {
-        Expression::Constructor(loc, contract_no, constructor_no, args) => {
+        Expression::Constructor {
+            loc,
+            contract_no,
+            constructor_no,
+            args,
+            ..
+        } => {
             let address_res = tab.temp_anonymous(&resolver::Type::Contract(contract_no));
 
             cfg.add(
