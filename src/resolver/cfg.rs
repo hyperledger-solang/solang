@@ -903,7 +903,7 @@ fn statement(
             }
             Ok(true)
         }
-        ast::Statement::BlockStatement(ast::BlockStatement(bs)) => {
+        ast::Statement::Block(bs) => {
             vartab.new_scope();
             let mut reachable = true;
 
@@ -1309,8 +1309,15 @@ fn statement(
 
             Ok(true)
         }
-        ast::Statement::Try(_, _, _, _, _) => {
+        ast::Statement::Try(_, _, _, _) => {
             try_catch(stmt, f, cfg, contract_no, ns, vartab, loops, errors)
+        }
+        ast::Statement::Args(_) => {
+            errors.push(Output::error(
+                stmt.loc(),
+                "expected code block, not list of named arguments".to_string(),
+            ));
+            Err(())
         }
         _ => panic!("not implemented"),
     }
@@ -1508,7 +1515,24 @@ fn try_catch(
     loops: &mut LoopScopes,
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
-    if let ast::Statement::Try(expr, returns, ok, error_stmt, catch_stmt) = &try {
+    if let ast::Statement::Try(expr, returns_and_ok, error_stmt, catch_stmt) = &try {
+        let mut expr = expr;
+        let mut ok = None;
+
+        while let ast::Expression::FunctionCallBlock(_, e, block) = expr {
+            if ok.is_some() {
+                errors.push(Output::error(
+                    block.loc(),
+                    "unexpected code block".to_string(),
+                ));
+                return Err(());
+            }
+
+            ok = Some(block.as_ref());
+
+            expr = e.as_ref();
+        }
+
         let fcall = match expr {
             ast::Expression::FunctionCall(loc, ty, args) => function_call_expr(
                 loc,
@@ -1530,33 +1554,81 @@ fn try_catch(
                 &mut Some(vartab),
                 errors,
             )?,
-            ast::Expression::New(loc, call) => match call.as_ref() {
-                ast::Expression::FunctionCall(_, ty, args) => new(
-                    loc,
-                    ty,
-                    args,
-                    cfg,
-                    Some(contract_no),
-                    ns,
-                    &mut Some(vartab),
-                    errors,
-                )?,
-                ast::Expression::NamedFunctionCall(_, ty, args) => constructor_named_args(
-                    loc,
-                    ty,
-                    args,
-                    cfg,
-                    Some(contract_no),
-                    ns,
-                    &mut Some(vartab),
-                    errors,
-                )?,
-                _ => unreachable!(),
-            },
+            ast::Expression::New(loc, call) => {
+                let mut call = call.as_ref();
+
+                while let ast::Expression::FunctionCallBlock(_, expr, block) = call {
+                    if ok.is_some() {
+                        errors.push(Output::error(
+                            block.loc(),
+                            "unexpected code block".to_string(),
+                        ));
+                        return Err(());
+                    }
+
+                    ok = Some(block.as_ref());
+
+                    call = expr.as_ref();
+                }
+
+                match call {
+                    ast::Expression::FunctionCall(_, ty, args) => new(
+                        loc,
+                        ty,
+                        args,
+                        cfg,
+                        Some(contract_no),
+                        ns,
+                        &mut Some(vartab),
+                        errors,
+                    )?,
+                    ast::Expression::NamedFunctionCall(_, ty, args) => constructor_named_args(
+                        loc,
+                        ty,
+                        args,
+                        cfg,
+                        Some(contract_no),
+                        ns,
+                        &mut Some(vartab),
+                        errors,
+                    )?,
+                    _ => unreachable!(),
+                }
+            }
             _ => {
                 errors.push(Output::error(
                     expr.loc(),
                     "try only supports external calls or constructor calls".to_string(),
+                ));
+                return Err(());
+            }
+        };
+
+        let mut returns = &Vec::new();
+
+        if let Some((rets, block)) = returns_and_ok {
+            if ok.is_some() {
+                errors.push(Output::error(
+                    block.loc(),
+                    "unexpected code block".to_string(),
+                ));
+                return Err(());
+            }
+
+            ok = Some(block);
+
+            returns = rets;
+        }
+
+        let ok = match ok {
+            Some(ok) => ok,
+            None => {
+                // position after the expression
+                let pos = expr.loc().1;
+
+                errors.push(Output::error(
+                    ast::Loc(pos, pos),
+                    "code block missing for no catch".to_string(),
                 ));
                 return Err(());
             }

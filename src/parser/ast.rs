@@ -80,7 +80,7 @@ impl fmt::Display for StorageLocation {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct VariableDeclaration {
     pub ty: Expression,
     pub storage: Option<StorageLocation>,
@@ -184,6 +184,7 @@ pub enum Expression {
     ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
     MemberAccess(Loc, Box<Expression>, Identifier),
     FunctionCall(Loc, Box<Expression>, Vec<Expression>),
+    FunctionCallBlock(Loc, Box<Expression>, Box<Statement>),
     NamedFunctionCall(Loc, Box<Expression>, Vec<NamedArgument>),
     Not(Loc, Box<Expression>),
     Complement(Loc, Box<Expression>),
@@ -243,6 +244,7 @@ impl Expression {
             | Expression::ArraySubscript(loc, _, _)
             | Expression::MemberAccess(loc, _, _)
             | Expression::FunctionCall(loc, _, _)
+            | Expression::FunctionCallBlock(loc, _, _)
             | Expression::NamedFunctionCall(loc, _, _)
             | Expression::Not(loc, _)
             | Expression::Complement(loc, _)
@@ -393,13 +395,11 @@ pub struct FunctionDefinition {
     pub body: Statement,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct BlockStatement(pub Vec<Statement>);
-
-#[derive(Debug, PartialEq)]
-#[allow(clippy::large_enum_variant)]
+#[derive(Debug, PartialEq, Clone)]
+#[allow(clippy::large_enum_variant, clippy::type_complexity)]
 pub enum Statement {
-    BlockStatement(BlockStatement),
+    Block(Vec<Statement>),
+    Args(Vec<NamedArgument>),
     If(Expression, Box<Statement>, Option<Box<Statement>>),
     While(Expression, Box<Statement>),
     PlaceHolder,
@@ -418,8 +418,7 @@ pub enum Statement {
     Emit(Identifier, Vec<Expression>),
     Try(
         Expression,
-        Vec<(Loc, Option<Parameter>)>,
-        Box<Statement>,
+        Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
         Option<Box<(Identifier, Parameter, Statement)>>,
         Box<(Parameter, Statement)>,
     ),
