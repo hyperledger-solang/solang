@@ -241,6 +241,9 @@ FunctionCall: Expression = {
     <a:@L> <i:Precedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc(a, b), Box::new(i), v)
     },
+    <i:Precedence0> <l:@L> <block:BlockStatement> <r:@R> => {
+        Expression::FunctionCallBlock(Loc(l, r), Box::new(i), Box::new(block))
+    },
     <a:@L> <i:Precedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
         Expression::NamedFunctionCall(Loc(a, b), Box::new(i), v)
     },
@@ -341,7 +344,7 @@ FunctionTy: FunctionTy = {
 
 BlockStatementOrSemiColon: Statement = {
     ";" => Statement::Empty,
-    BlockStatement => Statement::BlockStatement(<>),
+    BlockStatement => <>,
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
@@ -364,10 +367,9 @@ FunctionDefinition: Box<FunctionDefinition> = {
     },
 }
 
-BlockStatement: BlockStatement = {
-    "{" <s:Statement*> "}" => {
-        BlockStatement(s)
-    },
+BlockStatement: Statement = {
+    "{" <Statement*> "}" => Statement::Block(<>),
+    "{" <CommaOne<NamedArgument>> "}" => Statement::Args(<>),
 }
 
 OpenStatement: Statement = {
@@ -414,14 +416,16 @@ SimpleStatement: Statement = {
 
 CatchError: (Identifier, Parameter, Statement) = {
     "catch" <id:Identifier> "(" <param:Parameter> ")" <block:BlockStatement> => {
-        (id, param, Statement::BlockStatement(block))
+        (id, param, block)
     }
 }
 
+TryReturns: (Vec<(Loc, Option<Parameter>)>, Box<Statement>) = {
+    "returns" <list:ParameterList> <ok:BlockStatement> => (list, Box::new(ok))
+}
+
 NonIfStatement: Statement = {
-    BlockStatement => {
-        Statement::BlockStatement(<>)
-    },
+    BlockStatement => <>,
     <b:SimpleStatement> ";" => b,
     "_" ";" => {
         Statement::PlaceHolder
@@ -441,14 +445,13 @@ NonIfStatement: Statement = {
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
         Statement::Return(Loc(l, r), Some(e))
     },
-    "try" <e:Expression> <r:("returns" <ParameterList>)?>
-    <ok:BlockStatement>
+    "try" <e:Expression>
+    <returns:TryReturns?>
     <error:CatchError?>
     "catch" "(" <p:Parameter> ")" <b:BlockStatement> => {
-        Statement::Try(e, r.unwrap_or(Vec::new()),
-            Box::new(Statement::BlockStatement(ok)),
+        Statement::Try(e, returns,
             box_option(error),
-            Box::new((p, Statement::BlockStatement(b))))
+            Box::new((p, b)))
     },
     "emit" <n:Identifier> "(" <v:CommaOne<Expression>> ")" ";" => {
         Statement::Emit(n, v)

@@ -2367,6 +2367,10 @@ pub fn expression(
             ));
             Err(())
         }
+        ast::Expression::FunctionCallBlock(loc, _, _) => {
+            errors.push(Output::error(*loc, "unexpect block encountered".to_owned()));
+            Err(())
+        }
     }
 }
 

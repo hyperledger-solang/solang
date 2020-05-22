@@ -667,7 +667,7 @@ fn try_catch_constructor() {
         contract c {
             function test() public {
                 int x;
-                try new other()  {
+                try new other() {
                     x = 102;
                 } catch (bytes) {
                     x = 2;
@@ -765,6 +765,95 @@ fn try_catch_constructor() {
         first_error(errors),
         "try only supports external calls or constructor calls"
     );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function f() public {
+                x : 1
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "expected code block, not list of named arguments"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                try new other() 
+                catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public  {
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "code block missing for no catch");
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                try new other() {
+                    x = 1;
+                } {
+                    x= 5;
+                }
+                catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public  {
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "unexpected code block");
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test(other o) public {
+                try o.test() {
+                    x = 1;
+                } {
+                    x= 5;
+                }
+                catch (string) {
+                    x = 2;
+                }
+                assert(x == 1);
+            }
+        }
+        
+        contract other {
+            function test() public  {
+            }
+        }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "unexpected code block");
 }
 
 #[test]
