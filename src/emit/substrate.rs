@@ -2038,9 +2038,14 @@ impl TargetRuntime for SubstrateTarget {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
+        gas: IntValue<'b>,
+        value: IntValue<'b>,
     ) -> IntValue<'b> {
         // balance is a u128
-        let balance = contract.emit_global_string("balance", &[0u8; 16], true);
+        let value_ptr = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+        contract.builder.build_store(value_ptr, value);
 
         // do the actual call
         let ret = contract
@@ -2054,9 +2059,20 @@ impl TargetRuntime for SubstrateTarget {
                         .i32_type()
                         .const_int(contract.ns.address_length as u64, false)
                         .into(),
-                    contract.context.i64_type().const_zero().into(),
-                    balance.into(),
-                    contract.context.i32_type().const_int(16, false).into(),
+                    gas.into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value_ptr,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "value_transfer",
+                        )
+                        .into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.value_length as u64, false)
+                        .into(),
                     payload.into(),
                     payload_len.into(),
                 ],
