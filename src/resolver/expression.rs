@@ -5208,7 +5208,8 @@ fn emit_function_call(
             function_no,
             address,
             args,
-            ..
+            value,
+            gas,
         } => {
             let ftype = &ns.contracts[contract_no].functions[function_no];
 
@@ -5220,6 +5221,8 @@ fn emit_function_call(
                     contract_no,
                     function_no,
                     args,
+                    value: *value,
+                    gas: *gas,
                 },
             );
 

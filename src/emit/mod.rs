@@ -186,6 +186,8 @@ pub trait TargetRuntime {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
+        gas: IntValue<'b>,
+        value: IntValue<'b>,
     ) -> IntValue<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
@@ -2910,6 +2912,8 @@ impl<'a> Contract<'a> {
                         contract_no,
                         function_no,
                         args,
+                        value,
+                        gas,
                     } => {
                         let dest_func = &self.ns.contracts[*contract_no].functions[*function_no];
 
@@ -2933,6 +2937,12 @@ impl<'a> Contract<'a> {
                         let address = self
                             .expression(address, &w.vars, function, runtime)
                             .into_int_value();
+                        let gas = self
+                            .expression(gas, &w.vars, function, runtime)
+                            .into_int_value();
+                        let value = self
+                            .expression(value, &w.vars, function, runtime)
+                            .into_int_value();
 
                         let addr = self.builder.build_array_alloca(
                             self.context.i8_type(),
@@ -2951,7 +2961,8 @@ impl<'a> Contract<'a> {
                             address,
                         );
 
-                        let ret = runtime.external_call(self, payload, payload_len, addr);
+                        let ret =
+                            runtime.external_call(self, payload, payload_len, addr, gas, value);
 
                         let is_success = self.builder.build_int_compare(
                             IntPredicate::EQ,

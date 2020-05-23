@@ -735,6 +735,8 @@ impl TargetRuntime for SabreTarget {
         _payload: PointerValue<'b>,
         _payload_len: IntValue<'b>,
         _address: PointerValue<'b>,
+        _gas: IntValue<'b>,
+        _value: IntValue<'b>,
     ) -> IntValue<'b> {
         panic!("Sabre cannot call other contracts");
     }

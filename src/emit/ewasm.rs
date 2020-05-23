@@ -1144,9 +1144,14 @@ impl TargetRuntime for EwasmTarget {
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
+        gas: IntValue<'b>,
+        value: IntValue<'b>,
     ) -> IntValue<'b> {
         // value is a u128
-        let value = contract.emit_global_string("value", &[0u8; 8], true);
+        let value_ptr = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+        contract.builder.build_store(value_ptr, value);
 
         // call create
         contract
@@ -1154,9 +1159,16 @@ impl TargetRuntime for EwasmTarget {
             .build_call(
                 contract.module.get_function("call").unwrap(),
                 &[
-                    contract.context.i64_type().const_zero().into(),
+                    gas.into(),
                     address.into(),
-                    value.into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value_ptr,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "value_transfer",
+                        )
+                        .into(),
                     payload.into(),
                     payload_len.into(),
                 ],

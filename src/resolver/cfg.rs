@@ -14,6 +14,7 @@ use resolver::expression::{
     parameter_list_to_expr_list, Expression, StringLocation,
 };
 
+#[allow(clippy::large_enum_variant)]
 pub enum Instr {
     FuncArg {
         res: usize,
@@ -83,6 +84,8 @@ pub enum Instr {
         contract_no: usize,
         function_no: usize,
         args: Vec<Expression>,
+        value: Expression,
+        gas: Expression,
     },
     AbiDecode {
         res: Vec<usize>,
@@ -575,14 +578,18 @@ impl ControlFlowGraph {
                 contract_no,
                 function_no,
                 args,
+                value,
+                gas,
             } => format!(
-                "{} = external call address:{} signature:{} func:{}.{} {}",
+                "{} = external call address:{} signature:{} value:{} gas:{} func:{}.{} {}",
                 match success {
                     Some(i) => format!("%{}", self.vars[*i].id.name),
                     None => "_".to_string(),
                 },
                 self.expr_to_string(contract, ns, address),
                 ns.contracts[*contract_no].functions[*function_no].signature,
+                self.expr_to_string(contract, ns, value),
+                self.expr_to_string(contract, ns, gas),
                 ns.contracts[*contract_no].name,
                 ns.contracts[*contract_no].functions[*function_no].name,
                 args.iter()
@@ -1663,6 +1670,8 @@ fn try_catch(
                 function_no,
                 address,
                 args,
+                value,
+                gas,
                 ..
             } => {
                 cfg.add(
@@ -1673,6 +1682,8 @@ fn try_catch(
                         contract_no,
                         function_no,
                         args,
+                        value: *value,
+                        gas: *gas,
                     },
                 );
 
