@@ -398,36 +398,53 @@ pub struct FunctionDefinition {
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant, clippy::type_complexity)]
 pub enum Statement {
-    Block(Vec<Statement>),
-    Args(Vec<NamedArgument>),
-    If(Expression, Box<Statement>, Option<Box<Statement>>),
-    While(Expression, Box<Statement>),
-    PlaceHolder,
-    Expression(Expression),
-    VariableDefinition(VariableDeclaration, Option<Expression>),
+    Block(Loc, Vec<Statement>),
+    Args(Loc, Vec<NamedArgument>),
+    If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
+    While(Loc, Expression, Box<Statement>),
+    PlaceHolder(Loc),
+    Expression(Loc, Expression),
+    VariableDefinition(Loc, VariableDeclaration, Option<Expression>),
     For(
+        Loc,
         Option<Box<Statement>>,
         Option<Box<Expression>>,
         Option<Box<Statement>>,
         Option<Box<Statement>>,
     ),
-    DoWhile(Box<Statement>, Expression),
-    Continue,
-    Break,
+    DoWhile(Loc, Box<Statement>, Expression),
+    Continue(Loc),
+    Break(Loc),
     Return(Loc, Option<Expression>),
-    Emit(Identifier, Vec<Expression>),
+    Emit(Loc, Identifier, Vec<Expression>),
     Try(
+        Loc,
         Expression,
         Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>,
         Option<Box<(Identifier, Parameter, Statement)>>,
         Box<(Parameter, Statement)>,
     ),
-    Empty,
+    Empty(Loc),
 }
 
 impl Statement {
     pub fn loc(&self) -> Loc {
-        // FIXME add to parser
-        Loc(0, 0)
+        match self {
+            Statement::Block(loc, _)
+            | Statement::Args(loc, _)
+            | Statement::If(loc, _, _, _)
+            | Statement::While(loc, _, _)
+            | Statement::PlaceHolder(loc)
+            | Statement::Expression(loc, _)
+            | Statement::VariableDefinition(loc, _, _)
+            | Statement::For(loc, _, _, _, _)
+            | Statement::DoWhile(loc, _, _)
+            | Statement::Continue(loc)
+            | Statement::Break(loc)
+            | Statement::Return(loc, _)
+            | Statement::Emit(loc, _, _)
+            | Statement::Try(loc, _, _, _, _)
+            | Statement::Empty(loc) => *loc,
+        }
     }
 }
