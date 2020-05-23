@@ -873,7 +873,7 @@ fn statement(
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
     match stmt {
-        ast::Statement::VariableDefinition(decl, init) => {
+        ast::Statement::VariableDefinition(_, decl, init) => {
             let var_ty =
                 resolve_var_decl_ty(&decl.ty, &decl.storage, Some(contract_no), ns, errors)?;
 
@@ -903,7 +903,7 @@ fn statement(
             }
             Ok(true)
         }
-        ast::Statement::Block(bs) => {
+        ast::Statement::Block(_, bs) => {
             vartab.new_scope();
             let mut reachable = true;
 
@@ -952,7 +952,7 @@ fn statement(
         ast::Statement::Return(loc, Some(returns)) => {
             return_with_values(returns, loc, f, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Statement::Expression(expr) => {
+        ast::Statement::Expression(_, expr) => {
             let (expr, _) =
                 expression(expr, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
@@ -973,7 +973,7 @@ fn statement(
                 }
             }
         }
-        ast::Statement::If(cond, then_stmt, None) => if_then(
+        ast::Statement::If(_, cond, then_stmt, None) => if_then(
             cond,
             then_stmt,
             f,
@@ -984,7 +984,7 @@ fn statement(
             loops,
             errors,
         ),
-        ast::Statement::If(cond, then_stmt, Some(else_stmt)) => if_then_else(
+        ast::Statement::If(_, cond, then_stmt, Some(else_stmt)) => if_then_else(
             cond,
             then_stmt,
             else_stmt,
@@ -996,7 +996,7 @@ fn statement(
             loops,
             errors,
         ),
-        ast::Statement::Break => match loops.do_break() {
+        ast::Statement::Break(_) => match loops.do_break() {
             Some(bb) => {
                 cfg.add(vartab, Instr::Branch { bb });
                 Ok(false)
@@ -1009,7 +1009,7 @@ fn statement(
                 Err(())
             }
         },
-        ast::Statement::Continue => match loops.do_continue() {
+        ast::Statement::Continue(_) => match loops.do_continue() {
             Some(bb) => {
                 cfg.add(vartab, Instr::Branch { bb });
                 Ok(false)
@@ -1022,7 +1022,7 @@ fn statement(
                 Err(())
             }
         },
-        ast::Statement::DoWhile(body_stmt, cond_expr) => {
+        ast::Statement::DoWhile(_, body_stmt, cond_expr) => {
             let body = cfg.new_basic_block("body".to_string());
             let cond = cfg.new_basic_block("conf".to_string());
             let end = cfg.new_basic_block("enddowhile".to_string());
@@ -1088,7 +1088,7 @@ fn statement(
 
             Ok(body_reachable || control.no_breaks > 0)
         }
-        ast::Statement::While(cond_expr, body_stmt) => {
+        ast::Statement::While(_, cond_expr, body_stmt) => {
             let cond = cfg.new_basic_block("cond".to_string());
             let body = cfg.new_basic_block("body".to_string());
             let end = cfg.new_basic_block("endwhile".to_string());
@@ -1146,7 +1146,7 @@ fn statement(
 
             Ok(true)
         }
-        ast::Statement::For(init_stmt, None, next_stmt, body_stmt) => {
+        ast::Statement::For(_, init_stmt, None, next_stmt, body_stmt) => {
             let body = cfg.new_basic_block("body".to_string());
             let next = cfg.new_basic_block("next".to_string());
             let end = cfg.new_basic_block("endfor".to_string());
@@ -1211,7 +1211,7 @@ fn statement(
 
             Ok(control.no_breaks > 0)
         }
-        ast::Statement::For(init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
+        ast::Statement::For(_, init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
             let body = cfg.new_basic_block("body".to_string());
             let cond = cfg.new_basic_block("cond".to_string());
             let next = cfg.new_basic_block("next".to_string());
@@ -1309,10 +1309,10 @@ fn statement(
 
             Ok(true)
         }
-        ast::Statement::Try(_, _, _, _) => {
+        ast::Statement::Try(_, _, _, _, _) => {
             try_catch(stmt, f, cfg, contract_no, ns, vartab, loops, errors)
         }
-        ast::Statement::Args(_) => {
+        ast::Statement::Args(_, _) => {
             errors.push(Output::error(
                 stmt.loc(),
                 "expected code block, not list of named arguments".to_string(),
@@ -1515,7 +1515,7 @@ fn try_catch(
     loops: &mut LoopScopes,
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
-    if let ast::Statement::Try(expr, returns_and_ok, error_stmt, catch_stmt) = &try {
+    if let ast::Statement::Try(_, expr, returns_and_ok, error_stmt, catch_stmt) = &try {
         let mut expr = expr;
         let mut ok = None;
 

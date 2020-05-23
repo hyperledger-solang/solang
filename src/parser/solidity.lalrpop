@@ -343,7 +343,7 @@ FunctionTy: FunctionTy = {
 }
 
 BlockStatementOrSemiColon: Statement = {
-    ";" => Statement::Empty,
+    <@L> <@R> ";" => Statement::Empty(Loc(<>)),
     BlockStatement => <>,
 }
 
@@ -368,35 +368,35 @@ FunctionDefinition: Box<FunctionDefinition> = {
 }
 
 BlockStatement: Statement = {
-    "{" <Statement*> "}" => Statement::Block(<>),
-    "{" <CommaOne<NamedArgument>> "}" => Statement::Args(<>),
+    <l:@L> "{" <s:Statement*> "}" <r:@R> => Statement::Block(Loc(l, r), s),
+    <l:@L> "{" <v:CommaOne<NamedArgument>> "}" <r:@R> => Statement::Args(Loc(l, r), v),
 }
 
 OpenStatement: Statement = {
-    "if" "(" <cond:Expression> ")" <body:Statement> => {
-        Statement::If(cond, Box::new(body), None)
+    <l:@L> "if" "(" <cond:Expression> ")" <body:Statement> <r:@R> => {
+        Statement::If(Loc(l, r), cond, Box::new(body), None)
     },
-    "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> => {
-        Statement::If(cond, Box::new(body), Some(Box::new(o)))
+    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
+        Statement::If(Loc(l, r), cond, Box::new(body), Some(Box::new(o)))
     },
-    "while" "(" <e:Expression> ")" <b:OpenStatement> => {
-        Statement::While(e, Box::new(b))
+    <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
+        Statement::While(Loc(l, r), e, Box::new(b))
     }
 }
 
 ClosedStatement: Statement = {
     NonIfStatement,
-    "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> => {
-        Statement::If(cond, Box::new(body), Some(Box::new(o)))
+    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> <r:@R> => {
+        Statement::If(Loc(l, r), cond, Box::new(body), Some(Box::new(o)))
     },
-    "while" "(" <e:Expression> ")" <b:ClosedStatement> => {
-        Statement::While(e, Box::new(b))
+    <l:@L> "while" "(" <e:Expression> ")" <b:ClosedStatement> <r:@R> => {
+        Statement::While(Loc(l, r), e, Box::new(b))
     },
-    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> => {
-        Statement::For(box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" <block:ClosedStatement> <r:@R> => {
+        Statement::For(Loc(l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
     },
-    "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" ";" => {
-        Statement::For(box_option(b), box_option(c), box_option(n), None)
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:SimpleStatement?> ")" ";" <r:@R> => {
+        Statement::For(Loc(l, r), box_option(b), box_option(c), box_option(n), None)
     }
 }
 
@@ -406,11 +406,11 @@ Statement: Statement = {
 }
 
 SimpleStatement: Statement = {
-    <v:VariableDeclaration> <e:("=" <Expression>)?> => {
-        Statement::VariableDefinition(v, e)
+    <l:@L>  <v:VariableDeclaration> <e:("=" <Expression>)?> <r:@R> => {
+        Statement::VariableDefinition(Loc(l, r), v, e)
     },
-    <e:Expression> => {
-        Statement::Expression(e)
+    <l:@L> <e:Expression> <r:@R> => {
+        Statement::Expression(Loc(l, r), e)
     }
 }
 
@@ -426,18 +426,18 @@ TryReturns: (Vec<(Loc, Option<Parameter>)>, Box<Statement>) = {
 
 NonIfStatement: Statement = {
     BlockStatement => <>,
-    <b:SimpleStatement> ";" => b,
-    "_" ";" => {
-        Statement::PlaceHolder
+    <SimpleStatement> ";" => <>,
+    <l:@L> "_" <r:@R> ";" => {
+        Statement::PlaceHolder(Loc(l, r))
     },
-    "do" <b:Statement> "while" "(" <e:Expression> ")" ";" => {
-        Statement::DoWhile(Box::new(b), e)
+    <l:@L>"do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
+        Statement::DoWhile(Loc(l, r), Box::new(b), e)
     },
-    "continue" ";" => {
-        Statement::Continue
+    <l:@L> "continue" <r:@R> ";" => {
+        Statement::Continue(Loc(l, r))
     },
-    "break" ";" => {
-        Statement::Break
+    <l:@L> "break" <r:@R> ";" => {
+        Statement::Break(Loc(l, r))
     },
     <l:@L> "return" <r:@R> ";" => {
         Statement::Return(Loc(l, r), None)
@@ -445,16 +445,14 @@ NonIfStatement: Statement = {
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
         Statement::Return(Loc(l, r), Some(e))
     },
-    "try" <e:Expression>
-    <returns:TryReturns?>
-    <error:CatchError?>
-    "catch" "(" <p:Parameter> ")" <b:BlockStatement> => {
-        Statement::Try(e, returns,
-            box_option(error),
-            Box::new((p, b)))
+    <l:@L> "try" <e:Expression> <returns:TryReturns?> <error:CatchError?>
+        "catch" "(" <p:Parameter> ")" <b:BlockStatement> <r:@R> => {
+            Statement::Try(Loc(l, r), e, returns,
+                box_option(error),
+                Box::new((p, b)))
     },
-    "emit" <n:Identifier> "(" <v:CommaOne<Expression>> ")" ";" => {
-        Statement::Emit(n, v)
+    <l:@L> "emit" <id:Identifier> "(" <v:CommaOne<Expression>> ")" <r:@R> ";" => {
+        Statement::Emit(Loc(l, r), id, v)
     },
 }
 
