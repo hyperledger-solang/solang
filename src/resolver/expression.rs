@@ -2572,7 +2572,7 @@ pub fn constructor_named_args(
 ) -> Result<(Expression, resolver::Type), ()> {
     let (ty, call_args, _) = collect_call_args(ty, errors)?;
 
-    let call_args = parse_call_args(call_args, false, cfg, contract_no, ns, vartab, errors)?;
+    let call_args = parse_call_args(&call_args, false, cfg, contract_no, ns, vartab, errors)?;
 
     let no = match ns.resolve_type(contract_no, false, ty, errors)? {
         resolver::Type::Contract(n) => n,
@@ -2886,7 +2886,7 @@ pub fn new(
         resolver::Type::String | resolver::Type::DynamicBytes => {}
         resolver::Type::Contract(n) => {
             let call_args =
-                parse_call_args(call_args, false, cfg, contract_no, ns, vartab, errors)?;
+                parse_call_args(&call_args, false, cfg, contract_no, ns, vartab, errors)?;
 
             return constructor(
                 loc,
@@ -4396,27 +4396,27 @@ fn method_call_pos_args(
     var: &ast::Expression,
     func: &ast::Identifier,
     args: &[ast::Expression],
+    call_args: &[&ast::NamedArgument],
+    call_args_loc: Option<ast::Loc>,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (var, call_args, call_args_loc) = collect_call_args(var, errors)?;
-
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::StorageRef(ty) = &var_ty {
-        if let Some(loc) = call_args_loc {
-            errors.push(Output::error(
-                loc,
-                "call arguments not allowed on storage methods".to_string(),
-            ));
-            return Err(());
-        }
-
         match ty.as_ref() {
             resolver::Type::Array(_, dim) => {
+                if let Some(loc) = call_args_loc {
+                    errors.push(Output::error(
+                        loc,
+                        "call arguments not allowed on arrays".to_string(),
+                    ));
+                    return Err(());
+                }
+
                 if func.name == "push" {
                     return if dim.last().unwrap().is_some() {
                         errors.push(Output::error(
@@ -4451,25 +4451,35 @@ fn method_call_pos_args(
                     };
                 }
             }
-            resolver::Type::DynamicBytes => match func.name.as_str() {
-                "push" => {
-                    return bytes_push(
+            resolver::Type::DynamicBytes => {
+                if let Some(loc) = call_args_loc {
+                    errors.push(Output::error(
                         loc,
-                        var_expr,
-                        func,
-                        args,
-                        cfg,
-                        contract_no,
-                        ns,
-                        vartab,
-                        errors,
-                    );
+                        "call arguments not allowed on bytes".to_string(),
+                    ));
+                    return Err(());
                 }
-                "pop" => {
-                    return bytes_pop(loc, var_expr, func, args, cfg, errors);
+
+                match func.name.as_str() {
+                    "push" => {
+                        return bytes_push(
+                            loc,
+                            var_expr,
+                            func,
+                            args,
+                            cfg,
+                            contract_no,
+                            ns,
+                            vartab,
+                            errors,
+                        );
+                    }
+                    "pop" => {
+                        return bytes_pop(loc, var_expr, func, args, cfg, errors);
+                    }
+                    _ => {}
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
     }
@@ -4534,6 +4544,30 @@ fn method_call_pos_args(
                 }
             }
             if matches {
+                let mut nullsink = Vec::new();
+
+                let mut check_payable = true;
+                if let Ok((_, value)) = eval_number_expression(&call_args.value, &mut nullsink) {
+                    if value == BigInt::zero() {
+                        check_payable = false;
+                    }
+                }
+
+                if check_payable {
+                    if let Some(ast::StateMutability::Payable(_)) = ftype.mutability {
+                        // fine
+                    } else {
+                        errors.push(Output::error(
+                            *loc,
+                            format!(
+                                "sending value to function ‘{}’ which is not payable",
+                                ftype.name
+                            ),
+                        ));
+                        return Err(());
+                    }
+                }
+
                 return Ok((
                     Expression::ExternalFunctionCall {
                         loc: *loc,
@@ -4583,18 +4617,17 @@ fn method_call_with_named_args(
     var: &ast::Expression,
     func_name: &ast::Identifier,
     args: &[ast::NamedArgument],
+    call_args: &[&ast::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
-    let (var, call_args, _) = collect_call_args(var, errors)?;
-
     let (var_expr, var_ty) = expression(var, cfg, contract_no, ns, vartab, errors)?;
 
     if let resolver::Type::Contract(external_contract_no) = &var_ty.deref() {
-        let call_args = parse_call_args(call_args, true, cfg, contract_no, ns, vartab, errors)?;
+        let call_args = parse_call_args(&call_args, true, cfg, contract_no, ns, vartab, errors)?;
 
         let mut arguments = HashMap::new();
 
@@ -4675,6 +4708,30 @@ fn method_call_with_named_args(
             }
 
             if matches {
+                let mut nullsink = Vec::new();
+
+                let mut check_payable = true;
+                if let Ok((_, value)) = eval_number_expression(&call_args.value, &mut nullsink) {
+                    if value == BigInt::zero() {
+                        check_payable = false;
+                    }
+                }
+
+                if check_payable {
+                    if let Some(ast::StateMutability::Payable(_)) = func.mutability {
+                        // fine
+                    } else {
+                        errors.push(Output::error(
+                            *loc,
+                            format!(
+                                "sending value to function ‘{}’ which is not payable",
+                                func.name
+                            ),
+                        ));
+                        return Err(());
+                    }
+                }
+
                 return Ok((
                     Expression::ExternalFunctionCall {
                         loc: *loc,
@@ -4941,21 +4998,32 @@ pub fn collect_call_args<'a>(
     let mut loc: Option<ast::Loc> = None;
 
     while let ast::Expression::FunctionCallBlock(_, e, block) = expr {
-        if let ast::Statement::Args(_, args) = block.as_ref() {
-            if let Some(l) = loc {
-                loc = Some(ast::Loc(l.0, block.loc().1));
-            } else {
-                loc = Some(block.loc());
-            }
+        match block.as_ref() {
+            ast::Statement::Args(_, args) => {
+                if let Some(l) = loc {
+                    loc = Some(ast::Loc(l.0, block.loc().1));
+                } else {
+                    loc = Some(block.loc());
+                }
 
-            named_arguments.extend(args);
-        } else {
-            errors.push(Output::error(
-                block.loc(),
-                "code block found where list of call arguments expected, like ‘{gas: 5000}’"
-                    .to_string(),
-            ));
-            return Err(());
+                named_arguments.extend(args);
+            }
+            ast::Statement::Block(_, s) if s.is_empty() => {
+                // {}
+                errors.push(Output::error(
+                    block.loc(),
+                    "missing call arguments".to_string(),
+                ));
+                return Err(());
+            }
+            _ => {
+                errors.push(Output::error(
+                    block.loc(),
+                    "code block found where list of call arguments expected, like ‘{gas: 5000}’"
+                        .to_string(),
+                ));
+                return Err(());
+            }
         }
 
         expr = e;
@@ -4972,7 +5040,7 @@ struct CallArgs {
 
 /// Parse call arguments for external calls
 fn parse_call_args(
-    call_args: Vec<&ast::NamedArgument>,
+    call_args: &[&ast::NamedArgument],
     external_call: bool,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
@@ -4997,7 +5065,11 @@ fn parse_call_args(
     }
 
     let mut res = CallArgs {
-        value: Expression::NumberLiteral(ast::Loc(0, 0), ns.value_length as u16, BigInt::zero()),
+        value: Expression::NumberLiteral(
+            ast::Loc(0, 0),
+            ns.value_length as u16 * 8,
+            BigInt::zero(),
+        ),
         gas: Expression::NumberLiteral(ast::Loc(0, 0), 64, BigInt::zero()),
         salt: Expression::NumberLiteral(ast::Loc(0, 0), 256, BigInt::zero()),
     };
@@ -5007,7 +5079,7 @@ fn parse_call_args(
             "value" => {
                 let (expr, expr_ty) = expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?;
 
-                let ty = resolver::Type::Uint(ns.value_length as u16);
+                let ty = resolver::Type::Uint(ns.value_length as u16 * 8);
 
                 res.value = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
             }
@@ -5036,7 +5108,7 @@ fn parse_call_args(
             _ => {
                 errors.push(Output::error(
                     arg.loc,
-                    format!("‘{}’ not a valid parameter", arg.name.name),
+                    format!("‘{}’ not a valid call parameter", arg.name.name),
                 ));
                 return Err(());
             }
@@ -5057,12 +5129,16 @@ pub fn function_call_expr(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (ty, call_args, call_args_loc) = collect_call_args(ty, errors)?;
+
     match ty {
         ast::Expression::MemberAccess(_, member, func) => method_call_pos_args(
             loc,
             member,
             func,
             args,
+            &call_args,
+            call_args_loc,
             cfg,
             contract_no,
             ns,
@@ -5070,8 +5146,6 @@ pub fn function_call_expr(
             errors,
         ),
         ast::Expression::Variable(id) => {
-            let (_, _, call_args_loc) = collect_call_args(ty, errors)?;
-
             if let Some(loc) = call_args_loc {
                 errors.push(Output::error(
                     loc,
@@ -5107,12 +5181,15 @@ pub fn named_function_call_expr(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
+    let (ty, call_args, call_args_loc) = collect_call_args(ty, errors)?;
+
     match ty {
         ast::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
             loc,
             member,
             func,
             args,
+            &call_args,
             cfg,
             contract_no,
             ns,
@@ -5120,8 +5197,6 @@ pub fn named_function_call_expr(
             errors,
         ),
         ast::Expression::Variable(id) => {
-            let (_, _, call_args_loc) = collect_call_args(ty, errors)?;
-
             if let Some(loc) = call_args_loc {
                 errors.push(Output::error(
                     loc,

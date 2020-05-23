@@ -117,6 +117,7 @@ pub fn eval_number_expression(
             Ok((*loc, l >> r))
         }
         Expression::NumberLiteral(loc, _, n) => Ok((*loc, n.clone())),
+        Expression::ZeroExt(loc, _, n) => Ok((*loc, eval_number_expression(n, errors)?.1)),
         Expression::Not(loc, n) => Ok((*loc, !eval_number_expression(n, errors)?.1)),
         Expression::Complement(loc, n) => Ok((*loc, !eval_number_expression(n, errors)?.1)),
         Expression::UnaryMinus(loc, n) => Ok((*loc, -eval_number_expression(n, errors)?.1)),

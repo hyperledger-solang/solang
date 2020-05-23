@@ -615,7 +615,7 @@ impl Namespace {
             structs: Vec::new(),
             contracts: Vec::new(),
             address_length,
-            value_length: 128,
+            value_length: 16,
             symbols: HashMap::new(),
         }
     }

@@ -39,6 +39,7 @@ mod substrate_mappings;
 mod substrate_primitives;
 mod substrate_strings;
 mod substrate_structs;
+mod substrate_value;
 
 type StorageKey = [u8; 32];
 type Address = [u8; 32];
@@ -75,14 +76,16 @@ pub struct VM {
     address: Address,
     memory: MemoryRef,
     pub scratch: Vec<u8>,
+    pub value: u128,
 }
 
 impl VM {
-    fn new(address: Address) -> Self {
+    fn new(address: Address, value: u128) -> Self {
         VM {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             scratch: Vec::new(),
             address,
+            value,
         }
     }
 }
@@ -90,9 +93,8 @@ impl VM {
 pub struct TestRuntime {
     pub store: HashMap<(Address, StorageKey), Vec<u8>>,
     pub contracts: Vec<(Vec<u8>, String)>,
-    pub value: u128,
     pub printbuf: String,
-    pub accounts: HashMap<Address, Vec<u8>>,
+    pub accounts: HashMap<Address, (Vec<u8>, u128)>,
     pub abi: abi::substrate::Metadata,
     pub vm: VM,
 }
@@ -262,6 +264,9 @@ impl Externals for TestRuntime {
             Some(SubstrateExternal::ext_call) => {
                 let address_ptr: u32 = args.nth_checked(0)?;
                 let address_len: u32 = args.nth_checked(1)?;
+                //let gas: u64 = args.nth_checked(2)?;
+                let value_ptr: u32 = args.nth_checked(3)?;
+                let value_len: u32 = args.nth_checked(4)?;
                 let input_ptr: u32 = args.nth_checked(5)?;
                 let input_len: u32 = args.nth_checked(6)?;
 
@@ -274,6 +279,18 @@ impl Externals for TestRuntime {
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("ext_call: {}", e);
                 }
+
+                let mut value = [0u8; 16];
+
+                if value_len != 16 {
+                    panic!("ext_call: len = {}", value_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
+                    panic!("ext_call: {}", e);
+                }
+
+                let value = u128::from_le_bytes(value);
 
                 if !self.accounts.contains_key(&address) {
                     // substrate would return TRAP_RETURN_CODE (0x0100)
@@ -293,11 +310,11 @@ impl Externals for TestRuntime {
                     hex::encode(&input)
                 );
 
-                let mut vm = VM::new(address);
+                let mut vm = VM::new(address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
-                let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+                let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
                 self.vm.scratch = input;
                 let ret = module
@@ -310,6 +327,7 @@ impl Externals for TestRuntime {
 
                 println!("ext_call ret={:?} buf={}", ret, hex::encode(&output));
 
+                self.accounts.get_mut(&vm.address).unwrap().1 += vm.value;
                 self.vm.scratch = output;
 
                 Ok(ret)
@@ -317,6 +335,9 @@ impl Externals for TestRuntime {
             Some(SubstrateExternal::ext_instantiate) => {
                 let codehash_ptr: u32 = args.nth_checked(0)?;
                 let codehash_len: u32 = args.nth_checked(1)?;
+                //let gas: u64 = args.nth_checked(2)?;
+                let value_ptr: u32 = args.nth_checked(3)?;
+                let value_len: u32 = args.nth_checked(4)?;
                 let input_ptr: u32 = args.nth_checked(5)?;
                 let input_len: u32 = args.nth_checked(6)?;
 
@@ -329,6 +350,18 @@ impl Externals for TestRuntime {
                 if let Err(e) = self.vm.memory.get_into(codehash_ptr, &mut codehash) {
                     panic!("ext_instantiate: {}", e);
                 }
+
+                let mut value = [0u8; 16];
+
+                if value_len != 16 {
+                    panic!("ext_instantiate: len = {}", value_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(value_ptr, &mut value) {
+                    panic!("ext_instantiate: {}", e);
+                }
+
+                let value = u128::from_le_bytes(value);
 
                 let mut input = Vec::new();
                 input.resize(input_len as usize, 0u8);
@@ -354,7 +387,7 @@ impl Externals for TestRuntime {
                     })
                     .expect("codehash not found");
 
-                self.accounts.insert(address, code.0.clone());
+                self.accounts.insert(address, (code.0.clone(), 0));
 
                 let mut input = Vec::new();
                 input.resize(input_len as usize, 0u8);
@@ -363,7 +396,7 @@ impl Externals for TestRuntime {
                     panic!("ext_instantiate: {}", e);
                 }
 
-                let mut vm = VM::new(address);
+                let mut vm = VM::new(address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -379,6 +412,7 @@ impl Externals for TestRuntime {
                 std::mem::swap(&mut self.vm, &mut vm);
 
                 if let Some(RuntimeValue::I32(0)) = ret {
+                    self.accounts.get_mut(&vm.address).unwrap().1 += vm.value;
                     self.vm.scratch = address.to_vec();
                 } else {
                     self.vm.scratch = output;
@@ -387,7 +421,7 @@ impl Externals for TestRuntime {
                 Ok(ret)
             }
             Some(SubstrateExternal::ext_value_transferred) => {
-                self.vm.scratch = self.value.to_le_bytes().to_vec();
+                self.vm.scratch = self.vm.value.to_le_bytes().to_vec();
 
                 println!("ext_value_transferred: {}", hex::encode(&self.vm.scratch));
 
@@ -451,7 +485,7 @@ impl TestRuntime {
     pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
         let m = &self.abi.contract.constructors[index];
 
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = m.selector().into_iter().chain(args).collect();
 
@@ -468,7 +502,7 @@ impl TestRuntime {
     pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
         let m = &self.abi.contract.constructors[index];
 
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = m.selector().into_iter().chain(args).collect();
 
@@ -490,7 +524,7 @@ impl TestRuntime {
     pub fn function(&mut self, name: &str, args: Vec<u8>) {
         let m = self.abi.get_function(name).unwrap();
 
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = m.selector().into_iter().chain(args).collect();
 
@@ -507,7 +541,7 @@ impl TestRuntime {
     pub fn function_expect_return(&mut self, name: &str, args: Vec<u8>, expected_ret: i32) {
         let m = self.abi.get_function(name).unwrap();
 
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = m.selector().into_iter().chain(args).collect();
 
@@ -527,7 +561,7 @@ impl TestRuntime {
     }
 
     pub fn raw_function(&mut self, input: Vec<u8>) {
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = input;
 
@@ -542,7 +576,7 @@ impl TestRuntime {
     }
 
     pub fn raw_function_return(&mut self, expect_ret: i32, input: Vec<u8>) {
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = input;
 
@@ -559,7 +593,7 @@ impl TestRuntime {
     }
 
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
-        let module = self.create_module(self.accounts.get(&self.vm.address).unwrap());
+        let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
         self.vm.scratch = input;
 
@@ -593,14 +627,13 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
     let mut t = TestRuntime {
         accounts: HashMap::new(),
         printbuf: String::new(),
-        value: 0,
         store: HashMap::new(),
         contracts: res,
-        vm: VM::new(address),
+        vm: VM::new(address, 0),
         abi: abi::substrate::load(&abistr).unwrap(),
     };
 
-    t.accounts.insert(address, code);
+    t.accounts.insert(address, (code, 0));
 
     t
 }
