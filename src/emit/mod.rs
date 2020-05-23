@@ -394,7 +394,7 @@ impl<'a> Contract<'a> {
     /// llvm value type, as in chain currency (usually 128 bits int)
     fn value_type(&self) -> IntType<'a> {
         self.context
-            .custom_width_int_type(self.ns.value_length as u32)
+            .custom_width_int_type(self.ns.value_length as u32 * 8)
     }
 
     /// If we receive a value transfer, and we are "payable", abort with revert

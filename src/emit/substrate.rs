@@ -1953,7 +1953,7 @@ impl TargetRuntime for SubstrateTarget {
                     contract
                         .context
                         .i32_type()
-                        .const_int(contract.ns.value_length as u64 / 8, false)
+                        .const_int(contract.ns.value_length as u64, false)
                         .into(),
                 ],
                 "minimum_balance",
@@ -2289,7 +2289,7 @@ impl TargetRuntime for SubstrateTarget {
                 contract
                     .context
                     .i32_type()
-                    .const_int(contract.ns.value_length as u64 / 8, false)
+                    .const_int(contract.ns.value_length as u64, false)
                     .into(),
             ],
             "value_transferred",
