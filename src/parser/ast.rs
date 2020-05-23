@@ -172,6 +172,7 @@ pub struct HexLiteral {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NamedArgument {
+    pub loc: Loc,
     pub name: Identifier,
     pub expr: Expression,
 }

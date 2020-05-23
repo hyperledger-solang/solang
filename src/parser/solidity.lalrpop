@@ -234,7 +234,9 @@ Precedence2: Expression = {
 }
 
 NamedArgument: NamedArgument = {
-    <name:Identifier> ":" <expr:Expression> => NamedArgument{ name, expr }
+    <l:@L> <name:Identifier> ":" <expr:Expression> <r:@R> => {
+        NamedArgument{ loc: Loc(l, r), name, expr }
+    }
 }
 
 FunctionCall: Expression = {
