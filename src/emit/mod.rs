@@ -177,6 +177,9 @@ pub trait TargetRuntime {
         constructor_no: usize,
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
+        gas: IntValue<'b>,
+        value: IntValue<'b>,
+        salt: IntValue<'b>,
     );
 
     /// call external function
@@ -2879,6 +2882,9 @@ impl<'a> Contract<'a> {
                         contract_no,
                         constructor_no,
                         args,
+                        value,
+                        gas,
+                        salt,
                     } => {
                         let args = &args
                             .iter()
@@ -2890,6 +2896,15 @@ impl<'a> Contract<'a> {
                             self.context.i8_type().ptr_type(AddressSpace::Generic),
                             "address",
                         );
+                        let gas = self
+                            .expression(gas, &w.vars, function, runtime)
+                            .into_int_value();
+                        let value = self
+                            .expression(value, &w.vars, function, runtime)
+                            .into_int_value();
+                        let salt = self
+                            .expression(salt, &w.vars, function, runtime)
+                            .into_int_value();
 
                         let success = match success {
                             Some(n) => Some(&mut w.vars[*n].value),
@@ -2904,6 +2919,9 @@ impl<'a> Contract<'a> {
                             *constructor_no,
                             address,
                             args,
+                            gas,
+                            value,
+                            salt,
                         );
                     }
                     cfg::Instr::ExternalCall {

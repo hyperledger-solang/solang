@@ -5278,7 +5278,9 @@ fn emit_constructor_call(
             contract_no,
             constructor_no,
             args,
-            ..
+            value,
+            gas,
+            salt,
         } => {
             let address_res = tab.temp_anonymous(&resolver::Type::Contract(contract_no));
 
@@ -5290,6 +5292,9 @@ fn emit_constructor_call(
                     contract_no,
                     constructor_no,
                     args,
+                    value: *value,
+                    gas: *gas,
+                    salt: *salt,
                 },
             );
 

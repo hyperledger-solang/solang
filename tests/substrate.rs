@@ -68,6 +68,7 @@ enum SubstrateExternal {
     ext_call,
     ext_instantiate,
     ext_value_transferred,
+    ext_minimum_balance,
 }
 
 pub struct VM {
@@ -392,6 +393,13 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_minimum_balance) => {
+                self.vm.scratch = 500u128.to_le_bytes().to_vec();
+
+                println!("ext_value_transferred: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -412,6 +420,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_call" => SubstrateExternal::ext_call,
             "ext_instantiate" => SubstrateExternal::ext_instantiate,
             "ext_value_transferred" => SubstrateExternal::ext_value_transferred,
+            "ext_minimum_balance" => SubstrateExternal::ext_minimum_balance,
             _ => {
                 panic!("{} not implemented", field_name);
             }
