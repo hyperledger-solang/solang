@@ -77,6 +77,9 @@ pub enum Instr {
         contract_no: usize,
         constructor_no: usize,
         args: Vec<Expression>,
+        value: Expression,
+        gas: Expression,
+        salt: Expression,
     },
     ExternalCall {
         success: Option<usize>,
@@ -635,13 +638,19 @@ impl ControlFlowGraph {
                 contract_no,
                 constructor_no,
                 args,
+                gas,
+                salt,
+                value,
             } => format!(
-                "%{}, {} = constructor {} #{} ({})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} {} #{} ({})",
                 self.vars[*res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[*i].id.name),
                     None => "_".to_string(),
                 },
+                self.expr_to_string(contract, ns, salt),
+                self.expr_to_string(contract, ns, value),
+                self.expr_to_string(contract, ns, gas),
                 ns.contracts[*contract_no].name,
                 constructor_no,
                 args.iter()
@@ -1744,7 +1753,9 @@ fn try_catch(
                 contract_no,
                 constructor_no,
                 args,
-                ..
+                value,
+                gas,
+                salt,
             } => {
                 let ty = resolver::Type::Contract(contract_no);
                 let address_res = vartab.temp_anonymous(&resolver::Type::Contract(contract_no));
@@ -1757,6 +1768,9 @@ fn try_catch(
                         contract_no,
                         constructor_no,
                         args,
+                        value: *value,
+                        gas: *gas,
+                        salt: *salt,
                     },
                 );
 

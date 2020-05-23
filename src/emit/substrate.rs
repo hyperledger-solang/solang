@@ -48,6 +48,7 @@ impl SubstrateTarget {
             "ext_instantiate",
             "ext_call",
             "ext_value_transferred",
+            "ext_minimum_balance",
         ]);
 
         c
@@ -296,6 +297,12 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_value_transferred",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_minimum_balance",
             contract.context.void_type().fn_type(&[], false),
             Some(Linkage::External),
         );
@@ -1882,6 +1889,9 @@ impl TargetRuntime for SubstrateTarget {
         constructor_no: usize,
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
+        gas: IntValue<'b>,
+        value: IntValue<'b>,
+        salt: IntValue<'b>,
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
         let constructor = &resolver_contract
@@ -1891,30 +1901,66 @@ impl TargetRuntime for SubstrateTarget {
             .nth(constructor_no)
             .unwrap();
 
+        let mut args = args.to_vec();
+        let mut params = constructor.params.to_vec();
+
+        // salt
+        if let Some(0) = salt.get_zero_extended_constant() {
+            params.push(resolver::Parameter {
+                ty: resolver::Type::Uint(256),
+                name: "salt".to_string(),
+            });
+
+            args.push(salt.into());
+        } else {
+            // FIXME:something random
+        }
+
         // input
         let (input, input_len) = self.abi_encode(
             contract,
             Some(constructor.selector()),
             false,
             function,
-            args,
-            &constructor.params,
+            &args,
+            &params,
         );
 
+        let value_ptr = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+
         // balance is a u128, make sure it's enough to cover existential_deposit
-        // TODO: this is hardcoded for now. This needs to implemented so that:
-        //
-        // contractx x = new contractx{value: 102}();
-        //
-        // is supported.
-        let balance = contract.emit_global_string(
-            "balance",
-            &[
-                0u8, 0u8, 0u8, 0u8, 0xffu8, 0xffu8, 0xffu8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8,
-                0u8,
-            ],
-            true,
-        );
+        if let Some(0) = value.get_zero_extended_constant() {
+            contract.builder.build_call(
+                contract.module.get_function("ext_minimum_balance").unwrap(),
+                &[],
+                "minimum_balance",
+            );
+
+            contract.builder.build_call(
+                contract.module.get_function("ext_scratch_read").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value_ptr,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract.context.i32_type().const_zero().into(),
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.value_length as u64 / 8, false)
+                        .into(),
+                ],
+                "minimum_balance",
+            );
+        } else {
+            contract.builder.build_store(value_ptr, value);
+        }
 
         // wasm
         let target_contract = Contract::build(
@@ -1945,8 +1991,15 @@ impl TargetRuntime for SubstrateTarget {
                 &[
                     codehash.into(),
                     contract.context.i32_type().const_int(32, false).into(),
-                    contract.context.i64_type().const_zero().into(),
-                    balance.into(),
+                    gas.into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            value_ptr,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "value_transfer",
+                        )
+                        .into(),
                     contract.context.i32_type().const_int(16, false).into(),
                     input.into(),
                     input_len.into(),

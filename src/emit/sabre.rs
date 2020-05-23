@@ -724,6 +724,9 @@ impl TargetRuntime for SabreTarget {
         _constructor_no: usize,
         _address: PointerValue<'b>,
         _args: &[BasicValueEnum],
+        _gas: IntValue<'b>,
+        _value: IntValue<'b>,
+        _salt: IntValue<'b>,
     ) {
         panic!("Sabre cannot create new contracts");
     }
