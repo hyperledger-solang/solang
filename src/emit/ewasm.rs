@@ -518,6 +518,7 @@ impl EwasmTarget {
             function,
             None,
             self,
+            |func| !contract.function_abort_value_transfers && !func.is_payable(),
         );
     }
 
@@ -1048,8 +1049,8 @@ impl TargetRuntime for EwasmTarget {
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
         _gas: IntValue<'b>,
-        value: IntValue<'b>,
-        _salt: IntValue<'b>,
+        value: Option<IntValue<'b>>,
+        _salt: Option<IntValue<'b>>,
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
 
@@ -1097,7 +1098,13 @@ impl TargetRuntime for EwasmTarget {
         let value_ptr = contract
             .builder
             .build_alloca(contract.value_type(), "balance");
-        contract.builder.build_store(value_ptr, value);
+        contract.builder.build_store(
+            value_ptr,
+            match value {
+                Some(v) => v,
+                None => contract.value_type().const_zero(),
+            },
+        );
 
         // call create
         let ret = contract

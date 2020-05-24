@@ -432,6 +432,7 @@ pub struct FunctionDecl {
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub noreturn: bool,
+    pub check_nonpayable: bool,
     pub cfg: Option<Box<cfg::ControlFlowGraph>>,
 }
 
@@ -470,6 +471,7 @@ impl FunctionDecl {
             params,
             returns,
             noreturn: false,
+            check_nonpayable: false,
             cfg: None,
         }
     }
@@ -486,7 +488,7 @@ impl FunctionDecl {
         self.ty == ast::FunctionTy::Constructor
     }
 
-    /// Is this a constructor
+    /// Does this function have the payable state
     pub fn is_payable(&self) -> bool {
         if let Some(ast::StateMutability::Payable(_)) = self.mutability {
             true
@@ -494,6 +496,15 @@ impl FunctionDecl {
             false
         }
     }
+
+    /// Is this function accessable externally
+    pub fn is_public(&self) -> bool {
+        match self.visibility {
+            ast::Visibility::Public(_) | ast::Visibility::External(_) => true,
+            _ => false,
+        }
+    }
+
     /// Return a unique string for this function which is a valid wasm symbol
     pub fn wasm_symbol(&self, ns: &Namespace) -> String {
         let mut sig = self.name.to_owned();

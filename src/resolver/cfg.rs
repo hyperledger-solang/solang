@@ -77,9 +77,9 @@ pub enum Instr {
         contract_no: usize,
         constructor_no: usize,
         args: Vec<Expression>,
-        value: Expression,
+        value: Option<Expression>,
         gas: Expression,
-        salt: Expression,
+        salt: Option<Expression>,
     },
     ExternalCall {
         success: Option<usize>,
@@ -648,8 +648,14 @@ impl ControlFlowGraph {
                     Some(i) => format!("%{}", self.vars[*i].id.name),
                     None => "_".to_string(),
                 },
-                self.expr_to_string(contract, ns, salt),
-                self.expr_to_string(contract, ns, value),
+                match salt {
+                    Some(salt) => self.expr_to_string(contract, ns, salt),
+                    None => "".to_string(),
+                },
+                match value {
+                    Some(value) => self.expr_to_string(contract, ns, value),
+                    None => "".to_string(),
+                },
                 self.expr_to_string(contract, ns, gas),
                 ns.contracts[*contract_no].name,
                 constructor_no,
@@ -1768,9 +1774,9 @@ fn try_catch(
                         contract_no,
                         constructor_no,
                         args,
-                        value: *value,
+                        value: value.map(|v| *v),
                         gas: *gas,
-                        salt: *salt,
+                        salt: salt.map(|v| *v),
                     },
                 );
 

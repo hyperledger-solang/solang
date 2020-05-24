@@ -336,6 +336,7 @@ impl SubstrateTarget {
             function,
             Some(fallback_block),
             self,
+            |_| false,
         );
 
         // emit fallback code
@@ -368,6 +369,7 @@ impl SubstrateTarget {
             function,
             None,
             self,
+            |func| !contract.function_abort_value_transfers && !func.is_payable(),
         );
     }
 
@@ -1890,8 +1892,8 @@ impl TargetRuntime for SubstrateTarget {
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
         gas: IntValue<'b>,
-        value: IntValue<'b>,
-        salt: IntValue<'b>,
+        value: Option<IntValue<'b>>,
+        salt: Option<IntValue<'b>>,
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
         let constructor = &resolver_contract
@@ -1905,7 +1907,7 @@ impl TargetRuntime for SubstrateTarget {
         let mut params = constructor.params.to_vec();
 
         // salt
-        if let Some(0) = salt.get_zero_extended_constant() {
+        if let Some(salt) = salt {
             params.push(resolver::Parameter {
                 ty: resolver::Type::Uint(256),
                 name: "salt".to_string(),
@@ -1931,7 +1933,9 @@ impl TargetRuntime for SubstrateTarget {
             .build_alloca(contract.value_type(), "balance");
 
         // balance is a u128, make sure it's enough to cover existential_deposit
-        if let Some(0) = value.get_zero_extended_constant() {
+        if let Some(value) = value {
+            contract.builder.build_store(value_ptr, value);
+        } else {
             contract.builder.build_call(
                 contract.module.get_function("ext_minimum_balance").unwrap(),
                 &[],
@@ -1958,8 +1962,6 @@ impl TargetRuntime for SubstrateTarget {
                 ],
                 "minimum_balance",
             );
-        } else {
-            contract.builder.build_store(value_ptr, value);
         }
 
         // wasm

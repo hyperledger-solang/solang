@@ -262,7 +262,7 @@ fn external_call_value() {
             continue;
         }
 
-        assert_eq!(account.1, 1023);
+        assert_eq!(account.1, 1523);
     }
 
     let mut runtime = build_solidity(
@@ -294,6 +294,6 @@ fn external_call_value() {
             continue;
         }
 
-        assert_eq!(account.1, 1023);
+        assert_eq!(account.1, 1523);
     }
 }
