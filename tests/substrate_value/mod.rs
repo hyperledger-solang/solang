@@ -297,3 +297,146 @@ fn external_call_value() {
         assert_eq!(account.1, 1523);
     }
 }
+
+#[test]
+fn constructor_value() {
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                a f = new a();
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 500);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                a f = new a{value: 0}();
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 500);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                a f = new a{value: 499}();
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 499);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                try new a{value: 511}() {
+                    //
+                }
+                catch (bytes) {
+                    //
+                }
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 511);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                try new a{value: 511}() returns (a) {
+                    //
+                }
+                catch (bytes) {
+                    //
+                }
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 511);
+    }
+}
