@@ -101,9 +101,9 @@ pub enum Expression {
         contract_no: usize,
         constructor_no: usize,
         args: Vec<Expression>,
-        value: Box<Expression>,
         gas: Box<Expression>,
-        salt: Box<Expression>,
+        value: Option<Box<Expression>>,
+        salt: Option<Box<Expression>>,
     },
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
@@ -303,6 +303,17 @@ impl Expression {
             Expression::ReturnData(_) => false,
             Expression::Poison => false,
             Expression::Unreachable => false,
+        }
+    }
+
+    /// Is this expression 0
+    fn const_zero(&self) -> bool {
+        let mut nullsink = Vec::new();
+
+        if let Ok((_, value)) = eval_number_expression(&self, &mut nullsink) {
+            value == BigInt::zero()
+        } else {
+            false
         }
     }
 }
@@ -2499,15 +2510,27 @@ fn constructor(
         }
 
         if matches {
+            let value = if call_args.value.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.value))
+            };
+
+            let salt = if call_args.salt.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.salt))
+            };
+
             return Ok((
                 Expression::Constructor {
                     loc: *loc,
                     contract_no: no,
                     constructor_no,
                     args: cast_args,
-                    value: Box::new(call_args.value),
+                    value,
                     gas: Box::new(call_args.gas),
-                    salt: Box::new(call_args.salt),
+                    salt,
                 },
                 resolver::Type::Contract(no),
             ));
@@ -2520,18 +2543,32 @@ fn constructor(
         .filter(|f| f.is_constructor())
         .count()
     {
-        0 => Ok((
-            Expression::Constructor {
-                loc: *loc,
-                contract_no: no,
-                constructor_no: 0,
-                args: Vec::new(),
-                value: Box::new(call_args.value),
-                gas: Box::new(call_args.gas),
-                salt: Box::new(call_args.salt),
-            },
-            resolver::Type::Contract(no),
-        )),
+        0 => {
+            let value = if call_args.value.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.value))
+            };
+
+            let salt = if call_args.salt.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.salt))
+            };
+
+            Ok((
+                Expression::Constructor {
+                    loc: *loc,
+                    contract_no: no,
+                    constructor_no: 0,
+                    args: Vec::new(),
+                    value,
+                    gas: Box::new(call_args.gas),
+                    salt,
+                },
+                resolver::Type::Contract(no),
+            ))
+        }
         1 => {
             errors.append(&mut temp_errors);
 
@@ -2689,6 +2726,18 @@ pub fn constructor_named_args(
         }
 
         if matches {
+            let value = if call_args.value.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.value))
+            };
+
+            let salt = if call_args.salt.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.salt))
+            };
+
             return Ok((
                 Expression::Constructor {
                     loc: *loc,
@@ -2696,8 +2745,8 @@ pub fn constructor_named_args(
                     constructor_no,
                     args: cast_args,
                     gas: Box::new(call_args.gas),
-                    value: Box::new(call_args.value),
-                    salt: Box::new(call_args.salt),
+                    value,
+                    salt,
                 },
                 resolver::Type::Contract(no),
             ));
@@ -2710,18 +2759,32 @@ pub fn constructor_named_args(
         .filter(|f| f.is_constructor())
         .count()
     {
-        0 => Ok((
-            Expression::Constructor {
-                loc: *loc,
-                contract_no: no,
-                constructor_no: 0,
-                args: Vec::new(),
-                gas: Box::new(call_args.gas),
-                value: Box::new(call_args.value),
-                salt: Box::new(call_args.salt),
-            },
-            resolver::Type::Contract(no),
-        )),
+        0 => {
+            let value = if call_args.value.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.value))
+            };
+
+            let salt = if call_args.salt.const_zero() {
+                None
+            } else {
+                Some(Box::new(call_args.salt))
+            };
+
+            Ok((
+                Expression::Constructor {
+                    loc: *loc,
+                    contract_no: no,
+                    constructor_no: 0,
+                    args: Vec::new(),
+                    gas: Box::new(call_args.gas),
+                    value,
+                    salt,
+                },
+                resolver::Type::Contract(no),
+            ))
+        }
         1 => {
             errors.append(&mut temp_errors);
 
@@ -5367,9 +5430,9 @@ fn emit_constructor_call(
                     contract_no,
                     constructor_no,
                     args,
-                    value: *value,
+                    value: value.map(|v| *v),
                     gas: *gas,
-                    salt: *salt,
+                    salt: salt.map(|v| *v),
                 },
             );
 

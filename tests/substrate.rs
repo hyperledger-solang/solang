@@ -370,6 +370,12 @@ impl Externals for TestRuntime {
                     panic!("ext_instantiate: {}", e);
                 }
 
+                println!(
+                    "ext_instantiate value:{} input={}",
+                    value,
+                    hex::encode(&input)
+                );
+
                 let mut address = [0u8; 32];
 
                 address.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &input).as_bytes());
@@ -430,7 +436,7 @@ impl Externals for TestRuntime {
             Some(SubstrateExternal::ext_minimum_balance) => {
                 self.vm.scratch = 500u128.to_le_bytes().to_vec();
 
-                println!("ext_value_transferred: {}", hex::encode(&self.vm.scratch));
+                println!("ext_minimum_balance: {}", hex::encode(&self.vm.scratch));
 
                 Ok(None)
             }

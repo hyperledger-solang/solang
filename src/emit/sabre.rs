@@ -213,6 +213,7 @@ impl SabreTarget {
             function,
             None,
             self,
+            |_| false,
         );
     }
 }
@@ -725,8 +726,8 @@ impl TargetRuntime for SabreTarget {
         _address: PointerValue<'b>,
         _args: &[BasicValueEnum],
         _gas: IntValue<'b>,
-        _value: IntValue<'b>,
-        _salt: IntValue<'b>,
+        _value: Option<IntValue<'b>>,
+        _salt: Option<IntValue<'b>>,
     ) {
         panic!("Sabre cannot create new contracts");
     }

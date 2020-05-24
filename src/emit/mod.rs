@@ -178,8 +178,8 @@ pub trait TargetRuntime {
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
         gas: IntValue<'b>,
-        value: IntValue<'b>,
-        salt: IntValue<'b>,
+        value: Option<IntValue<'b>>,
+        salt: Option<IntValue<'b>>,
     );
 
     /// call external function
@@ -2460,17 +2460,6 @@ impl<'a> Contract<'a> {
         function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) {
-        let entry = self.context.append_basic_block(function, "entry");
-        self.builder.position_at_end(entry);
-
-        // abort value transfers for functions which are not payable, and
-        // if value transfers aren't aborted globally
-        if let Some(fdecl) = resolver_function {
-            if !self.function_abort_value_transfers && !fdecl.is_payable() {
-                self.abort_if_value_transfer(runtime, function);
-            }
-        }
-
         // recurse through basic blocks
         struct BasicBlock<'a> {
             bb: inkwell::basic_block::BasicBlock<'a>,
@@ -2489,10 +2478,6 @@ impl<'a> Contract<'a> {
             let mut phis = HashMap::new();
 
             let bb = self.context.append_basic_block(function, &cfg_bb.name);
-
-            if bb_no == 0 {
-                self.builder.build_unconditional_branch(bb);
-            }
 
             self.builder.position_at_end(bb);
 
@@ -2899,12 +2884,14 @@ impl<'a> Contract<'a> {
                         let gas = self
                             .expression(gas, &w.vars, function, runtime)
                             .into_int_value();
-                        let value = self
-                            .expression(value, &w.vars, function, runtime)
-                            .into_int_value();
-                        let salt = self
-                            .expression(salt, &w.vars, function, runtime)
-                            .into_int_value();
+                        let value = value.as_ref().map(|v| {
+                            self.expression(&v, &w.vars, function, runtime)
+                                .into_int_value()
+                        });
+                        let salt = salt.as_ref().map(|v| {
+                            self.expression(&v, &w.vars, function, runtime)
+                                .into_int_value()
+                        });
 
                         let success = match success {
                             Some(n) => Some(&mut w.vars[*n].value),
@@ -3155,7 +3142,7 @@ impl<'a> Contract<'a> {
     /// and dispatches based on that. If no function matches this, or no selector is in the argsdata, then fallback
     /// code is executed. This is either a fallback block provided to this function, or it automatically dispatches
     /// to the fallback function or receive function, if any.
-    pub fn emit_function_dispatch(
+    pub fn emit_function_dispatch<F>(
         &self,
         resolver_functions: &[resolver::FunctionDecl],
         function_ty: ast::FunctionTy,
@@ -3165,7 +3152,10 @@ impl<'a> Contract<'a> {
         function: inkwell::values::FunctionValue<'a>,
         fallback: Option<inkwell::basic_block::BasicBlock>,
         runtime: &dyn TargetRuntime,
-    ) {
+        nonpayable: F,
+    ) where
+        F: Fn(&resolver::FunctionDecl) -> bool,
+    {
         // create start function
         let no_function_matched = match fallback {
             Some(block) => block,
@@ -3212,11 +3202,8 @@ impl<'a> Contract<'a> {
             .enumerate()
             .filter(|f| f.1.ty == function_ty)
         {
-            match &f.visibility {
-                ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
-                    continue;
-                }
-                _ => (),
+            if !f.is_public() {
+                continue;
             }
 
             let bb = self.context.append_basic_block(function, "");
@@ -3224,6 +3211,10 @@ impl<'a> Contract<'a> {
             let id = f.selector();
 
             self.builder.position_at_end(bb);
+
+            if nonpayable(f) {
+                self.abort_if_value_transfer(runtime, function);
+            }
 
             let mut args = Vec::new();
 
