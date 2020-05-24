@@ -453,21 +453,17 @@ impl SubstrateTarget {
         }
     }
 
-    /// Check that data has not overrun end. If last is true, then data must be equal to end
+    /// Check that data has not overrun end. We do not check if we have more data than provided;
+    /// there could be a salt there for the constructor.
     fn check_overrun(
         &self,
         contract: &Contract,
         function: FunctionValue,
         data: PointerValue,
         end: PointerValue,
-        last: bool,
     ) {
         let in_bounds = contract.builder.build_int_compare(
-            if last {
-                IntPredicate::EQ
-            } else {
-                IntPredicate::ULE
-            },
+            IntPredicate::ULE,
             contract
                 .builder
                 .build_ptr_to_int(data, contract.context.i32_type(), "args"),
@@ -518,7 +514,7 @@ impl SubstrateTarget {
                     )
                 };
 
-                self.check_overrun(contract, function, *data, end, false);
+                self.check_overrun(contract, function, *data, end);
 
                 arg
             }
@@ -729,7 +725,7 @@ impl SubstrateTarget {
                     .build_load(from, "data")
                     .into_pointer_value();
 
-                self.check_overrun(contract, function, *data, end, false);
+                self.check_overrun(contract, function, *data, end);
 
                 contract
                     .builder
@@ -1777,10 +1773,6 @@ impl TargetRuntime for SubstrateTarget {
                 v
             });
         }
-
-        // Actually we always end with two checks: with last = false, and then another
-        // with last = true. We rely on llvm to optimize the former away
-        self.check_overrun(contract, function, argsdata, argsend, true);
     }
 
     ///  ABI encode the return values for the function

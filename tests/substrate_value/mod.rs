@@ -440,3 +440,60 @@ fn constructor_value() {
         assert_eq!(account.1, 511);
     }
 }
+
+#[test]
+fn constructor_salt() {
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                a f = new a{salt: 0}();
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                a f = new a{salt: 1}();
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    // we can instantiate the same contract if we provide a different contract
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public {
+                a f = new a{salt: 1}();
+                f = new a{salt: 2}();
+            }
+        }
+
+        contract a {
+            function test(int32 l) public payable {
+            }
+        }"##,
+    );
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+}
