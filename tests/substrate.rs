@@ -70,6 +70,7 @@ enum SubstrateExternal {
     ext_instantiate,
     ext_value_transferred,
     ext_minimum_balance,
+    ext_random,
 }
 
 pub struct VM {
@@ -258,6 +259,23 @@ impl Externals for TestRuntime {
                 println!("ext_println: {}", s);
 
                 self.printbuf.push_str(&s);
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_random) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+
+                let mut buf = Vec::new();
+                buf.resize(len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut buf) {
+                    panic!("ext_random: {}", e);
+                }
+
+                println!("ext_random: {}", hex::encode(&buf));
+
+                self.vm.scratch = buf;
 
                 Ok(None)
             }
@@ -461,6 +479,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_instantiate" => SubstrateExternal::ext_instantiate,
             "ext_value_transferred" => SubstrateExternal::ext_value_transferred,
             "ext_minimum_balance" => SubstrateExternal::ext_minimum_balance,
+            "ext_random" => SubstrateExternal::ext_random,
             _ => {
                 panic!("{} not implemented", field_name);
             }

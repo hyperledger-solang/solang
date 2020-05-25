@@ -169,7 +169,7 @@ pub trait TargetRuntime {
 
     /// Calls constructor
     fn create_contract<'b>(
-        &self,
+        &mut self,
         contract: &Contract<'b>,
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
@@ -653,7 +653,7 @@ impl<'a> Contract<'a> {
     }
 
     /// Emit all functions, constructors, fallback and receiver
-    fn emit_functions(&mut self, runtime: &dyn TargetRuntime) {
+    fn emit_functions(&mut self, runtime: &mut dyn TargetRuntime) {
         let mut defines = Vec::new();
 
         for resolver_func in &self.contract.functions {
@@ -2394,7 +2394,7 @@ impl<'a> Contract<'a> {
     }
 
     /// Emit the contract storage initializers
-    fn emit_initializer(&self, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
+    fn emit_initializer(&self, runtime: &mut dyn TargetRuntime) -> FunctionValue<'a> {
         let function = self.module.add_function(
             "storage_initializers",
             self.context.i32_type().fn_type(&[], false),
@@ -2442,7 +2442,7 @@ impl<'a> Contract<'a> {
         &self,
         resolver_func: &resolver::FunctionDecl,
         function: FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
+        runtime: &mut dyn TargetRuntime,
     ) {
         let cfg = match resolver_func.cfg {
             Some(ref cfg) => cfg,
@@ -2458,7 +2458,7 @@ impl<'a> Contract<'a> {
         cfg: &cfg::ControlFlowGraph,
         resolver_function: Option<&resolver::FunctionDecl>,
         function: FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
+        runtime: &mut dyn TargetRuntime,
     ) {
         // recurse through basic blocks
         struct BasicBlock<'a> {

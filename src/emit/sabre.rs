@@ -26,14 +26,14 @@ impl SabreTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         let mut c = Contract::new(context, contract, ns, filename, opt, None);
-        let b = SabreTarget {
+        let mut b = SabreTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
 
         // externals
         b.declare_externals(&mut c);
 
-        c.emit_functions(&b);
+        c.emit_functions(&mut b);
 
         b.emit_entrypoint(&mut c);
 
@@ -103,7 +103,7 @@ impl SabreTarget {
         );
     }
 
-    fn emit_entrypoint(&self, contract: &mut Contract) {
+    fn emit_entrypoint(&mut self, contract: &mut Contract) {
         let initializer = contract.emit_initializer(self);
 
         let bytes_ptr = contract.context.i32_type().ptr_type(AddressSpace::Generic);
@@ -717,7 +717,7 @@ impl TargetRuntime for SabreTarget {
 
     /// Create new contract
     fn create_contract<'b>(
-        &self,
+        &mut self,
         _contract: &Contract<'b>,
         _function: FunctionValue,
         _success: Option<&mut BasicValueEnum<'b>>,
