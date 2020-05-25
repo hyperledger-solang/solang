@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, no_errors};
+use super::{build_solidity, first_error, first_warning, no_errors};
 use solang::{parse_and_resolve, Target};
 
 #[test]
@@ -538,5 +538,84 @@ fn type_name() {
     assert_eq!(
         first_error(errors),
         "type ‘bool’ does not have type function max"
+    );
+}
+
+#[test]
+fn units() {
+    // parse
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            function foo() public {
+                assert(10 seconds == 10);
+                assert(1 minutes == 60);
+                assert(60 minutes == 1 hours);
+                assert(48 hours == 2 days);
+                assert(14 days == 2 weeks);
+            }
+        }"##,
+    );
+
+    runtime.function("foo", Vec::new());
+
+    // parse
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            function foo() public {
+                assert(10 wei == 10);
+                assert(1 szabo == 1000_000_000_000);
+                assert(1 finney == 1000_000_000_000_000);
+                assert(1 ether == 1000_000_000_000_000_000);
+            }
+        }"##,
+    );
+
+    runtime.function("foo", Vec::new());
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                int32 x = 1 ether;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(errors),
+        "ethereum currency unit used while not targetting ethereum"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                int32 x = 0xa days;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "hexadecimal numbers cannot be used with unit denominations"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            function test() public {
+                int32 x = (1 + 2) days;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "unit denominations can only be used with number literals"
     );
 }

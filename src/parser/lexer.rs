@@ -150,6 +150,16 @@ pub enum Token<'input> {
 
     Receive,
     Fallback,
+
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+    Weeks,
+    Wei,
+    Szabo,
+    Finney,
+    Ether,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -259,6 +269,15 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Catch => write!(f, "catch"),
             Token::Receive => write!(f, "receive"),
             Token::Fallback => write!(f, "fallback"),
+            Token::Seconds => write!(f, "seconds"),
+            Token::Minutes => write!(f, "minutes"),
+            Token::Hours => write!(f, "hours"),
+            Token::Days => write!(f, "days"),
+            Token::Weeks => write!(f, "weeks"),
+            Token::Wei => write!(f, "wei"),
+            Token::Szabo => write!(f, "szabo"),
+            Token::Finney => write!(f, "finney"),
+            Token::Ether => write!(f, "ether"),
         }
     }
 }
@@ -459,6 +478,15 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "catch" => Token::Catch,
     "receive" => Token::Receive,
     "fallback" => Token::Fallback,
+    "seconds" => Token::Seconds,
+    "minutes" => Token::Minutes,
+    "hours" => Token::Hours,
+    "days" => Token::Days,
+    "weeks" => Token::Weeks,
+    "wei" => Token::Wei,
+    "szabo" => Token::Szabo,
+    "finney" => Token::Finney,
+    "ether" => Token::Ether,
 };
 
 impl<'input> Lexer<'input> {

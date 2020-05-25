@@ -3,6 +3,7 @@ use num_bigint::Sign;
 use num_traits::FromPrimitive;
 use num_traits::Num;
 use num_traits::One;
+use num_traits::Pow;
 use num_traits::ToPrimitive;
 use num_traits::Zero;
 use std::cmp;
@@ -2396,6 +2397,56 @@ pub fn expression(
         ast::Expression::FunctionCallBlock(loc, _, _) => {
             errors.push(Output::error(*loc, "unexpect block encountered".to_owned()));
             Err(())
+        }
+        ast::Expression::Unit(loc, expr, unit) => {
+            let n = match expr.as_ref() {
+                ast::Expression::NumberLiteral(_, n) => n,
+                ast::Expression::HexNumberLiteral(loc, _) => {
+                    errors.push(Output::error(
+                        *loc,
+                        "hexadecimal numbers cannot be used with unit denominations".to_owned(),
+                    ));
+                    return Err(());
+                }
+                _ => {
+                    errors.push(Output::error(
+                        *loc,
+                        "unit denominations can only be used with number literals".to_owned(),
+                    ));
+                    return Err(());
+                }
+            };
+
+            match unit {
+                ast::Unit::Wei(loc)
+                | ast::Unit::Finney(loc)
+                | ast::Unit::Szabo(loc)
+                | ast::Unit::Ether(loc)
+                    if ns.target != crate::Target::Ewasm =>
+                {
+                    errors.push(Output::warning(
+                        *loc,
+                        "ethereum currency unit used while not targetting ethereum".to_owned(),
+                    ));
+                }
+                _ => (),
+            }
+
+            bigint_to_expression(
+                loc,
+                &(n * match unit {
+                    ast::Unit::Seconds(_) => BigInt::from(1),
+                    ast::Unit::Minutes(_) => BigInt::from(60),
+                    ast::Unit::Hours(_) => BigInt::from(60 * 60),
+                    ast::Unit::Days(_) => BigInt::from(60 * 60 * 24),
+                    ast::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
+                    ast::Unit::Wei(_) => BigInt::from(1),
+                    ast::Unit::Szabo(_) => BigInt::from(10).pow(12u32),
+                    ast::Unit::Finney(_) => BigInt::from(10).pow(15u32),
+                    ast::Unit::Ether(_) => BigInt::from(10).pow(18u32),
+                }),
+                errors,
+            )
         }
     }
 }
