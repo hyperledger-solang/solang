@@ -2510,27 +2510,15 @@ fn constructor(
         }
 
         if matches {
-            let value = if call_args.value.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.value))
-            };
-
-            let salt = if call_args.salt.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.salt))
-            };
-
             return Ok((
                 Expression::Constructor {
                     loc: *loc,
                     contract_no: no,
                     constructor_no,
                     args: cast_args,
-                    value,
-                    gas: Box::new(call_args.gas),
-                    salt,
+                    value: call_args.value,
+                    gas: call_args.gas,
+                    salt: call_args.salt,
                 },
                 resolver::Type::Contract(no),
             ));
@@ -2543,32 +2531,18 @@ fn constructor(
         .filter(|f| f.is_constructor())
         .count()
     {
-        0 => {
-            let value = if call_args.value.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.value))
-            };
-
-            let salt = if call_args.salt.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.salt))
-            };
-
-            Ok((
-                Expression::Constructor {
-                    loc: *loc,
-                    contract_no: no,
-                    constructor_no: 0,
-                    args: Vec::new(),
-                    value,
-                    gas: Box::new(call_args.gas),
-                    salt,
-                },
-                resolver::Type::Contract(no),
-            ))
-        }
+        0 => Ok((
+            Expression::Constructor {
+                loc: *loc,
+                contract_no: no,
+                constructor_no: 0,
+                args: Vec::new(),
+                value: call_args.value,
+                gas: call_args.gas,
+                salt: call_args.salt,
+            },
+            resolver::Type::Contract(no),
+        )),
         1 => {
             errors.append(&mut temp_errors);
 
@@ -2726,27 +2700,15 @@ pub fn constructor_named_args(
         }
 
         if matches {
-            let value = if call_args.value.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.value))
-            };
-
-            let salt = if call_args.salt.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.salt))
-            };
-
             return Ok((
                 Expression::Constructor {
                     loc: *loc,
                     contract_no: no,
                     constructor_no,
                     args: cast_args,
-                    gas: Box::new(call_args.gas),
-                    value,
-                    salt,
+                    value: call_args.value,
+                    gas: call_args.gas,
+                    salt: call_args.salt,
                 },
                 resolver::Type::Contract(no),
             ));
@@ -2759,32 +2721,18 @@ pub fn constructor_named_args(
         .filter(|f| f.is_constructor())
         .count()
     {
-        0 => {
-            let value = if call_args.value.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.value))
-            };
-
-            let salt = if call_args.salt.const_zero() {
-                None
-            } else {
-                Some(Box::new(call_args.salt))
-            };
-
-            Ok((
-                Expression::Constructor {
-                    loc: *loc,
-                    contract_no: no,
-                    constructor_no: 0,
-                    args: Vec::new(),
-                    gas: Box::new(call_args.gas),
-                    value,
-                    salt,
-                },
-                resolver::Type::Contract(no),
-            ))
-        }
+        0 => Ok((
+            Expression::Constructor {
+                loc: *loc,
+                contract_no: no,
+                constructor_no: 0,
+                args: Vec::new(),
+                value: call_args.value,
+                gas: call_args.gas,
+                salt: call_args.salt,
+            },
+            resolver::Type::Contract(no),
+        )),
         1 => {
             errors.append(&mut temp_errors);
 
@@ -4607,29 +4555,26 @@ fn method_call_pos_args(
                 }
             }
             if matches {
-                let mut nullsink = Vec::new();
-
-                let mut check_payable = true;
-                if let Ok((_, value)) = eval_number_expression(&call_args.value, &mut nullsink) {
-                    if value == BigInt::zero() {
-                        check_payable = false;
-                    }
-                }
-
-                if check_payable {
-                    if let Some(ast::StateMutability::Payable(_)) = ftype.mutability {
-                        // fine
-                    } else {
+                let value = if let Some(value) = call_args.value {
+                    if !value.const_zero() && !ftype.is_payable() {
                         errors.push(Output::error(
                             *loc,
                             format!(
                                 "sending value to function ‘{}’ which is not payable",
-                                ftype.name
+                                func.name
                             ),
                         ));
                         return Err(());
                     }
-                }
+
+                    value
+                } else {
+                    Box::new(Expression::NumberLiteral(
+                        ast::Loc(0, 0),
+                        ns.value_length as u16 * 8,
+                        BigInt::zero(),
+                    ))
+                };
 
                 return Ok((
                     Expression::ExternalFunctionCall {
@@ -4647,8 +4592,8 @@ fn method_call_pos_args(
                             errors,
                         )?),
                         args: cast_args,
-                        value: Box::new(call_args.value),
-                        gas: Box::new(call_args.gas),
+                        value,
+                        gas: call_args.gas,
                     },
                     resolver::Type::Undef,
                 ));
@@ -4771,19 +4716,8 @@ fn method_call_with_named_args(
             }
 
             if matches {
-                let mut nullsink = Vec::new();
-
-                let mut check_payable = true;
-                if let Ok((_, value)) = eval_number_expression(&call_args.value, &mut nullsink) {
-                    if value == BigInt::zero() {
-                        check_payable = false;
-                    }
-                }
-
-                if check_payable {
-                    if let Some(ast::StateMutability::Payable(_)) = func.mutability {
-                        // fine
-                    } else {
+                let value = if let Some(value) = call_args.value {
+                    if !value.const_zero() && !func.is_payable() {
                         errors.push(Output::error(
                             *loc,
                             format!(
@@ -4793,7 +4727,15 @@ fn method_call_with_named_args(
                         ));
                         return Err(());
                     }
-                }
+
+                    value
+                } else {
+                    Box::new(Expression::NumberLiteral(
+                        ast::Loc(0, 0),
+                        ns.value_length as u16 * 8,
+                        BigInt::zero(),
+                    ))
+                };
 
                 return Ok((
                     Expression::ExternalFunctionCall {
@@ -4811,8 +4753,8 @@ fn method_call_with_named_args(
                             errors,
                         )?),
                         args: cast_args,
-                        value: Box::new(call_args.value),
-                        gas: Box::new(call_args.gas),
+                        value,
+                        gas: call_args.gas,
                     },
                     resolver::Type::Undef,
                 ));
@@ -5096,9 +5038,9 @@ pub fn collect_call_args<'a>(
 }
 
 struct CallArgs {
-    gas: Expression,
-    salt: Expression,
-    value: Expression,
+    gas: Box<Expression>,
+    salt: Option<Box<Expression>>,
+    value: Option<Box<Expression>>,
 }
 
 /// Parse call arguments for external calls
@@ -5128,13 +5070,13 @@ fn parse_call_args(
     }
 
     let mut res = CallArgs {
-        value: Expression::NumberLiteral(
+        gas: Box::new(Expression::NumberLiteral(
             ast::Loc(0, 0),
-            ns.value_length as u16 * 8,
+            64,
             BigInt::zero(),
-        ),
-        gas: Expression::NumberLiteral(ast::Loc(0, 0), 64, BigInt::zero()),
-        salt: Expression::NumberLiteral(ast::Loc(0, 0), 256, BigInt::zero()),
+        )),
+        value: None,
+        salt: None,
     };
 
     for arg in args.values() {
@@ -5144,14 +5086,30 @@ fn parse_call_args(
 
                 let ty = resolver::Type::Uint(ns.value_length as u16 * 8);
 
-                res.value = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
+                res.value = Some(Box::new(cast(
+                    &arg.expr.loc(),
+                    expr,
+                    &expr_ty,
+                    &ty,
+                    true,
+                    ns,
+                    errors,
+                )?));
             }
             "gas" => {
                 let (expr, expr_ty) = expression(&arg.expr, cfg, contract_no, ns, vartab, errors)?;
 
                 let ty = resolver::Type::Uint(64);
 
-                res.gas = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
+                res.gas = Box::new(cast(
+                    &arg.expr.loc(),
+                    expr,
+                    &expr_ty,
+                    &ty,
+                    true,
+                    ns,
+                    errors,
+                )?);
             }
             "salt" => {
                 if external_call {
@@ -5166,7 +5124,15 @@ fn parse_call_args(
 
                 let ty = resolver::Type::Uint(256);
 
-                res.salt = cast(&arg.expr.loc(), expr, &expr_ty, &ty, true, ns, errors)?;
+                res.salt = Some(Box::new(cast(
+                    &arg.expr.loc(),
+                    expr,
+                    &expr_ty,
+                    &ty,
+                    true,
+                    ns,
+                    errors,
+                )?));
             }
             _ => {
                 errors.push(Output::error(

@@ -30,7 +30,7 @@ impl EwasmTarget {
     ) -> Contract<'a> {
         // first emit runtime code
         let mut runtime_code = Contract::new(context, contract, ns, filename, opt, None);
-        let b = EwasmTarget {
+        let mut b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
 
@@ -39,7 +39,7 @@ impl EwasmTarget {
 
         // This also emits the constructors. We are relying on DCE to eliminate them from
         // the final code.
-        runtime_code.emit_functions(&b);
+        runtime_code.emit_functions(&mut b);
 
         b.emit_function_dispatch(&runtime_code);
 
@@ -56,7 +56,7 @@ impl EwasmTarget {
             opt,
             Some(Box::new(runtime_code)),
         );
-        let b = EwasmTarget {
+        let mut b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
 
@@ -66,7 +66,7 @@ impl EwasmTarget {
         // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
         // no functions can be called from the constructor. We should either disallow this too
         // and not emit functions, or use lto linking to optimize any unused functions away.
-        deploy_code.emit_functions(&b);
+        deploy_code.emit_functions(&mut b);
 
         b.deployer_dispatch(&mut deploy_code, &runtime_bs);
 
@@ -447,7 +447,7 @@ impl EwasmTarget {
             .add_attribute(AttributeLoc::Function, noreturn);
     }
 
-    fn deployer_dispatch(&self, contract: &mut Contract, runtime: &[u8]) {
+    fn deployer_dispatch(&mut self, contract: &mut Contract, runtime: &[u8]) {
         let initializer = contract.emit_initializer(self);
 
         // create start function
@@ -1040,7 +1040,7 @@ impl TargetRuntime for EwasmTarget {
     }
 
     fn create_contract<'b>(
-        &self,
+        &mut self,
         contract: &Contract<'b>,
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,

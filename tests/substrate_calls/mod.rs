@@ -246,6 +246,25 @@ fn contract_already_exists() {
         r##"
         contract c {
             function test() public {
+                other o = new other{salt: 0}();
+
+                other t = new other{salt: 0}();
+            }
+        }
+        
+        contract other {
+            function test() public {
+
+            }
+        }"##,
+    );
+
+    runtime.function_expect_return("test", Vec::new(), 4);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
                 other o = new other();
 
                 other t = new other();
@@ -259,7 +278,7 @@ fn contract_already_exists() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 4);
+    runtime.function("test", Vec::new());
 }
 
 #[test]

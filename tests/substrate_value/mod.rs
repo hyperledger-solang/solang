@@ -349,7 +349,7 @@ fn constructor_value() {
             continue;
         }
 
-        assert_eq!(account.1, 500);
+        assert_eq!(account.1, 0);
     }
 
     let mut runtime = build_solidity(

@@ -1,6 +1,3 @@
-use parser::ast;
-use resolver;
-
 use blake2_rfc;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
@@ -10,10 +7,15 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
+use parser::ast;
+use resolver;
+use std::collections::HashMap;
 
 use super::{Contract, TargetRuntime};
 
-pub struct SubstrateTarget {}
+pub struct SubstrateTarget {
+    unique_strings: HashMap<usize, usize>,
+}
 
 impl SubstrateTarget {
     pub fn build<'a>(
@@ -24,11 +26,13 @@ impl SubstrateTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         let mut c = Contract::new(context, contract, ns, filename, opt, None);
-        let b = SubstrateTarget {};
+        let mut b = SubstrateTarget {
+            unique_strings: HashMap::new(),
+        };
 
         b.declare_externals(&c);
 
-        c.emit_functions(&b);
+        c.emit_functions(&mut b);
 
         b.emit_deploy(&c);
         b.emit_call(&c);
@@ -49,6 +53,7 @@ impl SubstrateTarget {
             "ext_call",
             "ext_value_transferred",
             "ext_minimum_balance",
+            "ext_random",
         ]);
 
         c
@@ -190,6 +195,22 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
+            "ext_random",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // subject_ptr
+                    contract.context.i32_type().into(), // subject_len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
             "ext_set_storage",
             contract.context.void_type().fn_type(
                 &[
@@ -308,7 +329,7 @@ impl SubstrateTarget {
         );
     }
 
-    fn emit_deploy(&self, contract: &Contract) {
+    fn emit_deploy(&mut self, contract: &Contract) {
         let initializer = contract.emit_initializer(self);
 
         // create deploy function
@@ -1282,6 +1303,29 @@ impl SubstrateTarget {
             }
         }
     }
+
+    /// Create a unique salt each time this function is called.
+    fn contract_unique_salt<'a>(
+        &mut self,
+        contract: &'a Contract,
+        contract_no: usize,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        let counter = *self.unique_strings.get(&contract_no).unwrap_or(&0);
+
+        let contract_name = &contract.ns.contracts[contract_no].name;
+
+        let unique = format!("{}-{}", contract_name, counter);
+
+        let salt = contract.emit_global_string(
+            &format!("salt_{}_{}", contract_name, counter),
+            blake2_rfc::blake2b::blake2b(32, &[], unique.as_bytes()).as_bytes(),
+            true,
+        );
+
+        self.unique_strings.insert(contract_no, counter + 1);
+
+        (salt, contract.context.i32_type().const_int(32, false))
+    }
 }
 
 impl TargetRuntime for SubstrateTarget {
@@ -1875,7 +1919,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     fn create_contract<'b>(
-        &self,
+        &mut self,
         contract: &Contract<'b>,
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
@@ -1899,16 +1943,47 @@ impl TargetRuntime for SubstrateTarget {
         let mut params = constructor.params.to_vec();
 
         // salt
-        if let Some(salt) = salt {
-            params.push(resolver::Parameter {
-                ty: resolver::Type::Uint(256),
-                name: "salt".to_string(),
-            });
+        let salt_ty = resolver::Type::Uint(256);
 
+        if let Some(salt) = salt {
             args.push(salt.into());
         } else {
-            // FIXME:something random
+            let salt = contract
+                .builder
+                .build_alloca(contract.llvm_type(&salt_ty), "salt");
+
+            let (ptr, len) = self.contract_unique_salt(contract, contract_no);
+
+            contract.builder.build_call(
+                contract.module.get_function("ext_random").unwrap(),
+                &[ptr.into(), len.into()],
+                "random",
+            );
+
+            contract.builder.build_call(
+                contract.module.get_function("ext_scratch_read").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            salt,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    contract.context.i32_type().const_zero().into(),
+                    contract.context.i32_type().const_int(32, false).into(),
+                ],
+                "random",
+            );
+
+            args.push(contract.builder.build_load(salt, "salt"));
         }
+
+        params.push(resolver::Parameter {
+            ty: salt_ty,
+            name: "salt".to_string(),
+        });
 
         // input
         let (input, input_len) = self.abi_encode(
