@@ -271,6 +271,7 @@ Precedence0: Expression = {
         Expression::ArrayLiteral(Loc(a, b), v)
     },
     <Identifier> => Expression::Variable(<>),
+    <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc(l, r), Box::new(e), u),
     <l:@L> <n:LexNumber> <r:@R> => {
         let s: String = n.chars().filter(|v| *v != '_').collect();
 
@@ -289,6 +290,18 @@ Precedence0: Expression = {
 
         Expression::List(Loc(l, r), a)
     }
+}
+
+Unit: Unit = {
+    <@L> "seconds" <@R> => Unit::Seconds(Loc(<>)),
+    <@L> "minutes" <@R> => Unit::Minutes(Loc(<>)),
+    <@L> "hours" <@R> => Unit::Hours(Loc(<>)),
+    <@L> "days" <@R> => Unit::Days(Loc(<>)),
+    <@L> "weeks" <@R> => Unit::Weeks(Loc(<>)),
+    <@L> "wei" <@R> => Unit::Wei(Loc(<>)),
+    <@L> "szabo" <@R> => Unit::Szabo(Loc(<>)),
+    <@L> "finney" <@R> => Unit::Finney(Loc(<>)),
+    <@L> "ether" <@R> => Unit::Ether(Loc(<>)),
 }
 
 StringLiteral: StringLiteral = {
@@ -586,6 +599,15 @@ extern {
         "catch" => Token::Catch,
         "receive" => Token::Receive,
         "fallback" => Token::Fallback,
+        "seconds" => Token::Seconds,
+        "minutes" => Token::Minutes,
+        "hours" => Token::Hours,
+        "days" => Token::Days,
+        "weeks" => Token::Weeks,
+        "wei" => Token::Wei,
+        "szabo" => Token::Szabo,
+        "finney" => Token::Finney,
+        "ether" => Token::Ether,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

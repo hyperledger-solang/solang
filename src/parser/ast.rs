@@ -178,6 +178,19 @@ pub struct NamedArgument {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Unit {
+    Seconds(Loc),
+    Minutes(Loc),
+    Hours(Loc),
+    Days(Loc),
+    Weeks(Loc),
+    Wei(Loc),
+    Szabo(Loc),
+    Finney(Loc),
+    Ether(Loc),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     PostDecrement(Loc, Box<Expression>),
@@ -234,6 +247,7 @@ pub enum Expression {
     Variable(Identifier),
     List(Loc, Vec<(Loc, Option<Parameter>)>),
     ArrayLiteral(Loc, Vec<Expression>),
+    Unit(Loc, Box<Expression>, Unit),
 }
 
 impl Expression {
@@ -291,6 +305,7 @@ impl Expression {
             | Expression::ArrayLiteral(loc, _)
             | Expression::List(loc, _)
             | Expression::Type(loc, _)
+            | Expression::Unit(loc, _, _)
             | Expression::Variable(Identifier { loc, .. }) => *loc,
             Expression::StringLiteral(v) => v[0].loc,
             Expression::HexLiteral(v) => v[0].loc,
