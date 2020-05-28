@@ -71,6 +71,8 @@ enum SubstrateExternal {
     ext_value_transferred,
     ext_minimum_balance,
     ext_random,
+    ext_address,
+    ext_balance,
 }
 
 pub struct VM {
@@ -451,6 +453,20 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_address) => {
+                self.vm.scratch = self.vm.address.to_vec();
+
+                println!("ext_address: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_balance) => {
+                self.vm.scratch = self.accounts[&self.vm.address].1.to_le_bytes().to_vec();
+
+                println!("ext_address: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
             Some(SubstrateExternal::ext_minimum_balance) => {
                 self.vm.scratch = 500u128.to_le_bytes().to_vec();
 
@@ -480,6 +496,8 @@ impl ModuleImportResolver for TestRuntime {
             "ext_value_transferred" => SubstrateExternal::ext_value_transferred,
             "ext_minimum_balance" => SubstrateExternal::ext_minimum_balance,
             "ext_random" => SubstrateExternal::ext_random,
+            "ext_address" => SubstrateExternal::ext_address,
+            "ext_balance" => SubstrateExternal::ext_balance,
             _ => {
                 panic!("{} not implemented", field_name);
             }

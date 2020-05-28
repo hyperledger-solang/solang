@@ -366,10 +366,7 @@ fn address_payable_type() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(errors),
-        "implicit conversion to address from address payable not allowed"
-    );
+    no_errors(errors);
 
     let (_, errors) = parse_and_resolve(
         r##"

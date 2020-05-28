@@ -289,7 +289,8 @@ Precedence0: Expression = {
         }
 
         Expression::List(Loc(l, r), a)
-    }
+    },
+    <@L> "this" <@R> => Expression::This(Loc(<>)),
 }
 
 Unit: Unit = {
@@ -608,6 +609,7 @@ extern {
         "szabo" => Token::Szabo,
         "finney" => Token::Finney,
         "ether" => Token::Ether,
+        "this" => Token::This,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

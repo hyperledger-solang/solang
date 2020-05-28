@@ -86,6 +86,8 @@ impl EwasmTarget {
             "getReturnDataSize",
             "returnDataCopy",
             "getCallValue",
+            "getAddress",
+            "getExternalBalance",
         ]);
 
         deploy_code
@@ -396,6 +398,41 @@ impl EwasmTarget {
                         .i8_type()
                         .ptr_type(AddressSpace::Generic)
                         .into(), // value_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getAddress",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // value_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getExternalBalance",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // address_ptr
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // balance_ptr
                 ],
                 false,
             ),
@@ -1331,6 +1368,72 @@ impl TargetRuntime for EwasmTarget {
         contract
             .builder
             .build_load(value, "value_transferred")
+            .into_int_value()
+    }
+
+    /// ewasm address is always 160 bits
+    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
+        let value = contract
+            .builder
+            .build_alloca(contract.address_type(), "self_address");
+
+        contract.builder.build_call(
+            contract.module.get_function("getAddress").unwrap(),
+            &[contract
+                .builder
+                .build_pointer_cast(
+                    value,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
+            "self_address",
+        );
+
+        contract
+            .builder
+            .build_load(value, "self_address")
+            .into_int_value()
+    }
+
+    /// ewasm address is always 160 bits
+    fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b> {
+        let address = contract
+            .builder
+            .build_alloca(contract.address_type(), "address");
+
+        contract.builder.build_store(address, addr);
+
+        let balance = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+
+        contract.builder.build_call(
+            contract.module.get_function("getExternalBalance").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        balance,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+            ],
+            "balance",
+        );
+
+        contract
+            .builder
+            .build_load(balance, "balance")
             .into_int_value()
     }
 }

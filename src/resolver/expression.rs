@@ -109,6 +109,8 @@ pub enum Expression {
     Keccak256(Loc, Vec<(Expression, resolver::Type)>),
 
     ReturnData(Loc),
+    GetAddress(Loc),
+    Balance(Loc, Box<Expression>),
     Poison,
     Unreachable,
 }
@@ -180,6 +182,8 @@ impl Expression {
             | Expression::LocalFunctionCall(loc, _, _)
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::Constructor { loc, .. }
+            | Expression::GetAddress(loc)
+            | Expression::Balance(loc, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::Poison | Expression::Unreachable => unreachable!(),
         }
@@ -302,6 +306,8 @@ impl Expression {
                 false
             }
             Expression::ReturnData(_) => false,
+            Expression::GetAddress(_) => false,
+            Expression::Balance(_, s) => s.reads_contract_storage(),
             Expression::Poison => false,
             Expression::Unreachable => false,
         }
@@ -991,11 +997,10 @@ fn cast_types(
                 Ok(expr)
             }
         }
-        // Implicit conversion between contract and address is allowed
-        (resolver::Type::Contract(_), resolver::Type::Address(false)) => Ok(expr),
-        (resolver::Type::Address(_), resolver::Type::Contract(_))
-        | (resolver::Type::Contract(_), resolver::Type::Address(true))
-        | (resolver::Type::Address(_), resolver::Type::Address(_)) => {
+        // Explicit conversion between contract and address is allowed
+        (resolver::Type::Address(false), resolver::Type::Address(true))
+        | (resolver::Type::Address(_), resolver::Type::Contract(_))
+        | (resolver::Type::Contract(_), resolver::Type::Address(false)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
@@ -1010,6 +1015,8 @@ fn cast_types(
                 Ok(expr)
             }
         }
+        // conversion from address payable to address is implicitly allowed (not vice versa)
+        (resolver::Type::Address(true), resolver::Type::Address(false)) => Ok(expr),
         // Explicit conversion to bytesN from int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
         (resolver::Type::Address(_), resolver::Type::Bytes(to_len)) => {
@@ -2043,197 +2050,7 @@ pub fn expression(
             array_subscript(loc, array, index, cfg, contract_no, ns, vartab, errors)
         }
         ast::Expression::MemberAccess(loc, e, id) => {
-            // is of the form "contract_name.enum_name.enum_value"
-            if let ast::Expression::MemberAccess(_, e, enum_name) = e.as_ref() {
-                if let ast::Expression::Variable(contract_name) = e.as_ref() {
-                    if let Some(contract_no) = ns.resolve_contract(contract_name) {
-                        if let Some(e) = ns.resolve_enum(Some(contract_no), enum_name) {
-                            return match ns.enums[e].values.get(&id.name) {
-                                Some((_, val)) => Ok((
-                                    Expression::NumberLiteral(
-                                        *loc,
-                                        ns.enums[e].ty.bits(ns),
-                                        BigInt::from_usize(*val).unwrap(),
-                                    ),
-                                    resolver::Type::Enum(e),
-                                )),
-                                None => {
-                                    errors.push(Output::error(
-                                        id.loc,
-                                        format!(
-                                            "enum {} does not have value {}",
-                                            ns.enums[e].print_to_string(),
-                                            id.name
-                                        ),
-                                    ));
-                                    Err(())
-                                }
-                            };
-                        }
-                    }
-                }
-            }
-
-            // is of the form "enum_name.enum_value"
-            if let ast::Expression::Variable(namespace) = e.as_ref() {
-                if let Some(e) = ns.resolve_enum(contract_no, namespace) {
-                    return match ns.enums[e].values.get(&id.name) {
-                        Some((_, val)) => Ok((
-                            Expression::NumberLiteral(
-                                *loc,
-                                ns.enums[e].ty.bits(ns),
-                                BigInt::from_usize(*val).unwrap(),
-                            ),
-                            resolver::Type::Enum(e),
-                        )),
-                        None => {
-                            errors.push(Output::error(
-                                id.loc,
-                                format!(
-                                    "enum {} does not have value {}",
-                                    ns.enums[e].print_to_string(),
-                                    id.name
-                                ),
-                            ));
-                            Err(())
-                        }
-                    };
-                }
-            }
-
-            // is of the form "type(x).field", like type(c).min
-            if let ast::Expression::FunctionCall(_, name, args) = e.as_ref() {
-                if let ast::Expression::Variable(func_name) = name.as_ref() {
-                    if func_name.name == "type" {
-                        return type_name_expr(loc, args, id, contract_no, ns, errors);
-                    }
-                }
-            }
-
-            let (expr, expr_ty) = expression(e, cfg, contract_no, ns, vartab, errors)?;
-
-            // Dereference if need to. This could be struct-in-struct for
-            // example.
-            let (expr, expr_ty) = if let resolver::Type::Ref(ty) = expr_ty {
-                (Expression::Load(*loc, Box::new(expr)), *ty)
-            } else {
-                (expr, expr_ty)
-            };
-
-            match expr_ty {
-                resolver::Type::Bytes(n) => {
-                    if id.name == "length" {
-                        return Ok((
-                            Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
-                            resolver::Type::Uint(8),
-                        ));
-                    }
-                }
-                resolver::Type::Array(_, dim) => {
-                    if id.name == "length" {
-                        return match dim.last().unwrap() {
-                            None => Ok((
-                                Expression::DynamicArrayLength(*loc, Box::new(expr)),
-                                resolver::Type::Uint(32),
-                            )),
-                            Some(d) => bigint_to_expression(loc, d, errors),
-                        };
-                    }
-                }
-                resolver::Type::String | resolver::Type::DynamicBytes => {
-                    if id.name == "length" {
-                        return Ok((
-                            Expression::DynamicArrayLength(*loc, Box::new(expr)),
-                            resolver::Type::Uint(32),
-                        ));
-                    }
-                }
-                resolver::Type::StorageRef(r) => match *r {
-                    resolver::Type::Struct(n) => {
-                        let mut slot = BigInt::zero();
-
-                        for field in &ns.structs[n].fields {
-                            if id.name == field.name {
-                                return Ok((
-                                    Expression::Add(
-                                        *loc,
-                                        Box::new(expr),
-                                        Box::new(Expression::NumberLiteral(*loc, 256, slot)),
-                                    ),
-                                    resolver::Type::StorageRef(Box::new(field.ty.clone())),
-                                ));
-                            }
-
-                            slot += field.ty.storage_slots(ns);
-                        }
-
-                        errors.push(Output::error(
-                            id.loc,
-                            format!(
-                                "struct ‘{}’ does not have a field called ‘{}’",
-                                ns.structs[n].name, id.name
-                            ),
-                        ));
-                        return Err(());
-                    }
-                    resolver::Type::Bytes(n) => {
-                        if id.name == "length" {
-                            return Ok((
-                                Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
-                                resolver::Type::Uint(8),
-                            ));
-                        }
-                    }
-                    resolver::Type::Array(_, dim) => {
-                        if id.name == "length" {
-                            return match dim.last().unwrap() {
-                                None => Ok((
-                                    expr,
-                                    resolver::Type::StorageRef(Box::new(resolver::Type::Uint(256))),
-                                )),
-                                Some(d) => bigint_to_expression(loc, d, errors),
-                            };
-                        }
-                    }
-                    resolver::Type::DynamicBytes => {
-                        if id.name == "length" {
-                            return Ok((
-                                Expression::StorageBytesLength(*loc, Box::new(expr)),
-                                resolver::Type::Uint(32),
-                            ));
-                        }
-                    }
-                    _ => {}
-                },
-                resolver::Type::Struct(n) => {
-                    if let Some((i, f)) = ns.structs[n]
-                        .fields
-                        .iter()
-                        .enumerate()
-                        .find(|f| id.name == f.1.name)
-                    {
-                        return Ok((
-                            Expression::StructMember(*loc, Box::new(expr), i),
-                            resolver::Type::Ref(Box::new(f.ty.clone())),
-                        ));
-                    } else {
-                        errors.push(Output::error(
-                            id.loc,
-                            format!(
-                                "struct ‘{}’ does not have a field called ‘{}’",
-                                ns.structs[n].print_to_string(),
-                                id.name
-                            ),
-                        ));
-                        return Err(());
-                    }
-                }
-                _ => (),
-            }
-
-            errors.push(Output::error(*loc, format!("‘{}’ not found", id.name)));
-
-            Err(())
+            member_access(loc, e, id, cfg, contract_no, ns, vartab, errors)
         }
         ast::Expression::Or(loc, left, right) => {
             let boolty = resolver::Type::Bool;
@@ -2448,6 +2265,19 @@ pub fn expression(
                 errors,
             )
         }
+        ast::Expression::This(loc) => match contract_no {
+            Some(contract_no) => Ok((
+                Expression::GetAddress(*loc),
+                resolver::Type::Contract(contract_no),
+            )),
+            None => {
+                errors.push(Output::warning(
+                    *loc,
+                    "this not allowed outside contract".to_owned(),
+                ));
+                Err(())
+            }
+        },
     }
 }
 
@@ -3832,6 +3662,230 @@ fn assign_expr(
 }
 
 /// Resolve an array subscript expression
+fn member_access(
+    loc: &ast::Loc,
+    e: &ast::Expression,
+    id: &ast::Identifier,
+    cfg: &mut ControlFlowGraph,
+    contract_no: Option<usize>,
+    ns: &resolver::Namespace,
+    vartab: &mut Option<&mut Vartable>,
+    errors: &mut Vec<output::Output>,
+) -> Result<(Expression, resolver::Type), ()> {
+    // is of the form "contract_name.enum_name.enum_value"
+    if let ast::Expression::MemberAccess(_, e, enum_name) = e {
+        if let ast::Expression::Variable(contract_name) = e.as_ref() {
+            if let Some(contract_no) = ns.resolve_contract(contract_name) {
+                if let Some(e) = ns.resolve_enum(Some(contract_no), enum_name) {
+                    return match ns.enums[e].values.get(&id.name) {
+                        Some((_, val)) => Ok((
+                            Expression::NumberLiteral(
+                                *loc,
+                                ns.enums[e].ty.bits(ns),
+                                BigInt::from_usize(*val).unwrap(),
+                            ),
+                            resolver::Type::Enum(e),
+                        )),
+                        None => {
+                            errors.push(Output::error(
+                                id.loc,
+                                format!(
+                                    "enum {} does not have value {}",
+                                    ns.enums[e].print_to_string(),
+                                    id.name
+                                ),
+                            ));
+                            Err(())
+                        }
+                    };
+                }
+            }
+        }
+    }
+
+    // is of the form "enum_name.enum_value"
+    if let ast::Expression::Variable(namespace) = e {
+        if let Some(e) = ns.resolve_enum(contract_no, namespace) {
+            return match ns.enums[e].values.get(&id.name) {
+                Some((_, val)) => Ok((
+                    Expression::NumberLiteral(
+                        *loc,
+                        ns.enums[e].ty.bits(ns),
+                        BigInt::from_usize(*val).unwrap(),
+                    ),
+                    resolver::Type::Enum(e),
+                )),
+                None => {
+                    errors.push(Output::error(
+                        id.loc,
+                        format!(
+                            "enum {} does not have value {}",
+                            ns.enums[e].print_to_string(),
+                            id.name
+                        ),
+                    ));
+                    Err(())
+                }
+            };
+        }
+    }
+
+    // is of the form "type(x).field", like type(c).min
+    if let ast::Expression::FunctionCall(_, name, args) = e {
+        if let ast::Expression::Variable(func_name) = name.as_ref() {
+            if func_name.name == "type" {
+                return type_name_expr(loc, args, id, contract_no, ns, errors);
+            }
+        }
+    }
+
+    let (expr, expr_ty) = expression(e, cfg, contract_no, ns, vartab, errors)?;
+
+    // Dereference if need to. This could be struct-in-struct for
+    // example.
+    let (expr, expr_ty) = if let resolver::Type::Ref(ty) = expr_ty {
+        (Expression::Load(*loc, Box::new(expr)), *ty)
+    } else {
+        (expr, expr_ty)
+    };
+
+    match expr_ty {
+        resolver::Type::Bytes(n) => {
+            if id.name == "length" {
+                return Ok((
+                    Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
+                    resolver::Type::Uint(8),
+                ));
+            }
+        }
+        resolver::Type::Array(_, dim) => {
+            if id.name == "length" {
+                return match dim.last().unwrap() {
+                    None => Ok((
+                        Expression::DynamicArrayLength(*loc, Box::new(expr)),
+                        resolver::Type::Uint(32),
+                    )),
+                    Some(d) => bigint_to_expression(loc, d, errors),
+                };
+            }
+        }
+        resolver::Type::String | resolver::Type::DynamicBytes => {
+            if id.name == "length" {
+                return Ok((
+                    Expression::DynamicArrayLength(*loc, Box::new(expr)),
+                    resolver::Type::Uint(32),
+                ));
+            }
+        }
+        resolver::Type::StorageRef(r) => match *r {
+            resolver::Type::Struct(n) => {
+                let mut slot = BigInt::zero();
+
+                for field in &ns.structs[n].fields {
+                    if id.name == field.name {
+                        return Ok((
+                            Expression::Add(
+                                *loc,
+                                Box::new(expr),
+                                Box::new(Expression::NumberLiteral(*loc, 256, slot)),
+                            ),
+                            resolver::Type::StorageRef(Box::new(field.ty.clone())),
+                        ));
+                    }
+
+                    slot += field.ty.storage_slots(ns);
+                }
+
+                errors.push(Output::error(
+                    id.loc,
+                    format!(
+                        "struct ‘{}’ does not have a field called ‘{}’",
+                        ns.structs[n].name, id.name
+                    ),
+                ));
+                return Err(());
+            }
+            resolver::Type::Bytes(n) => {
+                if id.name == "length" {
+                    return Ok((
+                        Expression::NumberLiteral(*loc, 8, BigInt::from_u8(n).unwrap()),
+                        resolver::Type::Uint(8),
+                    ));
+                }
+            }
+            resolver::Type::Array(_, dim) => {
+                if id.name == "length" {
+                    return match dim.last().unwrap() {
+                        None => Ok((
+                            expr,
+                            resolver::Type::StorageRef(Box::new(resolver::Type::Uint(256))),
+                        )),
+                        Some(d) => bigint_to_expression(loc, d, errors),
+                    };
+                }
+            }
+            resolver::Type::DynamicBytes => {
+                if id.name == "length" {
+                    return Ok((
+                        Expression::StorageBytesLength(*loc, Box::new(expr)),
+                        resolver::Type::Uint(32),
+                    ));
+                }
+            }
+            _ => {}
+        },
+        resolver::Type::Struct(n) => {
+            if let Some((i, f)) = ns.structs[n]
+                .fields
+                .iter()
+                .enumerate()
+                .find(|f| id.name == f.1.name)
+            {
+                return Ok((
+                    Expression::StructMember(*loc, Box::new(expr), i),
+                    resolver::Type::Ref(Box::new(f.ty.clone())),
+                ));
+            } else {
+                errors.push(Output::error(
+                    id.loc,
+                    format!(
+                        "struct ‘{}’ does not have a field called ‘{}’",
+                        ns.structs[n].print_to_string(),
+                        id.name
+                    ),
+                ));
+                return Err(());
+            }
+        }
+        resolver::Type::Address(_) => {
+            if id.name == "balance" {
+                if ns.target == crate::Target::Substrate {
+                    if let Expression::GetAddress(_) = expr {
+                        //
+                    } else {
+                        errors.push(Output::error(
+                                    expr.loc(),
+                                        "substrate can only retrieve balance of this, like ‘address(this).balance’".to_string(),
+                                ));
+                        return Err(());
+                    }
+                }
+
+                return Ok((
+                    Expression::Balance(*loc, Box::new(expr)),
+                    resolver::Type::Uint(ns.value_length as u16 * 8),
+                ));
+            }
+        }
+        _ => (),
+    }
+
+    errors.push(Output::error(*loc, format!("‘{}’ not found", id.name)));
+
+    Err(())
+}
+
+/// Resolve an array subscript expression
 fn array_subscript(
     loc: &ast::Loc,
     array: &ast::Expression,
@@ -4606,6 +4660,14 @@ fn method_call_pos_args(
                 }
             }
             if matches {
+                if !ftype.is_public() {
+                    errors.push(Output::error(
+                        *loc,
+                        format!("function ‘{}’ is not ‘public’ or ‘extern’", ftype.name),
+                    ));
+                    return Err(());
+                }
+
                 let value = if let Some(value) = call_args.value {
                     if !value.const_zero() && !ftype.is_payable() {
                         errors.push(Output::error(
@@ -4636,8 +4698,7 @@ fn method_call_pos_args(
                             &var.loc(),
                             var_expr,
                             &var_ty,
-                            // FIXME: make payable if function is payable
-                            &resolver::Type::Address(false),
+                            &resolver::Type::Contract(*contract_no),
                             true,
                             ns,
                             errors,
@@ -4767,6 +4828,14 @@ fn method_call_with_named_args(
             }
 
             if matches {
+                if !func.is_public() {
+                    errors.push(Output::error(
+                        *loc,
+                        format!("function ‘{}’ is not ‘public’ or ‘extern’", func.name),
+                    ));
+                    return Err(());
+                }
+
                 let value = if let Some(value) = call_args.value {
                     if !value.const_zero() && !func.is_payable() {
                         errors.push(Output::error(
@@ -4797,8 +4866,7 @@ fn method_call_with_named_args(
                             &var.loc(),
                             var_expr,
                             &var_ty,
-                            // FIXME: make payable if function is payable
-                            &resolver::Type::Address(false),
+                            &resolver::Type::Contract(*external_contract_no),
                             true,
                             ns,
                             errors,

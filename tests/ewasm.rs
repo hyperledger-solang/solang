@@ -78,6 +78,8 @@ pub enum Extern {
     returnDataCopy,
     getReturnDataSize,
     getCallValue,
+    getAddress,
+    getExternalBalance,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -398,6 +400,39 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(Extern::getAddress) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+
+                println!("getAddress: {}", hex::encode(&self.vm.cur));
+
+                self.vm
+                    .memory
+                    .set(address_ptr, &self.vm.cur[..])
+                    .expect("set address");
+
+                Ok(None)
+            }
+            Some(Extern::getExternalBalance) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+                let balance_ptr: u32 = args.nth_checked(1)?;
+
+                let mut addr = [0u8; 20];
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut addr) {
+                    panic!("call: {}", e);
+                }
+
+                let value = self.accounts.get(&addr).map(|a| a.1).unwrap_or(0);
+
+                println!("getExternalBalance: {} {}", hex::encode(&addr), value);
+
+                self.vm
+                    .memory
+                    .set(balance_ptr, &value.to_le_bytes()[..])
+                    .expect("set balance");
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -420,6 +455,8 @@ impl ModuleImportResolver for TestRuntime {
             "returnDataCopy" => Extern::returnDataCopy,
             "getReturnDataSize" => Extern::getReturnDataSize,
             "getCallValue" => Extern::getCallValue,
+            "getAddress" => Extern::getAddress,
+            "getExternalBalance" => Extern::getExternalBalance,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -1978,4 +2015,26 @@ fn payables() {
     runtime.function_revert("test2", &[]);
     runtime.value = 1;
     runtime.function("test", &[]);
+}
+
+#[test]
+fn balance() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public returns (uint128) {
+                return address(this).balance;
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 512;
+    let ret = runtime.function("test", &[]);
+
+    assert_eq!(
+        ret,
+        vec!(ethabi::Token::Uint(ethereum_types::U256::from(512)))
+    );
 }

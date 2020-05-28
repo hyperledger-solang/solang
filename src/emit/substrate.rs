@@ -54,6 +54,8 @@ impl SubstrateTarget {
             "ext_value_transferred",
             "ext_minimum_balance",
             "ext_random",
+            "ext_address",
+            "ext_balance",
         ]);
 
         c
@@ -318,6 +320,18 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_value_transferred",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_address",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_balance",
             contract.context.void_type().fn_type(&[], false),
             Some(Linkage::External),
         );
@@ -2367,6 +2381,84 @@ impl TargetRuntime for SubstrateTarget {
         contract
             .builder
             .build_load(value, "value_transferred")
+            .into_int_value()
+    }
+
+    /// Substrate value is usually 128 bits
+    fn balance<'b>(&self, contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
+        let value = contract
+            .builder
+            .build_alloca(contract.value_type(), "balance");
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_balance").unwrap(),
+            &[],
+            "balance",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_read").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        value,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_zero().into(),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.value_length as u64, false)
+                    .into(),
+            ],
+            "balance",
+        );
+
+        contract
+            .builder
+            .build_load(value, "balance")
+            .into_int_value()
+    }
+
+    /// Substrate value is usually 128 bits
+    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
+        let value = contract
+            .builder
+            .build_alloca(contract.address_type(), "self_address");
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_address").unwrap(),
+            &[],
+            "self_address",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_scratch_read").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        value,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_zero().into(),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.address_length as u64, false)
+                    .into(),
+            ],
+            "self_address",
+        );
+
+        contract
+            .builder
+            .build_load(value, "self_address")
             .into_int_value()
     }
 }

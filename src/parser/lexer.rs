@@ -160,6 +160,8 @@ pub enum Token<'input> {
     Szabo,
     Finney,
     Ether,
+
+    This,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -278,6 +280,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Szabo => write!(f, "szabo"),
             Token::Finney => write!(f, "finney"),
             Token::Ether => write!(f, "ether"),
+            Token::This => write!(f, "this"),
         }
     }
 }
@@ -487,6 +490,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "szabo" => Token::Szabo,
     "finney" => Token::Finney,
     "ether" => Token::Ether,
+    "this" => Token::This,
 };
 
 impl<'input> Lexer<'input> {
