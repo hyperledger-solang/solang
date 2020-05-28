@@ -1,7 +1,7 @@
 pub mod ast;
 pub mod lexer;
 
-#[allow(clippy::all,unused_parens)]
+#[allow(clippy::all)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub mod solidity;
 

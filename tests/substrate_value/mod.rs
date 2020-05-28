@@ -1,3 +1,6 @@
+use parity_scale_codec::Encode;
+use parity_scale_codec_derive::{Decode, Encode};
+
 use super::{build_solidity, first_error, no_errors};
 use solang::{parse_and_resolve, Target};
 
@@ -496,4 +499,245 @@ fn constructor_salt() {
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
+}
+
+#[test]
+fn this_address() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            function step1() public returns (address payable) {
+                return payable(this);
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "conversion from contract b to address payable not possible"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            function step1() public returns (address) {
+                return this;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion to address from contract b not allowed"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            function step1(b other) public {
+                this = other;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "expression is not assignable");
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public returns (address) {
+                return address(this);
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, runtime.vm.address);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public returns (b) {
+                return this;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, runtime.vm.address);
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Ret(u32);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            int32 s;
+
+            function step1() public returns (int32) {
+                this.other(102);
+                return s;
+            }
+
+            function other(int32 n) public {
+                s = n;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Ret(102).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            function step1() public returns (b) {
+                return this;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, runtime.vm.address);
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            int32 s;
+
+            function step1() public returns (int32) {
+                this.other(102);
+                return s;
+            }
+
+            function other(int32 n) private {
+                s = n;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function ‘other’ is not ‘public’ or ‘extern’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            int32 s;
+
+            function step1() public returns (int32) {
+                this.other({n: 102});
+                return s;
+            }
+
+            function other(int32 n) private {
+                s = n;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function ‘other’ is not ‘public’ or ‘extern’"
+    );
+}
+
+#[test]
+fn balance() {
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            function step1(address j) public returns (uint128) {
+                return j.balance;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "substrate can only retrieve balance of this, like ‘address(this).balance’"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            function step1(b j) public returns (uint128) {
+                return j.balance;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(errors), "‘balance’ not found");
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract b {
+            function step1(address payable j) public returns (uint128) {
+                return j.balance;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "substrate can only retrieve balance of this, like ‘address(this).balance’"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            other o;
+
+            constructor() public {
+                o = new other();
+            }
+
+            function step1() public returns (uint128) {
+                return address(this).balance;
+            }
+
+            function step2() public returns (uint128) {
+                return o.balance();
+            }
+        }
+
+        contract other {
+            function balance() public returns (uint128) {
+                return address(this).balance;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.accounts.get_mut(&runtime.vm.address).unwrap().1 = 315;
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, 315u128.to_le_bytes());
+
+    runtime.function("step2", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, 500u128.to_le_bytes());
 }

@@ -171,7 +171,10 @@ fn contract_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    assert_eq!(
+        first_error(errors),
+        "implicit conversion to address from contract printer not allowed"
+    );
 
     let (_, errors) = parse_and_resolve(
         r#"

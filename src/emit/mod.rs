@@ -198,6 +198,12 @@ pub trait TargetRuntime {
 
     /// Return the value we received
     fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b>;
+
+    /// Return the current address
+    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b>;
+
+    /// Return the balance for address
+    fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b>;
 }
 
 pub struct Contract<'a> {
@@ -395,6 +401,12 @@ impl<'a> Contract<'a> {
     fn value_type(&self) -> IntType<'a> {
         self.context
             .custom_width_int_type(self.ns.value_length as u32 * 8)
+    }
+
+    /// llvm address type
+    fn address_type(&self) -> IntType<'a> {
+        self.context
+            .custom_width_int_type(self.ns.address_length as u32 * 8)
     }
 
     /// If we receive a value transfer, and we are "payable", abort with revert
@@ -1744,6 +1756,14 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::ReturnData(_) => runtime.return_data(self).into(),
+            Expression::GetAddress(_) => runtime.get_address(self).into(),
+            Expression::Balance(_, addr) => {
+                let addr = self
+                    .expression(addr, vartab, function, runtime)
+                    .into_int_value();
+
+                runtime.balance(self, addr).into()
+            }
             _ => unreachable!(),
         }
     }
@@ -4030,10 +4050,9 @@ impl<'a> Contract<'a> {
             resolver::Type::Int(n) | resolver::Type::Uint(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
             }
-            resolver::Type::Contract(_) | resolver::Type::Address(_) => BasicTypeEnum::IntType(
-                self.context
-                    .custom_width_int_type(self.ns.address_length as u32 * 8),
-            ),
+            resolver::Type::Contract(_) | resolver::Type::Address(_) => {
+                BasicTypeEnum::IntType(self.address_type())
+            }
             resolver::Type::Bytes(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
             }
