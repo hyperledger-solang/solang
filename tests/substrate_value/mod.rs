@@ -513,10 +513,7 @@ fn this_address() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(errors),
-        "conversion from contract b to address payable not possible"
-    );
+    no_errors(errors);
 
     let (_, errors) = parse_and_resolve(
         r##"
