@@ -760,12 +760,14 @@ fn selfdestruct() {
             }
         }"##,
     );
-
     runtime.constructor(0, Vec::new());
 
     runtime.function("step1", Vec::new());
-    runtime.accounts.get_mut(&runtime.vm.address).unwrap().1 = 0;
+    assert_eq!(runtime.accounts.get_mut(&runtime.vm.address).unwrap().1, 0);
 
     runtime.function_expect_return("step2", Vec::new(), 1);
-    runtime.accounts.get_mut(&runtime.vm.address).unwrap().1 = 511;
+    assert_eq!(
+        runtime.accounts.get_mut(&runtime.vm.address).unwrap().1,
+        511
+    );
 }

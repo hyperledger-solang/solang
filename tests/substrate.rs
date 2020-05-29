@@ -372,7 +372,9 @@ impl Externals for TestRuntime {
 
                 println!("ext_call ret={:?} buf={}", ret, hex::encode(&output));
 
-                self.accounts.get_mut(&vm.address).unwrap().1 += vm.value;
+                if let Some(acc) = self.accounts.get_mut(&vm.address) {
+                    acc.1 += vm.value;
+                }
                 self.vm.scratch = output;
 
                 Ok(ret)
@@ -512,6 +514,14 @@ impl Externals for TestRuntime {
                 if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
                     panic!("ext_terminate: {}", e);
                 }
+
+                let remaining = self.accounts[&self.vm.address].1;
+
+                self.accounts.get_mut(&address).unwrap().1 += remaining;
+
+                println!("ext_terminate: {} {}", hex::encode(&address), remaining);
+
+                self.accounts.remove(&self.vm.address);
 
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeTerminate {}))))
             }
