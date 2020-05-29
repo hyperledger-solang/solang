@@ -4720,6 +4720,86 @@ fn method_call_pos_args(
         return Err(());
     }
 
+    if let resolver::Type::Address(true) = &var_ty.deref() {
+        if func.name == "transfer" || func.name == "send" {
+            if args.len() != 1 {
+                errors.push(Output::error(
+                    *loc,
+                    format!(
+                        "‘{}’ expects 1 argument, {} provided",
+                        func.name,
+                        args.len()
+                    ),
+                ));
+
+                return Err(());
+            }
+
+            if let Some(loc) = call_args_loc {
+                errors.push(Output::error(
+                    loc,
+                    format!("call arguments not allowed on ‘{}’", func.name),
+                ));
+                return Err(());
+            }
+
+            let (expr, expr_type) = expression(&args[0], cfg, contract_no, ns, vartab, errors)?;
+
+            let value = cast(
+                &args[0].loc(),
+                expr,
+                &expr_type,
+                &resolver::Type::Uint(ns.value_length as u16 * 8),
+                true,
+                ns,
+                errors,
+            )?;
+
+            let tab = match vartab {
+                &mut Some(ref mut tab) => tab,
+                None => unreachable!(),
+            };
+
+            let success = if func.name == "transfer" {
+                None
+            } else {
+                Some(tab.temp(
+                    &ast::Identifier {
+                        loc: ast::Loc(0, 0),
+                        name: "success".to_owned(),
+                    },
+                    &resolver::Type::Bool,
+                ))
+            };
+
+            cfg.add(
+                tab,
+                Instr::ExternalCall {
+                    success,
+                    address: cast(
+                        &var.loc(),
+                        var_expr,
+                        &var_ty,
+                        &resolver::Type::Address(true),
+                        true,
+                        ns,
+                        errors,
+                    )?,
+                    contract_no: None,
+                    function_no: 0,
+                    args: Vec::new(),
+                    value,
+                    gas: Expression::NumberLiteral(*loc, 64, BigInt::zero()),
+                },
+            );
+
+            return match success {
+                Some(pos) => Ok((Expression::Variable(*loc, pos), resolver::Type::Bool)),
+                None => Ok((Expression::Poison, resolver::Type::Undef)),
+            };
+        }
+    }
+
     errors.push(Output::error(
         func.loc,
         format!("method ‘{}’ does not exist", func.name),
@@ -5437,7 +5517,7 @@ fn emit_function_call(
                 Instr::ExternalCall {
                     success: None,
                     address: *address,
-                    contract_no,
+                    contract_no: Some(contract_no),
                     function_no,
                     args,
                     value: *value,
