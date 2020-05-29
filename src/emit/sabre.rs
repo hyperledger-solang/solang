@@ -768,4 +768,9 @@ impl TargetRuntime for SabreTarget {
     fn balance<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
         panic!("Sabre does not have the concept of balance");
     }
+
+    /// Terminate execution, destroy contract and send remaining funds to addr
+    fn selfdestruct<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) {
+        panic!("Sabre does not have the concept of selfdestruct");
+    }
 }

@@ -56,6 +56,7 @@ impl SubstrateTarget {
             "ext_random",
             "ext_address",
             "ext_balance",
+            "ext_terminate",
         ]);
 
         c
@@ -339,6 +340,17 @@ impl SubstrateTarget {
         contract.module.add_function(
             "ext_minimum_balance",
             contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_terminate",
+            contract.context.void_type().fn_type(
+                &[
+                    u8_ptr, u32_val, // address ptr and len
+                ],
+                false,
+            ),
             Some(Linkage::External),
         );
     }
@@ -2460,5 +2472,34 @@ impl TargetRuntime for SubstrateTarget {
             .builder
             .build_load(value, "self_address")
             .into_int_value()
+    }
+
+    /// Terminate execution, destroy contract and send remaining funds to addr
+    fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) {
+        let address = contract
+            .builder
+            .build_alloca(contract.address_type(), "address");
+
+        contract.builder.build_store(address, addr);
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_terminate").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.address_length as u64, false)
+                    .into(),
+            ],
+            "terminated",
+        );
     }
 }

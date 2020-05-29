@@ -482,6 +482,25 @@ impl EwasmTarget {
                 Some(Linkage::External),
             )
             .add_attribute(AttributeLoc::Function, noreturn);
+
+        // mark as noreturn
+        contract
+            .module
+            .add_function(
+                "selfDestruct",
+                contract.context.void_type().fn_type(
+                    &[
+                        contract
+                            .context
+                            .i8_type()
+                            .ptr_type(AddressSpace::Generic)
+                            .into(), // address_ptr
+                    ],
+                    false,
+                ),
+                Some(Linkage::External),
+            )
+            .add_attribute(AttributeLoc::Function, noreturn);
     }
 
     fn deployer_dispatch(&mut self, contract: &mut Contract, runtime: &[u8]) {
@@ -1435,5 +1454,27 @@ impl TargetRuntime for EwasmTarget {
             .builder
             .build_load(balance, "balance")
             .into_int_value()
+    }
+
+    /// Terminate execution, destroy contract and send remaining funds to addr
+    fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) {
+        let address = contract
+            .builder
+            .build_alloca(contract.address_type(), "address");
+
+        contract.builder.build_store(address, addr);
+
+        contract.builder.build_call(
+            contract.module.get_function("selfDestruct").unwrap(),
+            &[contract
+                .builder
+                .build_pointer_cast(
+                    address,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "",
+                )
+                .into()],
+            "terminated",
+        );
     }
 }
