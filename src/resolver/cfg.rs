@@ -98,6 +98,9 @@ pub enum Instr {
         data: Expression,
     },
     Unreachable,
+    SelfDestruct {
+        recipient: Expression,
+    },
 }
 
 pub struct BasicBlock {
@@ -669,6 +672,10 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Instr::Unreachable => "unreachable".to_string(),
+            Instr::SelfDestruct { recipient } => format!(
+                "selfdestruct {}",
+                self.expr_to_string(contract, ns, recipient)
+            ),
         }
     }
 

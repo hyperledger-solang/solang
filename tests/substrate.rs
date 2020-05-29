@@ -17,6 +17,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
 use std::collections::HashMap;
+use std::fmt;
 use tiny_keccak::keccak256;
 use wasmi::memory_units::Pages;
 use wasmi::*;
@@ -54,6 +55,17 @@ fn address_new() -> Address {
     a
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct HostCodeTerminate {}
+
+impl HostError for HostCodeTerminate {}
+
+impl fmt::Display for HostCodeTerminate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "ext_terminate")
+    }
+}
+
 #[derive(FromPrimitive)]
 #[allow(non_camel_case_types)]
 enum SubstrateExternal {
@@ -73,6 +85,7 @@ enum SubstrateExternal {
     ext_random,
     ext_address,
     ext_balance,
+    ext_terminate,
 }
 
 pub struct VM {
@@ -337,9 +350,21 @@ impl Externals for TestRuntime {
                 let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
                 self.vm.scratch = input;
-                let ret = module
-                    .invoke_export("call", &[], self)
-                    .expect("failed to call function");
+
+                let ret = match module.invoke_export("call", &[], self) {
+                    Err(wasmi::Error::Trap(trap)) => match trap.kind() {
+                        TrapKind::Host(host_error) => {
+                            if host_error.downcast_ref::<HostCodeTerminate>().is_some() {
+                                Some(RuntimeValue::I32(1))
+                            } else {
+                                panic!("did not go as planned");
+                            }
+                        }
+                        _ => panic!("fail to invoke main via create: {}", trap),
+                    },
+                    Ok(v) => v,
+                    Err(e) => panic!("fail to invoke main via create: {}", e),
+                };
 
                 let output = self.vm.scratch.clone();
 
@@ -474,6 +499,22 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_terminate) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+                let address_len: u32 = args.nth_checked(1)?;
+
+                let mut address = [0u8; 32];
+
+                if address_len != 32 {
+                    panic!("ext_terminate: len = {}", address_len);
+                }
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut address) {
+                    panic!("ext_terminate: {}", e);
+                }
+
+                Err(Trap::new(TrapKind::Host(Box::new(HostCodeTerminate {}))))
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -498,6 +539,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_random" => SubstrateExternal::ext_random,
             "ext_address" => SubstrateExternal::ext_address,
             "ext_balance" => SubstrateExternal::ext_balance,
+            "ext_terminate" => SubstrateExternal::ext_terminate,
             _ => {
                 panic!("{} not implemented", field_name);
             }

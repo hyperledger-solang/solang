@@ -9,6 +9,7 @@ pub fn add_builtin_function(ns: &mut Namespace, contract_no: usize) {
     add_print(ns, contract_no);
     add_revert(ns, contract_no);
     add_require(ns, contract_no);
+    add_selfdestruct(ns, contract_no);
 }
 
 fn add_assert(ns: &mut Namespace, contract_no: usize) {
@@ -396,6 +397,76 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
         Some(contract_no),
         &id,
         resolver::Symbol::Function(vec![(id.loc, pos_with_arg), (id.loc, pos_with_no_arg)]),
+        &mut errors,
+    );
+}
+
+fn add_selfdestruct(ns: &mut Namespace, contract_no: usize) {
+    let argty = resolver::Type::Address(true);
+    let id = ast::Identifier {
+        loc: ast::Loc(0, 0),
+        name: "selfdestruct".to_owned(),
+    };
+
+    let mut selfdestruct = FunctionDecl::new(
+        ast::Loc(0, 0),
+        "selfdestruct".to_owned(),
+        vec![],
+        ast::FunctionTy::Function,
+        None,
+        None,
+        ast::Visibility::Private(ast::Loc(0, 0)),
+        vec![Parameter {
+            name: "recipient".to_owned(),
+            ty: resolver::Type::Address(true),
+        }],
+        vec![],
+        ns,
+    );
+
+    selfdestruct.noreturn = true;
+
+    let mut errors = Vec::new();
+    let mut vartab = Vartable::new();
+    let mut cfg = ControlFlowGraph::new();
+
+    let recipient = vartab
+        .add(
+            &ast::Identifier {
+                loc: ast::Loc(0, 0),
+                name: "recipient".to_owned(),
+            },
+            argty,
+            &mut errors,
+        )
+        .unwrap();
+
+    cfg.add(
+        &mut vartab,
+        Instr::FuncArg {
+            res: recipient,
+            arg: 0,
+        },
+    );
+    cfg.add(
+        &mut vartab,
+        Instr::SelfDestruct {
+            recipient: Expression::Variable(ast::Loc(0, 0), recipient),
+        },
+    );
+    cfg.add(&mut vartab, Instr::Unreachable);
+    cfg.vars = vartab.drain();
+
+    selfdestruct.cfg = Some(Box::new(cfg));
+
+    let pos = ns.contracts[contract_no].functions.len();
+
+    ns.contracts[contract_no].functions.push(selfdestruct);
+
+    ns.add_symbol(
+        Some(contract_no),
+        &id,
+        resolver::Symbol::Function(vec![(id.loc, pos)]),
         &mut errors,
     );
 }

@@ -80,6 +80,7 @@ pub enum Extern {
     getCallValue,
     getAddress,
     getExternalBalance,
+    selfDestruct,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -433,6 +434,25 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(Extern::selfDestruct) => {
+                let address_ptr: u32 = args.nth_checked(0)?;
+
+                let mut addr = [0u8; 20];
+
+                if let Err(e) = self.vm.memory.get_into(address_ptr, &mut addr) {
+                    panic!("selfDestruct: {}", e);
+                }
+
+                let remaining = self.accounts[&self.vm.cur].1;
+
+                self.accounts.get_mut(&addr).unwrap().1 += remaining;
+
+                println!("selfDestruct: {} {}", hex::encode(&addr), remaining);
+
+                self.accounts.remove(&self.vm.cur);
+
+                Err(Trap::new(TrapKind::Host(Box::new(HostCodeFinish {}))))
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -457,6 +477,7 @@ impl ModuleImportResolver for TestRuntime {
             "getCallValue" => Extern::getCallValue,
             "getAddress" => Extern::getAddress,
             "getExternalBalance" => Extern::getExternalBalance,
+            "selfDestruct" => Extern::selfDestruct,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -2037,4 +2058,35 @@ fn balance() {
         ret,
         vec!(ethabi::Token::Uint(ethereum_types::U256::from(512)))
     );
+}
+
+#[test]
+fn selfdestruct() {
+    let mut runtime = build_solidity(
+        r##"
+        contract other {
+            function goaway(address payable from) public returns (bool) {
+                selfdestruct(from);
+            }
+        }
+
+        contract c {
+            other o;
+            function step1() public {
+                o = new other{value: 511}();
+            }
+
+            function step2() public {
+                o.goaway(payable(address(this)));
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.function("step1", &[]);
+    runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 0;
+
+    runtime.function("step2", &[]);
+    runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 511;
 }

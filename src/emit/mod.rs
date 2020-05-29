@@ -204,6 +204,9 @@ pub trait TargetRuntime {
 
     /// Return the balance for address
     fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b>;
+
+    /// Terminate execution, destroy contract and send remaining funds to addr
+    fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>);
 }
 
 pub struct Contract<'a> {
@@ -3152,6 +3155,13 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Unreachable => {
                         self.builder.build_unreachable();
+                    }
+                    cfg::Instr::SelfDestruct { recipient } => {
+                        let recipient = self
+                            .expression(recipient, &w.vars, function, runtime)
+                            .into_int_value();
+
+                        runtime.selfdestruct(self, recipient);
                     }
                 }
             }

@@ -741,3 +741,34 @@ fn balance() {
 
     assert_eq!(runtime.vm.scratch, 500u128.to_le_bytes());
 }
+
+#[test]
+fn selfdestruct() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            other o;
+            function step1() public {
+                o = new other{value: 511}();
+            }
+
+            function step2() public {
+                o.goaway(payable(address(this)));
+            }
+        }
+
+        contract other {
+            function goaway(address payable from) public returns (bool) {
+                selfdestruct(from);
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+    runtime.accounts.get_mut(&runtime.vm.address).unwrap().1 = 0;
+
+    runtime.function_expect_return("step2", Vec::new(), 1);
+    runtime.accounts.get_mut(&runtime.vm.address).unwrap().1 = 511;
+}
