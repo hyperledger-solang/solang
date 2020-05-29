@@ -267,6 +267,50 @@ fn external_call() {
         r##"
         contract c {
             b x;
+            function test() public returns (int32) {
+                return x.get_x();
+            }
+        }
+
+        contract b {
+            function get_x(int32 t) public returns (int32) {
+                return 1;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function expects 1 arguments, 0 provided"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            b x;
+            function test() public returns (int32) {
+                return x.get_x({b: false});
+            }
+        }
+
+        contract b {
+            function get_x(int32 t, bool b) public returns (int32) {
+                return 1;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(errors),
+        "function expects 2 arguments, 1 provided"
+    );
+
+    let (_, errors) = parse_and_resolve(
+        r##"
+        contract c {
+            b x;
             constructor() public {
                 x = new b(102);
             }
