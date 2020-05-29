@@ -4624,10 +4624,6 @@ fn method_call_pos_args(
             name_match += 1;
 
             if ftype.params.len() != args.len() {
-                continue;
-            }
-
-            if ftype.params.len() != args.len() {
                 temp_errors.push(Output::error(
                     *loc,
                     format!(
