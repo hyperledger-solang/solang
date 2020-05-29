@@ -2943,25 +2943,37 @@ impl<'a> Contract<'a> {
                         value,
                         gas,
                     } => {
-                        let dest_func = &self.ns.contracts[*contract_no].functions[*function_no];
+                        let (payload, payload_len) = match contract_no {
+                            Some(contract_no) => {
+                                let dest_func =
+                                    &self.ns.contracts[*contract_no].functions[*function_no];
 
-                        let selector = dest_func.selector();
+                                let selector = dest_func.selector();
 
-                        let (payload, payload_len) = runtime.abi_encode(
-                            self,
-                            Some(if self.ns.target == crate::Target::Ewasm {
-                                selector.to_be()
-                            } else {
-                                selector
-                            }),
-                            false,
-                            function,
-                            &args
-                                .iter()
-                                .map(|a| self.expression(&a, &w.vars, function, runtime))
-                                .collect::<Vec<BasicValueEnum>>(),
-                            &dest_func.params,
-                        );
+                                runtime.abi_encode(
+                                    self,
+                                    Some(if self.ns.target == crate::Target::Ewasm {
+                                        selector.to_be()
+                                    } else {
+                                        selector
+                                    }),
+                                    false,
+                                    function,
+                                    &args
+                                        .iter()
+                                        .map(|a| self.expression(&a, &w.vars, function, runtime))
+                                        .collect::<Vec<BasicValueEnum>>(),
+                                    &dest_func.params,
+                                )
+                            }
+                            None => (
+                                self.context
+                                    .i8_type()
+                                    .ptr_type(AddressSpace::Generic)
+                                    .const_null(),
+                                self.context.i32_type().const_zero(),
+                            ),
+                        };
                         let address = self
                             .expression(address, &w.vars, function, runtime)
                             .into_int_value();

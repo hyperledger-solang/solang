@@ -771,3 +771,138 @@ fn selfdestruct() {
         511
     );
 }
+
+#[test]
+fn send_and_transfer() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            other o;
+
+            constructor() public {
+                o = new other();
+            }
+
+            function step1() public returns (bool) {
+                return payable(o).send(511);
+            }
+        }
+
+        contract other {
+            function giveme() public payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, false.encode());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 1011);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            other o;
+
+            constructor() public {
+                o = new other();
+            }
+
+            function step1() public returns (bool) {
+                return payable(o).send(511);
+            }
+        }
+
+        contract other {
+            receive() external payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, true.encode());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 1011);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            other o;
+
+            constructor() public {
+                o = new other();
+            }
+
+            function step1() public {
+                payable(o).transfer(511);
+            }
+        }
+
+        contract other {
+            function giveme() public {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function_expect_return("step1", Vec::new(), 1);
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 1011);
+    }
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            other o;
+
+            constructor() public {
+                o = new other();
+            }
+
+            function step1() public {
+                payable(o).transfer(511);
+            }
+        }
+
+        contract other {
+            receive() external payable {
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    runtime.function("step1", Vec::new());
+
+    for (address, account) in runtime.accounts {
+        if address == runtime.vm.address {
+            continue;
+        }
+
+        assert_eq!(account.1, 1011);
+    }
+}

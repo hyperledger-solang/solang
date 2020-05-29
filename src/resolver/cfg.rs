@@ -84,7 +84,7 @@ pub enum Instr {
     ExternalCall {
         success: Option<usize>,
         address: Expression,
-        contract_no: usize,
+        contract_no: Option<usize>,
         function_no: usize,
         args: Vec<Expression>,
         value: Expression,
@@ -585,7 +585,7 @@ impl ControlFlowGraph {
             Instr::ExternalCall {
                 success,
                 address,
-                contract_no,
+                contract_no: Some(contract_no),
                 function_no,
                 args,
                 value,
@@ -606,6 +606,21 @@ impl ControlFlowGraph {
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
                     .join(", ")
+            ),
+            Instr::ExternalCall {
+                success,
+                address,
+                contract_no: None,
+                value,
+                ..
+            } => format!(
+                "{} = external call address:{} value:{}",
+                match success {
+                    Some(i) => format!("%{}", self.vars[*i].id.name),
+                    None => "_".to_string(),
+                },
+                self.expr_to_string(contract, ns, address),
+                self.expr_to_string(contract, ns, value),
             ),
             Instr::AbiDecode {
                 res,
@@ -1705,7 +1720,7 @@ fn try_catch(
                     Instr::ExternalCall {
                         success: Some(success),
                         address: *address,
-                        contract_no,
+                        contract_no: Some(contract_no),
                         function_no,
                         args,
                         value: *value,
