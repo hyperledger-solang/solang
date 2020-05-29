@@ -1000,7 +1000,7 @@ fn cast_types(
         // Explicit conversion between contract and address is allowed
         (resolver::Type::Address(false), resolver::Type::Address(true))
         | (resolver::Type::Address(_), resolver::Type::Contract(_))
-        | (resolver::Type::Contract(_), resolver::Type::Address(false)) => {
+        | (resolver::Type::Contract(_), resolver::Type::Address(_)) => {
             if implicit {
                 errors.push(Output::type_error(
                     *loc,
