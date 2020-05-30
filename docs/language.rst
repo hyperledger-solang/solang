@@ -946,6 +946,22 @@ current contract. It can be cast to ``address`` or ``address payable`` using a c
         }
     }
 
+Function calls made via this are function calls through the external call mechanism; i.e. they
+have to serialize and deserialise the arguments and have the external call overhead. In addition,
+this only works with public functions.
+
+.. code-block:: javascript
+
+    contract kadowari {
+        function nomi() public {
+            this.nokogiri(102);
+        }
+
+        function nokogiri(int a) public {
+            // ...
+        }
+    }
+
 type(..) operators
 __________________
 
