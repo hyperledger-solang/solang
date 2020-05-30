@@ -992,6 +992,30 @@ so both fields will evaluate to the same value.
     then the contract code would need to contain itself as a constant array, which would
     result in an contract of infinite size.
 
+Ether and time units
+____________________
+
+Any decimal numeric literal constant can have a unit denomination. For example
+``10 minutes`` will evaluate to 600, i.e. the constant will be multiplied by the
+multiplier listed below. The following units are available:
+
+=========== =========================
+Unit        Multiplier
+
+``seconds`` 1
+``minutes`` 60
+``hours``   3600
+``days``    86400 
+``weeks``   604800
+``wei``     1
+``szabo``   1_000_000_000_000
+``finney``  1_000_000_000_000_000
+``ether``   1_000_000_000_000_000_000
+=========== =========================
+
+Note that ``ether``, ``wei`` and the other Ethereum currency denominations are available when not
+compiling for Ethereum, but they will produce warnings.
+
 Casting
 _______
 
