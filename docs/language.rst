@@ -224,7 +224,7 @@ To make this an address, the compiler error message will give the correct capita
   error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
 An address can be payable or not. An payable address can used with the ``.send()``, ``.transfer()``, and
-``selfdestruct()`` function. A non-payable address or contract can be cast to an ``address payable``
+:ref:`selfdestruct` function. A non-payable address or contract can be cast to an ``address payable``
 using the ``payable()`` cast, like so:
 
 .. code-block:: javascript
@@ -1226,8 +1226,8 @@ but it can be called from within the contract.
 Any DocComment before a function will be include in the ABI. Currently only Substrate
 supports documentation in the ABI.
 
-Calling Functions
-_________________
+Argument passing
+________________
 
 Function arguments can be passed either by position or by name. When they are called
 by name, arguments can be in any order. However, functions with anonymous arguments
@@ -1294,6 +1294,32 @@ return values. This much more costly than an internal function call.
 The syntax for calling external call is the same as the external call, except for
 that it must be done on a contract type variable. Any error in an external call can
 be handled with :ref:`try-catch`.
+
+State mutability
+________________
+
+Some functions only read state, and others may write state. Functions that do not write
+state can be executed off-chain. Off-chain execution is faster, does not require write
+access, and does not need any balance.
+
+Functions that do not write state come in two flavours: ``view`` and ``pure``. ``pure``
+functions may not read state, and ``view`` functions that do read state.
+
+Functions that do write state come in two flavours: ``payable`` and non-payable, the
+default. Functions that are not intended to receive any value, should not be marked
+``payable``. The compiler will check that every call does not included any value, and
+there are runtime checks as well, which cause the function to be reverted if value is
+sent.
+
+A constructor can be marked ``payable``, in which case value can be passed with the
+constructor. 
+
+.. note::
+    If value is sent to a non-payable function on Parity Substrate, the call will be
+    reverted. However there is no refund preformed, so value will remain with the callee.
+
+    ``payable`` on constructors is not enforced on Parity Substrate. Funds are needed
+    for storage rent and there is a minimum deposit needed for the contract.
 
 Function overloading
 ____________________
@@ -1733,13 +1759,15 @@ to identify what the problem is.
 
     contract x {
         constructor(address foobar) public {
-            require(foobar != address(0), ,"foobar must a valid address");
+            require(foobar != address(0), "foobar must a valid address");
         }
     }
+
+.. _selfdestruct:
 
 selfdestruct(address payable recipient)
 _______________________________________
 
-The `selfdestruct()` function causes the current contract to be deleted, and any remaining
-balance to be sent to `recipient`. This functions does not return, as the contract no
-longer exists.
+The ``selfdestruct()`` function causes the current contract to be deleted, and any
+remaining balance to be sent to `recipient`. This functions does not return, as the
+contract no longer exists.
