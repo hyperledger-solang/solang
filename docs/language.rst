@@ -1524,6 +1524,96 @@ Both functions must be declare ``external``.
         }
     }
 
+Sending and receiving value
+---------------------------
+
+Value in Solidity is represented by ``uint128``.
+
+.. note::
+
+    Parity Substrate can be compiled with a different type for ``T::Balance``. If you
+    need support for a different type, please raise an
+    `issue <https://github.com/hyperledger-labs/solang/issues>`_.
+
+Checking your balance
+_____________________
+
+The balance of a contract can be checked with `address` ``.balance``, so your own balance
+is ``address(this).balance``.
+
+.. note::
+    Parity Substrate cannot check the balance for contracts other than the current
+    one. If you need to check the balance of another contract, then add a balance
+    function to that contract like the one below, and call that function instead.
+
+.. code-block:: javascript
+
+    function balance() public returns (uint128) {
+        return address(this).balance;
+    }
+
+Creating contracts with an intial value
+_______________________________________
+
+You can specify the value you want to be sent along with the function call by 
+specifying ``{value: 100 ether}`` before the function arguments. This is
+explained in `passing value and gas with external calls`_.
+
+
+Sending value with an external call
+______________________________________
+
+You can specify the value you want to be deposited in the new contract by 
+specifying ``{value: 100 ether}`` before the constructor arguments. This is
+explained in `sending value to the new contract`_.
+
+
+Sending value using ``send()`` and ``transfer()``
+_________________________________________________
+
+The ``send()`` and ``transfer()`` functions are available as method on a
+``address payable`` variable. The single arguments is the amount of value you
+would like to send. The difference between the two functions is what happens
+in the failure case: ``transfer()`` will revert the current call, ``send()``
+returns a ``bool`` which will be ``false``.
+
+In order for the receiving contract to receive the value, it needs a ``receive()``
+function, see `fallback() and receive() function`_.
+
+Here is an example:
+
+.. code-block:: javascript
+
+    contract A {
+        B other;
+
+        constructor() public {
+            other = new B();
+
+            bool complete = payable(other).transfer(100);
+
+            if (!complete) {
+                // oops
+            }
+
+            // if the following fails, our transaction will fail
+            other.send(100);
+        }
+
+
+
+    }
+
+    contract B {
+        receive() payable external {
+            // ..
+        }
+    }
+
+.. note::
+    This uses the ``ext_call()`` mechanism rather than ``ext_transfer()``, since
+    Solidity expects the ``receive()`` function to be called on receipt.
+
 Statements
 ----------
 
