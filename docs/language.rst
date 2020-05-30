@@ -744,7 +744,7 @@ sugar for calling functions on the contract.
 A contract can be created with the new statment, followed by the name of the contract. The
 arguments to the constructor must be provided.
 
-  .. code-block:: javascript
+.. code-block:: javascript
 
     contract child {
         function announce() public {
@@ -763,6 +763,17 @@ arguments to the constructor must be provided.
 Since child does not have a constructor, no arguments are needed for the new statement. The variable
 `c` of the contract `child` type, which simply holds its address. Functions can be called on
 this type. The contract type can be cast to and from address, provided an explicit cast is used.
+
+The expression ``this`` evaluates to the current contract, which can be cast to ``address`` or 
+``address payable``.
+
+.. code-block:: javascript
+
+    contract example {
+        function get_address() public returns (address) {
+            return address(this);
+        }
+    }
 
 Storage References
 __________________
@@ -919,6 +930,21 @@ _________________________________
 The post-increment and pre-increment operators are implemented like you would expect. So, ``a++``
 evaluates to the value of of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
 after incrementing.
+
+this
+____
+
+The keyword ``this`` evaluates to the current contract. The type of this is the type of the
+current contract. It can be cast to ``address`` or ``address payable`` using a cast.
+
+.. code-block:: javascript
+
+    contract kadowari {
+        function nomi() public {
+            kadowari c = this;
+            address a = address(c);
+        }
+    }
 
 Casting
 _______
