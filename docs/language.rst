@@ -192,8 +192,8 @@ is always the length of the type itself.
   byte b;
   assert(b.length == 1);
 
-Address Type
-____________
+Address and Address Payable Type
+________________________________
 
 The ``address`` type holds the address of an account. The length of an ``address`` type depends on
 the target being compiled for. On ewasm, an address is 20 bytes. Substrate has an address length
@@ -223,12 +223,27 @@ To make this an address, the compiler error message will give the correct capita
 
   error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
+An address can be payable or not. An payable address can used with the ``.send()``, ``.transfer()``, and
+``selfdestruct()`` function. A non-payable address or contract can be cast to an ``address payable``
+using the ``payable()`` cast, like so:
+
+.. code-block:: javascript
+
+    address payable addr = payable(this);
+
 ``address`` cannot be used in any arithmetic or bitwise operations. However, it can be cast to and from
 bytes types and integer types and ``==`` and ``!=`` works for comparing two address types.
 
 .. code-block:: javascript
 
   address foo = address(0);
+
+.. note::
+    The type name ``address payable`` cannot be used as a cast in the Ethereum Foundation Solidity compiler,
+    and the cast must be ``payable`` instead. This is
+    `apparently due to a limitation in their parser <https://github.com/ethereum/solidity/pull/4926#discussion_r216586365>`_.
+    Solang's generated parser has no such limitation and allows ``address payable`` to be used as a cast,
+    but allows ``payable`` to be used as a cast well, for compatibility reasons.
 
 .. note::
 
@@ -426,7 +441,7 @@ visible in the callee as well.
   }
 
 .. note::
-  
+
   In the Ethereum Foundation Solidity compiler, you need to add ``pragma experimental ABIEncoderV2;``
   to use structs as return values or function arguments in public functions. The default ABI encoder
   of Solang can handle structs, so there is no need for this pragma. The Solang compiler ignores
@@ -466,7 +481,7 @@ cast to the correct element type. For example:
 
     contract primes {
         uint64[10] constant primes = [ uint64(2), 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
-        
+
         function primenumber(uint32 n) public pure returns (uint64) {
             return primes[n];
         }
@@ -515,7 +530,7 @@ will need to be. They are declared by adding ``[]`` to your type. How they can b
 on whether they are contract storage variables or stored in memory.
 
 Memory dynamic arrays must be allocated with ``new`` before they can be used. The ``new``
-expression requires a single unsigned integer argument. The length can be read using 
+expression requires a single unsigned integer argument. The length can be read using
 ``length`` member variable. Once created, the length of the array cannot be changed.
 
 .. code-block:: javascript
@@ -540,7 +555,7 @@ expression requires a single unsigned integer argument. The length can be read u
 
 Storage dynamic memory arrays do not have to be allocated. By default, the have a
 length of zero and elements can be added and removed using the ``push()`` and ``pop()``
-methods. 
+methods.
 
 .. code-block:: javascript
 
@@ -557,7 +572,7 @@ methods.
             a[0] |= 64;
             // pop removes the last element
             a.pop();
-            // you can assign the return value of pop 
+            // you can assign the return value of pop
             int64 v = a.pop();
             assert(v == 192);
         }
@@ -703,7 +718,7 @@ If you access a non-existing field on a mapping, all the fields will read as zer
 is common practise to have a boolean field called ``exists``. Since mappings are not iterable,
 it is not possible to do a ``delete`` on an mapping, but an entry can be deleted.
 
-.. note:: 
+.. note::
 
   Solidity takes the keccak 256 hash of the key and the storage slot, and simply uses that
   to find the entry. There are no hash collision chains. This scheme is simple and avoids
@@ -1506,7 +1521,7 @@ be passed a reason code, which can be inspected using the ``catch Error(string)`
         function test() public {
             try new aborting() returns (aborting a) {
                 // new succeeded; a holds the a reference to the new contract
-            } 
+            }
             catch Error(string x) {
                 if (x == "bar") {
                     // "bar" revert or require was executed
@@ -1536,7 +1551,7 @@ return value is not accessible.
 
             try new abort.abort() returns (int32 a, bool b) {
                 // call succeeded; return values are in a and b
-            } 
+            }
             catch Error(string x) {
                 if (x == "bar") {
                     // "bar" reason code was provided through revert() or require()
@@ -1565,7 +1580,7 @@ might be useful when no error string is expected, and will generate shorter code
 
             try new abort.abort() returns (int32 a, bool b) {
                 // call succeeded; return values are in a and b
-            } 
+            }
             catch (bytes raw) {
                 // call failed with raw error in raw
             }
@@ -1574,6 +1589,43 @@ might be useful when no error string is expected, and will generate shorter code
 
 Builtin Functions
 -----------------
+
+assert(bool)
+____________
+
+Assert takes a boolean argument. If that evaluates to false, execution is aborted.
+
+
+.. code-block:: javascript
+
+    contract c {
+        constructor(int x) public {
+            assert(x > 0);
+        }
+    }
+
+print(string)
+_____________
+
+print() takes a string argument.
+
+.. code-block:: javascript
+
+    contract c {
+        constructor() public {
+            print("Hello, world!");
+        }
+    }
+
+.. note::
+
+  print() is not available with the Ethereum Foundation Solidity compiler.
+
+  When using Substrate, this function is only available on development chains.
+  If you use this functio on a production chain, the contract will fail to load.
+
+  When using ewasm, the function is only available on hera when compiled with
+  debugging.
 
 revert() or revert(string)
 __________________________
@@ -1613,40 +1665,9 @@ to identify what the problem is.
         }
     }
 
+selfdestruct(address payable recipient)
+_______________________________________
 
-assert(bool)
-____________
-
-Assert takes a boolean argument. If that evaluates to false, execution is aborted.
-
-
-.. code-block:: javascript
-
-    contract c {
-        constructor(int x) public {
-            assert(x > 0);
-        }
-    }
-
-print(string)
-_____________
-
-print() takes a string argument.
-
-.. code-block:: javascript
-
-    contract c {
-        constructor() public {
-            print("Hello, world!");
-        }
-    }
-
-.. note:: 
-
-  print() is not available with the Ethereum Foundation Solidity compiler. 
-  
-  When using Substrate, this function is only available on development chains.
-  If you use this functio on a production chain, the contract will fail to load.
-
-  When using ewasm, the function is only available on hera when compiled with
-  debugging.
+The `selfdestruct()` function causes the current contract to be deleted, and any remaining
+balance to be sent to `recipient`. This functions does not return, as the contract no
+longer exists.
