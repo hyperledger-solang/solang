@@ -1372,30 +1372,39 @@ storage, it can be declared ``view``.
 When a function is declared either ``view`` or ``pure``, it can be called without
 creating an on-chain transaction, so there is no associated gas cost.
 
-Fallback function
-_________________
+fallback() and receive() function
+_________________________________
 
 When a function is called externally, either via an transaction or when one contract
 call a function on another contract, the correct function is dispatched based on the
-function selector in the raw encoded ABI call data. If no function matches, then the
-fallback function is called, if it is defined. If no fallback function is defined then
-the call aborts via the ``unreachable`` wasm instruction. A fallback function may not have a name,
-any arguments or return values, and must be declared ``external``. Here is an example of
-fallback function:
+function selector in the raw encoded ABI call data. If there is no match, the call
+reverts, unless there is a ``fallback()`` and ``receive()`` function defined.
+
+If the call comes with value, then ``receive()`` is executed, otherwise ``fallback()``
+is executed. This made clear in the declarations; ``receive()`` must be declared
+``payable``, and ``fallback()`` must not be declared ``payable``. If a call is made
+with value and no ``receive()`` function is defined, then the call reverts, likewise if
+call is made without value and no ``fallback()`` is defined, then the call also reverts. 
+
+Both functions must be declare ``external``.
 
 .. code-block:: javascript
 
-  contract test {
-      int32 bar;
+    contract test {
+        int32 bar;
 
-      function foo(uint32 x) public {
-          bar = x;
-      }
+        function foo(uint32 x) public {
+            bar = x;
+        }
 
-      function() external {
-          bar = 0;
-      }
-  }
+        fallback() external {
+            // execute if function selector does not match "foo(uint32)" and no value sent
+        }
+
+        receive() payable external {
+            // execute if function selector does not match "foo(uint32)" and value sent
+        }
+    }
 
 Statements
 ----------
