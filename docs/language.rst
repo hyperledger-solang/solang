@@ -1174,8 +1174,73 @@ constructor arguments, which need to be provided.
         }
     }
 
-The constructor might fail for various reasons, for example `require()` might fail here. This can
+The constructor might fail for various reasons, for example ``require()`` might fail here. This can
 be handled using the :ref:`try-catch` statement, else errors are passed on the caller.
+
+Sending value to the new contract
+_________________________________
+
+It is possible to send value to the new contract. This can be done with the ``{value: 500}``
+syntax, like so:
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) payable public {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling{value: 500}("luna");
+        }
+    }
+
+The constructor should be declared ``payable`` for this to work.
+
+.. note::
+    If no value is specified, then on Parity Substrate the minimum balance (also know as the
+    existential deposit) is sent.
+
+Setting the salt and gas for the new contract
+_____________________________________________
+
+.. note::
+    `ewasm <https://github.com/ewasm/design/blob/master/eth_interface.md>`_ does not
+    yet provide a method for setting the salt or gas for the new contract, so if set
+    these values are ignored.
+
+When a new contract is created, the address for the new contract is a hash of the input
+(the constructor arguments) to the new contract. So, a contract cannot be created twice
+with the same input. This is why the salt is concatenated to the input. The salt is
+either a random value or it can be explicitly set using the ``{salt: 2}`` syntax. A
+constant will remove the need for the runtime random generation, however creating 
+a contract twice with the same salt and arguments will fail. The salt is of type
+``uint256``.
+
+If gas is specified, this limits the amount gas the constructor for the new contract
+can use. gas is a ``uint64``.
+
+.. code-block:: javascript
+
+    contact hatchling {
+        string name;
+
+        constructor(string id) payable {
+            require(id != "", "name must be provided");
+            name = id;
+        }
+    }
+
+    contract adult {
+        function test() public {
+            hatchling h = new hatchling{salt: 0, gas: 10000}("luna");
+        }
+    }
 
 Functions
 ---------
@@ -1295,6 +1360,29 @@ The syntax for calling external call is the same as the external call, except fo
 that it must be done on a contract type variable. Any error in an external call can
 be handled with :ref:`try-catch`.
 
+Passing value and gas with external calls
+_________________________________________
+
+For external calls, value can be sent along with the call. The callee must be
+``payable``. Likewise, a gas limit can be set.
+
+.. code-block:: javascript
+
+    contract foo {
+        function bar() public {
+            other o = new other();
+
+            o.feh{value: 102, gas: 5000}(102);
+        }
+    }
+
+    contract other {
+        function feh(uint32 x) public payable {
+            // ...
+        }
+    }
+
+
 State mutability
 ________________
 
@@ -1361,16 +1449,6 @@ values. Here is an example of an overloaded function:
 
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
-
-Function Mutability
-___________________
-
-A function which does not access any contract storage, can be declared ``pure``.
-Alternatively, if a function only reads contract, but does not write to contract
-storage, it can be declared ``view``.
-
-When a function is declared either ``view`` or ``pure``, it can be called without
-creating an on-chain transaction, so there is no associated gas cost.
 
 fallback() and receive() function
 _________________________________
@@ -1729,7 +1807,7 @@ print() takes a string argument.
   print() is not available with the Ethereum Foundation Solidity compiler.
 
   When using Substrate, this function is only available on development chains.
-  If you use this functio on a production chain, the contract will fail to load.
+  If you use this function on a production chain, the contract will fail to load.
 
   When using ewasm, the function is only available on hera when compiled with
   debugging.
