@@ -946,6 +946,52 @@ current contract. It can be cast to ``address`` or ``address payable`` using a c
         }
     }
 
+type(..) operators
+__________________
+
+For integer values, the minimum and maximum values the types are available using the
+``type(...).min`` and ``type(...).max`` operators. For unsigned integers, ``type(..).min``
+will always be 0.
+
+.. code-block:: javascript
+
+    contract example {
+        int16 stored;
+
+        function func(int x) public {
+            if (x < type(int16).min || x > type(int16).max) {
+                revert("value will not fit");
+            }
+
+            stored = x;
+        }
+    }
+
+The contract code for a contract, i.e. the binary WebAssembly, can be retrieved using the
+``type(c).creationCode`` and ``type(c).runtimeCode`` fields, as ``bytes``. In Ethereum,
+the constructor code is in the ``creationCode`` WebAssembly and all the functions are in
+the ``runtimeCode`` WebAssembly. Parity Substrate has a single WebAssembly code for both,
+so both fields will evaluate to the same value.
+
+.. code-block:: javascript
+
+    contract example {
+        function test() public {
+            bytes runtime = type(other).runtimeCode;
+        }
+    }
+
+    contract other {
+        bool foo;
+    }
+
+.. note::
+    ``type().creationCode`` and ``type().runtimeCode`` are compile time constants.
+
+    It is not possible to access the code for the current contract. If this were possible,
+    then the contract code would need to contain itself as a constant array, which would
+    result in an contract of infinite size.
+
 Casting
 _______
 
