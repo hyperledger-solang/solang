@@ -30,12 +30,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    services:
-      substrate:
-        image: parity/substrate:latest
-        options: '--dev'
-        ports:
-        - 9944:9944
     steps:
     - uses: actions/setup-node@v1
       with:
@@ -55,11 +49,18 @@ jobs:
       working-directory:  ./stdlib
     - name: Build
       run: cargo build --verbose
+    - name: Run Substrate
+      run: |
+        set
+        id=$(docker run --network-alias substrate -d -p 9944:9944 parity/substrate --dev)
+        docker ps -a
+        docker port $id
     - name: Unit tests
       run: cargo test --verbose
     - name: Build examples for Substrate tests
       run: cargo run examples/*.sol -o integration/substrate/
     - run: yarn install
       working-directory: ./integration/substrate
+    - run: docker ps -a
     - run: yarn test
       working-directory: ./integration/substrate

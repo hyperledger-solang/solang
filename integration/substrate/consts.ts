@@ -1,6 +1,6 @@
 import BN from "bn.js";
 
-export const WSURL = "ws://127.0.0.1:9944";
+export const WSURL = "ws://substrate:9944";
 export const DOT: BN = new BN("1000000000000000");
 export const CREATION_FEE: BN = DOT.muln(200);
 export const GAS_REQUIRED = 100000000000;
