@@ -30,7 +30,16 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      substrate:
+        image: parity/substrate:latest
+        options: '--dev'
+        ports:
+        - 9944:9944
     steps:
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12'
     - name: Checkout sources
       uses: actions/checkout@v2
     - name: Install LLVM
@@ -46,5 +55,11 @@ jobs:
       working-directory:  ./stdlib
     - name: Build
       run: cargo build --verbose
-    - name: Run tests
+    - name: Unit tests
       run: cargo test --verbose
+    - name: Build examples for Substrate tests
+      run: cargo run examples/*.sol -o integration/substrate/
+    - run: yarn install
+      working-directory: ./integration/substrate
+    - run: yarn test
+      working-directory: ./integration/substrate
