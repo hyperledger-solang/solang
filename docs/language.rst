@@ -101,7 +101,7 @@ _____________
   This represents a single signed integer of 256 bits wide. Values can be for example
   ``-102``, ``0``, ``102`` or ``-0xdead_cafe``.
 
-``int64``, ``uint32``, ``uint16``, ``uint8``
+``int64``, ``int32``, ``int16``, ``int8``
   These represent shorter single signed integers of the given width. These widths are
   most efficient in WebAssembly and should be used whenever possible.
 
@@ -151,7 +151,7 @@ a text string.
   bytes4 foo = "ABCD";
   bytes4 bar = hex"41_42_43_44";
 
-The ascii value for ``A`` is 41, when written in hexadecimal. So, in this case, foo and bar
+The ascii value for ``A`` is 41 in hexadecimal. So, in this case, foo and bar
 are initialized to the same value. Underscores are allowed in hex strings; they exist for
 readability. If the string is shorter than the type, it is padded with zeros. For example:
 
@@ -223,7 +223,8 @@ To make this an address, the compiler error message will give the correct capita
 
   error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
-An address can be payable or not. An payable address can used with the ``.send()``, ``.transfer()``, and
+An address can be payable or not. An payable address can used with the 
+:ref:`.send() and .transfer() functions <send_transfer>`, and
 :ref:`selfdestruct` function. A non-payable address or contract can be cast to an ``address payable``
 using the ``payable()`` cast, like so:
 
@@ -232,7 +233,7 @@ using the ``payable()`` cast, like so:
     address payable addr = payable(this);
 
 ``address`` cannot be used in any arithmetic or bitwise operations. However, it can be cast to and from
-bytes types and integer types and ``==`` and ``!=`` works for comparing two address types.
+bytes types and integer types. The ``==`` and ``!=`` operators work for comparing two address types.
 
 .. code-block:: javascript
 
@@ -247,7 +248,7 @@ bytes types and integer types and ``==`` and ``!=`` works for comparing two addr
 
 .. note::
 
-    Substrate can be built with a different type for Address. If you need support for
+    Substrate can be compiled with a different type for Address. If you need support for
     a different length than the default, please get in touch.
 
 Enums
@@ -270,9 +271,9 @@ is represented as a ``uint8`` in the ABI.
 An enum can be converted to and from integer, but this requires an explicit cast. The value of an enum
 is numbered from 0, like in C and Rust.
 
-If enum is declared in another contract, it can be refered to with the `contractname.` prefix. The enum
-declaration does not have to appear in a contract, in which case it can be used without the contract name
-prefix in every contract.
+If enum is declared in another contract, the type can be refered to with `contractname.typename`. The
+individual enum values are `contractname.typename.value`. The enum declaration does not have to appear
+in a contract, in which case it can be used without the contract name prefix.
 
 .. code-block:: javascript
 
@@ -308,9 +309,9 @@ prefix in every contract.
 Struct Type
 ___________
 
-A struct is composite type of several other types. This is used to group related items together. before
-a struct can be used, the struct must be defined. Then the name of the struct can then be used as a
-type itself. For example:
+A struct is composite type of several other types. This is used to group related items together. A
+struct type must have a definition before it can be used. The name of the struct type can then be
+used as a type itself. For example:
 
 .. code-block:: javascript
 
@@ -414,7 +415,7 @@ and memory is expensive; code has to be generated for each field and executed.
 Note that struct variables are references. When contract struct variables or normal struct variables
 are passed around, just the memory address or storage slot is passed around internally. This makes
 it very cheap, but it does mean that if the called function modifies the struct, then this is
-visible in the callee as well.
+visible in the caller as well.
 
 .. code-block:: javascript
 
@@ -480,9 +481,9 @@ cast to the correct element type. For example:
 .. code-block:: javascript
 
     contract primes {
-        uint64[10] constant primes = [ uint64(2), 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
-
         function primenumber(uint32 n) public pure returns (uint64) {
+            uint64[10] primes = [ uint64(2), 3, 5, 7, 11, 13, 17, 19, 23, 29 ];
+
             return primes[n];
         }
     }
@@ -514,7 +515,7 @@ those changes will be reflected in the current function. For example:
 .. note::
 
   In Solidity, an fixed array of 32 bytes (or smaller) can be declared as ``bytes32`` or
-  ``int8[32]``. In the Ethereum ABI encoding, an ``int8[32]`` is encoded using
+  ``uint8[32]``. In the Ethereum ABI encoding, an ``int8[32]`` is encoded using
   32 × 32 = 1024 bytes. This is because the Ethereum ABI encoding pads each primitive to
   32 bytes. However, since ``bytes32`` is a primitive in itself, this will only be 32
   bytes when ABI encoded.
@@ -660,7 +661,7 @@ can be cast to ``bytes`` but not to ``byte[]``.
 Mappings
 ________
 
-Mappings are a dictionary type, or a hashmap. Mappings have a number of
+Mappings are a dictionary type, or associative arrays. Mappings have a number of
 limitations:
 
 - it has to have to be in contract storage, not memory
@@ -741,7 +742,7 @@ In Solidity, other smart contracts can be called and created. So, there is a typ
 address of a contract. This is in fact simply the address of the contract, with some syntax
 sugar for calling functions on the contract.
 
-A contract can be created with the new statment, followed by the name of the contract. The
+A contract can be created with the new statement, followed by the name of the contract. The
 arguments to the constructor must be provided.
 
 .. code-block:: javascript
@@ -928,7 +929,7 @@ Increment and Decrement operators
 _________________________________
 
 The post-increment and pre-increment operators are implemented like you would expect. So, ``a++``
-evaluates to the value of of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
+evaluates to the value of ``a`` before incrementing, and ``++a`` evaluates to value of ``a``
 after incrementing.
 
 this
@@ -942,7 +943,7 @@ current contract. It can be cast to ``address`` or ``address payable`` using a c
     contract kadowari {
         function nomi() public {
             kadowari c = this;
-            address a = address(c);
+            address a = address(this);
         }
     }
 
@@ -979,7 +980,7 @@ will always be 0.
                 revert("value will not fit");
             }
 
-            stored = x;
+            stored = int16(x);
         }
     }
 
@@ -1176,7 +1177,8 @@ like so:
 A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
 then when the contract is deployed then those arguments must be supplied.
 
-A constructor must be declared ``public``.
+A constructor must be declared ``public``. If a contract is expected to hold receive value on
+instantiation, then the constructor should be declare ``payable``.
 
 .. note::
 
@@ -1251,7 +1253,7 @@ _____________________________________________
 
 .. note::
     `ewasm <https://github.com/ewasm/design/blob/master/eth_interface.md>`_ does not
-    yet provide a method for setting the salt or gas for the new contract, so if set
+    yet provide a method for setting the salt or gas for the new contract, so
     these values are ignored.
 
 When a new contract is created, the address for the new contract is a hash of the input
@@ -1331,8 +1333,8 @@ but it can be called from within the contract.
 Any DocComment before a function will be include in the ABI. Currently only Substrate
 supports documentation in the ABI.
 
-Argument passing
-________________
+Arguments passing and return values
+___________________________________
 
 Function arguments can be passed either by position or by name. When they are called
 by name, arguments can be in any order. However, functions with anonymous arguments
@@ -1426,9 +1428,9 @@ For external calls, value can be sent along with the call. The callee must be
 State mutability
 ________________
 
-Some functions only read state, and others may write state. Functions that do not write
-state can be executed off-chain. Off-chain execution is faster, does not require write
-access, and does not need any balance.
+Some functions only read contract storage (also known as *state*), and others may write
+contract storage. Functions that do not write state can be executed off-chain. Off-chain
+execution is faster, does not require write access, and does not need any balance.
 
 Functions that do not write state come in two flavours: ``view`` and ``pure``. ``pure``
 functions may not read state, and ``view`` functions that do read state.
@@ -1552,21 +1554,21 @@ is ``address(this).balance``.
         return address(this).balance;
     }
 
-Creating contracts with an intial value
-_______________________________________
-
-You can specify the value you want to be sent along with the function call by 
-specifying ``{value: 100 ether}`` before the function arguments. This is
-explained in `passing value and gas with external calls`_.
-
-
-Sending value with an external call
-______________________________________
+Creating contracts with an initial value
+________________________________________
 
 You can specify the value you want to be deposited in the new contract by 
 specifying ``{value: 100 ether}`` before the constructor arguments. This is
 explained in `sending value to the new contract`_.
 
+Sending value with an external call
+___________________________________
+
+You can specify the value you want to be sent along with the function call by 
+specifying ``{value: 100 ether}`` before the function arguments. This is
+explained in `passing value and gas with external calls`_.
+
+.. _send_transfer:
 
 Sending value using ``send()`` and ``transfer()``
 _________________________________________________
