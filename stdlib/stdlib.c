@@ -17,8 +17,10 @@ void __memset8(void *_dest, uint64_t val, size_t length)
 	} while (--length);
 }
 
-void __memset(uint8_t *dest, uint8_t val, size_t length)
+void __memset(void *_dest, uint8_t val, size_t length)
 {
+	uint8_t *dest = _dest;
+
 	do
 	{
 		*dest++ = val;
@@ -39,8 +41,11 @@ void __memcpy8(void *_dest, void *_src, size_t length)
 	} while (--length);
 }
 
-void __memcpy(uint8_t *dest, uint8_t *src, size_t length)
+void __memcpy(void *_dest, const void *_src, size_t length)
 {
+	uint8_t *dest = _dest;
+	const uint8_t *src = _src;
+
 	while (length--)
 	{
 		*dest++ = *src++;

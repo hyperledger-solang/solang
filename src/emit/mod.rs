@@ -4106,6 +4106,7 @@ impl<'a> Contract<'a> {
 
 static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
 static SHA3_IR: &[u8] = include_bytes!("../../stdlib/sha3.bc");
+static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/ripemd160.bc");
 static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/substrate.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
@@ -4117,6 +4118,13 @@ fn load_stdlib<'a>(context: &'a Context, target: &crate::Target) -> Module<'a> {
 
     if let super::Target::Substrate = target {
         let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
+
+        module
+            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+            .unwrap();
+
+        // substrate does not provide ripemd160
+        let memory = MemoryBuffer::create_from_memory_range(RIPEMD160_IR, "ripemd160");
 
         module
             .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
