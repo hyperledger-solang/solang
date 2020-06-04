@@ -44,8 +44,6 @@ lazy_static::lazy_static! {
 #[derive(Clone)]
 struct Variable<'a> {
     value: BasicValueEnum<'a>,
-    stack: bool,
-    phi: bool,
 }
 
 pub trait TargetRuntime {
@@ -1206,14 +1204,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::ULE, left, right, "")
                     .into()
             }
-            Expression::Variable(_, s) => {
-                if vartab[*s].stack {
-                    self.builder
-                        .build_load(vartab[*s].value.into_pointer_value(), "")
-                } else {
-                    vartab[*s].value
-                }
-            }
+            Expression::Variable(_, s) => vartab[*s].value,
             Expression::Load(_, e) => {
                 let expr = self
                     .expression(e, vartab, function, runtime)
@@ -2431,17 +2422,12 @@ impl<'a> Contract<'a> {
 
     /// Emit function prototype
     fn declare_function(&self, fname: &str, f: &resolver::FunctionDecl) -> FunctionValue<'a> {
-        let mut args: Vec<BasicTypeEnum> = Vec::new();
-
-        for p in &f.params {
-            let ty = self.llvm_type(&p.ty);
-
-            args.push(if p.ty.stack_based() && !p.ty.is_contract_storage() {
-                ty.ptr_type(AddressSpace::Generic).into()
-            } else {
-                ty
-            });
-        }
+        // function parameters
+        let mut args = f
+            .params
+            .iter()
+            .map(|p| self.llvm_var(&p.ty))
+            .collect::<Vec<BasicTypeEnum>>();
 
         // add return values
         for p in &f.returns {
@@ -2506,11 +2492,9 @@ impl<'a> Contract<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
-                    if cfg.vars[*v].ty.needs_phi() {
-                        let ty = self.llvm_var(&cfg.vars[*v].ty);
+                    let ty = self.llvm_var(&cfg.vars[*v].ty);
 
-                        phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
-                    }
+                    phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
                 }
             }
 
@@ -2532,15 +2516,11 @@ impl<'a> Contract<'a> {
                             .builder
                             .build_alloca(self.llvm_type(&v.ty), &v.id.name)
                             .into(),
-                        stack: false,
-                        phi: v.ty.needs_phi(),
                     });
                 }
-                cfg::Storage::Local if !v.ty.stack_based() || v.ty.is_reference_type() => {
+                cfg::Storage::Local if v.ty.is_contract_storage() => {
                     vars.push(Variable {
-                        value: self.context.i32_type().const_zero().into(),
-                        stack: false,
-                        phi: v.ty.needs_phi(),
+                        value: self.context.custom_width_int_type(256).const_zero().into(),
                     });
                 }
                 cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
@@ -2549,18 +2529,16 @@ impl<'a> Contract<'a> {
                     // This needs a placeholder
                     vars.push(Variable {
                         value: self.context.bool_type().get_undef().into(),
-                        stack: false,
-                        phi: v.ty.needs_phi(),
                     });
                 }
                 cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
+                    let ty = self.llvm_type(&v.ty);
                     vars.push(Variable {
-                        value: self
-                            .builder
-                            .build_alloca(self.llvm_type(&v.ty), &v.id.name)
-                            .into(),
-                        stack: true,
-                        phi: v.ty.needs_phi(),
+                        value: if ty.is_pointer_type() {
+                            ty.into_pointer_type().const_zero().into()
+                        } else {
+                            ty.into_int_type().const_zero().into()
+                        },
                     });
                 }
             }
@@ -2599,12 +2577,8 @@ impl<'a> Contract<'a> {
                     }
                     cfg::Instr::Set { res, expr } => {
                         let value_ref = self.expression(expr, &w.vars, function, runtime);
-                        if w.vars[*res].stack {
-                            self.builder
-                                .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
-                        } else {
-                            w.vars[*res].value = value_ref;
-                        }
+
+                        w.vars[*res].value = value_ref;
                     }
                     cfg::Instr::Eval { expr } => {
                         self.expression(expr, &w.vars, function, runtime);
@@ -2612,12 +2586,8 @@ impl<'a> Contract<'a> {
                     cfg::Instr::Constant { res, constant } => {
                         let const_expr = &self.contract.constants[*constant];
                         let value_ref = self.expression(const_expr, &w.vars, function, runtime);
-                        if w.vars[*res].stack {
-                            self.builder
-                                .build_store(w.vars[*res].value.into_pointer_value(), value_ref);
-                        } else {
-                            w.vars[*res].value = value_ref;
-                        }
+
+                        w.vars[*res].value = value_ref;
                     }
                     cfg::Instr::Branch { bb: dest } => {
                         let pos = self.builder.get_insert_block().unwrap();
@@ -2633,9 +2603,7 @@ impl<'a> Contract<'a> {
                         let bb = blocks.get(dest).unwrap();
 
                         for (v, phi) in bb.phis.iter() {
-                            if w.vars[*v].phi {
-                                phi.add_incoming(&[(&w.vars[*v].value, pos)]);
-                            }
+                            phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                         }
 
                         self.builder.position_at_end(pos);
@@ -2670,9 +2638,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(true_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                if w.vars[*v].phi {
-                                    phi.add_incoming(&[(&w.vars[*v].value, pos)]);
-                                }
+                                phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                             }
 
                             bb.bb
@@ -2690,9 +2656,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(false_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                if w.vars[*v].phi {
-                                    phi.add_incoming(&[(&w.vars[*v].value, pos)]);
-                                }
+                                phi.add_incoming(&[(&w.vars[*v].value, pos)]);
                             }
 
                             bb.bb
@@ -2814,24 +2778,12 @@ impl<'a> Contract<'a> {
                         );
                     }
                     cfg::Instr::Call { res, func, args } => {
-                        let mut parms: Vec<BasicValueEnum> = Vec::new();
                         let f = &self.contract.functions[*func];
 
-                        for (i, a) in args.iter().enumerate() {
-                            let ty = &f.params[i].ty;
-                            let val = self.expression(&a, &w.vars, function, runtime);
-
-                            parms.push(if ty.stack_based() && !ty.is_reference_type() {
-                                // copy onto stack
-                                let m = self.builder.build_alloca(self.llvm_type(ty), "");
-
-                                self.builder.build_store(m, val);
-
-                                m.into()
-                            } else {
-                                val
-                            });
-                        }
+                        let mut parms = args
+                            .iter()
+                            .map(|p| self.expression(p, &w.vars, function, runtime))
+                            .collect::<Vec<BasicValueEnum>>();
 
                         if !res.is_empty() {
                             for v in f.returns.iter() {
@@ -2899,11 +2851,8 @@ impl<'a> Contract<'a> {
                             .map(|a| self.expression(&a, &w.vars, function, runtime))
                             .collect::<Vec<BasicValueEnum>>();
 
-                        let address = self.builder.build_pointer_cast(
-                            w.vars[*res].value.into_pointer_value(),
-                            self.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "address",
-                        );
+                        let address = self.builder.build_alloca(self.address_type(), "address");
+
                         let gas = self
                             .expression(gas, &w.vars, function, runtime)
                             .into_int_value();
@@ -2927,12 +2876,18 @@ impl<'a> Contract<'a> {
                             success,
                             *contract_no,
                             *constructor_no,
-                            address,
+                            self.builder.build_pointer_cast(
+                                address,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
                             args,
                             gas,
                             value,
                             salt,
                         );
+
+                        w.vars[*res].value = self.builder.build_load(address, "address");
                     }
                     cfg::Instr::ExternalCall {
                         success,
@@ -4148,49 +4103,6 @@ impl<'a> Contract<'a> {
         self.code_size.replace(Some(new_size));
 
         true
-    }
-}
-
-impl resolver::Type {
-    /// Does this type need a phi node
-    pub fn needs_phi(&self) -> bool {
-        match self {
-            resolver::Type::Bool
-            | resolver::Type::Int(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Address(_)
-            | resolver::Type::Bytes(_) => !self.stack_based(),
-            resolver::Type::Enum(_) => true,
-            resolver::Type::Struct(_) => true,
-            resolver::Type::Array(_, _) => true,
-            resolver::Type::DynamicBytes => true,
-            resolver::Type::String => true,
-            resolver::Type::Mapping(_, _) => true,
-            resolver::Type::Contract(_) => true,
-            resolver::Type::Ref(r) => r.needs_phi(),
-            resolver::Type::StorageRef(_) => true,
-            resolver::Type::Undef => unreachable!(),
-        }
-    }
-
-    /// Should this value be stored in alloca'ed space
-    pub fn stack_based(&self) -> bool {
-        match self {
-            resolver::Type::Bool => false,
-            resolver::Type::Int(n) => *n > 64,
-            resolver::Type::Uint(n) => *n > 64,
-            resolver::Type::Contract(_) | resolver::Type::Address(_) => true,
-            resolver::Type::Bytes(n) => *n > 8,
-            resolver::Type::Enum(_) => false,
-            resolver::Type::Struct(_) => true,
-            resolver::Type::Array(_, _) => true,
-            resolver::Type::String => true,
-            resolver::Type::DynamicBytes => true,
-            resolver::Type::Mapping(_, _) => true,
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::Ref(_) => false,
-            resolver::Type::StorageRef(r) => r.stack_based(),
-        }
     }
 }
 

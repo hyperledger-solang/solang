@@ -1831,17 +1831,7 @@ impl TargetRuntime for SubstrateTarget {
         };
 
         for param in spec {
-            let v = self.decode_ty(contract, function, &param.ty, &mut argsdata, argsend);
-
-            args.push(if param.ty.stack_based() && !param.ty.is_reference_type() {
-                let s = contract.builder.build_alloca(v.get_type(), &param.name);
-
-                contract.builder.build_store(s, v);
-
-                s.into()
-            } else {
-                v
-            });
+            args.push(self.decode_ty(contract, function, &param.ty, &mut argsdata, argsend));
         }
     }
 
