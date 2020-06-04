@@ -704,6 +704,7 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
+            Expression::FunctionArg(_, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => self
                 .context
                 .bool_type()
@@ -2557,9 +2558,6 @@ impl<'a> Contract<'a> {
 
             for ins in &cfg.bb[w.bb_no].instr {
                 match ins {
-                    cfg::Instr::FuncArg { res, arg } => {
-                        w.vars[*res].value = function.get_nth_param(*arg as u32).unwrap();
-                    }
                     cfg::Instr::Return { value } if value.is_empty() => {
                         self.builder
                             .build_return(Some(&self.context.i32_type().const_zero()));

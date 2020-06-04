@@ -29,6 +29,7 @@ use resolver::storage::{
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expression {
+    FunctionArg(Loc, usize),
     BoolLiteral(Loc, bool),
     BytesLiteral(Loc, Vec<u8>),
     CodeLiteral(Loc, usize, bool),
@@ -125,7 +126,8 @@ impl Expression {
     /// Return the location for this expression
     pub fn loc(&self) -> Loc {
         match self {
-            Expression::BoolLiteral(loc, _)
+            Expression::FunctionArg(loc, _)
+            | Expression::BoolLiteral(loc, _)
             | Expression::BytesLiteral(loc, _)
             | Expression::CodeLiteral(loc, _, _)
             | Expression::NumberLiteral(loc, _, _)
@@ -192,7 +194,8 @@ impl Expression {
     pub fn reads_contract_storage(&self) -> bool {
         match self {
             Expression::StorageLoad(_, _, _) => true,
-            Expression::BoolLiteral(_, _)
+            Expression::FunctionArg(_, _)
+            | Expression::BoolLiteral(_, _)
             | Expression::BytesLiteral(_, _)
             | Expression::CodeLiteral(_, _, _)
             | Expression::NumberLiteral(_, _, _) => false,
