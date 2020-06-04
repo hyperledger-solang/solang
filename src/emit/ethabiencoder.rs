@@ -1029,7 +1029,11 @@ impl EthAbiEncoder {
                     "",
                 );
 
-                store.into()
+                if to.is_none() {
+                    contract.builder.build_load(store, "address")
+                } else {
+                    store.into()
+                }
             }
             resolver::Type::Uint(n) | resolver::Type::Int(n) => {
                 let int_type = contract.context.custom_width_int_type(*n as u32);
@@ -1057,7 +1061,7 @@ impl EthAbiEncoder {
                     "",
                 );
 
-                if *n <= 64 && to.is_none() {
+                if to.is_none() {
                     contract.builder.build_load(store, &format!("abi_int{}", n))
                 } else {
                     store.into()
@@ -1097,7 +1101,7 @@ impl EthAbiEncoder {
                     "",
                 );
 
-                if *b <= 8 && to.is_none() {
+                if to.is_none() {
                     contract.builder.build_load(store, &format!("bytes{}", *b))
                 } else {
                     store.into()
