@@ -16,10 +16,6 @@ use resolver::expression::{
 
 #[allow(clippy::large_enum_variant)]
 pub enum Instr {
-    FuncArg {
-        res: usize,
-        arg: usize,
-    },
     ClearStorage {
         ty: resolver::Type,
         storage: Expression,
@@ -186,6 +182,7 @@ impl ControlFlowGraph {
         expr: &Expression,
     ) -> String {
         match expr {
+            Expression::FunctionArg(_, pos) => format!("(arg #{})", pos),
             Expression::BoolLiteral(_, false) => "false".to_string(),
             Expression::BoolLiteral(_, true) => "true".to_string(),
             Expression::BytesLiteral(_, s) => format!("hex\"{}\"", hex::encode(s)),
@@ -541,9 +538,6 @@ impl ControlFlowGraph {
                 true_,
                 false_
             ),
-            Instr::FuncArg { res, arg } => {
-                format!("%{} = funcarg({})", self.vars[*res].id.name, arg)
-            }
             Instr::ClearStorage { ty, storage } => format!(
                 "clear storage slot({}) ty:{}",
                 self.expr_to_string(contract, ns, storage),
@@ -752,7 +746,13 @@ pub fn generate_cfg(
             if let Some(pos) = vartab.add(name, resolve_f.params[i].ty.clone(), errors) {
                 ns.check_shadowing(contract_no, name, errors);
 
-                cfg.add(&mut vartab, Instr::FuncArg { res: pos, arg: i });
+                cfg.add(
+                    &mut vartab,
+                    Instr::Set {
+                        res: pos,
+                        expr: Expression::FunctionArg(name.loc, i),
+                    },
+                );
             }
         }
     }

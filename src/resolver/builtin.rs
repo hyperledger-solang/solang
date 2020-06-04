@@ -13,7 +13,6 @@ pub fn add_builtin_function(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_assert(ns: &mut Namespace, contract_no: usize) {
-    let argty = resolver::Type::Bool;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "assert".to_owned(),
@@ -42,22 +41,10 @@ fn add_assert(ns: &mut Namespace, contract_no: usize) {
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
 
-    let cond = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "arg0".to_owned(),
-            },
-            argty,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(&mut vartab, Instr::FuncArg { res: cond, arg: 0 });
     cfg.add(
         &mut vartab,
         Instr::BranchCond {
-            cond: Expression::Variable(ast::Loc(0, 0), cond),
+            cond: Expression::FunctionArg(ast::Loc(0, 0), 0),
             true_,
             false_,
         },
@@ -86,7 +73,6 @@ fn add_assert(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_print(ns: &mut Namespace, contract_no: usize) {
-    let argty = resolver::Type::String;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "print".to_owned(),
@@ -112,22 +98,10 @@ fn add_print(ns: &mut Namespace, contract_no: usize) {
     let mut vartab = Vartable::new();
     let mut cfg = ControlFlowGraph::new();
 
-    let cond = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "arg0".to_owned(),
-            },
-            argty,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(&mut vartab, Instr::FuncArg { res: cond, arg: 0 });
     cfg.add(
         &mut vartab,
         Instr::Print {
-            expr: Expression::Variable(ast::Loc(0, 0), cond),
+            expr: Expression::FunctionArg(ast::Loc(0, 0), 0),
         },
     );
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
@@ -148,7 +122,6 @@ fn add_print(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_require(ns: &mut Namespace, contract_no: usize) {
-    let argty = resolver::Type::Bool;
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "require".to_owned(),
@@ -176,42 +149,16 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
         ns,
     );
 
-    let mut errors = Vec::new();
     let mut vartab = Vartable::new();
     let mut cfg = ControlFlowGraph::new();
 
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
 
-    let error = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "ReasonCode".to_owned(),
-            },
-            resolver::Type::String,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(&mut vartab, Instr::FuncArg { res: error, arg: 1 });
-
-    let cond = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "condition".to_owned(),
-            },
-            argty,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(&mut vartab, Instr::FuncArg { res: cond, arg: 0 });
     cfg.add(
         &mut vartab,
         Instr::BranchCond {
-            cond: Expression::Variable(ast::Loc(0, 0), cond),
+            cond: Expression::FunctionArg(ast::Loc(0, 0), 0),
             true_,
             false_,
         },
@@ -224,7 +171,7 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::AssertFailure {
-            expr: Some(Expression::Variable(ast::Loc(0, 0), error)),
+            expr: Some(Expression::FunctionArg(ast::Loc(0, 0), 1)),
         },
     );
 
@@ -233,8 +180,6 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     require.cfg = Some(Box::new(cfg));
 
     let pos_with_reason = ns.contracts[contract_no].functions.len();
-
-    let argty = resolver::Type::Bool;
 
     ns.contracts[contract_no].functions.push(require);
 
@@ -261,22 +206,10 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     let true_ = cfg.new_basic_block("noassert".to_owned());
     let false_ = cfg.new_basic_block("doassert".to_owned());
 
-    let cond = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "condition".to_owned(),
-            },
-            argty,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(&mut vartab, Instr::FuncArg { res: cond, arg: 0 });
     cfg.add(
         &mut vartab,
         Instr::BranchCond {
-            cond: Expression::Variable(ast::Loc(0, 0), cond),
+            cond: Expression::FunctionArg(ast::Loc(0, 0), 0),
             true_,
             false_,
         },
@@ -331,27 +264,13 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
 
     revert.noreturn = true;
 
-    let mut errors = Vec::new();
     let mut vartab = Vartable::new();
     let mut cfg = ControlFlowGraph::new();
-
-    let error = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "ReasonCode".to_owned(),
-            },
-            resolver::Type::String,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(&mut vartab, Instr::FuncArg { res: error, arg: 0 });
 
     cfg.add(
         &mut vartab,
         Instr::AssertFailure {
-            expr: Some(Expression::Variable(ast::Loc(0, 0), error)),
+            expr: Some(Expression::FunctionArg(ast::Loc(0, 0), 0)),
         },
     );
 
@@ -402,7 +321,6 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_selfdestruct(ns: &mut Namespace, contract_no: usize) {
-    let argty = resolver::Type::Address(true);
     let id = ast::Identifier {
         loc: ast::Loc(0, 0),
         name: "selfdestruct".to_owned(),
@@ -430,28 +348,10 @@ fn add_selfdestruct(ns: &mut Namespace, contract_no: usize) {
     let mut vartab = Vartable::new();
     let mut cfg = ControlFlowGraph::new();
 
-    let recipient = vartab
-        .add(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
-                name: "recipient".to_owned(),
-            },
-            argty,
-            &mut errors,
-        )
-        .unwrap();
-
-    cfg.add(
-        &mut vartab,
-        Instr::FuncArg {
-            res: recipient,
-            arg: 0,
-        },
-    );
     cfg.add(
         &mut vartab,
         Instr::SelfDestruct {
-            recipient: Expression::Variable(ast::Loc(0, 0), recipient),
+            recipient: Expression::FunctionArg(ast::Loc(0, 0), 0),
         },
     );
     cfg.add(&mut vartab, Instr::Unreachable);
