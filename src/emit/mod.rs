@@ -205,6 +205,15 @@ pub trait TargetRuntime {
 
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>);
+
+    /// Crypto Hash
+    fn hash<'b>(
+        &self,
+        contract: &Contract<'b>,
+        hash: cfg::HashTy,
+        string: PointerValue<'b>,
+        length: IntValue<'b>,
+    ) -> IntValue<'b>;
 }
 
 pub struct Contract<'a> {
@@ -3127,6 +3136,48 @@ impl<'a> Contract<'a> {
                             .into_int_value();
 
                         runtime.selfdestruct(self, recipient);
+                    }
+                    cfg::Instr::Hash { res, hash, expr } => {
+                        let v = self
+                            .expression(expr, &w.vars, function, runtime)
+                            .into_pointer_value();
+
+                        let data = unsafe {
+                            self.builder.build_gep(
+                                v,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(2, false),
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let data_len = unsafe {
+                            self.builder.build_gep(
+                                v,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_zero(),
+                                ],
+                                "data_len",
+                            )
+                        };
+
+                        w.vars[*res].value = runtime
+                            .hash(
+                                &self,
+                                hash.clone(),
+                                self.builder.build_pointer_cast(
+                                    data,
+                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "data",
+                                ),
+                                self.builder
+                                    .build_load(data_len, "data_len")
+                                    .into_int_value(),
+                            )
+                            .into();
                     }
                 }
             }

@@ -9,6 +9,7 @@ extern crate parity_scale_codec;
 extern crate parity_scale_codec_derive;
 extern crate rand;
 extern crate serde_derive;
+extern crate sha2;
 extern crate solang;
 extern crate tiny_keccak;
 extern crate wasmi;
@@ -16,6 +17,7 @@ extern crate wasmi;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
 use tiny_keccak::keccak256;
@@ -86,6 +88,9 @@ enum SubstrateExternal {
     ext_address,
     ext_balance,
     ext_terminate,
+    ext_hash_sha2_256,
+    ext_hash_blake2_128,
+    ext_hash_blake2_256,
 }
 
 pub struct VM {
@@ -116,6 +121,7 @@ pub struct TestRuntime {
 }
 
 impl Externals for TestRuntime {
+    #[allow(clippy::cognitive_complexity)]
     fn invoke_index(
         &mut self,
         index: usize,
@@ -238,10 +244,101 @@ impl Externals for TestRuntime {
                 if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
                     panic!("ext_hash_keccak_256: {}", e);
                 }
+
                 let hash = keccak256(&data);
+
+                println!(
+                    "ext_hash_keccak_256: {} = {}",
+                    hex::encode(data),
+                    hex::encode(hash)
+                );
 
                 if let Err(e) = self.vm.memory.set(out_ptr, &hash) {
                     panic!("ext_hash_keccak_256: {}", e);
+                }
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_hash_sha2_256) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+                let out_ptr: u32 = args.nth_checked(2)?;
+
+                let mut data = Vec::new();
+
+                data.resize(len as usize, 0);
+
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
+                    panic!("ext_hash_sha2_256: {}", e);
+                }
+
+                let mut hasher = Sha256::new();
+
+                hasher.input(&data);
+
+                let hash = hasher.result();
+
+                println!(
+                    "ext_hash_sha2_256: {} = {}",
+                    hex::encode(data),
+                    hex::encode(hash)
+                );
+
+                if let Err(e) = self.vm.memory.set(out_ptr, &hash) {
+                    panic!("ext_hash_sha2_256: {}", e);
+                }
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_hash_blake2_128) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+                let out_ptr: u32 = args.nth_checked(2)?;
+
+                let mut data = Vec::new();
+
+                data.resize(len as usize, 0);
+
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
+                    panic!("ext_hash_blake2_128: {}", e);
+                }
+                let hash = blake2_rfc::blake2b::blake2b(16, &[], &data);
+
+                println!(
+                    "ext_hash_blake2_128: {} = {}",
+                    hex::encode(data),
+                    hex::encode(hash)
+                );
+
+                if let Err(e) = self.vm.memory.set(out_ptr, &hash.as_bytes()) {
+                    panic!("ext_hash_blake2_128: {}", e);
+                }
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_hash_blake2_256) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let len: u32 = args.nth_checked(1)?;
+                let out_ptr: u32 = args.nth_checked(2)?;
+
+                let mut data = Vec::new();
+
+                data.resize(len as usize, 0);
+
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
+                    panic!("ext_hash_blake2_256: {}", e);
+                }
+
+                let hash = blake2_rfc::blake2b::blake2b(32, &[], &data);
+
+                println!(
+                    "ext_hash_blake2_256: {} = {}",
+                    hex::encode(data),
+                    hex::encode(hash)
+                );
+
+                if let Err(e) = self.vm.memory.set(out_ptr, &hash.as_bytes()) {
+                    panic!("ext_hash_blake2_256: {}", e);
                 }
 
                 Ok(None)
@@ -540,7 +637,10 @@ impl ModuleImportResolver for TestRuntime {
             "ext_set_storage" => SubstrateExternal::ext_set_storage,
             "ext_clear_storage" => SubstrateExternal::ext_clear_storage,
             "ext_return" => SubstrateExternal::ext_return,
+            "ext_hash_sha2_256" => SubstrateExternal::ext_hash_sha2_256,
             "ext_hash_keccak_256" => SubstrateExternal::ext_hash_keccak_256,
+            "ext_hash_blake2_128" => SubstrateExternal::ext_hash_blake2_128,
+            "ext_hash_blake2_256" => SubstrateExternal::ext_hash_blake2_256,
             "ext_println" => SubstrateExternal::ext_println,
             "ext_call" => SubstrateExternal::ext_call,
             "ext_instantiate" => SubstrateExternal::ext_instantiate,

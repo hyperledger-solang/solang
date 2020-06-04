@@ -1145,3 +1145,71 @@ fn payable_functions() {
         "fallback function must be declared external"
     );
 }
+
+#[test]
+fn hash_tests() {
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            function test() public {
+                bytes32 hash = keccak256("Hello, World!");
+            
+                assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            function test() public {
+                bytes32 hash = sha256("Hello, World!");
+            
+                assert(hash == hex"dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            function test() public {
+                bytes32 hash = blake2_256("Hello, World!");
+            
+                assert(hash == hex"511bc81dde11180838c562c82bb35f3223f46061ebde4a955c27b3f489cf1e03");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            function test() public {
+                bytes16 hash = blake2_128("Hello, World!");
+            
+                assert(hash == hex"3895c59e4aeb0903396b5be3fbec69fe");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            function test() public {
+                bytes20 hash = ripemd160("Hello, World!");
+            
+                assert(hash == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+}

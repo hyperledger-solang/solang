@@ -9,6 +9,7 @@ use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
 use parser::ast;
 use resolver;
+use resolver::cfg::HashTy;
 use std::collections::HashMap;
 
 use super::{Contract, TargetRuntime};
@@ -47,6 +48,9 @@ impl SubstrateTarget {
             "ext_get_storage",
             "ext_clear_storage",
             "ext_hash_keccak_256",
+            "ext_hash_sha2_256",
+            "ext_hash_blake2_128",
+            "ext_hash_blake2_256",
             "ext_return",
             "ext_println",
             "ext_instantiate",
@@ -162,6 +166,69 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_hash_keccak_256",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // src_ptr
+                    contract.context.i32_type().into(), // len
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // dest_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_hash_sha2_256",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // src_ptr
+                    contract.context.i32_type().into(), // len
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // dest_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_hash_blake2_128",
+            contract.context.void_type().fn_type(
+                &[
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // src_ptr
+                    contract.context.i32_type().into(), // len
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // dest_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_hash_blake2_256",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -2491,5 +2558,59 @@ impl TargetRuntime for SubstrateTarget {
             ],
             "terminated",
         );
+    }
+
+    /// Crypto Hash
+    fn hash<'b>(
+        &self,
+        contract: &Contract<'b>,
+        hash: HashTy,
+        input: PointerValue<'b>,
+        input_len: IntValue<'b>,
+    ) -> IntValue<'b> {
+        let (fname, hashlen) = match hash {
+            HashTy::Keccak256 => ("ext_hash_keccak_256", 32),
+            HashTy::Ripemd160 => ("ripemd160", 20),
+            HashTy::Sha256 => ("ext_hash_sha2_256", 32),
+            HashTy::Blake2_128 => ("ext_hash_blake2_128", 16),
+            HashTy::Blake2_256 => ("ext_hash_blake2_256", 32),
+        };
+
+        let res = contract.builder.build_array_alloca(
+            contract.context.i8_type(),
+            contract.context.i32_type().const_int(hashlen, false),
+            "res",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function(fname).unwrap(),
+            &[input.into(), input_len.into(), res.into()],
+            "hash",
+        );
+
+        // bytes32 needs to reverse bytes
+        let temp = contract.builder.build_alloca(
+            contract.llvm_type(&resolver::Type::Bytes(hashlen as u8)),
+            "hash",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("__beNtoleN").unwrap(),
+            &[
+                res.into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        temp,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(hashlen, false).into(),
+            ],
+            "",
+        );
+
+        contract.builder.build_load(temp, "hash").into_int_value()
     }
 }

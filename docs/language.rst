@@ -1921,6 +1921,21 @@ Assert takes a boolean argument. If that evaluates to false, execution is aborte
         }
     }
 
+blake2_128(bytes)
+_________________
+
+This returns the ``bytes16`` blake2_128 hash of the bytes. This function is only available on Parity Substrate.
+
+blake2_256(bytes)
+_________________
+
+This returns the ``bytes32`` blake2_256 hash of the bytes. This function is only available on Parity Substrate.
+
+keccak256(bytes)
+________________
+
+This returns the ``bytes32`` keccak256 hash of the bytes.
+
 print(string)
 _____________
 
@@ -1981,6 +1996,16 @@ to identify what the problem is.
             require(foobar != address(0), "foobar must a valid address");
         }
     }
+
+ripemd(bytes)
+_____________
+
+This returns the ``bytes20`` ripemd160 hash of the bytes.
+
+sha256(bytes)
+_____________
+
+This returns the ``bytes32`` sha256 hash of the bytes.
 
 .. _selfdestruct:
 
