@@ -1,5 +1,6 @@
 use parser::ast;
 use resolver;
+use resolver::cfg::HashTy;
 use std::cell::RefCell;
 use std::str;
 
@@ -1476,5 +1477,121 @@ impl TargetRuntime for EwasmTarget {
                 .into()],
             "terminated",
         );
+    }
+
+    /// Crypto Hash
+    fn hash<'b>(
+        &self,
+        contract: &Contract<'b>,
+        hash: HashTy,
+        input: PointerValue<'b>,
+        input_len: IntValue<'b>,
+    ) -> IntValue<'b> {
+        let (precompile, hashlen) = match hash {
+            HashTy::Keccak256 => (0, 32),
+            HashTy::Ripemd160 => (3, 20),
+            HashTy::Sha256 => (2, 32),
+            _ => unreachable!(),
+        };
+
+        let res = contract.builder.build_array_alloca(
+            contract.context.i8_type(),
+            contract.context.i32_type().const_int(hashlen, false),
+            "res",
+        );
+
+        if hash == HashTy::Keccak256 {
+            contract.builder.build_call(
+                contract.module.get_function("sha3").unwrap(),
+                &[
+                    input.into(),
+                    input_len.into(),
+                    res.into(),
+                    contract.context.i32_type().const_int(hashlen, false).into(),
+                ],
+                "",
+            );
+        } else {
+            let balance = contract
+                .builder
+                .build_alloca(contract.value_type(), "balance");
+
+            contract
+                .builder
+                .build_store(balance, contract.value_type().const_zero());
+
+            let address = contract
+                .builder
+                .build_alloca(contract.address_type(), "address");
+
+            contract.builder.build_store(
+                address,
+                contract.address_type().const_int(precompile, false),
+            );
+
+            contract.builder.build_call(
+                contract.module.get_function("call").unwrap(),
+                &[
+                    contract.context.i64_type().const_zero().into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            address,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address",
+                        )
+                        .into(),
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            balance,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "balance",
+                        )
+                        .into(),
+                    input.into(),
+                    input_len.into(),
+                ],
+                "",
+            );
+
+            // We're not checking return value or returnDataSize;
+            // assuming precompiles always succeed
+
+            contract.builder.build_call(
+                contract.module.get_function("returnDataCopy").unwrap(),
+                &[
+                    res.into(),
+                    contract.context.i32_type().const_zero().into(),
+                    contract.context.i32_type().const_int(hashlen, false).into(),
+                ],
+                "",
+            );
+        }
+
+        // bytes32 needs to reverse bytes
+        let temp = contract.builder.build_alloca(
+            contract.llvm_type(&resolver::Type::Bytes(hashlen as u8)),
+            "hash",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("__beNtoleN").unwrap(),
+            &[
+                res.into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        temp,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract.context.i32_type().const_int(hashlen, false).into(),
+            ],
+            "",
+        );
+
+        contract.builder.build_load(temp, "hash").into_int_value()
     }
 }

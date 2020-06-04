@@ -1,5 +1,6 @@
 use parser::ast;
 use resolver;
+use resolver::cfg::HashTy;
 use std::str;
 
 use inkwell::context::Context;
@@ -772,5 +773,16 @@ impl TargetRuntime for SabreTarget {
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) {
         panic!("Sabre does not have the concept of selfdestruct");
+    }
+
+    /// Crypto Hash
+    fn hash<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _hash: HashTy,
+        _input: PointerValue<'b>,
+        _input_len: IntValue<'b>,
+    ) -> IntValue<'b> {
+        unimplemented!()
     }
 }

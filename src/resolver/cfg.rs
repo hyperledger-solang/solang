@@ -2,6 +2,7 @@ use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::LinkedList;
+use std::fmt;
 use std::str;
 
 use hex;
@@ -97,6 +98,32 @@ pub enum Instr {
     SelfDestruct {
         recipient: Expression,
     },
+    Hash {
+        res: usize,
+        hash: HashTy,
+        expr: Expression,
+    },
+}
+
+#[derive(Clone, PartialEq)]
+pub enum HashTy {
+    Keccak256,
+    Ripemd160,
+    Sha256,
+    Blake2_256,
+    Blake2_128,
+}
+
+impl fmt::Display for HashTy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            HashTy::Keccak256 => write!(f, "keccak256"),
+            HashTy::Ripemd160 => write!(f, "ripemd160"),
+            HashTy::Sha256 => write!(f, "sha256"),
+            HashTy::Blake2_128 => write!(f, "blake2_128"),
+            HashTy::Blake2_256 => write!(f, "blake2_256"),
+        }
+    }
 }
 
 pub struct BasicBlock {
@@ -684,6 +711,12 @@ impl ControlFlowGraph {
             Instr::SelfDestruct { recipient } => format!(
                 "selfdestruct {}",
                 self.expr_to_string(contract, ns, recipient)
+            ),
+            Instr::Hash { res, hash, expr } => format!(
+                "%{} = hash {} {}",
+                self.vars[*res].id.name,
+                hash,
+                self.expr_to_string(contract, ns, expr)
             ),
         }
     }

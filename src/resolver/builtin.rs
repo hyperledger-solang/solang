@@ -1,6 +1,7 @@
-use super::cfg::{ControlFlowGraph, Instr, Vartable};
+use super::cfg::{ControlFlowGraph, HashTy, Instr, Vartable};
 use super::expression::Expression;
 use super::{FunctionDecl, Namespace, Parameter};
+use crate::Target;
 use parser::ast;
 use resolver;
 
@@ -10,6 +11,7 @@ pub fn add_builtin_function(ns: &mut Namespace, contract_no: usize) {
     add_revert(ns, contract_no);
     add_require(ns, contract_no);
     add_selfdestruct(ns, contract_no);
+    add_crypto_hash(ns, contract_no);
 }
 
 fn add_assert(ns: &mut Namespace, contract_no: usize) {
@@ -369,4 +371,112 @@ fn add_selfdestruct(ns: &mut Namespace, contract_no: usize) {
         resolver::Symbol::Function(vec![(id.loc, pos)]),
         &mut errors,
     );
+}
+
+fn add_crypto_hash(ns: &mut Namespace, contract_no: usize) {
+    struct HashFunction {
+        function_name: &'static str,
+        hash_ty: HashTy,
+        ret_ty: resolver::Type,
+        target: Option<Target>,
+    };
+
+    for hash in &[
+        HashFunction {
+            function_name: "keccak256",
+            hash_ty: HashTy::Keccak256,
+            ret_ty: resolver::Type::Bytes(32),
+            target: None,
+        },
+        HashFunction {
+            function_name: "ripemd160",
+            hash_ty: HashTy::Ripemd160,
+            ret_ty: resolver::Type::Bytes(20),
+            target: None,
+        },
+        HashFunction {
+            function_name: "sha256",
+            hash_ty: HashTy::Sha256,
+            ret_ty: resolver::Type::Bytes(32),
+            target: None,
+        },
+        HashFunction {
+            function_name: "blake2_128",
+            hash_ty: HashTy::Blake2_128,
+            ret_ty: resolver::Type::Bytes(16),
+            target: Some(Target::Substrate),
+        },
+        HashFunction {
+            function_name: "blake2_256",
+            hash_ty: HashTy::Blake2_256,
+            ret_ty: resolver::Type::Bytes(32),
+            target: Some(Target::Substrate),
+        },
+    ] {
+        if let Some(target) = hash.target {
+            if target != ns.target {
+                continue;
+            }
+        }
+
+        let id = ast::Identifier {
+            loc: ast::Loc(0, 0),
+            name: hash.function_name.to_owned(),
+        };
+
+        let mut assert = FunctionDecl::new(
+            ast::Loc(0, 0),
+            hash.function_name.to_owned(),
+            vec![],
+            ast::FunctionTy::Function,
+            None,
+            None,
+            ast::Visibility::Private(ast::Loc(0, 0)),
+            vec![Parameter {
+                name: "bs".to_owned(),
+                ty: resolver::Type::DynamicBytes,
+            }],
+            vec![Parameter {
+                name: "hash".to_owned(),
+                ty: hash.ret_ty.clone(),
+            }],
+            ns,
+        );
+
+        let mut errors = Vec::new();
+        let mut vartab = Vartable::new();
+        let mut cfg = ControlFlowGraph::new();
+
+        let res = vartab.temp_anonymous(&resolver::Type::Bytes(32));
+
+        cfg.add(
+            &mut vartab,
+            Instr::Hash {
+                res,
+                hash: hash.hash_ty.clone(),
+                expr: Expression::FunctionArg(ast::Loc(0, 0), 0),
+            },
+        );
+        cfg.add(
+            &mut vartab,
+            Instr::Return {
+                value: vec![Expression::Variable(ast::Loc(0, 0), res)],
+            },
+        );
+
+        cfg.vars = vartab.drain();
+
+        assert.cfg = Some(Box::new(cfg));
+
+        let pos = ns.contracts[contract_no].functions.len();
+
+        ns.contracts[contract_no].functions.push(assert);
+
+        ns.add_symbol(
+            Some(contract_no),
+            &id,
+            resolver::Symbol::Function(vec![(id.loc, pos)]),
+            &mut errors,
+        );
+    }
 }
