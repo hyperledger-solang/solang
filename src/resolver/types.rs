@@ -1,12 +1,12 @@
 use super::{Contract, EnumDecl, Namespace, StructDecl, StructField, Symbol, Type};
 use output::Output;
-use parser::ast;
+use parser::pt;
 use std::collections::HashMap;
 use Target;
 
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
 /// structs as fields, including ones that have not been declared yet.
-pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) {
+pub fn resolve(s: &pt::SourceUnit, target: Target) -> (Namespace, Vec<Output>) {
     let mut errors = Vec::new();
     let mut ns = Namespace::new(
         target,
@@ -23,20 +23,20 @@ pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
     // done
     for part in &s.0 {
         match part {
-            ast::SourceUnitPart::PragmaDirective(name, value) => {
+            pt::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
                     errors.push(Output::info(
-                        ast::Loc(name.loc.0, value.loc.1),
+                        pt::Loc(name.loc.0, value.loc.1),
                         "pragma ‘solidity’ is ignored".to_string(),
                     ));
                 } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
                     errors.push(Output::info(
-                        ast::Loc(name.loc.0, value.loc.1),
+                        pt::Loc(name.loc.0, value.loc.1),
                         "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
                     ));
                 } else {
                     errors.push(Output::warning(
-                        ast::Loc(name.loc.0, value.loc.1),
+                        pt::Loc(name.loc.0, value.loc.1),
                         format!(
                             "unknown pragma ‘{}’ with value ‘{}’ ignored",
                             name.name, value.string
@@ -44,13 +44,13 @@ pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
                     ));
                 }
             }
-            ast::SourceUnitPart::ContractDefinition(def) => {
+            pt::SourceUnitPart::ContractDefinition(def) => {
                 resolve_contract(&def, &mut structs, &mut errors, &mut ns);
             }
-            ast::SourceUnitPart::EnumDefinition(def) => {
+            pt::SourceUnitPart::EnumDefinition(def) => {
                 let _ = enum_decl(&def, None, &mut ns, &mut errors);
             }
-            ast::SourceUnitPart::StructDefinition(def) => {
+            pt::SourceUnitPart::StructDefinition(def) => {
                 if ns.add_symbol(
                     None,
                     &def.name,
@@ -122,8 +122,8 @@ pub fn resolve(s: &ast::SourceUnit, target: Target) -> (Namespace, Vec<Output>) 
 
 /// Resolve all the types in a contract
 fn resolve_contract<'a>(
-    def: &'a ast::ContractDefinition,
-    structs: &mut Vec<(StructDecl, &'a ast::StructDefinition, Option<usize>)>,
+    def: &'a pt::ContractDefinition,
+    structs: &mut Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)>,
     errors: &mut Vec<Output>,
     ns: &mut Namespace,
 ) -> bool {
@@ -139,12 +139,12 @@ fn resolve_contract<'a>(
 
     for parts in &def.parts {
         match parts {
-            ast::ContractPart::EnumDefinition(ref e) => {
+            pt::ContractPart::EnumDefinition(ref e) => {
                 if !enum_decl(e, Some(contract_no), ns, errors) {
                     broken = true;
                 }
             }
-            ast::ContractPart::StructDefinition(ref s) => {
+            pt::ContractPart::StructDefinition(ref s) => {
                 if ns.add_symbol(
                     Some(contract_no),
                     &s.name,
@@ -175,7 +175,7 @@ fn resolve_contract<'a>(
 /// contract, so that we can continue producing compiler messages for the remainder
 /// of the contract, even if the struct contains an invalid definition.
 pub fn struct_decl(
-    def: &ast::StructDefinition,
+    def: &pt::StructDefinition,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     errors: &mut Vec<Output>,
@@ -249,7 +249,7 @@ pub fn struct_decl(
 /// Parse enum declaration. If the declaration is invalid, it is still generated
 /// so that we can continue parsing, with errors recorded.
 fn enum_decl(
-    enum_: &ast::EnumDefinition,
+    enum_: &pt::EnumDefinition,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     errors: &mut Vec<Output>,
@@ -278,7 +278,7 @@ fn enum_decl(
     }
 
     // check for duplicates
-    let mut entries: HashMap<String, (ast::Loc, usize)> = HashMap::new();
+    let mut entries: HashMap<String, (pt::Loc, usize)> = HashMap::new();
 
     for (i, e) in enum_.values.iter().enumerate() {
         if let Some(prev) = entries.get(&e.name.to_string()) {
@@ -323,10 +323,10 @@ fn enum_decl(
 
 #[test]
 fn enum_256values_is_uint8() {
-    let mut e = ast::EnumDefinition {
+    let mut e = pt::EnumDefinition {
         doc: vec![],
-        name: ast::Identifier {
-            loc: ast::Loc(0, 0),
+        name: pt::Identifier {
+            loc: pt::Loc(0, 0),
             name: "foo".into(),
         },
         values: Vec::new(),
@@ -334,8 +334,8 @@ fn enum_256values_is_uint8() {
 
     let mut ns = Namespace::new(Target::Ewasm, 20);
 
-    e.values.push(ast::Identifier {
-        loc: ast::Loc(0, 0),
+    e.values.push(pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "first".into(),
     });
 
@@ -343,8 +343,8 @@ fn enum_256values_is_uint8() {
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
-        e.values.push(ast::Identifier {
-            loc: ast::Loc(0, 0),
+        e.values.push(pt::Identifier {
+            loc: pt::Loc(0, 0),
             name: format!("val{}", i),
         })
     }
@@ -355,8 +355,8 @@ fn enum_256values_is_uint8() {
     assert!(enum_decl(&e, None, &mut ns, &mut Vec::new()));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
-    e.values.push(ast::Identifier {
-        loc: ast::Loc(0, 0),
+    e.values.push(pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "another".into(),
     });
 

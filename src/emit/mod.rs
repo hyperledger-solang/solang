@@ -1,5 +1,5 @@
 use hex;
-use parser::ast;
+use parser::pt;
 use resolver;
 use resolver::cfg;
 use resolver::expression::{Expression, StringLocation};
@@ -680,10 +680,10 @@ impl<'a> Contract<'a> {
 
         for resolver_func in &self.contract.functions {
             let name = match resolver_func.ty {
-                ast::FunctionTy::Function => {
+                pt::FunctionTy::Function => {
                     format!("sol::function::{}", resolver_func.wasm_symbol(self.ns))
                 }
-                ast::FunctionTy::Constructor => {
+                pt::FunctionTy::Constructor => {
                     format!("sol::constructor{}", resolver_func.wasm_symbol(self.ns))
                 }
                 _ => format!("sol::{}", resolver_func.ty),
@@ -3191,7 +3191,7 @@ impl<'a> Contract<'a> {
     pub fn emit_function_dispatch<F>(
         &self,
         resolver_functions: &[resolver::FunctionDecl],
-        function_ty: ast::FunctionTy,
+        function_ty: pt::FunctionTy,
         functions: &[FunctionValue<'a>],
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,

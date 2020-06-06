@@ -7,7 +7,7 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
-use parser::ast;
+use parser::pt;
 use resolver;
 use resolver::cfg::HashTy;
 use std::collections::HashMap;
@@ -443,7 +443,7 @@ impl SubstrateTarget {
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
-            ast::FunctionTy::Constructor,
+            pt::FunctionTy::Constructor,
             &contract.functions,
             deploy_args,
             deploy_args_length,
@@ -476,7 +476,7 @@ impl SubstrateTarget {
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
-            ast::FunctionTy::Function,
+            pt::FunctionTy::Function,
             &contract.functions,
             call_args,
             call_args_length,

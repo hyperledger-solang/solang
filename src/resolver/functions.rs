@@ -1,10 +1,10 @@
 use super::{FunctionDecl, Namespace, Parameter, Symbol, Type};
 use output::Output;
-use parser::ast;
+use parser::pt;
 use Target;
 
 pub fn function_decl(
-    f: &ast::FunctionDefinition,
+    f: &pt::FunctionDefinition,
     i: usize,
     contract_no: usize,
     ns: &mut Namespace,
@@ -15,7 +15,7 @@ pub fn function_decl(
     // The parser allows constructors to have return values. This is so that we can give a
     // nicer error message than "returns unexpected"
     match f.ty {
-        ast::FunctionTy::Function => {
+        pt::FunctionTy::Function => {
             // Function name cannot be the same as the contract name
             if let Some(n) = &f.name {
                 if n.name == ns.contracts[contract_no].name {
@@ -33,7 +33,7 @@ pub fn function_decl(
                 return false;
             }
         }
-        ast::FunctionTy::Constructor => {
+        pt::FunctionTy::Constructor => {
             if !f.returns.is_empty() {
                 errors.push(Output::warning(
                     f.loc,
@@ -49,7 +49,7 @@ pub fn function_decl(
                 return false;
             }
         }
-        ast::FunctionTy::Fallback | ast::FunctionTy::Receive => {
+        pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
             if !f.returns.is_empty() {
                 errors.push(Output::warning(
                     f.loc,
@@ -74,12 +74,12 @@ pub fn function_decl(
         }
     }
 
-    let mut mutability: Option<ast::StateMutability> = None;
-    let mut visibility: Option<ast::Visibility> = None;
+    let mut mutability: Option<pt::StateMutability> = None;
+    let mut visibility: Option<pt::Visibility> = None;
 
     for a in &f.attributes {
         match &a {
-            ast::FunctionAttribute::StateMutability(m) => {
+            pt::FunctionAttribute::StateMutability(m) => {
                 if let Some(e) = &mutability {
                     errors.push(Output::error_with_note(
                         m.loc(),
@@ -93,7 +93,7 @@ pub fn function_decl(
 
                 mutability = Some(m.clone());
             }
-            ast::FunctionAttribute::Visibility(v) => {
+            pt::FunctionAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     errors.push(Output::error_with_note(
                         v.loc(),
@@ -116,15 +116,15 @@ pub fn function_decl(
             errors.push(Output::error(f.loc, "no visibility specified".to_string()));
             success = false;
             // continue processing while assuming it's a public
-            ast::Visibility::Public(ast::Loc(0, 0))
+            pt::Visibility::Public(pt::Loc(0, 0))
         }
     };
 
     // Reference types can't be passed through the ABI encoder/decoder, so
     // storage parameters/returns are only allowed in internal/private functions
     let storage_allowed = match visibility {
-        ast::Visibility::Internal(_) | ast::Visibility::Private(_) => {
-            if let Some(ast::StateMutability::Payable(loc)) = mutability {
+        pt::Visibility::Internal(_) | pt::Visibility::Private(_) => {
+            if let Some(pt::StateMutability::Payable(loc)) = mutability {
                 errors.push(Output::error(
                     loc,
                     "internal or private function cannot be payable".to_string(),
@@ -133,7 +133,7 @@ pub fn function_decl(
             }
             true
         }
-        ast::Visibility::Public(_) | ast::Visibility::External(_) => false,
+        pt::Visibility::Public(_) | pt::Visibility::External(_) => false,
     };
 
     let (params, params_success) = resolve_params(f, storage_allowed, contract_no, ns, errors);
@@ -162,7 +162,7 @@ pub fn function_decl(
         ns,
     );
 
-    if f.ty == ast::FunctionTy::Constructor {
+    if f.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
         if ns.target == Target::Ewasm {
             if let Some(prev) = ns.contracts[contract_no]
@@ -198,7 +198,7 @@ pub fn function_decl(
 
         // FIXME: Internal visibility is allowed on abstract contracts, but we don't support those yet
         match fdecl.visibility {
-            ast::Visibility::Public(_) => (),
+            pt::Visibility::Public(_) => (),
             _ => {
                 errors.push(Output::error(
                     f.loc,
@@ -209,14 +209,14 @@ pub fn function_decl(
         }
 
         match fdecl.mutability {
-            Some(ast::StateMutability::Pure(loc)) => {
+            Some(pt::StateMutability::Pure(loc)) => {
                 errors.push(Output::error(
                     loc,
                     "constructor cannot be declared pure".to_string(),
                 ));
                 return false;
             }
-            Some(ast::StateMutability::View(loc)) => {
+            Some(pt::StateMutability::View(loc)) => {
                 errors.push(Output::error(
                     loc,
                     "constructor cannot be declared view".to_string(),
@@ -246,7 +246,7 @@ pub fn function_decl(
         ns.contracts[contract_no].functions.push(fdecl);
 
         true
-    } else if f.ty == ast::FunctionTy::Receive || f.ty == ast::FunctionTy::Fallback {
+    } else if f.ty == pt::FunctionTy::Receive || f.ty == pt::FunctionTy::Fallback {
         if let Some(prev) = ns.contracts[contract_no]
             .functions
             .iter()
@@ -261,7 +261,7 @@ pub fn function_decl(
             return false;
         }
 
-        if let ast::Visibility::External(_) = fdecl.visibility {
+        if let pt::Visibility::External(_) = fdecl.visibility {
             // ok
         } else {
             errors.push(Output::error(
@@ -271,15 +271,15 @@ pub fn function_decl(
             return false;
         }
 
-        if let Some(ast::StateMutability::Payable(_)) = fdecl.mutability {
-            if f.ty == ast::FunctionTy::Fallback {
+        if let Some(pt::StateMutability::Payable(_)) = fdecl.mutability {
+            if f.ty == pt::FunctionTy::Fallback {
                 errors.push(Output::error(
                     f.loc,
                     format!("{} function must not be declare payable, use ‘receive() external payable’ instead", f.ty),
                 ));
                 return false;
             }
-        } else if f.ty == ast::FunctionTy::Receive {
+        } else if f.ty == pt::FunctionTy::Receive {
             errors.push(Output::error(
                 f.loc,
                 format!("{} function must be declared payable", f.ty),
@@ -334,7 +334,7 @@ pub fn function_decl(
 
 /// Resolve the parameters
 fn resolve_params(
-    f: &ast::FunctionDefinition,
+    f: &pt::FunctionDefinition,
     storage_allowed: bool,
     contract_no: usize,
     ns: &mut Namespace,
@@ -366,7 +366,7 @@ fn resolve_params(
                     }
 
                     ty
-                } else if let Some(ast::StorageLocation::Storage(loc)) = p.storage {
+                } else if let Some(pt::StorageLocation::Storage(loc)) = p.storage {
                     if storage_allowed {
                         Type::StorageRef(Box::new(ty))
                     } else {
@@ -406,7 +406,7 @@ fn resolve_params(
 
 /// Resolve the return values
 fn resolve_returns(
-    f: &ast::FunctionDefinition,
+    f: &pt::FunctionDefinition,
     storage_allowed: bool,
     contract_no: usize,
     ns: &mut Namespace,
@@ -440,7 +440,7 @@ fn resolve_returns(
                     ty
                 } else {
                     match r.storage {
-                        Some(ast::StorageLocation::Calldata(loc)) => {
+                        Some(pt::StorageLocation::Calldata(loc)) => {
                             errors.push(Output::error(
                                 loc,
                                 "data location ‘calldata’ can not be used for return types"
@@ -449,7 +449,7 @@ fn resolve_returns(
                             success = false;
                             ty
                         }
-                        Some(ast::StorageLocation::Storage(loc)) => {
+                        Some(pt::StorageLocation::Storage(loc)) => {
                             if storage_allowed {
                                 Type::StorageRef(Box::new(ty))
                             } else {
@@ -499,13 +499,13 @@ fn signatures() {
     let ns = Namespace::new(Target::Ewasm, 20);
 
     let fdecl = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "foo".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         Some(0),
         None,
-        ast::Visibility::Public(ast::Loc(0, 0)),
+        pt::Visibility::Public(pt::Loc(0, 0)),
         vec![
             Parameter {
                 name: "".to_string(),

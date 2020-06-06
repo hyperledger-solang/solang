@@ -6,14 +6,14 @@ use num_traits::Zero;
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{cast, expression, Expression};
 use output::Output;
-use parser::ast;
+use parser::pt;
 use resolver;
 
 /// Given a storage slot which is the start of the array, calculate the
 /// offset of the array element. This function exists to avoid doing
 /// 256 bit multiply if possible.
 pub fn array_offset(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     start: Expression,
     index: Expression,
     elem_ty: resolver::Type,
@@ -55,8 +55,8 @@ pub fn array_offset(
 
 /// Resolve delete statement
 pub fn delete(
-    loc: &ast::Loc,
-    var: &ast::Expression,
+    loc: &pt::Loc,
+    var: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -106,11 +106,11 @@ pub fn delete(
 
 /// Push() method on dynamic array in storage
 pub fn array_push(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     var_expr: Expression,
-    func: &ast::Identifier,
+    func: &pt::Identifier,
     ty: &resolver::Type,
-    args: &[ast::Expression],
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -232,11 +232,11 @@ pub fn array_push(
 
 /// Pop() method on dynamic array in storage
 pub fn array_pop(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     var_expr: Expression,
-    func: &ast::Identifier,
+    func: &pt::Identifier,
     ty: &resolver::Type,
-    args: &[ast::Expression],
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     ns: &resolver::Namespace,
     vartab: &mut Option<&mut Vartable>,
@@ -364,10 +364,10 @@ pub fn array_pop(
 
 /// Push() method on dynamic bytes in storage
 pub fn bytes_push(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     var_expr: Expression,
-    func: &ast::Identifier,
-    args: &[ast::Expression],
+    func: &pt::Identifier,
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -427,10 +427,10 @@ pub fn bytes_push(
 
 /// Pop() method on dynamic bytes in storage
 pub fn bytes_pop(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     var_expr: Expression,
-    func: &ast::Identifier,
-    args: &[ast::Expression],
+    func: &pt::Identifier,
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
@@ -452,10 +452,10 @@ pub fn bytes_pop(
 
 /// Calculate storage subscript
 pub fn mapping_subscript(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     mapping: Expression,
     mapping_ty: &resolver::Type,
-    index: &ast::Expression,
+    index: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,

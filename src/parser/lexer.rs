@@ -9,7 +9,7 @@ use std::iter::Peekable;
 use std::str::CharIndices;
 use unicode_xid::UnicodeXID;
 
-use super::ast::Loc;
+use super::pt::Loc;
 
 pub type Spanned<Token, Loc, Error> = Result<(Loc, Token, Loc), Error>;
 

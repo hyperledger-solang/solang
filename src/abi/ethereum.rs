@@ -1,6 +1,5 @@
 // ethereum style ABIs
-
-use parser::ast;
+use parser::pt;
 use resolver::{Namespace, Type};
 use serde::Serialize;
 
@@ -63,7 +62,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         .functions
         .iter()
         .filter(|f| match f.visibility {
-            ast::Visibility::Public(_) | ast::Visibility::External(_) => true,
+            pt::Visibility::Public(_) | pt::Visibility::External(_) => true,
             _ => false,
         })
         .map(|f| ABI {
