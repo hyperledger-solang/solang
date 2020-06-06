@@ -8,7 +8,7 @@ use std::str;
 use hex;
 use output;
 use output::Output;
-use parser::ast;
+use parser::pt;
 use resolver;
 use resolver::expression::{
     cast, constructor_named_args, expression, function_call_expr, named_function_call_expr, new,
@@ -761,7 +761,7 @@ impl ControlFlowGraph {
 }
 
 pub fn generate_cfg(
-    ast_f: &ast::FunctionDefinition,
+    ast_f: &pt::FunctionDefinition,
     resolve_f: &resolver::FunctionDecl,
     contract_no: usize,
     ns: &resolver::Namespace,
@@ -822,8 +822,8 @@ pub fn generate_cfg(
             } else {
                 // this variable can never be assigned but will need a zero value
                 let pos = vartab.temp(
-                    &ast::Identifier {
-                        loc: ast::Loc(0, 0),
+                    &pt::Identifier {
+                        loc: pt::Loc(0, 0),
                         name: format!("arg{}", i),
                     },
                     &resolve_f.returns[i].ty.clone(),
@@ -869,7 +869,7 @@ pub fn generate_cfg(
 }
 
 fn check_return(
-    f: &ast::FunctionDefinition,
+    f: &pt::FunctionDefinition,
     cfg: &mut ControlFlowGraph,
     vartab: &Vartable,
     errors: &mut Vec<output::Output>,
@@ -890,7 +890,7 @@ fn check_return(
             value: vartab
                 .returns
                 .iter()
-                .map(|pos| Expression::Variable(ast::Loc(0, 0), *pos))
+                .map(|pos| Expression::Variable(pt::Loc(0, 0), *pos))
                 .collect(),
         });
 
@@ -906,8 +906,8 @@ fn check_return(
 
 /// Resolve the type of a variable declaration
 pub fn resolve_var_decl_ty(
-    ty: &ast::Expression,
-    storage: &Option<ast::StorageLocation>,
+    ty: &pt::Expression,
+    storage: &Option<pt::StorageLocation>,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
@@ -926,7 +926,7 @@ pub fn resolve_var_decl_ty(
             return Err(());
         }
 
-        if let ast::StorageLocation::Storage(_) = storage {
+        if let pt::StorageLocation::Storage(_) = storage {
             var_ty = resolver::Type::StorageRef(Box::new(var_ty));
         }
 
@@ -955,7 +955,7 @@ pub fn resolve_var_decl_ty(
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 fn statement(
-    stmt: &ast::Statement,
+    stmt: &pt::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -965,7 +965,7 @@ fn statement(
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
     match stmt {
-        ast::Statement::VariableDefinition(_, decl, init) => {
+        pt::Statement::VariableDefinition(_, decl, init) => {
             let var_ty =
                 resolve_var_decl_ty(&decl.ty, &decl.storage, Some(contract_no), ns, errors)?;
 
@@ -995,7 +995,7 @@ fn statement(
             }
             Ok(true)
         }
-        ast::Statement::Block(_, bs) => {
+        pt::Statement::Block(_, bs) => {
             vartab.new_scope();
             let mut reachable = true;
 
@@ -1014,7 +1014,7 @@ fn statement(
 
             Ok(reachable)
         }
-        ast::Statement::Return(loc, None) => {
+        pt::Statement::Return(loc, None) => {
             let no_returns = f.returns.len();
 
             if vartab.returns.len() != no_returns {
@@ -1034,17 +1034,17 @@ fn statement(
                     value: vartab
                         .returns
                         .iter()
-                        .map(|pos| Expression::Variable(ast::Loc(0, 0), *pos))
+                        .map(|pos| Expression::Variable(pt::Loc(0, 0), *pos))
                         .collect(),
                 },
             );
 
             Ok(false)
         }
-        ast::Statement::Return(loc, Some(returns)) => {
+        pt::Statement::Return(loc, Some(returns)) => {
             return_with_values(returns, loc, f, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Statement::Expression(_, expr) => {
+        pt::Statement::Expression(_, expr) => {
             let (expr, _) =
                 expression(expr, cfg, Some(contract_no), ns, &mut Some(vartab), errors)?;
 
@@ -1065,7 +1065,7 @@ fn statement(
                 }
             }
         }
-        ast::Statement::If(_, cond, then_stmt, None) => if_then(
+        pt::Statement::If(_, cond, then_stmt, None) => if_then(
             cond,
             then_stmt,
             f,
@@ -1076,7 +1076,7 @@ fn statement(
             loops,
             errors,
         ),
-        ast::Statement::If(_, cond, then_stmt, Some(else_stmt)) => if_then_else(
+        pt::Statement::If(_, cond, then_stmt, Some(else_stmt)) => if_then_else(
             cond,
             then_stmt,
             else_stmt,
@@ -1088,7 +1088,7 @@ fn statement(
             loops,
             errors,
         ),
-        ast::Statement::Break(_) => match loops.do_break() {
+        pt::Statement::Break(_) => match loops.do_break() {
             Some(bb) => {
                 cfg.add(vartab, Instr::Branch { bb });
                 Ok(false)
@@ -1101,7 +1101,7 @@ fn statement(
                 Err(())
             }
         },
-        ast::Statement::Continue(_) => match loops.do_continue() {
+        pt::Statement::Continue(_) => match loops.do_continue() {
             Some(bb) => {
                 cfg.add(vartab, Instr::Branch { bb });
                 Ok(false)
@@ -1114,7 +1114,7 @@ fn statement(
                 Err(())
             }
         },
-        ast::Statement::DoWhile(_, body_stmt, cond_expr) => {
+        pt::Statement::DoWhile(_, body_stmt, cond_expr) => {
             let body = cfg.new_basic_block("body".to_string());
             let cond = cfg.new_basic_block("conf".to_string());
             let end = cfg.new_basic_block("enddowhile".to_string());
@@ -1180,7 +1180,7 @@ fn statement(
 
             Ok(body_reachable || control.no_breaks > 0)
         }
-        ast::Statement::While(_, cond_expr, body_stmt) => {
+        pt::Statement::While(_, cond_expr, body_stmt) => {
             let cond = cfg.new_basic_block("cond".to_string());
             let body = cfg.new_basic_block("body".to_string());
             let end = cfg.new_basic_block("endwhile".to_string());
@@ -1238,7 +1238,7 @@ fn statement(
 
             Ok(true)
         }
-        ast::Statement::For(_, init_stmt, None, next_stmt, body_stmt) => {
+        pt::Statement::For(_, init_stmt, None, next_stmt, body_stmt) => {
             let body = cfg.new_basic_block("body".to_string());
             let next = cfg.new_basic_block("next".to_string());
             let end = cfg.new_basic_block("endfor".to_string());
@@ -1303,7 +1303,7 @@ fn statement(
 
             Ok(control.no_breaks > 0)
         }
-        ast::Statement::For(_, init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
+        pt::Statement::For(_, init_stmt, Some(cond_expr), next_stmt, body_stmt) => {
             let body = cfg.new_basic_block("body".to_string());
             let cond = cfg.new_basic_block("cond".to_string());
             let next = cfg.new_basic_block("next".to_string());
@@ -1401,10 +1401,10 @@ fn statement(
 
             Ok(true)
         }
-        ast::Statement::Try(_, _, _, _, _) => {
+        pt::Statement::Try(_, _, _, _, _) => {
             try_catch(stmt, f, cfg, contract_no, ns, vartab, loops, errors)
         }
-        ast::Statement::Args(_, _) => {
+        pt::Statement::Args(_, _) => {
             errors.push(Output::error(
                 stmt.loc(),
                 "expected code block, not list of named arguments".to_string(),
@@ -1417,8 +1417,8 @@ fn statement(
 
 /// Parse return statement with values
 fn return_with_values(
-    returns: &ast::Expression,
-    loc: &ast::Loc,
+    returns: &pt::Expression,
+    loc: &pt::Loc,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1476,8 +1476,8 @@ fn return_with_values(
 
 /// Parse if-then-no-else
 fn if_then(
-    cond: &ast::Expression,
-    then_stmt: &ast::Statement,
+    cond: &pt::Expression,
+    then_stmt: &pt::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1529,9 +1529,9 @@ fn if_then(
 
 /// Parse if-then-else
 fn if_then_else(
-    cond: &ast::Expression,
-    then_stmt: &ast::Statement,
-    else_stmt: &ast::Statement,
+    cond: &pt::Expression,
+    then_stmt: &pt::Statement,
+    else_stmt: &pt::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1598,7 +1598,7 @@ fn if_then_else(
 
 /// Resolve try catch statement
 fn try_catch(
-    try: &ast::Statement,
+    try: &pt::Statement,
     f: &resolver::FunctionDecl,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
@@ -1607,11 +1607,11 @@ fn try_catch(
     loops: &mut LoopScopes,
     errors: &mut Vec<output::Output>,
 ) -> Result<bool, ()> {
-    if let ast::Statement::Try(_, expr, returns_and_ok, error_stmt, catch_stmt) = &try {
+    if let pt::Statement::Try(_, expr, returns_and_ok, error_stmt, catch_stmt) = &try {
         let mut expr = expr;
         let mut ok = None;
 
-        while let ast::Expression::FunctionCallBlock(_, e, block) = expr {
+        while let pt::Expression::FunctionCallBlock(_, e, block) = expr {
             if ok.is_some() {
                 errors.push(Output::error(
                     block.loc(),
@@ -1626,7 +1626,7 @@ fn try_catch(
         }
 
         let fcall = match expr {
-            ast::Expression::FunctionCall(loc, ty, args) => function_call_expr(
+            pt::Expression::FunctionCall(loc, ty, args) => function_call_expr(
                 loc,
                 ty,
                 args,
@@ -1636,7 +1636,7 @@ fn try_catch(
                 &mut Some(vartab),
                 errors,
             )?,
-            ast::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
+            pt::Expression::NamedFunctionCall(loc, ty, args) => named_function_call_expr(
                 loc,
                 ty,
                 args,
@@ -1646,10 +1646,10 @@ fn try_catch(
                 &mut Some(vartab),
                 errors,
             )?,
-            ast::Expression::New(loc, call) => {
+            pt::Expression::New(loc, call) => {
                 let mut call = call.as_ref();
 
-                while let ast::Expression::FunctionCallBlock(_, expr, block) = call {
+                while let pt::Expression::FunctionCallBlock(_, expr, block) = call {
                     if ok.is_some() {
                         errors.push(Output::error(
                             block.loc(),
@@ -1664,7 +1664,7 @@ fn try_catch(
                 }
 
                 match call {
-                    ast::Expression::FunctionCall(_, ty, args) => new(
+                    pt::Expression::FunctionCall(_, ty, args) => new(
                         loc,
                         ty,
                         args,
@@ -1674,7 +1674,7 @@ fn try_catch(
                         &mut Some(vartab),
                         errors,
                     )?,
-                    ast::Expression::NamedFunctionCall(_, ty, args) => constructor_named_args(
+                    pt::Expression::NamedFunctionCall(_, ty, args) => constructor_named_args(
                         loc,
                         ty,
                         args,
@@ -1719,7 +1719,7 @@ fn try_catch(
                 let pos = expr.loc().1;
 
                 errors.push(Output::error(
-                    ast::Loc(pos, pos),
+                    pt::Loc(pos, pos),
                     "code block missing for no catch".to_string(),
                 ));
                 return Err(());
@@ -1727,8 +1727,8 @@ fn try_catch(
         };
 
         let success = vartab.temp(
-            &ast::Identifier {
-                loc: ast::Loc(0, 0),
+            &pt::Identifier {
+                loc: pt::Loc(0, 0),
                 name: "success".to_owned(),
             },
             &resolver::Type::Bool,
@@ -1766,7 +1766,7 @@ fn try_catch(
                 cfg.add(
                     vartab,
                     Instr::BranchCond {
-                        cond: Expression::Variable(ast::Loc(0, 0), success),
+                        cond: Expression::Variable(pt::Loc(0, 0), success),
                         true_: success_block,
                         false_: catch_block,
                     },
@@ -1790,8 +1790,8 @@ fn try_catch(
                     let mut returns = Vec::new();
                     let mut res = Vec::new();
                     for ret in &ftype.returns {
-                        let id = ast::Identifier {
-                            loc: ast::Loc(0, 0),
+                        let id = pt::Identifier {
+                            loc: pt::Loc(0, 0),
                             name: "".to_owned(),
                         };
                         let temp_pos = vartab.temp(&id, &ret.ty);
@@ -1805,7 +1805,7 @@ fn try_catch(
                             selector: None,
                             exception: None,
                             tys: ftype.returns.clone(),
-                            data: Expression::ReturnData(ast::Loc(0, 0)),
+                            data: Expression::ReturnData(pt::Loc(0, 0)),
                         },
                     );
                     returns
@@ -1842,7 +1842,7 @@ fn try_catch(
                 cfg.add(
                     vartab,
                     Instr::BranchCond {
-                        cond: Expression::Variable(ast::Loc(0, 0), success),
+                        cond: Expression::Variable(pt::Loc(0, 0), success),
                         true_: success_block,
                         false_: catch_block,
                     },
@@ -1882,7 +1882,7 @@ fn try_catch(
             let (arg, arg_ty) = args.remove(0);
 
             match &param.1 {
-                Some(ast::Parameter { ty, storage, name }) => {
+                Some(pt::Parameter { ty, storage, name }) => {
                     let ret_ty = resolve_var_decl_ty(&ty, &storage, Some(contract_no), ns, errors)?;
 
                     if arg_ty != ret_ty {
@@ -1973,7 +1973,7 @@ fn try_catch(
                         name: "error".to_string(),
                         ty: resolver::Type::String,
                     }],
-                    data: Expression::ReturnData(ast::Loc(0, 0)),
+                    data: Expression::ReturnData(pt::Loc(0, 0)),
                 },
             );
 
@@ -1986,7 +1986,7 @@ fn try_catch(
                         vartab,
                         Instr::Set {
                             res: pos,
-                            expr: Expression::Variable(ast::Loc(0, 0), error_var),
+                            expr: Expression::Variable(pt::Loc(0, 0), error_var),
                         },
                     );
                 }
@@ -2043,7 +2043,7 @@ fn try_catch(
                     vartab,
                     Instr::Set {
                         res: pos,
-                        expr: Expression::ReturnData(ast::Loc(0, 0)),
+                        expr: Expression::ReturnData(pt::Loc(0, 0)),
                     },
                 );
             }
@@ -2095,7 +2095,7 @@ pub enum Storage {
 
 #[derive(Clone)]
 pub struct Variable {
-    pub id: ast::Identifier,
+    pub id: pt::Identifier,
     pub ty: resolver::Type,
     pub pos: usize,
     pub storage: Storage,
@@ -2132,7 +2132,7 @@ impl Vartable {
 
     pub fn add(
         &mut self,
-        id: &ast::Identifier,
+        id: &pt::Identifier,
         ty: resolver::Type,
         errors: &mut Vec<output::Output>,
     ) -> Option<usize> {
@@ -2176,7 +2176,7 @@ impl Vartable {
 
     pub fn find(
         &mut self,
-        id: &ast::Identifier,
+        id: &pt::Identifier,
         contract_no: usize,
         ns: &resolver::Namespace,
         errors: &mut Vec<output::Output>,
@@ -2214,9 +2214,9 @@ impl Vartable {
         let pos = self.vars.len();
 
         self.vars.push(Variable {
-            id: ast::Identifier {
+            id: pt::Identifier {
                 name: format!("temp.{}", pos),
-                loc: ast::Loc(0, 0),
+                loc: pt::Loc(0, 0),
             },
             ty: ty.clone(),
             pos,
@@ -2226,11 +2226,11 @@ impl Vartable {
         pos
     }
 
-    pub fn temp(&mut self, id: &ast::Identifier, ty: &resolver::Type) -> usize {
+    pub fn temp(&mut self, id: &pt::Identifier, ty: &resolver::Type) -> usize {
         let pos = self.vars.len();
 
         self.vars.push(Variable {
-            id: ast::Identifier {
+            id: pt::Identifier {
                 name: format!("{}.temp.{}", id.name, pos),
                 loc: id.loc,
             },
@@ -2327,22 +2327,22 @@ impl resolver::Type {
     fn default(&self, ns: &resolver::Namespace) -> Expression {
         match self {
             resolver::Type::Uint(b) | resolver::Type::Int(b) => {
-                Expression::NumberLiteral(ast::Loc(0, 0), *b, BigInt::from(0))
+                Expression::NumberLiteral(pt::Loc(0, 0), *b, BigInt::from(0))
             }
-            resolver::Type::Bool => Expression::BoolLiteral(ast::Loc(0, 0), false),
+            resolver::Type::Bool => Expression::BoolLiteral(pt::Loc(0, 0), false),
             resolver::Type::Address(_) => Expression::NumberLiteral(
-                ast::Loc(0, 0),
+                pt::Loc(0, 0),
                 ns.address_length as u16 * 8,
                 BigInt::from(0),
             ),
             resolver::Type::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(*n as usize, 0);
-                Expression::BytesLiteral(ast::Loc(0, 0), l)
+                Expression::BytesLiteral(pt::Loc(0, 0), l)
             }
             resolver::Type::Enum(e) => ns.enums[*e].ty.default(ns),
             resolver::Type::Struct(_) => {
-                Expression::StructLiteral(ast::Loc(0, 0), self.clone(), Vec::new())
+                Expression::StructLiteral(pt::Loc(0, 0), self.clone(), Vec::new())
             }
             resolver::Type::Ref(_) => unreachable!(),
             resolver::Type::StorageRef(_) => unreachable!(),

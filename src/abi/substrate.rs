@@ -1,7 +1,6 @@
 // Parity Substrate style ABIs/metadata
-
 use num_traits::ToPrimitive;
-use parser::ast;
+use parser::pt;
 use resolver;
 use serde::{Deserialize, Serialize};
 
@@ -424,8 +423,8 @@ pub fn gen_abi(contract_no: usize, ns: &resolver::Namespace) -> Metadata {
         .functions
         .iter()
         .filter(|f| match f.visibility {
-            ast::Visibility::Public(_) | ast::Visibility::External(_) => {
-                f.ty == ast::FunctionTy::Function
+            pt::Visibility::Public(_) | pt::Visibility::External(_) => {
+                f.ty == pt::FunctionTy::Function
             }
             _ => false,
         })

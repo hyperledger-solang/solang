@@ -2,7 +2,7 @@ use super::cfg::{ControlFlowGraph, HashTy, Instr, Vartable};
 use super::expression::Expression;
 use super::{FunctionDecl, Namespace, Parameter};
 use crate::Target;
-use parser::ast;
+use parser::pt;
 use resolver;
 
 pub fn add_builtin_function(ns: &mut Namespace, contract_no: usize) {
@@ -15,19 +15,19 @@ pub fn add_builtin_function(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_assert(ns: &mut Namespace, contract_no: usize) {
-    let id = ast::Identifier {
-        loc: ast::Loc(0, 0),
+    let id = pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "assert".to_owned(),
     };
 
     let mut assert = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "assert".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![Parameter {
             name: "arg0".to_owned(),
             ty: resolver::Type::Bool,
@@ -46,7 +46,7 @@ fn add_assert(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::BranchCond {
-            cond: Expression::FunctionArg(ast::Loc(0, 0), 0),
+            cond: Expression::FunctionArg(pt::Loc(0, 0), 0),
             true_,
             false_,
         },
@@ -75,19 +75,19 @@ fn add_assert(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_print(ns: &mut Namespace, contract_no: usize) {
-    let id = ast::Identifier {
-        loc: ast::Loc(0, 0),
+    let id = pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "print".to_owned(),
     };
 
     let mut assert = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "print".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![Parameter {
             name: "arg0".to_owned(),
             ty: resolver::Type::String,
@@ -103,7 +103,7 @@ fn add_print(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::Print {
-            expr: Expression::FunctionArg(ast::Loc(0, 0), 0),
+            expr: Expression::FunctionArg(pt::Loc(0, 0), 0),
         },
     );
     cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
@@ -124,19 +124,19 @@ fn add_print(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_require(ns: &mut Namespace, contract_no: usize) {
-    let id = ast::Identifier {
-        loc: ast::Loc(0, 0),
+    let id = pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "require".to_owned(),
     };
 
     let mut require = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "require".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![
             Parameter {
                 name: "condition".to_owned(),
@@ -160,7 +160,7 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::BranchCond {
-            cond: Expression::FunctionArg(ast::Loc(0, 0), 0),
+            cond: Expression::FunctionArg(pt::Loc(0, 0), 0),
             true_,
             false_,
         },
@@ -173,7 +173,7 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::AssertFailure {
-            expr: Some(Expression::FunctionArg(ast::Loc(0, 0), 1)),
+            expr: Some(Expression::FunctionArg(pt::Loc(0, 0), 1)),
         },
     );
 
@@ -186,13 +186,13 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     ns.contracts[contract_no].functions.push(require);
 
     let mut require = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "require".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![Parameter {
             name: "condition".to_owned(),
             ty: resolver::Type::Bool,
@@ -211,7 +211,7 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::BranchCond {
-            cond: Expression::FunctionArg(ast::Loc(0, 0), 0),
+            cond: Expression::FunctionArg(pt::Loc(0, 0), 0),
             true_,
             false_,
         },
@@ -243,19 +243,19 @@ fn add_require(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_revert(ns: &mut Namespace, contract_no: usize) {
-    let id = ast::Identifier {
-        loc: ast::Loc(0, 0),
+    let id = pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "revert".to_owned(),
     };
 
     let mut revert = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "revert".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![Parameter {
             name: "ReasonCode".to_owned(),
             ty: resolver::Type::String,
@@ -272,7 +272,7 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::AssertFailure {
-            expr: Some(Expression::FunctionArg(ast::Loc(0, 0), 0)),
+            expr: Some(Expression::FunctionArg(pt::Loc(0, 0), 0)),
         },
     );
 
@@ -286,13 +286,13 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
 
     // now add variant with no argument
     let mut revert = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "revert".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![],
         vec![],
         ns,
@@ -323,19 +323,19 @@ fn add_revert(ns: &mut Namespace, contract_no: usize) {
 }
 
 fn add_selfdestruct(ns: &mut Namespace, contract_no: usize) {
-    let id = ast::Identifier {
-        loc: ast::Loc(0, 0),
+    let id = pt::Identifier {
+        loc: pt::Loc(0, 0),
         name: "selfdestruct".to_owned(),
     };
 
     let mut selfdestruct = FunctionDecl::new(
-        ast::Loc(0, 0),
+        pt::Loc(0, 0),
         "selfdestruct".to_owned(),
         vec![],
-        ast::FunctionTy::Function,
+        pt::FunctionTy::Function,
         None,
         None,
-        ast::Visibility::Private(ast::Loc(0, 0)),
+        pt::Visibility::Private(pt::Loc(0, 0)),
         vec![Parameter {
             name: "recipient".to_owned(),
             ty: resolver::Type::Address(true),
@@ -353,7 +353,7 @@ fn add_selfdestruct(ns: &mut Namespace, contract_no: usize) {
     cfg.add(
         &mut vartab,
         Instr::SelfDestruct {
-            recipient: Expression::FunctionArg(ast::Loc(0, 0), 0),
+            recipient: Expression::FunctionArg(pt::Loc(0, 0), 0),
         },
     );
     cfg.add(&mut vartab, Instr::Unreachable);
@@ -419,19 +419,19 @@ fn add_crypto_hash(ns: &mut Namespace, contract_no: usize) {
             }
         }
 
-        let id = ast::Identifier {
-            loc: ast::Loc(0, 0),
+        let id = pt::Identifier {
+            loc: pt::Loc(0, 0),
             name: hash.function_name.to_owned(),
         };
 
         let mut assert = FunctionDecl::new(
-            ast::Loc(0, 0),
+            pt::Loc(0, 0),
             hash.function_name.to_owned(),
             vec![],
-            ast::FunctionTy::Function,
+            pt::FunctionTy::Function,
             None,
             None,
-            ast::Visibility::Private(ast::Loc(0, 0)),
+            pt::Visibility::Private(pt::Loc(0, 0)),
             vec![Parameter {
                 name: "bs".to_owned(),
                 ty: resolver::Type::DynamicBytes,
@@ -454,13 +454,13 @@ fn add_crypto_hash(ns: &mut Namespace, contract_no: usize) {
             Instr::Hash {
                 res,
                 hash: hash.hash_ty.clone(),
-                expr: Expression::FunctionArg(ast::Loc(0, 0), 0),
+                expr: Expression::FunctionArg(pt::Loc(0, 0), 0),
             },
         );
         cfg.add(
             &mut vartab,
             Instr::Return {
-                value: vec![Expression::Variable(ast::Loc(0, 0), res)],
+                value: vec![Expression::Variable(pt::Loc(0, 0), res)],
             },
         );
 

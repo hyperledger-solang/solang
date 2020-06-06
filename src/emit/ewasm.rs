@@ -1,4 +1,4 @@
-use parser::ast;
+use parser::pt;
 use resolver;
 use resolver::cfg::HashTy;
 use std::cell::RefCell;
@@ -568,7 +568,7 @@ impl EwasmTarget {
 
         contract.emit_function_dispatch(
             &contract.contract.functions,
-            ast::FunctionTy::Function,
+            pt::FunctionTy::Function,
             &contract.functions,
             argsdata,
             argslen,

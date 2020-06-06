@@ -1,12 +1,12 @@
 use super::{ContractVariable, Namespace, Symbol};
 use output::Output;
-use parser::ast;
+use parser::pt;
 use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
 use resolver::expression::{cast, expression, Expression};
 use resolver::ContractVariableType;
 
 pub fn contract_variables(
-    def: &ast::ContractDefinition,
+    def: &pt::ContractDefinition,
     contract_no: usize,
     ns: &mut Namespace,
     errors: &mut Vec<Output>,
@@ -16,7 +16,7 @@ pub fn contract_variables(
     let mut cfg = ControlFlowGraph::new();
 
     for parts in &def.parts {
-        if let ast::ContractPart::ContractVariableDefinition(ref s) = parts {
+        if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {
             if !var_decl(s, contract_no, ns, &mut cfg, &mut vartab, errors) {
                 broken = true;
             }
@@ -33,7 +33,7 @@ pub fn contract_variables(
 }
 
 fn var_decl(
-    s: &ast::ContractVariableDefinition,
+    s: &pt::ContractVariableDefinition,
     contract_no: usize,
     ns: &mut Namespace,
     cfg: &mut ControlFlowGraph,
@@ -48,11 +48,11 @@ fn var_decl(
     };
 
     let mut is_constant = false;
-    let mut visibility: Option<ast::Visibility> = None;
+    let mut visibility: Option<pt::Visibility> = None;
 
     for attr in &s.attrs {
         match &attr {
-            ast::VariableAttribute::Constant(loc) => {
+            pt::VariableAttribute::Constant(loc) => {
                 if is_constant {
                     errors.push(Output::warning(
                         *loc,
@@ -61,14 +61,14 @@ fn var_decl(
                 }
                 is_constant = true;
             }
-            ast::VariableAttribute::Visibility(ast::Visibility::External(loc)) => {
+            pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
                 errors.push(Output::error(
                     *loc,
                     "variable cannot be declared external".to_string(),
                 ));
                 return false;
             }
-            ast::VariableAttribute::Visibility(v) => {
+            pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
                     errors.push(Output::error_with_note(
                         v.loc(),
@@ -86,7 +86,7 @@ fn var_decl(
 
     let visibility = match visibility {
         Some(v) => v,
-        None => ast::Visibility::Private(ast::Loc(0, 0)),
+        None => pt::Visibility::Private(pt::Loc(0, 0)),
     };
 
     let var = if !is_constant {

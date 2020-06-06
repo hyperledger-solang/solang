@@ -17,8 +17,8 @@ use std::ops::Sub;
 use hex;
 use output;
 use output::Output;
-use parser::ast;
-use parser::ast::Loc;
+use parser::pt;
+use parser::pt::Loc;
 use resolver;
 use resolver::address::to_hexstr_eip55;
 use resolver::cfg::{resolve_var_decl_ty, ControlFlowGraph, Instr, Storage, Vartable};
@@ -90,7 +90,7 @@ pub enum Expression {
     And(Loc, Box<Expression>, Box<Expression>),
     LocalFunctionCall(Loc, usize, Vec<Expression>),
     ExternalFunctionCall {
-        loc: ast::Loc,
+        loc: pt::Loc,
         contract_no: usize,
         function_no: usize,
         address: Box<Expression>,
@@ -355,14 +355,14 @@ fn unescape(literal: &str, start: usize, errors: &mut Vec<output::Output>) -> St
                     Some(ch) => s.push(ch),
                     None => {
                         errors.push(Output::error(
-                            ast::Loc(start + i, start + i + 4),
+                            pt::Loc(start + i, start + i + 4),
                             format!("\\x{:02x} is not a valid unicode character", ch),
                         ));
                     }
                 },
                 Err(offset) => {
                     errors.push(Output::error(
-                        ast::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
+                        pt::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
                         "\\x escape should be followed by two hex digits".to_string(),
                     ));
                 }
@@ -372,21 +372,21 @@ fn unescape(literal: &str, start: usize, errors: &mut Vec<output::Output>) -> St
                     Some(ch) => s.push(ch),
                     None => {
                         errors.push(Output::error(
-                            ast::Loc(start + i, start + i + 6),
+                            pt::Loc(start + i, start + i + 6),
                             format!("\\u{:04x} is not a valid unicode character", ch),
                         ));
                     }
                 },
                 Err(offset) => {
                     errors.push(Output::error(
-                        ast::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
+                        pt::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
                         "\\u escape should be followed by four hex digits".to_string(),
                     ));
                 }
             },
             Some((i, ch)) => {
                 errors.push(Output::error(
-                    ast::Loc(start + i, start + i + ch.len_utf8()),
+                    pt::Loc(start + i, start + i + ch.len_utf8()),
                     format!("unknown escape character '{}'", ch),
                 ));
             }
@@ -425,9 +425,9 @@ fn get_digits(input: &mut std::str::CharIndices, len: usize) -> Result<u32, usiz
 
 fn coerce(
     l: &resolver::Type,
-    l_loc: &ast::Loc,
+    l_loc: &pt::Loc,
     r: &resolver::Type,
-    r_loc: &ast::Loc,
+    r_loc: &pt::Loc,
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
 ) -> Result<resolver::Type, ()> {
@@ -451,7 +451,7 @@ fn coerce(
 
 fn get_int_length(
     l: &resolver::Type,
-    l_loc: &ast::Loc,
+    l_loc: &pt::Loc,
     allow_bytes: bool,
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
@@ -501,9 +501,9 @@ fn get_int_length(
 
 fn coerce_int(
     l: &resolver::Type,
-    l_loc: &ast::Loc,
+    l_loc: &pt::Loc,
     r: &resolver::Type,
-    r_loc: &ast::Loc,
+    r_loc: &pt::Loc,
     allow_bytes: bool,
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
@@ -546,7 +546,7 @@ fn coerce_int(
 /// Try to convert a BigInt into a Expression::NumberLiteral. This checks for sign,
 /// width and creates to correct Type.
 fn bigint_to_expression(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     n: &BigInt,
     errors: &mut Vec<Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
@@ -579,7 +579,7 @@ fn bigint_to_expression(
 /// Cast from one type to another, which also automatically derefs any Type::Ref() type.
 /// if the cast is explicit (e.g. bytes32(bar) then implicit should be set to false.
 pub fn cast(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     expr: Expression,
     from: &resolver::Type,
     to: &resolver::Type,
@@ -736,7 +736,7 @@ pub fn cast(
 
 /// Do casting between types (no literals)
 fn cast_types(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     expr: Expression,
     from_conv: resolver::Type,
     to_conv: resolver::Type,
@@ -1095,7 +1095,7 @@ fn cast_types(
 }
 
 pub fn expression(
-    expr: &ast::Expression,
+    expr: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -1103,16 +1103,16 @@ pub fn expression(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     match expr {
-        ast::Expression::ArrayLiteral(loc, exprs) => {
+        pt::Expression::ArrayLiteral(loc, exprs) => {
             resolve_array_literal(loc, exprs, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Expression::BoolLiteral(loc, v) => {
+        pt::Expression::BoolLiteral(loc, v) => {
             Ok((Expression::BoolLiteral(*loc, *v), resolver::Type::Bool))
         }
-        ast::Expression::StringLiteral(v) => {
+        pt::Expression::StringLiteral(v) => {
             // Concatenate the strings
             let mut result = Vec::new();
-            let mut loc = ast::Loc(v[0].loc.0, 0);
+            let mut loc = pt::Loc(v[0].loc.0, 0);
 
             for s in v {
                 result.extend_from_slice(unescape(&s.string, s.loc.0, errors).as_bytes());
@@ -1126,9 +1126,9 @@ pub fn expression(
                 resolver::Type::Bytes(length as u8),
             ))
         }
-        ast::Expression::HexLiteral(v) => {
+        pt::Expression::HexLiteral(v) => {
             let mut result = Vec::new();
-            let mut loc = ast::Loc(0, 0);
+            let mut loc = pt::Loc(0, 0);
 
             for s in v {
                 if (s.hex.len() % 2) != 0 {
@@ -1153,8 +1153,8 @@ pub fn expression(
                 resolver::Type::Bytes(length as u8),
             ))
         }
-        ast::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, errors),
-        ast::Expression::HexNumberLiteral(loc, n) => {
+        pt::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, errors),
+        pt::Expression::HexNumberLiteral(loc, n) => {
             // ns.address_length is in bytes; double for hex and two for the leading 0x
             let looks_like_address = n.len() == ns.address_length * 2 + 2
                 && n.starts_with("0x")
@@ -1191,7 +1191,7 @@ pub fn expression(
                 bigint_to_expression(loc, &BigInt::from_str_radix(&s, 16).unwrap(), errors)
             }
         }
-        ast::Expression::Variable(id) => {
+        pt::Expression::Variable(id) => {
             if let Some(ref mut tab) = *vartab {
                 let v = tab.find(id, contract_no.unwrap(), ns, errors)?;
                 match &v.storage {
@@ -1219,10 +1219,8 @@ pub fn expression(
                 Err(())
             }
         }
-        ast::Expression::Add(loc, l, r) => {
-            addition(loc, l, r, cfg, contract_no, ns, vartab, errors)
-        }
-        ast::Expression::Subtract(loc, l, r) => {
+        pt::Expression::Add(loc, l, r) => addition(loc, l, r, cfg, contract_no, ns, vartab, errors),
+        pt::Expression::Subtract(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1245,7 +1243,7 @@ pub fn expression(
                 ty,
             ))
         }
-        ast::Expression::BitwiseOr(loc, l, r) => {
+        pt::Expression::BitwiseOr(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1268,7 +1266,7 @@ pub fn expression(
                 ty,
             ))
         }
-        ast::Expression::BitwiseAnd(loc, l, r) => {
+        pt::Expression::BitwiseAnd(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1291,7 +1289,7 @@ pub fn expression(
                 ty,
             ))
         }
-        ast::Expression::BitwiseXor(loc, l, r) => {
+        pt::Expression::BitwiseXor(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1314,7 +1312,7 @@ pub fn expression(
                 ty,
             ))
         }
-        ast::Expression::ShiftLeft(loc, l, r) => {
+        pt::Expression::ShiftLeft(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1332,7 +1330,7 @@ pub fn expression(
                 left_type,
             ))
         }
-        ast::Expression::ShiftRight(loc, l, r) => {
+        pt::Expression::ShiftRight(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1351,7 +1349,7 @@ pub fn expression(
                 left_type,
             ))
         }
-        ast::Expression::Multiply(loc, l, r) => {
+        pt::Expression::Multiply(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1374,7 +1372,7 @@ pub fn expression(
                 ty,
             ))
         }
-        ast::Expression::Divide(loc, l, r) => {
+        pt::Expression::Divide(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1408,7 +1406,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Modulo(loc, l, r) => {
+        pt::Expression::Modulo(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1442,7 +1440,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Power(loc, b, e) => {
+        pt::Expression::Power(loc, b, e) => {
             let (base, base_type) = expression(b, cfg, contract_no, ns, vartab, errors)?;
             let (exp, exp_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1468,7 +1466,7 @@ pub fn expression(
         }
 
         // compare
-        ast::Expression::More(loc, l, r) => {
+        pt::Expression::More(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1502,7 +1500,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Less(loc, l, r) => {
+        pt::Expression::Less(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1536,7 +1534,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::MoreEqual(loc, l, r) => {
+        pt::Expression::MoreEqual(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1570,7 +1568,7 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::LessEqual(loc, l, r) => {
+        pt::Expression::LessEqual(loc, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1604,11 +1602,11 @@ pub fn expression(
                 ))
             }
         }
-        ast::Expression::Equal(loc, l, r) => Ok((
+        pt::Expression::Equal(loc, l, r) => Ok((
             equal(loc, l, r, cfg, contract_no, ns, vartab, errors)?,
             resolver::Type::Bool,
         )),
-        ast::Expression::NotEqual(loc, l, r) => Ok((
+        pt::Expression::NotEqual(loc, l, r) => Ok((
             Expression::Not(
                 *loc,
                 Box::new(equal(loc, l, r, cfg, contract_no, ns, vartab, errors)?),
@@ -1616,7 +1614,7 @@ pub fn expression(
             resolver::Type::Bool,
         )),
         // unary expressions
-        ast::Expression::Not(loc, e) => {
+        pt::Expression::Not(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
             Ok((
@@ -1635,14 +1633,14 @@ pub fn expression(
                 resolver::Type::Bool,
             ))
         }
-        ast::Expression::Complement(loc, e) => {
+        pt::Expression::Complement(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
             get_int_length(&expr_type, loc, true, ns, errors)?;
 
             Ok((Expression::Complement(*loc, Box::new(expr)), expr_type))
         }
-        ast::Expression::UnaryMinus(loc, e) => {
+        pt::Expression::UnaryMinus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
             if let Expression::NumberLiteral(_, _, n) = expr {
@@ -1653,7 +1651,7 @@ pub fn expression(
                 Ok((Expression::UnaryMinus(*loc, Box::new(expr)), expr_type))
             }
         }
-        ast::Expression::UnaryPlus(loc, e) => {
+        pt::Expression::UnaryPlus(loc, e) => {
             let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
 
             get_int_length(&expr_type, loc, false, ns, errors)?;
@@ -1661,7 +1659,7 @@ pub fn expression(
             Ok((expr, expr_type))
         }
 
-        ast::Expression::Ternary(loc, c, l, r) => {
+        pt::Expression::Ternary(loc, c, l, r) => {
             let (left, left_type) = expression(l, cfg, contract_no, ns, vartab, errors)?;
             let (right, right_type) = expression(r, cfg, contract_no, ns, vartab, errors)?;
             let (cond, cond_type) = expression(c, cfg, contract_no, ns, vartab, errors)?;
@@ -1685,12 +1683,12 @@ pub fn expression(
         }
 
         // pre/post decrement/increment
-        ast::Expression::PostIncrement(loc, var)
-        | ast::Expression::PreIncrement(loc, var)
-        | ast::Expression::PostDecrement(loc, var)
-        | ast::Expression::PreDecrement(loc, var) => {
+        pt::Expression::PostIncrement(loc, var)
+        | pt::Expression::PreIncrement(loc, var)
+        | pt::Expression::PostDecrement(loc, var)
+        | pt::Expression::PreDecrement(loc, var) => {
             let id = match var.as_ref() {
-                ast::Expression::Variable(id) => id,
+                pt::Expression::Variable(id) => id,
                 _ => unreachable!(),
             };
 
@@ -1741,7 +1739,7 @@ pub fn expression(
             get_int_length(&v.ty, loc, false, ns, errors)?;
 
             match expr {
-                ast::Expression::PostIncrement(_, _) => {
+                pt::Expression::PostIncrement(_, _) => {
                     // temporary to hold the value of the variable _before_ incrementing
                     // which will be returned by the expression
                     let temp_pos = vartab.temp(id, &v.ty);
@@ -1782,7 +1780,7 @@ pub fn expression(
 
                     Ok((Expression::Variable(id.loc, temp_pos), v.ty))
                 }
-                ast::Expression::PostDecrement(_, _) => {
+                pt::Expression::PostDecrement(_, _) => {
                     // temporary to hold the value of the variable _before_ decrementing
                     // which will be returned by the expression
                     let temp_pos = vartab.temp(id, &v.ty);
@@ -1823,7 +1821,7 @@ pub fn expression(
 
                     Ok((Expression::Variable(id.loc, temp_pos), v.ty))
                 }
-                ast::Expression::PreIncrement(_, _) => {
+                pt::Expression::PreIncrement(_, _) => {
                     let temp_pos = vartab.temp(id, &v.ty);
                     cfg.add(
                         vartab,
@@ -1862,7 +1860,7 @@ pub fn expression(
 
                     Ok((Expression::Variable(id.loc, temp_pos), v.ty))
                 }
-                ast::Expression::PreDecrement(_, _) => {
+                pt::Expression::PreDecrement(_, _) => {
                     let temp_pos = vartab.temp(id, &v.ty);
                     cfg.add(
                         vartab,
@@ -1906,23 +1904,23 @@ pub fn expression(
         }
 
         // assignment
-        ast::Expression::Assign(loc, var, e) => {
+        pt::Expression::Assign(loc, var, e) => {
             assign(loc, var, e, cfg, contract_no, ns, vartab, errors)
         }
 
-        ast::Expression::AssignAdd(loc, var, e)
-        | ast::Expression::AssignSubtract(loc, var, e)
-        | ast::Expression::AssignMultiply(loc, var, e)
-        | ast::Expression::AssignDivide(loc, var, e)
-        | ast::Expression::AssignModulo(loc, var, e)
-        | ast::Expression::AssignOr(loc, var, e)
-        | ast::Expression::AssignAnd(loc, var, e)
-        | ast::Expression::AssignXor(loc, var, e)
-        | ast::Expression::AssignShiftLeft(loc, var, e)
-        | ast::Expression::AssignShiftRight(loc, var, e) => {
+        pt::Expression::AssignAdd(loc, var, e)
+        | pt::Expression::AssignSubtract(loc, var, e)
+        | pt::Expression::AssignMultiply(loc, var, e)
+        | pt::Expression::AssignDivide(loc, var, e)
+        | pt::Expression::AssignModulo(loc, var, e)
+        | pt::Expression::AssignOr(loc, var, e)
+        | pt::Expression::AssignAnd(loc, var, e)
+        | pt::Expression::AssignXor(loc, var, e)
+        | pt::Expression::AssignShiftLeft(loc, var, e)
+        | pt::Expression::AssignShiftRight(loc, var, e) => {
             assign_expr(loc, var, expr, e, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Expression::NamedFunctionCall(loc, ty, args) => {
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
             if vartab.is_none() {
                 errors.push(Output::error(
                     expr.loc(),
@@ -1974,13 +1972,13 @@ pub fn expression(
             Ok(returns.remove(0))
         }
 
-        ast::Expression::New(loc, call) => match call.as_ref() {
-            ast::Expression::FunctionCall(_, ty, args) => {
+        pt::Expression::New(loc, call) => match call.as_ref() {
+            pt::Expression::FunctionCall(_, ty, args) => {
                 let (expr, expr_ty) = new(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
 
                 Ok(emit_constructor_call(expr, expr_ty, cfg, vartab))
             }
-            ast::Expression::NamedFunctionCall(_, ty, args) => {
+            pt::Expression::NamedFunctionCall(_, ty, args) => {
                 let (expr, expr_ty) =
                     constructor_named_args(loc, ty, args, cfg, contract_no, ns, vartab, errors)?;
 
@@ -1988,8 +1986,8 @@ pub fn expression(
             }
             _ => unreachable!(),
         },
-        ast::Expression::Delete(loc, var) => delete(loc, var, cfg, contract_no, ns, vartab, errors),
-        ast::Expression::FunctionCall(loc, ty, args) => {
+        pt::Expression::Delete(loc, var) => delete(loc, var, cfg, contract_no, ns, vartab, errors),
+        pt::Expression::FunctionCall(loc, ty, args) => {
             let mut blackhole = Vec::new();
 
             match ns.resolve_type(contract_no, true, ty, &mut blackhole) {
@@ -2041,7 +2039,7 @@ pub fn expression(
 
             Ok(returns.remove(0))
         }
-        ast::Expression::ArraySubscript(loc, _, None) => {
+        pt::Expression::ArraySubscript(loc, _, None) => {
             errors.push(Output::error(
                 *loc,
                 "expected expression before ‘]’ token".to_string(),
@@ -2049,13 +2047,13 @@ pub fn expression(
 
             Err(())
         }
-        ast::Expression::ArraySubscript(loc, array, Some(index)) => {
+        pt::Expression::ArraySubscript(loc, array, Some(index)) => {
             array_subscript(loc, array, index, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Expression::MemberAccess(loc, e, id) => {
+        pt::Expression::MemberAccess(loc, e, id) => {
             member_access(loc, e, id, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Expression::Or(loc, left, right) => {
+        pt::Expression::Or(loc, left, right) => {
             let boolty = resolver::Type::Bool;
             let (l, l_type) = expression(left, cfg, contract_no, ns, vartab, errors)?;
             let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
@@ -2086,7 +2084,7 @@ pub fn expression(
             };
 
             let pos = tab.temp(
-                &ast::Identifier {
+                &pt::Identifier {
                     name: "or".to_owned(),
                     loc: *loc,
                 },
@@ -2129,7 +2127,7 @@ pub fn expression(
 
             Ok((Expression::Variable(*loc, pos), boolty))
         }
-        ast::Expression::And(loc, left, right) => {
+        pt::Expression::And(loc, left, right) => {
             let boolty = resolver::Type::Bool;
             let (l, l_type) = expression(left, cfg, contract_no, ns, vartab, errors)?;
             let l = cast(&loc, l, &l_type, &boolty, true, ns, errors)?;
@@ -2160,7 +2158,7 @@ pub fn expression(
             };
 
             let pos = tab.temp(
-                &ast::Identifier {
+                &pt::Identifier {
                     name: "and".to_owned(),
                     loc: *loc,
                 },
@@ -2203,25 +2201,25 @@ pub fn expression(
 
             Ok((Expression::Variable(*loc, pos), boolty))
         }
-        ast::Expression::Type(loc, _) => {
+        pt::Expression::Type(loc, _) => {
             errors.push(Output::error(*loc, "type not expected".to_owned()));
             Err(())
         }
-        ast::Expression::List(loc, _) => {
+        pt::Expression::List(loc, _) => {
             errors.push(Output::error(
                 *loc,
                 "lists only permitted in destructure statements".to_owned(),
             ));
             Err(())
         }
-        ast::Expression::FunctionCallBlock(loc, _, _) => {
+        pt::Expression::FunctionCallBlock(loc, _, _) => {
             errors.push(Output::error(*loc, "unexpect block encountered".to_owned()));
             Err(())
         }
-        ast::Expression::Unit(loc, expr, unit) => {
+        pt::Expression::Unit(loc, expr, unit) => {
             let n = match expr.as_ref() {
-                ast::Expression::NumberLiteral(_, n) => n,
-                ast::Expression::HexNumberLiteral(loc, _) => {
+                pt::Expression::NumberLiteral(_, n) => n,
+                pt::Expression::HexNumberLiteral(loc, _) => {
                     errors.push(Output::error(
                         *loc,
                         "hexadecimal numbers cannot be used with unit denominations".to_owned(),
@@ -2238,10 +2236,10 @@ pub fn expression(
             };
 
             match unit {
-                ast::Unit::Wei(loc)
-                | ast::Unit::Finney(loc)
-                | ast::Unit::Szabo(loc)
-                | ast::Unit::Ether(loc)
+                pt::Unit::Wei(loc)
+                | pt::Unit::Finney(loc)
+                | pt::Unit::Szabo(loc)
+                | pt::Unit::Ether(loc)
                     if ns.target != crate::Target::Ewasm =>
                 {
                     errors.push(Output::warning(
@@ -2255,20 +2253,20 @@ pub fn expression(
             bigint_to_expression(
                 loc,
                 &(n * match unit {
-                    ast::Unit::Seconds(_) => BigInt::from(1),
-                    ast::Unit::Minutes(_) => BigInt::from(60),
-                    ast::Unit::Hours(_) => BigInt::from(60 * 60),
-                    ast::Unit::Days(_) => BigInt::from(60 * 60 * 24),
-                    ast::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
-                    ast::Unit::Wei(_) => BigInt::from(1),
-                    ast::Unit::Szabo(_) => BigInt::from(10).pow(12u32),
-                    ast::Unit::Finney(_) => BigInt::from(10).pow(15u32),
-                    ast::Unit::Ether(_) => BigInt::from(10).pow(18u32),
+                    pt::Unit::Seconds(_) => BigInt::from(1),
+                    pt::Unit::Minutes(_) => BigInt::from(60),
+                    pt::Unit::Hours(_) => BigInt::from(60 * 60),
+                    pt::Unit::Days(_) => BigInt::from(60 * 60 * 24),
+                    pt::Unit::Weeks(_) => BigInt::from(60 * 60 * 24 * 7),
+                    pt::Unit::Wei(_) => BigInt::from(1),
+                    pt::Unit::Szabo(_) => BigInt::from(10).pow(12u32),
+                    pt::Unit::Finney(_) => BigInt::from(10).pow(15u32),
+                    pt::Unit::Ether(_) => BigInt::from(10).pow(18u32),
                 }),
                 errors,
             )
         }
-        ast::Expression::This(loc) => match contract_no {
+        pt::Expression::This(loc) => match contract_no {
             Some(contract_no) => Ok((
                 Expression::GetAddress(*loc),
                 resolver::Type::Contract(contract_no),
@@ -2286,9 +2284,9 @@ pub fn expression(
 
 /// Resolve an new contract expression with positional arguments
 fn constructor(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     no: usize,
-    args: &[ast::Expression],
+    args: &[pt::Expression],
     call_args: CallArgs,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
@@ -2456,9 +2454,9 @@ fn circular_reference(from: usize, to: usize, ns: &resolver::Namespace) -> bool 
 
 /// Resolve an new contract expression with named arguments
 pub fn constructor_named_args(
-    loc: &ast::Loc,
-    ty: &ast::Expression,
-    args: &[ast::NamedArgument],
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    args: &[pt::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -2567,7 +2565,7 @@ pub fn constructor_named_args(
             };
 
             match cast(
-                &ast::Loc(0, 0),
+                &pt::Loc(0, 0),
                 arg.0.clone(),
                 &arg.1,
                 &param.ty,
@@ -2635,9 +2633,9 @@ pub fn constructor_named_args(
 
 /// Resolve type(x).foo
 pub fn type_name_expr(
-    loc: &ast::Loc,
-    args: &[ast::Expression],
-    field: &ast::Identifier,
+    loc: &pt::Loc,
+    args: &[pt::Expression],
+    field: &pt::Identifier,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
     errors: &mut Vec<output::Output>,
@@ -2744,9 +2742,9 @@ pub fn type_name_expr(
 
 /// Resolve an new expression
 pub fn new(
-    loc: &ast::Loc,
-    ty: &ast::Expression,
-    args: &[ast::Expression],
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -2857,9 +2855,9 @@ pub fn new(
 
 /// Test for equality; first check string equality, then integer equality
 fn equal(
-    loc: &ast::Loc,
-    l: &ast::Expression,
-    r: &ast::Expression,
+    loc: &pt::Loc,
+    l: &pt::Expression,
+    r: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -2955,9 +2953,9 @@ fn equal(
 
 /// Try string concatenation
 fn addition(
-    loc: &ast::Loc,
-    l: &ast::Expression,
-    r: &ast::Expression,
+    loc: &pt::Loc,
+    l: &pt::Expression,
+    r: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -3048,9 +3046,9 @@ fn addition(
 
 /// Resolve an assignment
 fn assign(
-    loc: &ast::Loc,
-    var: &ast::Expression,
-    e: &ast::Expression,
+    loc: &pt::Loc,
+    var: &pt::Expression,
+    e: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -3058,7 +3056,7 @@ fn assign(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // is it a destructuring assignment
-    if let ast::Expression::List(_, var) = var {
+    if let pt::Expression::List(_, var) = var {
         destructuring(loc, var, e, cfg, contract_no, ns, vartab, errors)
     } else {
         let (expr, expr_type) = expression(e, cfg, contract_no, ns, vartab, errors)?;
@@ -3079,8 +3077,8 @@ fn assign(
 
 /// Resolve an assignment
 fn assign_single(
-    loc: &ast::Loc,
-    var: &ast::Expression,
+    loc: &pt::Loc,
+    var: &pt::Expression,
     expr: Expression,
     expr_type: resolver::Type,
     cfg: &mut ControlFlowGraph,
@@ -3090,7 +3088,7 @@ fn assign_single(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     match var {
-        ast::Expression::Variable(id) => {
+        pt::Expression::Variable(id) => {
             let vartab = match vartab {
                 &mut Some(ref mut tab) => tab,
                 None => {
@@ -3229,9 +3227,9 @@ fn assign_single(
 
 /// Resolve an destructuring assignment
 fn destructuring(
-    loc: &ast::Loc,
-    var: &[(ast::Loc, Option<ast::Parameter>)],
-    e: &ast::Expression,
+    loc: &pt::Loc,
+    var: &[(pt::Loc, Option<pt::Parameter>)],
+    e: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -3250,7 +3248,7 @@ fn destructuring(
     };
 
     let mut args = match e {
-        ast::Expression::FunctionCall(loc, ty, args) => {
+        pt::Expression::FunctionCall(loc, ty, args) => {
             let expr = function_call_expr(
                 loc,
                 ty,
@@ -3271,7 +3269,7 @@ fn destructuring(
                 &mut Some(vartab),
             )
         }
-        ast::Expression::NamedFunctionCall(loc, ty, args) => {
+        pt::Expression::NamedFunctionCall(loc, ty, args) => {
             let expr = named_function_call_expr(
                 loc,
                 ty,
@@ -3328,7 +3326,7 @@ fn destructuring(
             None => {
                 // nothing to do
             }
-            Some(ast::Parameter {
+            Some(pt::Parameter {
                 ty,
                 storage,
                 name: None,
@@ -3355,7 +3353,7 @@ fn destructuring(
                     return Err(());
                 }
             }
-            Some(ast::Parameter {
+            Some(pt::Parameter {
                 ty,
                 storage,
                 name: Some(name),
@@ -3378,10 +3376,10 @@ fn destructuring(
 
 /// Resolve an assignment with an operator
 fn assign_expr(
-    loc: &ast::Loc,
-    var: &ast::Expression,
-    expr: &ast::Expression,
-    e: &ast::Expression,
+    loc: &pt::Loc,
+    var: &pt::Expression,
+    expr: &pt::Expression,
+    e: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -3395,8 +3393,8 @@ fn assign_expr(
               errors: &mut Vec<output::Output>|
      -> Result<Expression, ()> {
         let set = match expr {
-            ast::Expression::AssignShiftLeft(_, _, _)
-            | ast::Expression::AssignShiftRight(_, _, _) => {
+            pt::Expression::AssignShiftLeft(_, _, _)
+            | pt::Expression::AssignShiftRight(_, _, _) => {
                 let left_length = get_int_length(&ty, &loc, true, ns, errors)?;
                 let right_length = get_int_length(&set_type, &e.loc(), false, ns, errors)?;
 
@@ -3415,38 +3413,38 @@ fn assign_expr(
         };
 
         Ok(match expr {
-            ast::Expression::AssignAdd(_, _, _) => {
+            pt::Expression::AssignAdd(_, _, _) => {
                 Expression::Add(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignSubtract(_, _, _) => {
+            pt::Expression::AssignSubtract(_, _, _) => {
                 Expression::Subtract(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignMultiply(_, _, _) => {
+            pt::Expression::AssignMultiply(_, _, _) => {
                 Expression::Multiply(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignOr(_, _, _) => {
+            pt::Expression::AssignOr(_, _, _) => {
                 Expression::BitwiseOr(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignAnd(_, _, _) => {
+            pt::Expression::AssignAnd(_, _, _) => {
                 Expression::BitwiseAnd(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignXor(_, _, _) => {
+            pt::Expression::AssignXor(_, _, _) => {
                 Expression::BitwiseXor(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignShiftLeft(_, _, _) => {
+            pt::Expression::AssignShiftLeft(_, _, _) => {
                 Expression::ShiftLeft(*loc, Box::new(assign), Box::new(set))
             }
-            ast::Expression::AssignShiftRight(_, _, _) => {
+            pt::Expression::AssignShiftRight(_, _, _) => {
                 Expression::ShiftRight(*loc, Box::new(assign), Box::new(set), ty.signed())
             }
-            ast::Expression::AssignDivide(_, _, _) => {
+            pt::Expression::AssignDivide(_, _, _) => {
                 if ty.signed() {
                     Expression::SDivide(*loc, Box::new(assign), Box::new(set))
                 } else {
                     Expression::UDivide(*loc, Box::new(assign), Box::new(set))
                 }
             }
-            ast::Expression::AssignModulo(_, _, _) => {
+            pt::Expression::AssignModulo(_, _, _) => {
                 if ty.signed() {
                     Expression::SModulo(*loc, Box::new(assign), Box::new(set))
                 } else {
@@ -3459,7 +3457,7 @@ fn assign_expr(
 
     // either it's a variable, or a reference to an array element
     match var {
-        ast::Expression::Variable(id) => {
+        pt::Expression::Variable(id) => {
             let tab = match vartab {
                 &mut Some(ref mut tab) => tab,
                 None => {
@@ -3666,9 +3664,9 @@ fn assign_expr(
 
 /// Resolve an array subscript expression
 fn member_access(
-    loc: &ast::Loc,
-    e: &ast::Expression,
-    id: &ast::Identifier,
+    loc: &pt::Loc,
+    e: &pt::Expression,
+    id: &pt::Identifier,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -3676,8 +3674,8 @@ fn member_access(
     errors: &mut Vec<output::Output>,
 ) -> Result<(Expression, resolver::Type), ()> {
     // is of the form "contract_name.enum_name.enum_value"
-    if let ast::Expression::MemberAccess(_, e, enum_name) = e {
-        if let ast::Expression::Variable(contract_name) = e.as_ref() {
+    if let pt::Expression::MemberAccess(_, e, enum_name) = e {
+        if let pt::Expression::Variable(contract_name) = e.as_ref() {
             if let Some(contract_no) = ns.resolve_contract(contract_name) {
                 if let Some(e) = ns.resolve_enum(Some(contract_no), enum_name) {
                     return match ns.enums[e].values.get(&id.name) {
@@ -3707,7 +3705,7 @@ fn member_access(
     }
 
     // is of the form "enum_name.enum_value"
-    if let ast::Expression::Variable(namespace) = e {
+    if let pt::Expression::Variable(namespace) = e {
         if let Some(e) = ns.resolve_enum(contract_no, namespace) {
             return match ns.enums[e].values.get(&id.name) {
                 Some((_, val)) => Ok((
@@ -3734,8 +3732,8 @@ fn member_access(
     }
 
     // is of the form "type(x).field", like type(c).min
-    if let ast::Expression::FunctionCall(_, name, args) = e {
-        if let ast::Expression::Variable(func_name) = name.as_ref() {
+    if let pt::Expression::FunctionCall(_, name, args) = e {
+        if let pt::Expression::Variable(func_name) = name.as_ref() {
             if func_name.name == "type" {
                 return type_name_expr(loc, args, id, contract_no, ns, errors);
             }
@@ -3890,9 +3888,9 @@ fn member_access(
 
 /// Resolve an array subscript expression
 fn array_subscript(
-    loc: &ast::Loc,
-    array: &ast::Expression,
-    index: &ast::Expression,
+    loc: &pt::Loc,
+    array: &pt::Expression,
+    index: &pt::Expression,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4023,7 +4021,7 @@ fn array_subscript(
     let coerced_ty = resolver::Type::Uint(width);
 
     let pos = tab.temp(
-        &ast::Identifier {
+        &pt::Identifier {
             name: "index".to_owned(),
             loc: *loc,
         },
@@ -4216,9 +4214,9 @@ fn array_subscript(
 
 /// Resolve a function call with positional arguments
 fn struct_literal(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     struct_no: usize,
-    args: &[ast::Expression],
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4263,9 +4261,9 @@ fn struct_literal(
 
 /// Resolve a function call with positional arguments
 fn function_call_pos_args(
-    loc: &ast::Loc,
-    id: &ast::Identifier,
-    args: &[ast::Expression],
+    loc: &pt::Loc,
+    id: &pt::Identifier,
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4311,7 +4309,7 @@ fn function_call_pos_args(
             let arg = &resolved_args[i];
 
             match cast(
-                &ast::Loc(0, 0),
+                &pt::Loc(0, 0),
                 *arg.clone(),
                 &resolved_types[i],
                 &param.ty,
@@ -4349,9 +4347,9 @@ fn function_call_pos_args(
 
 /// Resolve a function call with named arguments
 fn function_call_with_named_args(
-    loc: &ast::Loc,
-    id: &ast::Identifier,
-    args: &[ast::NamedArgument],
+    loc: &pt::Loc,
+    id: &pt::Identifier,
+    args: &[pt::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4416,7 +4414,7 @@ fn function_call_with_named_args(
             };
 
             match cast(
-                &ast::Loc(0, 0),
+                &pt::Loc(0, 0),
                 arg.0.clone(),
                 &arg.1,
                 &param.ty,
@@ -4454,9 +4452,9 @@ fn function_call_with_named_args(
 
 /// Resolve a struct literal with named fields
 fn named_struct_literal(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     struct_no: usize,
-    args: &[ast::NamedArgument],
+    args: &[pt::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4511,12 +4509,12 @@ fn named_struct_literal(
 
 /// Resolve a method call with positional arguments
 fn method_call_pos_args(
-    loc: &ast::Loc,
-    var: &ast::Expression,
-    func: &ast::Identifier,
-    args: &[ast::Expression],
-    call_args: &[&ast::NamedArgument],
-    call_args_loc: Option<ast::Loc>,
+    loc: &pt::Loc,
+    var: &pt::Expression,
+    func: &pt::Identifier,
+    args: &[pt::Expression],
+    call_args: &[&pt::NamedArgument],
+    call_args_loc: Option<pt::Loc>,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4643,7 +4641,7 @@ fn method_call_pos_args(
             for (i, param) in ftype.params.iter().enumerate() {
                 let arg = &resolved_args[i];
                 match cast(
-                    &ast::Loc(0, 0),
+                    &pt::Loc(0, 0),
                     *arg.clone(),
                     &resolved_types[i],
                     &param.ty,
@@ -4682,7 +4680,7 @@ fn method_call_pos_args(
                     value
                 } else {
                     Box::new(Expression::NumberLiteral(
-                        ast::Loc(0, 0),
+                        pt::Loc(0, 0),
                         ns.value_length as u16 * 8,
                         BigInt::zero(),
                     ))
@@ -4767,8 +4765,8 @@ fn method_call_pos_args(
                 None
             } else {
                 Some(tab.temp(
-                    &ast::Identifier {
-                        loc: ast::Loc(0, 0),
+                    &pt::Identifier {
+                        loc: pt::Loc(0, 0),
                         name: "success".to_owned(),
                     },
                     &resolver::Type::Bool,
@@ -4812,11 +4810,11 @@ fn method_call_pos_args(
 }
 
 fn method_call_with_named_args(
-    loc: &ast::Loc,
-    var: &ast::Expression,
-    func_name: &ast::Identifier,
-    args: &[ast::NamedArgument],
-    call_args: &[&ast::NamedArgument],
+    loc: &pt::Loc,
+    var: &pt::Expression,
+    func_name: &pt::Identifier,
+    args: &[pt::NamedArgument],
+    call_args: &[&pt::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -4890,7 +4888,7 @@ fn method_call_with_named_args(
                     }
                 };
                 match cast(
-                    &ast::Loc(0, 0),
+                    &pt::Loc(0, 0),
                     arg.0.clone(),
                     &arg.1,
                     &param.ty,
@@ -4930,7 +4928,7 @@ fn method_call_with_named_args(
                     value
                 } else {
                     Box::new(Expression::NumberLiteral(
-                        ast::Loc(0, 0),
+                        pt::Loc(0, 0),
                         ns.value_length as u16 * 8,
                         BigInt::zero(),
                     ))
@@ -4995,7 +4993,7 @@ fn method_call_with_named_args(
 // result of the shift to be left argument, so this function coercies the right argument
 // into the right length.
 fn cast_shift_arg(
-    loc: &ast::Loc,
+    loc: &pt::Loc,
     expr: Expression,
     from_width: u16,
     ty: &resolver::Type,
@@ -5018,8 +5016,8 @@ fn cast_shift_arg(
 /// must of the same type. The array might be a multidimensional array; all the leaf nodes
 /// must match.
 fn resolve_array_literal(
-    loc: &ast::Loc,
-    exprs: &[ast::Expression],
+    loc: &pt::Loc,
+    exprs: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -5084,17 +5082,17 @@ fn resolve_array_literal(
 /// Traverse the literal looking for sub arrays. Ensure that all the sub
 /// arrays are the same length, and returned a flattened array of elements
 fn check_subarrays<'a>(
-    exprs: &'a [ast::Expression],
+    exprs: &'a [pt::Expression],
     dims: &mut Option<&mut Vec<u32>>,
-    flatten: &mut Vec<&'a ast::Expression>,
+    flatten: &mut Vec<&'a pt::Expression>,
     errors: &mut Vec<output::Output>,
 ) -> Result<(), ()> {
-    if let Some(ast::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
+    if let Some(pt::Expression::ArrayLiteral(_, first)) = exprs.get(0) {
         // ensure all elements are array literals of the same length
         check_subarrays(first, dims, flatten, errors)?;
 
         for (i, e) in exprs.iter().enumerate().skip(1) {
-            if let ast::Expression::ArrayLiteral(_, other) = e {
+            if let pt::Expression::ArrayLiteral(_, other) = e {
                 if other.len() != first.len() {
                     errors.push(Output::error(
                         e.loc(),
@@ -5115,7 +5113,7 @@ fn check_subarrays<'a>(
         }
     } else {
         for (i, e) in exprs.iter().enumerate().skip(1) {
-            if let ast::Expression::ArrayLiteral(loc, _) = e {
+            if let pt::Expression::ArrayLiteral(loc, _) = e {
                 errors.push(Output::error(
                     *loc,
                     format!(
@@ -5139,10 +5137,10 @@ fn check_subarrays<'a>(
 /// The parser generates parameter lists for lists. Sometimes this needs to be a
 /// simple expression list.
 pub fn parameter_list_to_expr_list<'a>(
-    e: &'a ast::Expression,
+    e: &'a pt::Expression,
     errors: &mut Vec<output::Output>,
-) -> Result<Vec<&'a ast::Expression>, ()> {
-    if let ast::Expression::List(_, v) = &e {
+) -> Result<Vec<&'a pt::Expression>, ()> {
+    if let pt::Expression::List(_, v) = &e {
         let mut list = Vec::new();
         let mut broken = false;
 
@@ -5152,13 +5150,13 @@ pub fn parameter_list_to_expr_list<'a>(
                     errors.push(Output::error(e.0, "stray comma".to_string()));
                     broken = true;
                 }
-                Some(ast::Parameter {
+                Some(pt::Parameter {
                     name: Some(name), ..
                 }) => {
                     errors.push(Output::error(name.loc, "single value expected".to_string()));
                     broken = true;
                 }
-                Some(ast::Parameter {
+                Some(pt::Parameter {
                     storage: Some(storage),
                     ..
                 }) => {
@@ -5168,7 +5166,7 @@ pub fn parameter_list_to_expr_list<'a>(
                     ));
                     broken = true;
                 }
-                Some(ast::Parameter { ty, .. }) => {
+                Some(pt::Parameter { ty, .. }) => {
                     list.push(ty);
                 }
             }
@@ -5186,32 +5184,32 @@ pub fn parameter_list_to_expr_list<'a>(
 
 /// Function call arguments
 pub fn collect_call_args<'a>(
-    expr: &'a ast::Expression,
+    expr: &'a pt::Expression,
     errors: &mut Vec<Output>,
 ) -> Result<
     (
-        &'a ast::Expression,
-        Vec<&'a ast::NamedArgument>,
-        Option<ast::Loc>,
+        &'a pt::Expression,
+        Vec<&'a pt::NamedArgument>,
+        Option<pt::Loc>,
     ),
     (),
 > {
     let mut named_arguments = Vec::new();
     let mut expr = expr;
-    let mut loc: Option<ast::Loc> = None;
+    let mut loc: Option<pt::Loc> = None;
 
-    while let ast::Expression::FunctionCallBlock(_, e, block) = expr {
+    while let pt::Expression::FunctionCallBlock(_, e, block) = expr {
         match block.as_ref() {
-            ast::Statement::Args(_, args) => {
+            pt::Statement::Args(_, args) => {
                 if let Some(l) = loc {
-                    loc = Some(ast::Loc(l.0, block.loc().1));
+                    loc = Some(pt::Loc(l.0, block.loc().1));
                 } else {
                     loc = Some(block.loc());
                 }
 
                 named_arguments.extend(args);
             }
-            ast::Statement::Block(_, s) if s.is_empty() => {
+            pt::Statement::Block(_, s) if s.is_empty() => {
                 // {}
                 errors.push(Output::error(
                     block.loc(),
@@ -5243,7 +5241,7 @@ struct CallArgs {
 
 /// Parse call arguments for external calls
 fn parse_call_args(
-    call_args: &[&ast::NamedArgument],
+    call_args: &[&pt::NamedArgument],
     external_call: bool,
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
@@ -5251,7 +5249,7 @@ fn parse_call_args(
     vartab: &mut Option<&mut Vartable>,
     errors: &mut Vec<Output>,
 ) -> Result<CallArgs, ()> {
-    let mut args: HashMap<&String, &ast::NamedArgument> = HashMap::new();
+    let mut args: HashMap<&String, &pt::NamedArgument> = HashMap::new();
 
     for arg in call_args {
         if let Some(prev) = args.get(&arg.name.name) {
@@ -5268,11 +5266,7 @@ fn parse_call_args(
     }
 
     let mut res = CallArgs {
-        gas: Box::new(Expression::NumberLiteral(
-            ast::Loc(0, 0),
-            64,
-            BigInt::zero(),
-        )),
+        gas: Box::new(Expression::NumberLiteral(pt::Loc(0, 0), 64, BigInt::zero())),
         value: None,
         salt: None,
     };
@@ -5347,9 +5341,9 @@ fn parse_call_args(
 
 /// Resolve function call
 pub fn function_call_expr(
-    loc: &ast::Loc,
-    ty: &ast::Expression,
-    args: &[ast::Expression],
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    args: &[pt::Expression],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -5359,7 +5353,7 @@ pub fn function_call_expr(
     let (ty, call_args, call_args_loc) = collect_call_args(ty, errors)?;
 
     match ty {
-        ast::Expression::MemberAccess(_, member, func) => method_call_pos_args(
+        pt::Expression::MemberAccess(_, member, func) => method_call_pos_args(
             loc,
             member,
             func,
@@ -5372,7 +5366,7 @@ pub fn function_call_expr(
             vartab,
             errors,
         ),
-        ast::Expression::Variable(id) => {
+        pt::Expression::Variable(id) => {
             if let Some(loc) = call_args_loc {
                 errors.push(Output::error(
                     loc,
@@ -5383,7 +5377,7 @@ pub fn function_call_expr(
 
             function_call_pos_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Expression::ArraySubscript(_, _, _) => {
+        pt::Expression::ArraySubscript(_, _, _) => {
             errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
             Err(())
         }
@@ -5399,9 +5393,9 @@ pub fn function_call_expr(
 
 /// Resolve function call expression with named arguments
 pub fn named_function_call_expr(
-    loc: &ast::Loc,
-    ty: &ast::Expression,
-    args: &[ast::NamedArgument],
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    args: &[pt::NamedArgument],
     cfg: &mut ControlFlowGraph,
     contract_no: Option<usize>,
     ns: &resolver::Namespace,
@@ -5411,7 +5405,7 @@ pub fn named_function_call_expr(
     let (ty, call_args, call_args_loc) = collect_call_args(ty, errors)?;
 
     match ty {
-        ast::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
+        pt::Expression::MemberAccess(_, member, func) => method_call_with_named_args(
             loc,
             member,
             func,
@@ -5423,7 +5417,7 @@ pub fn named_function_call_expr(
             vartab,
             errors,
         ),
-        ast::Expression::Variable(id) => {
+        pt::Expression::Variable(id) => {
             if let Some(loc) = call_args_loc {
                 errors.push(Output::error(
                     loc,
@@ -5434,7 +5428,7 @@ pub fn named_function_call_expr(
 
             function_call_with_named_args(loc, &id, args, cfg, contract_no, ns, vartab, errors)
         }
-        ast::Expression::ArraySubscript(_, _, _) => {
+        pt::Expression::ArraySubscript(_, _, _) => {
             errors.push(Output::error(ty.loc(), "unexpected array type".to_string()));
             Err(())
         }
@@ -5471,8 +5465,8 @@ fn emit_function_call(
                 let mut returns = Vec::new();
 
                 for ret in &ftype.returns {
-                    let id = ast::Identifier {
-                        loc: ast::Loc(0, 0),
+                    let id = pt::Identifier {
+                        loc: pt::Loc(0, 0),
                         name: ret.name.to_owned(),
                     };
 
@@ -5533,8 +5527,8 @@ fn emit_function_call(
                 let mut res = Vec::new();
 
                 for ret in &ftype.returns {
-                    let id = ast::Identifier {
-                        loc: ast::Loc(0, 0),
+                    let id = pt::Identifier {
+                        loc: pt::Loc(0, 0),
                         name: "".to_owned(),
                     };
                     let temp_pos = tab.temp(&id, &ret.ty);

@@ -4,7 +4,7 @@ use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::{One, Zero};
 use output::{any_errors, Note, Output};
-use parser::ast;
+use parser::pt;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::Mul;
@@ -26,7 +26,7 @@ use resolver::cfg::{ControlFlowGraph, Instr, Vartable};
 use resolver::eval::eval_number_expression;
 use resolver::expression::{expression, Expression};
 
-pub type ArrayDimension = Option<(ast::Loc, BigInt)>;
+pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
@@ -374,13 +374,13 @@ impl Type {
 
 pub struct StructField {
     pub name: String,
-    pub loc: ast::Loc,
+    pub loc: pt::Loc,
     pub ty: Type,
 }
 
 pub struct StructDecl {
     pub name: String,
-    pub loc: ast::Loc,
+    pub loc: pt::Loc,
     pub contract: Option<String>,
     pub fields: Vec<StructField>,
 }
@@ -400,7 +400,7 @@ pub struct EnumDecl {
     pub name: String,
     pub contract: Option<String>,
     pub ty: Type,
-    pub values: HashMap<String, (ast::Loc, usize)>,
+    pub values: HashMap<String, (pt::Loc, usize)>,
 }
 
 impl EnumDecl {
@@ -422,13 +422,13 @@ pub struct Parameter {
 
 pub struct FunctionDecl {
     pub doc: Vec<String>,
-    pub loc: ast::Loc,
+    pub loc: pt::Loc,
     pub name: String,
-    pub ty: ast::FunctionTy,
+    pub ty: pt::FunctionTy,
     pub signature: String,
     pub ast_index: Option<usize>,
-    pub mutability: Option<ast::StateMutability>,
-    pub visibility: ast::Visibility,
+    pub mutability: Option<pt::StateMutability>,
+    pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub noreturn: bool,
@@ -438,13 +438,13 @@ pub struct FunctionDecl {
 
 impl FunctionDecl {
     fn new(
-        loc: ast::Loc,
+        loc: pt::Loc,
         name: String,
         doc: Vec<String>,
-        ty: ast::FunctionTy,
+        ty: pt::FunctionTy,
         ast_index: Option<usize>,
-        mutability: Option<ast::StateMutability>,
-        visibility: ast::Visibility,
+        mutability: Option<pt::StateMutability>,
+        visibility: pt::Visibility,
         params: Vec<Parameter>,
         returns: Vec<Parameter>,
         ns: &Namespace,
@@ -485,12 +485,12 @@ impl FunctionDecl {
 
     /// Is this a constructor
     pub fn is_constructor(&self) -> bool {
-        self.ty == ast::FunctionTy::Constructor
+        self.ty == pt::FunctionTy::Constructor
     }
 
     /// Does this function have the payable state
     pub fn is_payable(&self) -> bool {
-        if let Some(ast::StateMutability::Payable(_)) = self.mutability {
+        if let Some(pt::StateMutability::Payable(_)) = self.mutability {
             true
         } else {
             false
@@ -500,7 +500,7 @@ impl FunctionDecl {
     /// Is this function accessable externally
     pub fn is_public(&self) -> bool {
         match self.visibility {
-            ast::Visibility::Public(_) | ast::Visibility::External(_) => true,
+            pt::Visibility::Public(_) | pt::Visibility::External(_) => true,
             _ => false,
         }
     }
@@ -558,20 +558,20 @@ impl FunctionDecl {
     }
 }
 
-impl From<&ast::Type> for Type {
-    fn from(p: &ast::Type) -> Type {
+impl From<&pt::Type> for Type {
+    fn from(p: &pt::Type) -> Type {
         match p {
-            ast::Type::Bool => Type::Bool,
-            ast::Type::Address => Type::Address(false),
-            ast::Type::AddressPayable => Type::Address(true),
-            ast::Type::Payable => Type::Address(true),
-            ast::Type::Int(n) => Type::Int(*n),
-            ast::Type::Uint(n) => Type::Uint(*n),
-            ast::Type::Bytes(n) => Type::Bytes(*n),
-            ast::Type::String => Type::String,
-            ast::Type::DynamicBytes => Type::DynamicBytes,
+            pt::Type::Bool => Type::Bool,
+            pt::Type::Address => Type::Address(false),
+            pt::Type::AddressPayable => Type::Address(true),
+            pt::Type::Payable => Type::Address(true),
+            pt::Type::Int(n) => Type::Int(*n),
+            pt::Type::Uint(n) => Type::Uint(*n),
+            pt::Type::Bytes(n) => Type::Bytes(*n),
+            pt::Type::String => Type::String,
+            pt::Type::DynamicBytes => Type::DynamicBytes,
             // needs special casing
-            ast::Type::Mapping(_, _, _) => unimplemented!(),
+            pt::Type::Mapping(_, _, _) => unimplemented!(),
         }
     }
 }
@@ -585,7 +585,7 @@ pub struct ContractVariable {
     pub doc: Vec<String>,
     pub name: String,
     pub ty: Type,
-    pub visibility: ast::Visibility,
+    pub visibility: pt::Visibility,
     pub var: ContractVariableType,
 }
 
@@ -600,11 +600,11 @@ impl ContractVariable {
 }
 
 pub enum Symbol {
-    Enum(ast::Loc, usize),
-    Function(Vec<(ast::Loc, usize)>),
-    Variable(ast::Loc, usize),
-    Struct(ast::Loc, usize),
-    Contract(ast::Loc, usize),
+    Enum(pt::Loc, usize),
+    Function(Vec<(pt::Loc, usize)>),
+    Variable(pt::Loc, usize),
+    Struct(pt::Loc, usize),
+    Contract(pt::Loc, usize),
 }
 
 /// When resolving a Solidity file, this holds all the resolved items
@@ -635,7 +635,7 @@ impl Namespace {
     pub fn add_symbol(
         &mut self,
         contract_no: Option<usize>,
-        id: &ast::Identifier,
+        id: &pt::Identifier,
         symbol: Symbol,
         errors: &mut Vec<Output>,
     ) -> bool {
@@ -752,7 +752,7 @@ impl Namespace {
         true
     }
 
-    pub fn resolve_enum(&self, contract_no: Option<usize>, id: &ast::Identifier) -> Option<usize> {
+    pub fn resolve_enum(&self, contract_no: Option<usize>, id: &pt::Identifier) -> Option<usize> {
         if let Some(Symbol::Enum(_, n)) = self.symbols.get(&(contract_no, id.name.to_owned())) {
             return Some(*n);
         }
@@ -766,7 +766,7 @@ impl Namespace {
         None
     }
 
-    pub fn resolve_contract(&self, id: &ast::Identifier) -> Option<usize> {
+    pub fn resolve_contract(&self, id: &pt::Identifier) -> Option<usize> {
         if let Some(Symbol::Contract(_, n)) = self.symbols.get(&(None, id.name.to_owned())) {
             return Some(*n);
         }
@@ -777,9 +777,9 @@ impl Namespace {
     pub fn resolve_func(
         &self,
         contract_no: usize,
-        id: &ast::Identifier,
+        id: &pt::Identifier,
         errors: &mut Vec<Output>,
-    ) -> Result<&Vec<(ast::Loc, usize)>, ()> {
+    ) -> Result<&Vec<(pt::Loc, usize)>, ()> {
         match self.symbols.get(&(Some(contract_no), id.name.to_owned())) {
             Some(Symbol::Function(v)) => Ok(v),
             _ => {
@@ -796,7 +796,7 @@ impl Namespace {
     pub fn resolve_var(
         &self,
         contract_no: usize,
-        id: &ast::Identifier,
+        id: &pt::Identifier,
         errors: &mut Vec<Output>,
     ) -> Result<usize, ()> {
         let mut s = self.symbols.get(&(Some(contract_no), id.name.to_owned()));
@@ -848,7 +848,7 @@ impl Namespace {
     pub fn check_shadowing(
         &self,
         contract_no: usize,
-        id: &ast::Identifier,
+        id: &pt::Identifier,
         errors: &mut Vec<Output>,
     ) {
         let mut s = self.symbols.get(&(Some(contract_no), id.name.to_owned()));
@@ -915,11 +915,11 @@ impl Namespace {
         &self,
         contract_no: Option<usize>,
         casting: bool,
-        id: &ast::Expression,
+        id: &pt::Expression,
         errors: &mut Vec<Output>,
     ) -> Result<Type, ()> {
         fn resolve_dimensions(
-            ast_dimensions: &[Option<(ast::Loc, BigInt)>],
+            ast_dimensions: &[Option<(pt::Loc, BigInt)>],
             errors: &mut Vec<Output>,
         ) -> Result<Vec<Option<BigInt>>, ()> {
             let mut dimensions = Vec::new();
@@ -950,11 +950,11 @@ impl Namespace {
 
         let (contract_name, id, dimensions) = self.expr_to_type(&id, errors)?;
 
-        if let ast::Expression::Type(_, ty) = &id {
+        if let pt::Expression::Type(_, ty) = &id {
             assert_eq!(contract_name, None);
 
             let ty = match ty {
-                ast::Type::Mapping(_, k, v) => {
+                pt::Type::Mapping(_, k, v) => {
                     let key = self.resolve_type(contract_no, false, k, errors)?;
                     let value = self.resolve_type(contract_no, false, v, errors)?;
 
@@ -983,7 +983,7 @@ impl Namespace {
                         _ => Type::Mapping(Box::new(key), Box::new(value)),
                     }
                 }
-                ast::Type::Payable => {
+                pt::Type::Payable => {
                     if !casting {
                         errors.push(Output::decl_error(
                             id.loc(),
@@ -1009,7 +1009,7 @@ impl Namespace {
         }
 
         let id = match id {
-            ast::Expression::Variable(id) => id,
+            pt::Expression::Variable(id) => id,
             _ => unreachable!(),
         };
 
@@ -1108,39 +1108,32 @@ impl Namespace {
     // no unexpected expressions types.
     pub fn expr_to_type(
         &self,
-        expr: &ast::Expression,
+        expr: &pt::Expression,
         errors: &mut Vec<Output>,
-    ) -> Result<
-        (
-            Option<ast::Identifier>,
-            ast::Expression,
-            Vec<ArrayDimension>,
-        ),
-        (),
-    > {
+    ) -> Result<(Option<pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
         let mut dimensions = Vec::new();
 
         loop {
             expr = match expr {
-                ast::Expression::ArraySubscript(_, r, None) => {
+                pt::Expression::ArraySubscript(_, r, None) => {
                     dimensions.push(None);
 
                     &*r
                 }
-                ast::Expression::ArraySubscript(_, r, Some(index)) => {
+                pt::Expression::ArraySubscript(_, r, Some(index)) => {
                     dimensions.push(self.resolve_array_dimension(index, errors)?);
 
                     &*r
                 }
-                ast::Expression::Variable(_) | ast::Expression::Type(_, _) => {
+                pt::Expression::Variable(_) | pt::Expression::Type(_, _) => {
                     return Ok((None, expr.clone(), dimensions))
                 }
-                ast::Expression::MemberAccess(_, namespace, id) => {
-                    if let ast::Expression::Variable(namespace) = namespace.as_ref() {
+                pt::Expression::MemberAccess(_, namespace, id) => {
+                    if let pt::Expression::Variable(namespace) = namespace.as_ref() {
                         return Ok((
                             Some(namespace.clone()),
-                            ast::Expression::Variable(id.clone()),
+                            pt::Expression::Variable(id.clone()),
                             dimensions,
                         ));
                     } else {
@@ -1165,7 +1158,7 @@ impl Namespace {
     /// Resolve an expression which defines the array length, e.g. 2**8 in "bool[2**8]"
     pub fn resolve_array_dimension(
         &self,
-        expr: &ast::Expression,
+        expr: &pt::Expression,
         errors: &mut Vec<Output>,
     ) -> Result<ArrayDimension, ()> {
         let mut cfg = ControlFlowGraph::new();
@@ -1217,7 +1210,7 @@ impl Contract {
     /// Return the index of the fallback function, if any
     pub fn fallback_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
-            if f.ty == ast::FunctionTy::Fallback {
+            if f.ty == pt::FunctionTy::Fallback {
                 return Some(i);
             }
         }
@@ -1227,7 +1220,7 @@ impl Contract {
     /// Return the index of the receive function, if any
     pub fn receive_function(&self) -> Option<usize> {
         for (i, f) in self.functions.iter().enumerate() {
-            if f.ty == ast::FunctionTy::Receive {
+            if f.ty == pt::FunctionTy::Receive {
                 return Some(i);
             }
         }
@@ -1263,7 +1256,7 @@ impl Contract {
     }
 }
 
-pub fn resolver(s: ast::SourceUnit, target: Target) -> (Option<Namespace>, Vec<Output>) {
+pub fn resolver(s: pt::SourceUnit, target: Target) -> (Option<Namespace>, Vec<Output>) {
     // first resolve all the types we can find
     let (mut ns, mut errors) = types::resolve(&s, target);
 
@@ -1276,7 +1269,7 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Option<Namespace>, Vec<O
     // contracts before they are declared
     let mut contract_no = 0;
     for part in &s.0 {
-        if let ast::SourceUnitPart::ContractDefinition(def) = part {
+        if let pt::SourceUnitPart::ContractDefinition(def) = part {
             resolve_contract_declarations(def, contract_no, target, &mut errors, &mut ns);
 
             contract_no += 1;
@@ -1286,7 +1279,7 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Option<Namespace>, Vec<O
     // Now we can resolve the bodies
     let mut contract_no = 0;
     for part in &s.0 {
-        if let ast::SourceUnitPart::ContractDefinition(def) = part {
+        if let pt::SourceUnitPart::ContractDefinition(def) = part {
             resolve_contract_bodies(def, contract_no, &mut errors, &mut ns);
 
             contract_no += 1;
@@ -1302,7 +1295,7 @@ pub fn resolver(s: ast::SourceUnit, target: Target) -> (Option<Namespace>, Vec<O
 
 /// Resolve functions declarations, constructor declarations, and contract variables
 fn resolve_contract_declarations(
-    def: &ast::ContractDefinition,
+    def: &pt::ContractDefinition,
     contract_no: usize,
     target: Target,
     errors: &mut Vec<Output>,
@@ -1319,7 +1312,7 @@ fn resolve_contract_declarations(
 
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {
-        if let ast::ContractPart::FunctionDefinition(ref f) = parts {
+        if let pt::ContractPart::FunctionDefinition(ref f) = parts {
             if !functions::function_decl(f, i, contract_no, ns, errors) {
                 broken = true;
             }
@@ -1339,13 +1332,13 @@ fn resolve_contract_declarations(
         && target == Target::Substrate
     {
         let mut fdecl = FunctionDecl::new(
-            ast::Loc(0, 0),
+            pt::Loc(0, 0),
             "".to_owned(),
             vec![],
-            ast::FunctionTy::Constructor,
+            pt::FunctionTy::Constructor,
             None,
             None,
-            ast::Visibility::Public(ast::Loc(0, 0)),
+            pt::Visibility::Public(pt::Loc(0, 0)),
             Vec::new(),
             Vec::new(),
             ns,
@@ -1366,7 +1359,7 @@ fn resolve_contract_declarations(
 }
 
 fn resolve_contract_bodies(
-    def: &ast::ContractDefinition,
+    def: &pt::ContractDefinition,
     contract_no: usize,
     errors: &mut Vec<Output>,
     ns: &mut Namespace,
@@ -1376,7 +1369,7 @@ fn resolve_contract_bodies(
     // resolve function bodies
     for f in 0..ns.contracts[contract_no].functions.len() {
         if let Some(ast_index) = ns.contracts[contract_no].functions[f].ast_index {
-            if let ast::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
+            if let pt::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
                 match cfg::generate_cfg(
                     ast_f,
                     &ns.contracts[contract_no].functions[f],
@@ -1386,7 +1379,7 @@ fn resolve_contract_bodies(
                 ) {
                     Ok(c) => {
                         match &ns.contracts[contract_no].functions[f].mutability {
-                            Some(ast::StateMutability::Pure(loc)) => {
+                            Some(pt::StateMutability::Pure(loc)) => {
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
                                         *loc,
@@ -1403,7 +1396,7 @@ fn resolve_contract_bodies(
                                     broken = true;
                                 }
                             }
-                            Some(ast::StateMutability::View(loc)) => {
+                            Some(pt::StateMutability::View(loc)) => {
                                 if c.writes_contract_storage {
                                     errors.push(Output::error(
                                         *loc,
@@ -1418,7 +1411,7 @@ fn resolve_contract_bodies(
                                     ));
                                 }
                             }
-                            Some(ast::StateMutability::Payable(_)) => {
+                            Some(pt::StateMutability::Payable(_)) => {
                                 //
                             }
                             None => {

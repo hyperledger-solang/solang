@@ -7,7 +7,7 @@ use num_traits::Zero;
 use super::expression::Expression;
 use output;
 use output::Output;
-use parser::ast::Loc;
+use parser::pt::Loc;
 
 /// Resolve an expression where a compile-time constant is expected
 pub fn eval_number_expression(

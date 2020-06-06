@@ -7,7 +7,7 @@ use parser::ast;
 /// contract, so that we can continue producing compiler messages for the remainder
 /// of the contract, even if the struct contains an invalid definition.
 pub fn struct_decl(
-    def: &ast::StructDefinition,
+    def: &pt::StructDefinition,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     errors: &mut Vec<Output>,

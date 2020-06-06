@@ -1,5 +1,5 @@
-pub mod ast;
 pub mod lexer;
+pub mod pt;
 
 #[allow(clippy::all)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -8,7 +8,7 @@ pub mod solidity;
 use lalrpop_util::ParseError;
 use output::Output;
 
-pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
+pub fn parse(src: &str) -> Result<pt::SourceUnit, Vec<Output>> {
     // parse phase
     let lex = lexer::Lexer::new(src);
 
@@ -19,13 +19,13 @@ pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
     if let Err(e) = s {
         errors.push(match e {
             ParseError::InvalidToken { location } => {
-                Output::parser_error(ast::Loc(location, location), "invalid token".to_string())
+                Output::parser_error(pt::Loc(location, location), "invalid token".to_string())
             }
             ParseError::UnrecognizedToken {
                 token: (l, token, r),
                 expected,
             } => Output::parser_error(
-                ast::Loc(l, r),
+                pt::Loc(l, r),
                 format!(
                     "unrecognised token `{}', expected {}",
                     token,
@@ -34,11 +34,11 @@ pub fn parse(src: &str) -> Result<ast::SourceUnit, Vec<Output>> {
             ),
             ParseError::User { error } => Output::parser_error(error.loc(), error.to_string()),
             ParseError::ExtraToken { token } => Output::parser_error(
-                ast::Loc(token.0, token.2),
+                pt::Loc(token.0, token.2),
                 format!("extra token `{}' encountered", token.0),
             ),
             ParseError::UnrecognizedEOF { location, expected } => Output::parser_error(
-                ast::Loc(location, location),
+                pt::Loc(location, location),
                 format!("unexpected end of file, expecting {}", expected.join(", ")),
             ),
         });
@@ -58,8 +58,8 @@ pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
 
 #[cfg(test)]
 mod test {
-    use parser::ast::*;
     use parser::lexer;
+    use parser::pt::*;
     use parser::solidity;
 
     #[test]
