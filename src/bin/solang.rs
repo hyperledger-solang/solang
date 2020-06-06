@@ -10,6 +10,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 use solang::abi;
+use solang::codegen::codegen;
 use solang::output;
 
 #[derive(Serialize)]
@@ -146,27 +147,29 @@ fn process_filename(
         .expect("something went wrong reading the file");
 
     // resolve phase
-    let (ns, errors) = solang::parse_and_resolve(&contents, target);
+    let mut ns = solang::parse_and_resolve(&contents, target);
 
     if matches.is_present("STD-JSON") {
-        let mut out = output::message_as_json(filename, &contents, &errors);
+        let mut out = output::message_as_json(filename, &contents, &ns.diagnostics);
         json.errors.append(&mut out);
     } else {
-        output::print_messages(filename, &contents, &errors, verbose);
+        output::print_messages(filename, &contents, &ns.diagnostics, verbose);
     }
-
-    let ns = match ns {
-        Some(ns) => ns,
-        None => std::process::exit(1),
-    };
 
     if ns.contracts.is_empty() {
         eprintln!("{}: error: no contracts found", filename);
         std::process::exit(1);
     }
 
+    // codegen all the contracts
+    for contract_no in 0..ns.contracts.len() {
+        codegen(contract_no, &mut ns);
+    }
+
     // emit phase
-    for (contract_no, resolved_contract) in ns.contracts.iter().enumerate() {
+    for contract_no in 0..ns.contracts.len() {
+        let resolved_contract = &ns.contracts[contract_no];
+
         if let Some("cfg") = matches.value_of("EMIT") {
             println!("{}", resolved_contract.print_to_string(&ns));
             continue;
@@ -323,7 +326,7 @@ fn process_filename(
             let mut file = File::create(wasm_filename).unwrap();
             file.write_all(&wasm).unwrap();
 
-            let (abi_bytes, abi_ext) = ns.abi(contract_no, verbose);
+            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, verbose);
             let abi_filename = output_file(&contract.name, abi_ext);
 
             if verbose {

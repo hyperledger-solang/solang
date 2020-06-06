@@ -1,6 +1,6 @@
+use codegen::cfg::HashTy;
 use parser::pt;
-use resolver;
-use resolver::cfg::HashTy;
+use sema::ast;
 use std::cell::RefCell;
 use std::str;
 
@@ -24,8 +24,8 @@ pub struct EwasmTarget {
 impl EwasmTarget {
     pub fn build<'a>(
         context: &'a Context,
-        contract: &'a resolver::Contract,
-        ns: &'a resolver::Namespace,
+        contract: &'a ast::Contract,
+        ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
@@ -79,7 +79,7 @@ impl EwasmTarget {
             "storageLoad",
             "finish",
             "revert",
-            "copyCopy",
+            "codeCopy",
             "getCodeSize",
             "printMem",
             "call",
@@ -587,7 +587,7 @@ impl EwasmTarget {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let mut offset = contract.context.i32_type().const_int(
             spec.iter()
@@ -1070,7 +1070,7 @@ impl TargetRuntime for EwasmTarget {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         self.encode(contract, selector, None, load, function, args, spec)
     }
@@ -1082,7 +1082,7 @@ impl TargetRuntime for EwasmTarget {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) {
         self.abi
             .decode(contract, function, args, data, length, spec);
@@ -1570,10 +1570,9 @@ impl TargetRuntime for EwasmTarget {
         }
 
         // bytes32 needs to reverse bytes
-        let temp = contract.builder.build_alloca(
-            contract.llvm_type(&resolver::Type::Bytes(hashlen as u8)),
-            "hash",
-        );
+        let temp = contract
+            .builder
+            .build_alloca(contract.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
 
         contract.builder.build_call(
             contract.module.get_function("__beNtoleN").unwrap(),

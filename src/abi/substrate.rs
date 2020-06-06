@@ -1,7 +1,7 @@
 // Parity Substrate style ABIs/metadata
 use num_traits::ToPrimitive;
 use parser::pt;
-use resolver;
+use sema::ast;
 use serde::{Deserialize, Serialize};
 
 /// Substrate contracts abi consists of a a registry of strings and types, the contract itself
@@ -294,7 +294,7 @@ impl Registry {
 
     /// Returns index to builtin type in registry. Type is added if not already present
     #[allow(dead_code)]
-    fn builtin_enum_type(&mut self, e: &resolver::EnumDecl) -> usize {
+    fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
         let length = self.types.len();
         let name = self.string(&e.name);
 
@@ -354,7 +354,7 @@ pub fn load(bs: &str) -> Result<Metadata, serde_json::error::Error> {
     serde_json::from_str(bs)
 }
 
-pub fn gen_abi(contract_no: usize, ns: &resolver::Namespace) -> Metadata {
+pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
     let mut registry = Registry::new();
 
     let fields = ns.contracts[contract_no]
@@ -373,7 +373,7 @@ pub fn gen_abi(contract_no: usize, ns: &resolver::Namespace) -> Metadata {
         .variables
         .iter()
         .filter_map(|v| {
-            if let resolver::ContractVariableType::Storage(storage) = &v.var {
+            if let ast::ContractVariableType::Storage(storage) = &v.var {
                 if !v.ty.is_mapping() {
                     Some(StorageLayout {
                         name: registry.string(&v.name),
@@ -473,28 +473,27 @@ pub fn gen_abi(contract_no: usize, ns: &resolver::Namespace) -> Metadata {
     }
 }
 
-fn ty_to_abi(ty: &resolver::Type, ns: &resolver::Namespace, registry: &mut Registry) -> ParamType {
+fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Registry) -> ParamType {
     match ty {
         /* clike_enums are broken in polkadot. Use u8 for now.
-        resolver::Type::Enum(n) => ParamType {
+        ast::Type::Enum(n) => ParamType {
             ty: registry.builtin_enum_type(&contract.enums[*n]),
             display_name: vec![registry.string(&contract.enums[*n].name)],
         },
         */
-        resolver::Type::Enum(_) => ParamType {
+        ast::Type::Enum(_) => ParamType {
             ty: registry.builtin_type("u8"),
             display_name: vec![registry.string("u8")],
         },
-        resolver::Type::Bytes(n) => {
+        ast::Type::Bytes(n) => {
             let elem = registry.builtin_type("u8");
             ParamType {
                 ty: registry.builtin_array_type(elem, *n as usize),
                 display_name: vec![],
             }
         }
-        resolver::Type::Undef => unreachable!(),
-        resolver::Type::Mapping(_, _) => unreachable!(),
-        resolver::Type::Array(ty, dims) => {
+        ast::Type::Mapping(_, _) => unreachable!(),
+        ast::Type::Array(ty, dims) => {
             let mut param_ty = ty_to_abi(ty, ns, registry);
 
             for d in dims {
@@ -510,13 +509,13 @@ fn ty_to_abi(ty: &resolver::Type, ns: &resolver::Namespace, registry: &mut Regis
 
             param_ty
         }
-        resolver::Type::StorageRef(ty) => ty_to_abi(ty, ns, registry),
-        resolver::Type::Ref(ty) => ty_to_abi(ty, ns, registry),
-        resolver::Type::Bool
-        | resolver::Type::Uint(_)
-        | resolver::Type::Int(_)
-        | resolver::Type::Address(_)
-        | resolver::Type::Contract(_) => {
+        ast::Type::StorageRef(ty) => ty_to_abi(ty, ns, registry),
+        ast::Type::Ref(ty) => ty_to_abi(ty, ns, registry),
+        ast::Type::Bool
+        | ast::Type::Uint(_)
+        | ast::Type::Int(_)
+        | ast::Type::Address(_)
+        | ast::Type::Contract(_) => {
             let scalety = primitive_to_string(ty.clone());
 
             ParamType {
@@ -524,7 +523,7 @@ fn ty_to_abi(ty: &resolver::Type, ns: &resolver::Namespace, registry: &mut Regis
                 display_name: vec![registry.string(&scalety)],
             }
         }
-        resolver::Type::Struct(n) => {
+        ast::Type::Struct(n) => {
             let def = &ns.structs[*n];
             let fields = def
                 .fields
@@ -539,7 +538,7 @@ fn ty_to_abi(ty: &resolver::Type, ns: &resolver::Namespace, registry: &mut Regis
                 display_name: vec![],
             }
         }
-        resolver::Type::DynamicBytes => {
+        ast::Type::DynamicBytes => {
             let elem = registry.builtin_type("u8");
 
             ParamType {
@@ -547,30 +546,27 @@ fn ty_to_abi(ty: &resolver::Type, ns: &resolver::Namespace, registry: &mut Regis
                 display_name: vec![registry.string("Vec")],
             }
         }
-        resolver::Type::String => ParamType {
+        ast::Type::String => ParamType {
             ty: registry.string_type(),
             display_name: vec![registry.string("str")],
         },
+        _ => unreachable!(),
     }
 }
 
 // For a given primitive, give the name as Substrate would like it (i.e. 64 bits
 // signed int is i64, not int64).
-fn primitive_to_string(ty: resolver::Type) -> String {
+fn primitive_to_string(ty: ast::Type) -> String {
     match ty {
-        resolver::Type::Bool => "bool".into(),
-        resolver::Type::Uint(n) => format!("u{}", n),
-        resolver::Type::Int(n) => format!("i{}", n),
-        resolver::Type::Contract(_) | resolver::Type::Address(_) => "address".into(),
+        ast::Type::Bool => "bool".into(),
+        ast::Type::Uint(n) => format!("u{}", n),
+        ast::Type::Int(n) => format!("i{}", n),
+        ast::Type::Contract(_) | ast::Type::Address(_) => "address".into(),
         _ => unreachable!(),
     }
 }
 
-fn parameter_to_abi(
-    param: &resolver::Parameter,
-    ns: &resolver::Namespace,
-    registry: &mut Registry,
-) -> Param {
+fn parameter_to_abi(param: &ast::Parameter, ns: &ast::Namespace, registry: &mut Registry) -> Param {
     Param {
         name: registry.string(&param.name),
         ty: ty_to_abi(&param.ty, ns, registry),
@@ -578,7 +574,7 @@ fn parameter_to_abi(
 }
 
 /// Given an u32 selector, generate a byte string like: "[\"0xF8\",\"0x1E\",\"0x7E\",\"0x1A\"]"
-fn render_selector(f: &resolver::FunctionDecl) -> String {
+fn render_selector(f: &ast::Function) -> String {
     format!(
         "[{}]",
         f.selector()

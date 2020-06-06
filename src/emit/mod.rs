@@ -1,8 +1,8 @@
+use codegen::cfg;
 use hex;
 use parser::pt;
-use resolver;
-use resolver::cfg;
-use resolver::expression::{Expression, StringLocation};
+use sema::ast;
+use sema::ast::{Expression, StringLocation};
 use std::cell::RefCell;
 use std::path::Path;
 use std::str;
@@ -54,7 +54,7 @@ pub trait TargetRuntime {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     );
 
     /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
@@ -66,7 +66,7 @@ pub trait TargetRuntime {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>);
 
     // Access storage
@@ -225,8 +225,8 @@ pub struct Contract<'a> {
     builder: Builder<'a>,
     context: &'a Context,
     triple: TargetTriple,
-    contract: &'a resolver::Contract,
-    ns: &'a resolver::Namespace,
+    contract: &'a ast::Contract,
+    ns: &'a ast::Namespace,
     functions: Vec<FunctionValue<'a>>,
     wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
@@ -237,8 +237,8 @@ impl<'a> Contract<'a> {
     /// Build the LLVM IR for a contract
     pub fn build(
         context: &'a Context,
-        contract: &'a resolver::Contract,
-        ns: &'a resolver::Namespace,
+        contract: &'a ast::Contract,
+        ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Self {
@@ -359,8 +359,8 @@ impl<'a> Contract<'a> {
 
     pub fn new(
         context: &'a Context,
-        contract: &'a resolver::Contract,
-        ns: &'a resolver::Namespace,
+        contract: &'a ast::Contract,
+        ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
         runtime: Option<Box<Contract<'a>>>,
@@ -678,25 +678,25 @@ impl<'a> Contract<'a> {
     fn emit_functions(&mut self, runtime: &mut dyn TargetRuntime) {
         let mut defines = Vec::new();
 
-        for resolver_func in &self.contract.functions {
-            let name = match resolver_func.ty {
+        for codegen_func in &self.contract.functions {
+            let name = match codegen_func.ty {
                 pt::FunctionTy::Function => {
-                    format!("sol::function::{}", resolver_func.wasm_symbol(self.ns))
+                    format!("sol::function::{}", codegen_func.wasm_symbol(self.ns))
                 }
                 pt::FunctionTy::Constructor => {
-                    format!("sol::constructor{}", resolver_func.wasm_symbol(self.ns))
+                    format!("sol::constructor{}", codegen_func.wasm_symbol(self.ns))
                 }
-                _ => format!("sol::{}", resolver_func.ty),
+                _ => format!("sol::{}", codegen_func.ty),
             };
 
-            let func_decl = self.declare_function(&name, resolver_func);
+            let func_decl = self.declare_function(&name, codegen_func);
             self.functions.push(func_decl);
 
-            defines.push((func_decl, resolver_func));
+            defines.push((func_decl, codegen_func));
         }
 
-        for (func_decl, resolver_func) in defines {
-            self.define_function(resolver_func, func_decl, runtime);
+        for (func_decl, codegen_func) in defines {
+            self.define_function(codegen_func, func_decl, runtime);
         }
     }
 
@@ -713,13 +713,15 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
-            Expression::FunctionArg(_, pos) => function.get_nth_param(*pos as u32).unwrap(),
+            Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => self
                 .context
                 .bool_type()
                 .const_int(*val as u64, false)
                 .into(),
-            Expression::NumberLiteral(_, bits, n) => self.number_literal(*bits as u32, n).into(),
+            Expression::NumberLiteral(_, ty, n) => {
+                self.number_literal(ty.bits(self.ns) as u32, n).into()
+            }
             Expression::StructLiteral(_, ty, exprs) => {
                 let struct_ty = self.llvm_type(ty);
 
@@ -763,7 +765,7 @@ impl<'a> Contract<'a> {
 
                 s.into()
             }
-            Expression::BytesLiteral(_, bs) => {
+            Expression::BytesLiteral(_, _, bs) => {
                 let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
 
                 // hex"11223344" should become i32 0x11223344
@@ -774,10 +776,10 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::CodeLiteral(_, contract_no, runtime) => {
-                let resolver_contract = &self.ns.contracts[*contract_no];
+                let codegen_contract = &self.ns.contracts[*contract_no];
 
                 let target_contract =
-                    Contract::build(self.context, &resolver_contract, self.ns, "", self.opt);
+                    Contract::build(self.context, &codegen_contract, self.ns, "", self.opt);
 
                 // wasm
                 let wasm = if *runtime && target_contract.runtime.is_some() {
@@ -798,7 +800,7 @@ impl<'a> Contract<'a> {
                     &format!(
                         "code_{}_{}",
                         if *runtime { "runtime" } else { "deployer" },
-                        &resolver_contract.name
+                        &codegen_contract.name
                     ),
                     &wasm,
                     false,
@@ -826,7 +828,7 @@ impl<'a> Contract<'a> {
                     )
                     .into()
             }
-            Expression::Add(_, l, r) => {
+            Expression::Add(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -836,7 +838,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_add(left, right, "").into()
             }
-            Expression::Subtract(_, l, r) => {
+            Expression::Subtract(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -846,7 +848,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_int_sub(left, right, "").into()
             }
-            Expression::Multiply(_, l, r) => {
+            Expression::Multiply(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -901,7 +903,7 @@ impl<'a> Contract<'a> {
                     self.builder.build_int_mul(left, right, "").into()
                 }
             }
-            Expression::UDivide(_, l, r) => {
+            Expression::UDivide(_, _, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -948,7 +950,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::SDivide(_, l, r) => {
+            Expression::SDivide(_, _, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -991,7 +993,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::UModulo(_, l, r) => {
+            Expression::UModulo(_, _, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -1038,7 +1040,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::SModulo(_, l, r) => {
+            Expression::SModulo(_, _, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -1080,7 +1082,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::Power(_, l, r) => {
+            Expression::Power(_, _, l, r) => {
                 let left = self.expression(l, vartab, function, runtime);
                 let right = self.expression(r, vartab, function, runtime);
 
@@ -1214,8 +1216,8 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::ULE, left, right, "")
                     .into()
             }
-            Expression::Variable(_, s) => vartab[*s].value,
-            Expression::Load(_, e) => {
+            Expression::Variable(_, _, s) => vartab[*s].value,
+            Expression::Load(_, _, e) => {
                 let expr = self
                     .expression(e, vartab, function, runtime)
                     .into_pointer_value();
@@ -1241,7 +1243,7 @@ impl<'a> Contract<'a> {
                     .build_int_z_extend(e, ty.into_int_type(), "")
                     .into()
             }
-            Expression::UnaryMinus(_, e) => {
+            Expression::UnaryMinus(_, _, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
@@ -1268,6 +1270,7 @@ impl<'a> Contract<'a> {
                     .build_int_truncate(e, ty.into_int_type(), "")
                     .into()
             }
+            Expression::Cast(_, _, e) => self.expression(e, vartab, function, runtime),
             Expression::Not(_, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
@@ -1277,7 +1280,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
                     .into()
             }
-            Expression::Complement(_, e) => {
+            Expression::Complement(_, _, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)
                     .into_int_value();
@@ -1304,7 +1307,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_and(left, right, "").into()
             }
-            Expression::BitwiseOr(_, l, r) => {
+            Expression::BitwiseOr(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -1314,7 +1317,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_or(left, right, "").into()
             }
-            Expression::BitwiseAnd(_, l, r) => {
+            Expression::BitwiseAnd(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -1324,7 +1327,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_and(left, right, "").into()
             }
-            Expression::BitwiseXor(_, l, r) => {
+            Expression::BitwiseXor(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -1334,7 +1337,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_xor(left, right, "").into()
             }
-            Expression::ShiftLeft(_, l, r) => {
+            Expression::ShiftLeft(_, _, l, r) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -1344,7 +1347,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_left_shift(left, right, "").into()
             }
-            Expression::ShiftRight(_, l, r, signed) => {
+            Expression::ShiftRight(_, _, l, r, signed) => {
                 let left = self
                     .expression(l, vartab, function, runtime)
                     .into_int_value();
@@ -1356,7 +1359,7 @@ impl<'a> Contract<'a> {
                     .build_right_shift(left, right, *signed, "")
                     .into()
             }
-            Expression::ArraySubscript(_, a, i) => {
+            Expression::ArraySubscript(_, _, a, i) => {
                 let array = self
                     .expression(a, vartab, function, runtime)
                     .into_pointer_value();
@@ -1418,7 +1421,7 @@ impl<'a> Contract<'a> {
                     .storage_string_length(&self, function, slot_ptr)
                     .into()
             }
-            Expression::DynamicArraySubscript(_, a, elem_ty, i) => {
+            Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
                 let array = self
                     .expression(a, vartab, function, runtime)
                     .into_pointer_value();
@@ -1451,7 +1454,7 @@ impl<'a> Contract<'a> {
                     .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
                     .into()
             }
-            Expression::StructMember(_, a, i) => {
+            Expression::StructMember(_, _, a, i) => {
                 let array = self
                     .expression(a, vartab, function, runtime)
                     .into_pointer_value();
@@ -1469,7 +1472,7 @@ impl<'a> Contract<'a> {
                         .into()
                 }
             }
-            Expression::Ternary(_, c, l, r) => {
+            Expression::Ternary(_, _, c, l, r) => {
                 let cond = self
                     .expression(c, vartab, function, runtime)
                     .into_int_value();
@@ -1482,7 +1485,7 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_select(cond, left, right, "")
             }
-            Expression::ConstArrayLiteral(_, dims, exprs) => {
+            Expression::ConstArrayLiteral(_, _, dims, exprs) => {
                 // For const arrays (declared with "constant" keyword, we should create a global constant
                 let mut dims = dims.iter();
 
@@ -1620,16 +1623,16 @@ impl<'a> Contract<'a> {
 
                 self.builder.build_load(len, "array_len")
             }
-            Expression::Keccak256(_, exprs) => {
+            Expression::Keccak256(_, _, exprs) => {
                 let mut length = self.context.i32_type().const_zero();
-                let mut values: Vec<(BasicValueEnum, IntValue, resolver::Type)> = Vec::new();
+                let mut values: Vec<(BasicValueEnum, IntValue, ast::Type)> = Vec::new();
 
                 // first we need to calculate the length of the buffer and get the types/lengths
                 for e in exprs {
-                    let v = self.expression(&e.0, vartab, function, runtime);
+                    let v = self.expression(&e, vartab, function, runtime);
 
-                    let len = match e.1 {
-                        resolver::Type::DynamicBytes | resolver::Type::String => {
+                    let len = match e.ty() {
+                        ast::Type::DynamicBytes | ast::Type::String => {
                             // field 0 is the length
                             let array_len = unsafe {
                                 self.builder.build_gep(
@@ -1655,7 +1658,7 @@ impl<'a> Contract<'a> {
 
                     length = self.builder.build_int_add(length, len, "");
 
-                    values.push((v, len, e.1.clone()));
+                    values.push((v, len, e.ty()));
                 }
 
                 //  now allocate a buffer
@@ -1672,7 +1675,7 @@ impl<'a> Contract<'a> {
                     offset = self.builder.build_int_add(offset, len, "");
 
                     match ty {
-                        resolver::Type::DynamicBytes | resolver::Type::String => {
+                        ast::Type::DynamicBytes | ast::Type::String => {
                             let data = unsafe {
                                 self.builder.build_gep(
                                     v.into_pointer_value(),
@@ -1733,7 +1736,7 @@ impl<'a> Contract<'a> {
                     .left()
                     .unwrap()
             }
-            Expression::StringConcat(_, l, r) => {
+            Expression::StringConcat(_, _, l, r) => {
                 let (left, left_len) = self.string_location(l, vartab, function, runtime);
                 let (right, right_len) = self.string_location(r, vartab, function, runtime);
 
@@ -1760,15 +1763,15 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::ReturnData(_) => runtime.return_data(self).into(),
-            Expression::GetAddress(_) => runtime.get_address(self).into(),
-            Expression::Balance(_, addr) => {
+            Expression::GetAddress(_, _) => runtime.get_address(self).into(),
+            Expression::Balance(_, _, addr) => {
                 let addr = self
                     .expression(addr, vartab, function, runtime)
                     .into_int_value();
 
                 runtime.balance(self, addr).into()
             }
-            _ => unreachable!(),
+            _ => panic!("{:?} not implemented", e),
         }
     }
 
@@ -1839,17 +1842,17 @@ impl<'a> Contract<'a> {
     /// Recursively load a type from contract storage
     fn storage_load(
         &self,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue,
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match ty {
-            resolver::Type::Ref(ty) => self.storage_load(ty, slot, slot_ptr, function, runtime),
-            resolver::Type::Array(_, dim) => {
+            ast::Type::Ref(ty) => self.storage_load(ty, slot, slot_ptr, function, runtime),
+            ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
-                    let llvm_ty = self.llvm_type(ty.deref());
+                    let llvm_ty = self.llvm_type(ty.deref_any());
                     // LLVMSizeOf() produces an i64
                     let size = self.builder.build_int_truncate(
                         llvm_ty.size_of().unwrap(),
@@ -1902,7 +1905,7 @@ impl<'a> Contract<'a> {
                     dest.into()
                 } else {
                     // iterate over dynamic array
-                    let slot_ty = resolver::Type::Uint(256);
+                    let slot_ty = ast::Type::Uint(256);
 
                     let size = self.builder.build_int_truncate(
                         self.storage_load(&slot_ty, slot, slot_ptr, function, runtime)
@@ -1993,8 +1996,8 @@ impl<'a> Contract<'a> {
                     dest.into()
                 }
             }
-            resolver::Type::Struct(n) => {
-                let llvm_ty = self.llvm_type(ty.deref());
+            ast::Type::Struct(n) => {
+                let llvm_ty = self.llvm_type(ty.deref_any());
                 // LLVMSizeOf() produces an i64
                 let size = self.builder.build_int_truncate(
                     llvm_ty.size_of().unwrap(),
@@ -2039,7 +2042,7 @@ impl<'a> Contract<'a> {
 
                 dest.into()
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::String | ast::Type::DynamicBytes => {
                 self.builder.build_store(slot_ptr, *slot);
 
                 let ret = runtime.get_storage_string(&self, function, slot_ptr);
@@ -2059,7 +2062,7 @@ impl<'a> Contract<'a> {
                     &self,
                     function,
                     slot_ptr,
-                    self.llvm_type(ty.deref()).into_int_type(),
+                    self.llvm_type(ty.deref_any()).into_int_type(),
                 );
 
                 *slot = self.builder.build_int_add(
@@ -2076,15 +2079,15 @@ impl<'a> Contract<'a> {
     /// Recursively store a type to contract storage
     fn storage_store(
         &self,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) {
-        match ty.deref() {
-            resolver::Type::Array(_, dim) => {
+        match ty.deref_any() {
+            ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
                     let ty = ty.array_deref();
 
@@ -2138,7 +2141,7 @@ impl<'a> Contract<'a> {
                         )
                         .into_int_value();
 
-                    let slot_ty = resolver::Type::Uint(256);
+                    let slot_ty = ast::Type::Uint(256);
 
                     // details about our array elements
                     let elem_ty = self.llvm_type(&ty.array_elem());
@@ -2252,7 +2255,7 @@ impl<'a> Contract<'a> {
                     );
                 }
             }
-            resolver::Type::Struct(n) => {
+            ast::Type::Struct(n) => {
                 for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
                     let mut elem = unsafe {
                         self.builder.build_gep(
@@ -2283,7 +2286,7 @@ impl<'a> Contract<'a> {
                     }
                 }
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::String | ast::Type::DynamicBytes => {
                 runtime.set_storage_string(&self, function, slot_ptr, dest.into_pointer_value());
             }
             _ => {
@@ -2309,14 +2312,14 @@ impl<'a> Contract<'a> {
     /// Recursively clear contract storage
     fn storage_clear(
         &self,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) {
-        match ty.deref() {
-            resolver::Type::Array(_, dim) => {
+        match ty.deref_any() {
+            ast::Type::Array(_, dim) => {
                 let ty = ty.array_deref();
 
                 if let Some(d) = &dim[0] {
@@ -2384,16 +2387,10 @@ impl<'a> Contract<'a> {
                     );
 
                     // clear length itself
-                    self.storage_clear(
-                        &resolver::Type::Uint(256),
-                        slot,
-                        slot_ptr,
-                        function,
-                        runtime,
-                    );
+                    self.storage_clear(&ast::Type::Uint(256), slot, slot_ptr, function, runtime);
                 }
             }
-            resolver::Type::Struct(n) => {
+            ast::Type::Struct(n) => {
                 for (_, field) in self.ns.structs[*n].fields.iter().enumerate() {
                     self.storage_clear(&field.ty, slot, slot_ptr, function, runtime);
 
@@ -2406,7 +2403,7 @@ impl<'a> Contract<'a> {
                     }
                 }
             }
-            resolver::Type::Mapping(_, _) => {
+            ast::Type::Mapping(_, _) => {
                 // nothing to do, step over it
             }
             _ => {
@@ -2431,7 +2428,7 @@ impl<'a> Contract<'a> {
     }
 
     /// Emit function prototype
-    fn declare_function(&self, fname: &str, f: &resolver::FunctionDecl) -> FunctionValue<'a> {
+    fn declare_function(&self, fname: &str, f: &ast::Function) -> FunctionValue<'a> {
         // function parameters
         let mut args = f
             .params
@@ -2459,23 +2456,23 @@ impl<'a> Contract<'a> {
     /// Emit function body
     fn define_function(
         &self,
-        resolver_func: &resolver::FunctionDecl,
+        codegen_func: &ast::Function,
         function: FunctionValue<'a>,
         runtime: &mut dyn TargetRuntime,
     ) {
-        let cfg = match resolver_func.cfg {
+        let cfg = match codegen_func.cfg {
             Some(ref cfg) => cfg,
             None => panic!(),
         };
 
-        self.emit_cfg(cfg, Some(resolver_func), function, runtime);
+        self.emit_cfg(cfg, Some(codegen_func), function, runtime);
     }
 
     #[allow(clippy::cognitive_complexity)]
     fn emit_cfg(
         &self,
         cfg: &cfg::ControlFlowGraph,
-        resolver_function: Option<&resolver::FunctionDecl>,
+        codegen_function: Option<&ast::Function>,
         function: FunctionValue<'a>,
         runtime: &mut dyn TargetRuntime,
     ) {
@@ -2572,7 +2569,7 @@ impl<'a> Contract<'a> {
                             .build_return(Some(&self.context.i32_type().const_zero()));
                     }
                     cfg::Instr::Return { value } => {
-                        let returns_offset = resolver_function.unwrap().params.len();
+                        let returns_offset = codegen_function.unwrap().params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(val, &w.vars, function, runtime);
@@ -2591,7 +2588,10 @@ impl<'a> Contract<'a> {
                         self.expression(expr, &w.vars, function, runtime);
                     }
                     cfg::Instr::Constant { res, constant } => {
-                        let const_expr = &self.contract.constants[*constant];
+                        let const_expr = self.contract.variables[*constant]
+                            .initializer
+                            .as_ref()
+                            .unwrap();
                         let value_ref = self.expression(const_expr, &w.vars, function, runtime);
 
                         w.vars[*res].value = value_ref;
@@ -2737,9 +2737,10 @@ impl<'a> Contract<'a> {
                             false,
                             function,
                             &[v],
-                            &[resolver::Parameter {
+                            &[ast::Parameter {
+                                loc: pt::Loc(0, 0),
                                 name: "error".to_owned(),
-                                ty: resolver::Type::String,
+                                ty: ast::Type::String,
                             }],
                         );
 
@@ -3190,7 +3191,7 @@ impl<'a> Contract<'a> {
     /// to the fallback function or receive function, if any.
     pub fn emit_function_dispatch<F>(
         &self,
-        resolver_functions: &[resolver::FunctionDecl],
+        codegen_functions: &[ast::Function],
         function_ty: pt::FunctionTy,
         functions: &[FunctionValue<'a>],
         argsdata: inkwell::values::PointerValue<'a>,
@@ -3200,7 +3201,7 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
         nonpayable: F,
     ) where
-        F: Fn(&resolver::FunctionDecl) -> bool,
+        F: Fn(&ast::Function) -> bool,
     {
         // create start function
         let no_function_matched = match fallback {
@@ -3243,7 +3244,7 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (i, f) in resolver_functions
+        for (i, f) in codegen_functions
             .iter()
             .enumerate()
             .filter(|f| f.1.ty == function_ty)
@@ -4056,37 +4057,35 @@ impl<'a> Contract<'a> {
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself
-    fn llvm_var(&self, ty: &resolver::Type) -> BasicTypeEnum<'a> {
+    fn llvm_var(&self, ty: &ast::Type) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty);
-        match ty.deref_nonstorage() {
-            resolver::Type::Struct(_)
-            | resolver::Type::Array(_, _)
-            | resolver::Type::DynamicBytes
-            | resolver::Type::String => {
-                llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-            }
+        match ty.deref() {
+            ast::Type::Struct(_)
+            | ast::Type::Array(_, _)
+            | ast::Type::DynamicBytes
+            | ast::Type::String => llvm_ty.ptr_type(AddressSpace::Generic).as_basic_type_enum(),
             _ => llvm_ty,
         }
     }
 
     /// Return the llvm type for the resolved type.
-    fn llvm_type(&self, ty: &resolver::Type) -> BasicTypeEnum<'a> {
+    fn llvm_type(&self, ty: &ast::Type) -> BasicTypeEnum<'a> {
         match ty {
-            resolver::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
-            resolver::Type::Int(n) | resolver::Type::Uint(n) => {
+            ast::Type::Bool => BasicTypeEnum::IntType(self.context.bool_type()),
+            ast::Type::Int(n) | ast::Type::Uint(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
             }
-            resolver::Type::Contract(_) | resolver::Type::Address(_) => {
+            ast::Type::Contract(_) | ast::Type::Address(_) => {
                 BasicTypeEnum::IntType(self.address_type())
             }
-            resolver::Type::Bytes(n) => {
+            ast::Type::Bytes(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
             }
-            resolver::Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
+            ast::Type::String | ast::Type::DynamicBytes => {
                 self.module.get_type("struct.vector").unwrap()
             }
-            resolver::Type::Array(base_ty, dims) => {
+            ast::Type::Array(base_ty, dims) => {
                 let ty = self.llvm_var(base_ty);
 
                 let mut dims = dims.iter();
@@ -4105,7 +4104,7 @@ impl<'a> Contract<'a> {
 
                 BasicTypeEnum::ArrayType(aty)
             }
-            resolver::Type::Struct(n) => self
+            ast::Type::Struct(n) => self
                 .context
                 .struct_type(
                     &self.ns.structs[*n]
@@ -4116,15 +4115,15 @@ impl<'a> Contract<'a> {
                     false,
                 )
                 .as_basic_type_enum(),
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(r) => self
+            ast::Type::Mapping(_, _) => unreachable!(),
+            ast::Type::Ref(r) => self
                 .llvm_type(r)
                 .ptr_type(AddressSpace::Generic)
                 .as_basic_type_enum(),
-            resolver::Type::StorageRef(_) => {
+            ast::Type::StorageRef(_) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(256))
             }
+            _ => unreachable!(),
         }
     }
 

@@ -1,6 +1,6 @@
 // ethereum style ABIs
 use parser::pt;
-use resolver::{Namespace, Type};
+use sema::ast::{Namespace, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]

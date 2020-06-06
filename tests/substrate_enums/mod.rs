@@ -84,7 +84,7 @@ fn enums_other_contracts() {
 
 #[test]
 fn test_cast_errors() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             enum state { foo, bar, baz }
             function foo() public pure returns (uint8) {
@@ -95,11 +95,11 @@ fn test_cast_errors() {
     );
 
     assert_eq!(
-        first_error(errors),
-        "conversion from enum test.state to uint8 not possible"
+        first_error(ns.diagnostics),
+        "implicit conversion from enum test.state to uint8 not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             enum state {  }
             function foo() public pure returns (uint8) {
@@ -109,9 +109,12 @@ fn test_cast_errors() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "enum ‘state’ is missing fields");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "enum ‘state’ is missing fields"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             enum state { foo, bar, baz }
             function foo() public pure returns (uint8) {
@@ -121,5 +124,5 @@ fn test_cast_errors() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 }

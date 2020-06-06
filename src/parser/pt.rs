@@ -82,6 +82,7 @@ impl fmt::Display for StorageLocation {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct VariableDeclaration {
+    pub loc: Loc,
     pub ty: Expression,
     pub storage: Option<StorageLocation>,
     pub name: Identifier,
@@ -317,6 +318,7 @@ impl Expression {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Parameter {
+    pub loc: Loc,
     pub ty: Expression,
     pub storage: Option<StorageLocation>,
     pub name: Option<Identifier>,

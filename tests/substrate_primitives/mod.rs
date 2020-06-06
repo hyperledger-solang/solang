@@ -59,7 +59,7 @@ fn various_constants() {
 
 #[test]
 fn test_literal_overflow() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             uint8 foo = 300;
         }",
@@ -67,11 +67,11 @@ fn test_literal_overflow() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would truncate from uint16 to uint8"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             uint16 foo = 0x10000;
         }",
@@ -79,11 +79,11 @@ fn test_literal_overflow() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would truncate from uint24 to uint16"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             int8 foo = 0x8_0;
         }",
@@ -91,38 +91,38 @@ fn test_literal_overflow() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would truncate from uint8 to int8"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             int8 foo = 127;
         }",
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             int8 foo = -128;
         }",
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             uint8 foo = 255;
         }",
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             uint8 foo = -1_30;
         }",
@@ -130,11 +130,11 @@ fn test_literal_overflow() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion cannot change negative number to uint8"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             int64 foo = 1844674_4073709551616;
         }",
@@ -142,7 +142,7 @@ fn test_literal_overflow() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would truncate from uint72 to int64"
     );
 }
@@ -234,7 +234,7 @@ fn bytes() {
 
 #[test]
 fn address() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             address  foo = 0x1844674_4073709551616;
         }",
@@ -242,20 +242,20 @@ fn address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion from uint80 to address not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             address foo = 0xa368df6dfcd5ba7b0bc108af09e98e4655e35a2c3b2e2d5e3eae6c6f7cd8d2d4;
         }",
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "address literal has incorrect checksum, expected ‘0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4’");
+    assert_eq!(first_error(ns.diagnostics), "address literal has incorrect checksum, expected ‘0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4’");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             uint256 foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
         }",
@@ -263,11 +263,11 @@ fn address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would truncate from address to uint256"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
 
@@ -279,11 +279,11 @@ fn address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "expression of type address not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
 
@@ -295,11 +295,11 @@ fn address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "expression of type address not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             address foo = 0xA368dF6DFCD5Ba7b0BC108AF09e98E4655e35A2c3B2e2D5E3Eae6c6f7CD8D2D4;
 
@@ -311,7 +311,7 @@ fn address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "expression of type address not allowed"
     );
 
@@ -356,7 +356,7 @@ fn address() {
 
 #[test]
 fn address_payable_type() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address payable a) public {
@@ -366,9 +366,9 @@ fn address_payable_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address a) public {
@@ -384,11 +384,11 @@ fn address_payable_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion to contract other from address not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address payable a) public {
@@ -404,11 +404,11 @@ fn address_payable_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion to contract other from address payable not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address payable a) public {
@@ -423,9 +423,9 @@ fn address_payable_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address payable a) public {
@@ -435,9 +435,9 @@ fn address_payable_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(payable a) public {
@@ -448,12 +448,12 @@ fn address_payable_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "‘payable’ cannot be used for type declarations, only casting. use ‘address payable’"
     );
 
     // note: this is not possible in solc yet
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address a) public {
@@ -463,7 +463,7 @@ fn address_payable_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 }
 
 #[test]
@@ -522,7 +522,7 @@ fn type_name() {
     runtime.function("max_int", Vec::new());
     runtime.function("max_uint", Vec::new());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -533,7 +533,7 @@ fn type_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "type ‘bool’ does not have type function max"
     );
 }
@@ -571,7 +571,7 @@ fn units() {
 
     runtime.function("foo", Vec::new());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -582,11 +582,11 @@ fn units() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "ethereum currency unit used while not targetting ethereum"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -597,11 +597,11 @@ fn units() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "hexadecimal numbers cannot be used with unit denominations"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -612,7 +612,7 @@ fn units() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "unit denominations can only be used with number literals"
     );
 }

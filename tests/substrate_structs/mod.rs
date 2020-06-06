@@ -12,7 +12,7 @@ struct Val8(u8);
 
 #[test]
 fn parse_structs() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -24,11 +24,11 @@ fn parse_structs() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "struct ‘Foo’ has duplicate struct field ‘a’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -40,11 +40,11 @@ fn parse_structs() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "storage location ‘storage’ not allowed for struct field"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -56,11 +56,11 @@ fn parse_structs() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "storage location ‘calldata’ not allowed for struct field"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -72,11 +72,11 @@ fn parse_structs() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "storage location ‘memory’ not allowed for struct field"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -86,11 +86,11 @@ fn parse_structs() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "struct definition for ‘Foo’ has no fields"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -100,10 +100,10 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "type ‘boolean’ not found");
+    assert_eq!(first_error(ns.diagnostics), "type ‘boolean’ not found");
 
     // is it impossible to define recursive structs
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -114,10 +114,13 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘Foo’ has infinite size");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "struct ‘Foo’ has infinite size"
+    );
 
     // is it impossible to define recursive structs
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             s z;
@@ -136,10 +139,10 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘s’ has infinite size");
+    assert_eq!(first_error(ns.diagnostics), "struct ‘s’ has infinite size");
 
     // literal initializers
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -154,10 +157,13 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 0");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "struct ‘Foo’ has 2 fields, not 0"
+    );
 
     // literal initializers
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -172,10 +178,13 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 3");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "struct ‘Foo’ has 2 fields, not 3"
+    );
 
     // literal initializers
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -190,10 +199,13 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 0");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "struct ‘Foo’ has 2 fields, not 0"
+    );
 
     // literal initializers
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -208,10 +220,13 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘Foo’ has 2 fields, not 3");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "struct ‘Foo’ has 2 fields, not 3"
+    );
 
     // literal initializers
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract test_struct_parsing {
             struct Foo {
@@ -226,7 +241,7 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "struct ‘Foo’ has no field ‘z’");
+    assert_eq!(first_error(ns.diagnostics), "struct ‘Foo’ has no field ‘z’");
 }
 
 #[test]

@@ -1,10 +1,9 @@
-use num_traits::ToPrimitive;
-use resolver;
-
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
+use num_traits::ToPrimitive;
+use sema::ast;
 
 use super::Contract;
 
@@ -18,19 +17,19 @@ impl EthAbiEncoder {
         contract: &Contract<'a>,
         load: bool,
         function: FunctionValue,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         arg: BasicValueEnum<'a>,
         fixed: &mut PointerValue<'a>,
         offset: &mut IntValue<'a>,
         dynamic: &mut PointerValue<'a>,
     ) {
         match &ty {
-            resolver::Type::Bool
-            | resolver::Type::Address(_)
-            | resolver::Type::Contract(_)
-            | resolver::Type::Int(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Bytes(_) => {
+            ast::Type::Bool
+            | ast::Type::Address(_)
+            | ast::Type::Contract(_)
+            | ast::Type::Int(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Bytes(_) => {
                 self.encode_primitive(contract, load, ty, *fixed, arg);
 
                 *fixed = unsafe {
@@ -41,10 +40,10 @@ impl EthAbiEncoder {
                     )
                 };
             }
-            resolver::Type::Enum(n) => {
+            ast::Type::Enum(n) => {
                 self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *fixed, arg);
             }
-            resolver::Type::Array(_, dim) => {
+            ast::Type::Array(_, dim) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -75,7 +74,7 @@ impl EthAbiEncoder {
                                 contract,
                                 true,
                                 function,
-                                &ty.deref(),
+                                &ty.deref_any(),
                                 elem.into(),
                                 data,
                                 offset,
@@ -88,7 +87,7 @@ impl EthAbiEncoder {
                     self.encode_primitive(
                         contract,
                         false,
-                        &resolver::Type::Uint(32),
+                        &ast::Type::Uint(32),
                         *fixed,
                         (*offset).into(),
                     );
@@ -122,7 +121,7 @@ impl EthAbiEncoder {
                     self.encode_primitive(
                         contract,
                         false,
-                        &resolver::Type::Uint(32),
+                        &ast::Type::Uint(32),
                         *dynamic,
                         len.into(),
                     );
@@ -204,7 +203,7 @@ impl EthAbiEncoder {
                                 contract,
                                 true,
                                 function,
-                                &ty.deref(),
+                                &ty.deref_any(),
                                 elem.into(),
                                 data,
                                 offset,
@@ -214,7 +213,7 @@ impl EthAbiEncoder {
                     );
                 }
             }
-            resolver::Type::Struct(n) => {
+            ast::Type::Struct(n) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -245,18 +244,15 @@ impl EthAbiEncoder {
                     );
                 }
             }
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::StorageRef(_) => unreachable!(),
-            resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(ty) => {
+            ast::Type::Ref(ty) => {
                 self.encode_ty(contract, load, function, ty, arg, fixed, offset, dynamic);
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::String | ast::Type::DynamicBytes => {
                 // write the current offset to fixed
                 self.encode_primitive(
                     contract,
                     false,
-                    &resolver::Type::Uint(32),
+                    &ast::Type::Uint(32),
                     *fixed,
                     (*offset).into(),
                 );
@@ -293,13 +289,7 @@ impl EthAbiEncoder {
                     .into_int_value();
 
                 // write the current offset to fixed
-                self.encode_primitive(
-                    contract,
-                    false,
-                    &resolver::Type::Uint(32),
-                    *dynamic,
-                    len.into(),
-                );
+                self.encode_primitive(contract, false, &ast::Type::Uint(32), *dynamic, len.into());
 
                 *dynamic = unsafe {
                     contract.builder.build_gep(
@@ -366,6 +356,7 @@ impl EthAbiEncoder {
 
                 *offset = contract.builder.build_int_add(*offset, len, "");
             }
+            _ => unreachable!(),
         };
     }
 
@@ -374,12 +365,12 @@ impl EthAbiEncoder {
         &self,
         contract: &Contract,
         load: bool,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         dest: PointerValue,
         arg: BasicValueEnum,
     ) {
         match ty {
-            resolver::Type::Bool => {
+            ast::Type::Bool => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -409,7 +400,7 @@ impl EthAbiEncoder {
 
                 contract.builder.build_store(dest, value);
             }
-            resolver::Type::Int(8) | resolver::Type::Uint(8) => {
+            ast::Type::Int(8) | ast::Type::Uint(8) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -422,7 +413,7 @@ impl EthAbiEncoder {
                     "destvoid",
                 );
 
-                if let resolver::Type::Int(_) = ty {
+                if let ast::Type::Int(_) = ty {
                     let negative = contract.builder.build_int_compare(
                         IntPredicate::SLT,
                         arg.into_int_value(),
@@ -461,18 +452,18 @@ impl EthAbiEncoder {
 
                 contract.builder.build_store(dest, arg);
             }
-            resolver::Type::Contract(_)
-            | resolver::Type::Address(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Int(_)
+            ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Int(_)
                 if load =>
             {
                 let n = match ty {
-                    resolver::Type::Contract(_) | resolver::Type::Address(_) => {
+                    ast::Type::Contract(_) | ast::Type::Address(_) => {
                         contract.ns.address_length as u16 * 8
                     }
-                    resolver::Type::Uint(b) => *b,
-                    resolver::Type::Int(b) => *b,
+                    ast::Type::Uint(b) => *b,
+                    ast::Type::Int(b) => *b,
                     _ => unreachable!(),
                 };
 
@@ -490,7 +481,7 @@ impl EthAbiEncoder {
 
                 // first clear/set the upper bits
                 if n < 256 {
-                    if let resolver::Type::Int(_) = ty {
+                    if let ast::Type::Int(_) = ty {
                         let signdest = unsafe {
                             contract.builder.build_gep(
                                 arg8,
@@ -548,18 +539,18 @@ impl EthAbiEncoder {
                     "",
                 );
             }
-            resolver::Type::Contract(_)
-            | resolver::Type::Address(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Int(_)
+            ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Int(_)
                 if !load =>
             {
                 let n = match ty {
-                    resolver::Type::Contract(_) | resolver::Type::Address(_) => {
+                    ast::Type::Contract(_) | ast::Type::Address(_) => {
                         contract.ns.address_length as u16 * 8
                     }
-                    resolver::Type::Uint(b) => *b,
-                    resolver::Type::Int(b) => *b,
+                    ast::Type::Uint(b) => *b,
+                    ast::Type::Int(b) => *b,
                     _ => unreachable!(),
                 };
 
@@ -571,7 +562,7 @@ impl EthAbiEncoder {
 
                 // first clear/set the upper bits
                 if n < 256 {
-                    if let resolver::Type::Int(_) = ty {
+                    if let ast::Type::Int(_) = ty {
                         let negative = contract.builder.build_int_compare(
                             IntPredicate::SLT,
                             arg.into_int_value(),
@@ -628,7 +619,7 @@ impl EthAbiEncoder {
                     "",
                 );
             }
-            resolver::Type::Bytes(1) => {
+            ast::Type::Bytes(1) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -643,7 +634,7 @@ impl EthAbiEncoder {
 
                 contract.builder.build_store(dest8, arg);
             }
-            resolver::Type::Bytes(n) => {
+            ast::Type::Bytes(n) => {
                 let val = if load {
                     arg.into_pointer_value()
                 } else {
@@ -693,12 +684,12 @@ impl EthAbiEncoder {
         &self,
         arg: BasicValueEnum<'a>,
         load: bool,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         function: FunctionValue,
         contract: &Contract<'a>,
     ) -> IntValue<'a> {
         match ty {
-            resolver::Type::Struct(n) => {
+            ast::Type::Struct(n) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -732,7 +723,7 @@ impl EthAbiEncoder {
 
                 sum
             }
-            resolver::Type::Array(_, dims) => {
+            ast::Type::Array(_, dims) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -844,7 +835,7 @@ impl EthAbiEncoder {
 
                 sum
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -883,23 +874,23 @@ impl EthAbiEncoder {
     }
 
     /// Return the encoded length of the given type, fixed part only
-    pub fn encoded_fixed_length(&self, ty: &resolver::Type, ns: &resolver::Namespace) -> u64 {
+    pub fn encoded_fixed_length(&self, ty: &ast::Type, ns: &ast::Namespace) -> u64 {
         match ty {
-            resolver::Type::Bool
-            | resolver::Type::Contract(_)
-            | resolver::Type::Address(_)
-            | resolver::Type::Int(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Bytes(_) => 32,
+            ast::Type::Bool
+            | ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Int(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Bytes(_) => 32,
             // String and Dynamic bytes use 32 bytes for the offset into dynamic encoded
-            resolver::Type::String | resolver::Type::DynamicBytes => 32,
-            resolver::Type::Enum(_) => 32,
-            resolver::Type::Struct(n) => ns.structs[*n]
+            ast::Type::String | ast::Type::DynamicBytes => 32,
+            ast::Type::Enum(_) => 32,
+            ast::Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
                 .map(|f| self.encoded_fixed_length(&f.ty, ns))
                 .sum(),
-            resolver::Type::Array(ty, dims) => {
+            ast::Type::Array(ty, dims) => {
                 let mut product = 1;
 
                 for dim in dims {
@@ -913,10 +904,9 @@ impl EthAbiEncoder {
 
                 product * self.encoded_fixed_length(&ty, ns)
             }
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(r) => self.encoded_fixed_length(r, ns),
-            resolver::Type::StorageRef(r) => self.encoded_fixed_length(r, ns),
+            ast::Type::Ref(r) => self.encoded_fixed_length(r, ns),
+            ast::Type::StorageRef(r) => self.encoded_fixed_length(r, ns),
+            _ => unreachable!(),
         }
     }
 
@@ -925,7 +915,7 @@ impl EthAbiEncoder {
         &self,
         contract: &Contract<'b>,
         function: FunctionValue,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         to: Option<PointerValue<'b>>,
         offset: &mut IntValue<'b>,
         data: PointerValue<'b>,
@@ -944,14 +934,14 @@ impl EthAbiEncoder {
 
         *offset = new_offset;
 
-        let ty = if let resolver::Type::Enum(n) = ty {
+        let ty = if let ast::Type::Enum(n) = ty {
             &contract.ns.enums[*n].ty
         } else {
             ty
         };
 
         match &ty {
-            resolver::Type::Bool => {
+            ast::Type::Bool => {
                 // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
                 // which is unneeded (hopefully)
                 // cast to 64 bit pointer
@@ -983,7 +973,7 @@ impl EthAbiEncoder {
                 }
                 val.into()
             }
-            resolver::Type::Uint(8) | resolver::Type::Int(8) => {
+            ast::Type::Uint(8) | ast::Type::Int(8) => {
                 let int8_ptr = unsafe {
                     contract.builder.build_gep(
                         data,
@@ -1000,7 +990,7 @@ impl EthAbiEncoder {
 
                 val
             }
-            resolver::Type::Address(_) | resolver::Type::Contract(_) => {
+            ast::Type::Address(_) | ast::Type::Contract(_) => {
                 let int_type = contract
                     .context
                     .custom_width_int_type(contract.ns.address_length as u32 * 8);
@@ -1035,7 +1025,7 @@ impl EthAbiEncoder {
                     store.into()
                 }
             }
-            resolver::Type::Uint(n) | resolver::Type::Int(n) => {
+            ast::Type::Uint(n) | ast::Type::Int(n) => {
                 let int_type = contract.context.custom_width_int_type(*n as u32);
                 let type_size = int_type.size_of();
 
@@ -1067,7 +1057,7 @@ impl EthAbiEncoder {
                     store.into()
                 }
             }
-            resolver::Type::Bytes(1) => {
+            ast::Type::Bytes(1) => {
                 let val = contract.builder.build_load(data, "bytes1");
 
                 if let Some(p) = to {
@@ -1075,7 +1065,7 @@ impl EthAbiEncoder {
                 }
                 val
             }
-            resolver::Type::Bytes(b) => {
+            ast::Type::Bytes(b) => {
                 let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
                 let type_size = int_type.size_of();
 
@@ -1116,15 +1106,15 @@ impl EthAbiEncoder {
         &self,
         contract: &Contract<'b>,
         function: FunctionValue,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         to: Option<PointerValue<'b>>,
         offset: &mut IntValue<'b>,
         data: PointerValue<'b>,
         length: IntValue<'b>,
     ) -> BasicValueEnum<'b> {
         match &ty {
-            resolver::Type::Array(_, dim) => {
-                let llvm_ty = contract.llvm_type(ty.deref());
+            ast::Type::Array(_, dim) => {
+                let llvm_ty = contract.llvm_type(ty.deref_any());
 
                 let size = llvm_ty
                     .size_of()
@@ -1185,7 +1175,7 @@ impl EthAbiEncoder {
                         self.decode_primitive(
                             contract,
                             function,
-                            &resolver::Type::Uint(32),
+                            &ast::Type::Uint(32),
                             None,
                             offset,
                             data,
@@ -1199,7 +1189,7 @@ impl EthAbiEncoder {
                         .decode_primitive(
                             contract,
                             function,
-                            &resolver::Type::Uint(32),
+                            &ast::Type::Uint(32),
                             None,
                             &mut dataoffset,
                             data,
@@ -1207,7 +1197,7 @@ impl EthAbiEncoder {
                         )
                         .into_int_value();
 
-                    let elem_ty = contract.llvm_var(&ty.deref());
+                    let elem_ty = contract.llvm_var(&ty.deref_any());
                     let elem_size = elem_ty
                         .size_of()
                         .unwrap()
@@ -1287,8 +1277,8 @@ impl EthAbiEncoder {
 
                 dest.into()
             }
-            resolver::Type::Struct(n) => {
-                let llvm_ty = contract.llvm_type(ty.deref());
+            ast::Type::Struct(n) => {
+                let llvm_ty = contract.llvm_type(ty.deref_any());
 
                 let size = llvm_ty
                     .size_of()
@@ -1342,17 +1332,15 @@ impl EthAbiEncoder {
 
                 struct_pointer.into()
             }
-            resolver::Type::Ref(ty) => {
-                self.decode_ty(contract, function, ty, to, offset, data, length)
-            }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::Ref(ty) => self.decode_ty(contract, function, ty, to, offset, data, length),
+            ast::Type::String | ast::Type::DynamicBytes => {
                 // we read the offset and the length as 32 bits. Since we are in 32 bits wasm,
                 // we cannot deal with more than 4GB of abi encoded data.
                 let mut dataoffset = contract.builder.build_int_z_extend(
                     self.decode_primitive(
                         contract,
                         function,
-                        &resolver::Type::Uint(32),
+                        &ast::Type::Uint(32),
                         None,
                         offset,
                         data,
@@ -1367,7 +1355,7 @@ impl EthAbiEncoder {
                     self.decode_primitive(
                         contract,
                         function,
-                        &resolver::Type::Uint(32),
+                        &ast::Type::Uint(32),
                         None,
                         &mut dataoffset,
                         data,
@@ -1468,7 +1456,7 @@ impl EthAbiEncoder {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         datalength: IntValue<'b>,
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) {
         let data = contract.builder.build_pointer_cast(
             data,

@@ -87,7 +87,7 @@ fn constructor_wrong_selector() {
 
 #[test]
 fn fallback() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract test {
             int64 result = 102;
@@ -104,7 +104,7 @@ fn fallback() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?"
     );
 
@@ -214,7 +214,7 @@ fn test_overloading() {
 
 #[test]
 fn mutability() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             int64 foo = 1844674;
 
@@ -226,11 +226,11 @@ fn mutability() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function declared pure but reads contract storage"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             int64 foo = 1844674;
 
@@ -242,7 +242,7 @@ fn mutability() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function declared view but writes contract storage"
     );
 }
@@ -269,10 +269,10 @@ fn shadowing() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "declaration of `result\' shadows state variable"
     );
 
@@ -309,9 +309,9 @@ fn scopes() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "`a\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`a\' is not declared");
 
     let src = "
     contract test {
@@ -323,9 +323,9 @@ fn scopes() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "`i\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`i\' is not declared");
 }
 
 #[test]
@@ -340,9 +340,9 @@ fn for_forever() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "unreachable statement");
+    assert_eq!(first_error(ns.diagnostics), "unreachable statement");
 }
 
 #[test]
@@ -466,9 +466,9 @@ fn args_and_returns() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "arg1 is already declared");
+    assert_eq!(first_error(ns.diagnostics), "arg1 is already declared");
 
     let src = "
     contract args {
@@ -476,9 +476,9 @@ fn args_and_returns() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "arg2 is already declared");
+    assert_eq!(first_error(ns.diagnostics), "arg2 is already declared");
 
     let src = "
     contract args {
@@ -486,9 +486,9 @@ fn args_and_returns() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "missing return statement");
+    assert_eq!(first_error(ns.diagnostics), "missing return statement");
 
     let mut runtime = build_solidity(
         "
@@ -525,10 +525,10 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function expects 2 arguments, 1 provided"
     );
 
@@ -542,9 +542,9 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "unexpected array type");
+    assert_eq!(first_error(ns.diagnostics), "unexpected array type");
 
     let src = "
     contract args {
@@ -556,9 +556,12 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "duplicate argument with name ‘arg1’");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "duplicate argument with name ‘arg1’"
+    );
 
     let src = "
     contract args {
@@ -570,10 +573,10 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "missing argument ‘arg2’ to function ‘foo’"
     );
 
@@ -587,10 +590,10 @@ fn named_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from bool to uint256 not possible"
     );
 
@@ -631,10 +634,10 @@ fn positional_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function expects 2 arguments, 1 provided"
     );
 
@@ -648,9 +651,9 @@ fn positional_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(errors), "unexpected array type");
+    assert_eq!(first_error(ns.diagnostics), "unexpected array type");
 
     let src = "
     contract args {
@@ -662,10 +665,10 @@ fn positional_argument_call() {
         }
     }";
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from uint8 to bool not possible"
     );
 
@@ -778,10 +781,10 @@ fn payable() {
             }
         }"##;
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "internal or private function cannot be payable"
     );
 
@@ -796,10 +799,10 @@ fn payable() {
             }
         }"##;
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "internal or private function cannot be payable"
     );
 
@@ -814,10 +817,10 @@ fn payable() {
             }
         }"##;
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "receive function must be declared payable"
     );
 
@@ -832,10 +835,10 @@ fn payable() {
             }
         }"##;
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "fallback function must not be declare payable, use ‘receive() external payable’ instead"
     );
 
@@ -847,10 +850,10 @@ fn payable() {
             }
         }"##;
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "all constructors should be defined ‘payable’ or not"
     );
 
@@ -862,10 +865,10 @@ fn payable() {
             }
         }"##;
 
-    let (_, errors) = parse_and_resolve(&src, Target::Substrate);
+    let ns = parse_and_resolve(&src, Target::Substrate);
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "all constructors should be defined ‘payable’ or not"
     );
 }
