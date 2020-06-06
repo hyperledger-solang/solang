@@ -13,7 +13,7 @@ struct Val8(u8);
 
 #[test]
 fn missing_array_index() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public returns (uint) {
@@ -25,9 +25,12 @@ fn missing_array_index() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "expected expression before ‘]’ token");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "expected expression before ‘]’ token"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public returns (uint8) {
@@ -40,7 +43,7 @@ fn missing_array_index() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from uint8[5] to uint8[4] not possible"
     );
 }
@@ -217,7 +220,7 @@ fn enum_arrays() {
 
 #[test]
 fn data_locations() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function bar(uint storage) public returns () {
@@ -227,11 +230,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "data location ‘storage’ can only be specified for array, struct or mapping"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function bar(uint calldata x) public returns () {
@@ -241,11 +244,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "data location ‘calldata’ can only be specified for array, struct or mapping"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -256,11 +259,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "data location ‘memory’ can only be specified for array, struct or mapping"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -271,11 +274,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "data location ‘calldata’ can only be specified for array, struct or mapping"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -286,11 +289,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "data location ‘calldata’ can only be specified for array, struct or mapping"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -301,11 +304,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "data location ‘storage’ can only be specified for array, struct or mapping"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -316,11 +319,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "parameter of type ‘storage’ not allowed public or external functions"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -331,11 +334,11 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "return type of type ‘storage’ not allowed public or external functions"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum foo2 { bar1, bar2 }
@@ -346,7 +349,7 @@ fn data_locations() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "return type of type ‘storage’ not allowed public or external functions"
     );
 }
@@ -501,7 +504,7 @@ fn memory_to_storage() {
 
 #[test]
 fn array_dimensions() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             bool[10 - 10] x;
@@ -509,9 +512,9 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "zero size array not permitted");
+    assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             bool[-10 + 10] x;
@@ -519,9 +522,9 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "zero size array not permitted");
+    assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             bool[1 / 10] x;
@@ -529,9 +532,9 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "zero size array not permitted");
+    assert_eq!(first_error(ns.diagnostics), "zero size array not permitted");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             enum e { e1, e2, e3 }
@@ -540,9 +543,9 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "divide by zero");
+    assert_eq!(first_error(ns.diagnostics), "divide by zero");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             struct bar { 
@@ -553,7 +556,7 @@ fn array_dimensions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "divide by zero");
+    assert_eq!(first_error(ns.diagnostics), "divide by zero");
 
     let mut runtime = build_solidity(
         r##"
@@ -707,7 +710,7 @@ fn struct_array_struct_abi() {
 
 #[test]
 fn memory_dynamic_array_new() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -720,11 +723,11 @@ fn memory_dynamic_array_new() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new dynamic array should have a single length argument"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -737,11 +740,11 @@ fn memory_dynamic_array_new() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new dynamic array should have a single length argument"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -754,11 +757,11 @@ fn memory_dynamic_array_new() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new size argument must be unsigned integer, not ‘bytes1’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -771,11 +774,11 @@ fn memory_dynamic_array_new() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new size argument must be unsigned integer, not ‘int8’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -787,7 +790,10 @@ fn memory_dynamic_array_new() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "new cannot allocate type ‘bool’");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "new cannot allocate type ‘bool’"
+    );
 
     let mut runtime = build_solidity(
         r#"
@@ -819,7 +825,7 @@ fn memory_dynamic_array_new() {
 
 #[test]
 fn memory_dynamic_array_deref() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -832,11 +838,11 @@ fn memory_dynamic_array_deref() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "array subscript must be an unsigned integer, not ‘int8’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             function test() public {
@@ -850,7 +856,7 @@ fn memory_dynamic_array_deref() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "array subscript must be an unsigned integer, not ‘int32’"
     );
 
@@ -1010,7 +1016,7 @@ fn storage_dynamic_array_length() {
 
 #[test]
 fn storage_dynamic_array_push() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             int32[] bar;
@@ -1024,11 +1030,11 @@ fn storage_dynamic_array_push() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "method ‘push()’ takes at most 1 argument"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             int32[4] bar;
@@ -1041,7 +1047,7 @@ fn storage_dynamic_array_push() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "method ‘push()’ not allowed on fixed length array"
     );
 
@@ -1090,7 +1096,7 @@ fn storage_dynamic_array_push() {
 
     runtime.function("test", Vec::new());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             struct s {
@@ -1107,14 +1113,14 @@ fn storage_dynamic_array_push() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function or method does not return a value"
     );
 }
 
 #[test]
 fn storage_dynamic_array_pop() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             int32[] bar;
@@ -1128,11 +1134,11 @@ fn storage_dynamic_array_pop() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "method ‘pop()’ does not take any arguments"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             int32[4] bar;
@@ -1145,7 +1151,7 @@ fn storage_dynamic_array_pop() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "method ‘pop()’ not allowed on fixed length array"
     );
 
@@ -1213,7 +1219,7 @@ fn storage_dynamic_array_pop() {
     assert_eq!(runtime.store.len(), 1);
 
     // pop returns the dereferenced value, not a reference to storage
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             struct s {
@@ -1230,14 +1236,14 @@ fn storage_dynamic_array_pop() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from struct foo.s to struct foo.s storage not possible"
     );
 }
 
 #[test]
 fn storage_delete() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             int32[] bar;
@@ -1250,11 +1256,11 @@ fn storage_delete() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "argument to ‘delete’ should be storage reference"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract foo {
             int32[] bar;
@@ -1267,8 +1273,8 @@ fn storage_delete() {
     );
 
     assert_eq!(
-        first_error(errors),
-        "function or method does not return a value"
+        first_error(ns.diagnostics),
+        "delete not allowed in expression"
     );
 
     // ensure that structs and fixed arrays are wiped by pop

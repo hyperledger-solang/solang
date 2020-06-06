@@ -1,4 +1,4 @@
-use resolver::Namespace;
+use sema::ast::Namespace;
 use Target;
 
 pub mod ethereum;

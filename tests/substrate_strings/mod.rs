@@ -7,7 +7,7 @@ use solang::{parse_and_resolve, Target};
 
 #[test]
 fn basic_tests() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -20,11 +20,11 @@ fn basic_tests() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "array subscript is not permitted on string"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -35,11 +35,11 @@ fn basic_tests() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from string to bytes not possible"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -50,11 +50,11 @@ fn basic_tests() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from bytes to string not possible"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -64,9 +64,9 @@ fn basic_tests() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -76,7 +76,7 @@ fn basic_tests() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 }
 
 #[test]
@@ -648,7 +648,7 @@ fn bytes_memory_subscript() {
 
 #[test]
 fn string_escape() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -659,11 +659,11 @@ fn string_escape() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "\\x escape should be followed by two hex digits"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -674,11 +674,11 @@ fn string_escape() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "\\x escape should be followed by two hex digits"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -689,11 +689,11 @@ fn string_escape() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "\\x escape should be followed by two hex digits"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -704,11 +704,11 @@ fn string_escape() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "\\u escape should be followed by four hex digits"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -719,11 +719,11 @@ fn string_escape() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "\\u escape should be followed by four hex digits"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function foo() public {
@@ -734,7 +734,7 @@ fn string_escape() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "\\u escape should be followed by four hex digits"
     );
 

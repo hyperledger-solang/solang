@@ -1,4 +1,5 @@
 use blake2_rfc;
+use codegen::cfg::HashTy;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
@@ -8,8 +9,7 @@ use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
 use parser::pt;
-use resolver;
-use resolver::cfg::HashTy;
+use sema::ast;
 use std::collections::HashMap;
 
 use super::{Contract, TargetRuntime};
@@ -21,8 +21,8 @@ pub struct SubstrateTarget {
 impl SubstrateTarget {
     pub fn build<'a>(
         context: &'a Context,
-        contract: &'a resolver::Contract,
-        ns: &'a resolver::Namespace,
+        contract: &'a ast::Contract,
+        ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
@@ -491,11 +491,11 @@ impl SubstrateTarget {
     fn decode_primitive<'b>(
         &self,
         contract: &Contract<'b>,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         src: PointerValue<'b>,
     ) -> (BasicValueEnum<'b>, u64) {
         match ty {
-            resolver::Type::Bool => {
+            ast::Type::Bool => {
                 let val = contract.builder.build_int_compare(
                     IntPredicate::EQ,
                     contract
@@ -507,12 +507,12 @@ impl SubstrateTarget {
                 );
                 (val.into(), 1)
             }
-            resolver::Type::Contract(_)
-            | resolver::Type::Address(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Int(_) => {
+            ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Int(_) => {
                 let bits = match ty {
-                    resolver::Type::Uint(n) | resolver::Type::Int(n) => *n as u32,
+                    ast::Type::Uint(n) | ast::Type::Int(n) => *n as u32,
                     _ => contract.ns.address_length as u32 * 8,
                 };
 
@@ -531,7 +531,7 @@ impl SubstrateTarget {
 
                 (val, len)
             }
-            resolver::Type::Bytes(len) => {
+            ast::Type::Bytes(len) => {
                 let int_type = contract.context.custom_width_int_type(*len as u32 * 8);
 
                 let buf = contract.builder.build_alloca(int_type, "buf");
@@ -607,17 +607,17 @@ impl SubstrateTarget {
         &self,
         contract: &Contract<'b>,
         function: FunctionValue,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         data: &mut PointerValue<'b>,
         end: PointerValue<'b>,
     ) -> BasicValueEnum<'b> {
         match &ty {
-            resolver::Type::Bool
-            | resolver::Type::Address(_)
-            | resolver::Type::Contract(_)
-            | resolver::Type::Int(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Bytes(_) => {
+            ast::Type::Bool
+            | ast::Type::Address(_)
+            | ast::Type::Contract(_)
+            | ast::Type::Int(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Bytes(_) => {
                 let (arg, arglen) = self.decode_primitive(contract, ty, *data);
 
                 *data = unsafe {
@@ -632,11 +632,11 @@ impl SubstrateTarget {
 
                 arg
             }
-            resolver::Type::Enum(n) => {
+            ast::Type::Enum(n) => {
                 self.decode_ty(contract, function, &contract.ns.enums[*n].ty, data, end)
             }
-            resolver::Type::Struct(n) => {
-                let llvm_ty = contract.llvm_type(ty.deref());
+            ast::Type::Struct(n) => {
+                let llvm_ty = contract.llvm_type(ty.deref_any());
 
                 let size = llvm_ty
                     .size_of()
@@ -680,9 +680,9 @@ impl SubstrateTarget {
 
                 dest.into()
             }
-            resolver::Type::Array(_, dim) => {
+            ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
-                    let llvm_ty = contract.llvm_type(ty.deref());
+                    let llvm_ty = contract.llvm_type(ty.deref_any());
 
                     let size = llvm_ty
                         .size_of()
@@ -815,7 +815,7 @@ impl SubstrateTarget {
                     v.into()
                 }
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::String | ast::Type::DynamicBytes => {
                 let from = contract.builder.build_alloca(
                     contract.context.i8_type().ptr_type(AddressSpace::Generic),
                     "from",
@@ -854,10 +854,8 @@ impl SubstrateTarget {
                     )
                     .into()
             }
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::StorageRef(_) => unreachable!(),
-            resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(ty) => self.decode_ty(contract, function, ty, data, end),
+            ast::Type::Ref(ty) => self.decode_ty(contract, function, ty, data, end),
+            _ => unreachable!(),
         }
     }
 
@@ -866,12 +864,12 @@ impl SubstrateTarget {
         &self,
         contract: &Contract,
         load: bool,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         dest: PointerValue,
         arg: BasicValueEnum,
     ) -> u64 {
         match ty {
-            resolver::Type::Bool => {
+            ast::Type::Bool => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -888,12 +886,12 @@ impl SubstrateTarget {
                 );
                 1
             }
-            resolver::Type::Contract(_)
-            | resolver::Type::Address(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Int(_) => {
+            ast::Type::Contract(_)
+            | ast::Type::Address(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Int(_) => {
                 let len = match ty {
-                    resolver::Type::Uint(n) | resolver::Type::Int(n) => *n as u64 / 8,
+                    ast::Type::Uint(n) | ast::Type::Int(n) => *n as u64 / 8,
                     _ => contract.ns.address_length as u64,
                 };
 
@@ -916,7 +914,7 @@ impl SubstrateTarget {
 
                 len
             }
-            resolver::Type::Bytes(n) => {
+            ast::Type::Bytes(n) => {
                 let val = if load {
                     arg.into_pointer_value()
                 } else {
@@ -964,17 +962,17 @@ impl SubstrateTarget {
         contract: &Contract<'a>,
         load: bool,
         function: FunctionValue,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         arg: BasicValueEnum<'a>,
         data: &mut PointerValue<'a>,
     ) {
         match &ty {
-            resolver::Type::Bool
-            | resolver::Type::Address(_)
-            | resolver::Type::Contract(_)
-            | resolver::Type::Int(_)
-            | resolver::Type::Uint(_)
-            | resolver::Type::Bytes(_) => {
+            ast::Type::Bool
+            | ast::Type::Address(_)
+            | ast::Type::Contract(_)
+            | ast::Type::Int(_)
+            | ast::Type::Uint(_)
+            | ast::Type::Bytes(_) => {
                 let arglen = self.encode_primitive(contract, load, ty, *data, arg);
 
                 *data = unsafe {
@@ -985,10 +983,10 @@ impl SubstrateTarget {
                     )
                 };
             }
-            resolver::Type::Enum(n) => {
+            ast::Type::Enum(n) => {
                 self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *data, arg);
             }
-            resolver::Type::Array(_, dim) => {
+            ast::Type::Array(_, dim) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1019,7 +1017,7 @@ impl SubstrateTarget {
                                 contract,
                                 true,
                                 function,
-                                &ty.deref(),
+                                &ty.deref_any(),
                                 elem.into(),
                                 data,
                             );
@@ -1096,7 +1094,7 @@ impl SubstrateTarget {
                                 contract,
                                 true,
                                 function,
-                                &ty.deref(),
+                                &ty.deref_any(),
                                 elem.into(),
                                 data,
                             );
@@ -1104,7 +1102,7 @@ impl SubstrateTarget {
                     );
                 }
             }
-            resolver::Type::Struct(n) => {
+            ast::Type::Struct(n) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1126,13 +1124,10 @@ impl SubstrateTarget {
                     self.encode_ty(contract, true, function, &field.ty, elem.into(), data);
                 }
             }
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::StorageRef(_) => unreachable!(),
-            resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(ty) => {
+            ast::Type::Ref(ty) => {
                 self.encode_ty(contract, load, function, ty, arg, data);
             }
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1164,6 +1159,7 @@ impl SubstrateTarget {
                     .unwrap()
                     .into_pointer_value();
             }
+            _ => unreachable!(),
         };
     }
 
@@ -1175,24 +1171,24 @@ impl SubstrateTarget {
         &self,
         arg: BasicValueEnum<'a>,
         load: bool,
-        ty: &resolver::Type,
+        ty: &ast::Type,
         function: FunctionValue,
         contract: &Contract<'a>,
     ) -> IntValue<'a> {
         match ty {
-            resolver::Type::Bool => contract.context.i32_type().const_int(1, false),
-            resolver::Type::Uint(n) | resolver::Type::Int(n) => {
+            ast::Type::Bool => contract.context.i32_type().const_int(1, false),
+            ast::Type::Uint(n) | ast::Type::Int(n) => {
                 contract.context.i32_type().const_int(*n as u64 / 8, false)
             }
-            resolver::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
-            resolver::Type::Address(_) | resolver::Type::Contract(_) => contract
+            ast::Type::Bytes(n) => contract.context.i32_type().const_int(*n as u64, false),
+            ast::Type::Address(_) | ast::Type::Contract(_) => contract
                 .context
                 .i32_type()
                 .const_int(contract.ns.address_length as u64, false),
-            resolver::Type::Enum(n) => {
+            ast::Type::Enum(n) => {
                 self.encoded_length(arg, load, &contract.ns.enums[*n].ty, function, contract)
             }
-            resolver::Type::Struct(n) => {
+            ast::Type::Struct(n) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1222,7 +1218,7 @@ impl SubstrateTarget {
 
                 sum
             }
-            resolver::Type::Array(_, dims) => {
+            ast::Type::Array(_, dims) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1360,11 +1356,8 @@ impl SubstrateTarget {
                     )
                 }
             }
-            resolver::Type::Undef => unreachable!(),
-            resolver::Type::StorageRef(_) => unreachable!(),
-            resolver::Type::Mapping(_, _) => unreachable!(),
-            resolver::Type::Ref(r) => self.encoded_length(arg, load, r, function, contract),
-            resolver::Type::String | resolver::Type::DynamicBytes => {
+            ast::Type::Ref(r) => self.encoded_length(arg, load, r, function, contract),
+            ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
                 } else {
@@ -1394,6 +1387,7 @@ impl SubstrateTarget {
                     "",
                 )
             }
+            _ => unreachable!(),
         }
     }
 
@@ -1883,7 +1877,7 @@ impl TargetRuntime for SubstrateTarget {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         datalength: IntValue<'b>,
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) {
         let mut argsdata = contract.builder.build_pointer_cast(
             data,
@@ -1910,7 +1904,7 @@ impl TargetRuntime for SubstrateTarget {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         // first calculate how much memory we need to allocate
         let mut length = contract.context.i32_type().const_zero();
@@ -2015,6 +2009,7 @@ impl TargetRuntime for SubstrateTarget {
         salt: Option<IntValue<'b>>,
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
+
         let constructor = &resolver_contract
             .functions
             .iter()
@@ -2026,7 +2021,7 @@ impl TargetRuntime for SubstrateTarget {
         let mut params = constructor.params.to_vec();
 
         // salt
-        let salt_ty = resolver::Type::Uint(256);
+        let salt_ty = ast::Type::Uint(256);
 
         if let Some(salt) = salt {
             args.push(salt.into());
@@ -2063,7 +2058,8 @@ impl TargetRuntime for SubstrateTarget {
             args.push(contract.builder.build_load(salt, "salt"));
         }
 
-        params.push(resolver::Parameter {
+        params.push(ast::Parameter {
+            loc: pt::Loc(0, 0),
             ty: salt_ty,
             name: "salt".to_string(),
         });
@@ -2589,10 +2585,9 @@ impl TargetRuntime for SubstrateTarget {
         );
 
         // bytes32 needs to reverse bytes
-        let temp = contract.builder.build_alloca(
-            contract.llvm_type(&resolver::Type::Bytes(hashlen as u8)),
-            "hash",
-        );
+        let temp = contract
+            .builder
+            .build_alloca(contract.llvm_type(&ast::Type::Bytes(hashlen as u8)), "hash");
 
         contract.builder.build_call(
             contract.module.get_function("__beNtoleN").unwrap(),

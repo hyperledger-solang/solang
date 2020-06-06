@@ -15,12 +15,12 @@ extern crate tiny_keccak;
 extern crate unicode_xid;
 
 pub mod abi;
+pub mod codegen;
+mod emit;
 pub mod link;
 pub mod output;
-
-mod emit;
 mod parser;
-mod resolver;
+mod sema;
 
 use inkwell::OptimizationLevel;
 use std::fmt;
@@ -61,7 +61,7 @@ pub fn compile(
 ) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();
 
-    let ast = match parser::parse(src) {
+    let pt = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {
             return (Vec::new(), errors);
@@ -69,12 +69,16 @@ pub fn compile(
     };
 
     // resolve
-    let (ns, errors) = match resolver::resolver(ast, target) {
-        (None, errors) => {
-            return (Vec::new(), errors);
-        }
-        (Some(ns), errors) => (ns, errors),
-    };
+    let mut ns = sema::sema(pt, target);
+
+    if output::any_errors(&ns.diagnostics) {
+        return (Vec::new(), ns.diagnostics);
+    }
+
+    // codegen all the contracts
+    for contract_no in 0..ns.contracts.len() {
+        codegen::codegen(contract_no, &mut ns);
+    }
 
     let results = (0..ns.contracts.len())
         .map(|c| {
@@ -89,7 +93,7 @@ pub fn compile(
         })
         .collect();
 
-    (results, errors)
+    (results, ns.diagnostics)
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.
@@ -97,17 +101,18 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(
-    src: &str,
-    target: Target,
-) -> (Option<resolver::Namespace>, Vec<output::Output>) {
-    let ast = match parser::parse(src) {
+pub fn parse_and_resolve(src: &str, target: Target) -> sema::ast::Namespace {
+    let pt = match parser::parse(src) {
         Ok(s) => s,
         Err(errors) => {
-            return (None, errors);
+            let mut ns = sema::ast::Namespace::new(target, 32);
+
+            ns.diagnostics = errors;
+
+            return ns;
         }
     };
 
     // resolve
-    resolver::resolver(ast, target)
+    sema::sema(pt, target)
 }

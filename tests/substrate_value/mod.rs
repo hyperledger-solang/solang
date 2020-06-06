@@ -6,7 +6,7 @@ use solang::{parse_and_resolve, Target};
 
 #[test]
 fn external_call_value() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -24,9 +24,12 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘foo’ not a valid call parameter");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘foo’ not a valid call parameter"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -44,9 +47,12 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘foo’ not a valid call parameter");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘foo’ not a valid call parameter"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -64,9 +70,12 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘salt’ not valid for external calls");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘salt’ not valid for external calls"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -84,9 +93,12 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘value’ specified multiple times");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘value’ specified multiple times"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -104,9 +116,12 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘value’ specified multiple times");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘value’ specified multiple times"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -125,11 +140,11 @@ fn external_call_value() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "code block found where list of call arguments expected, like ‘{gas: 5000}’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(b t) public {
@@ -147,9 +162,9 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "missing call arguments");
+    assert_eq!(first_error(ns.diagnostics), "missing call arguments");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(int32 l) public {
@@ -168,11 +183,11 @@ fn external_call_value() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "sending value to function ‘test’ which is not payable"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(int32 l) public {
@@ -191,11 +206,11 @@ fn external_call_value() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "sending value to function ‘test’ which is not payable"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(int32 l) public {
@@ -213,9 +228,9 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test(int32 l) public {
@@ -233,7 +248,7 @@ fn external_call_value() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
     let mut runtime = build_solidity(
         r##"
@@ -503,7 +518,7 @@ fn constructor_salt() {
 
 #[test]
 fn this_address() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             function step1() public returns (address payable) {
@@ -513,9 +528,9 @@ fn this_address() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             function step1() public returns (address) {
@@ -526,11 +541,11 @@ fn this_address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion to address from contract b not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             function step1(b other) public {
@@ -540,7 +555,7 @@ fn this_address() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "expression is not assignable");
+    assert_eq!(first_error(ns.diagnostics), "expression is not assignable");
 
     let mut runtime = build_solidity(
         r##"
@@ -612,7 +627,7 @@ fn this_address() {
 
     assert_eq!(runtime.vm.scratch, runtime.vm.address);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             int32 s;
@@ -630,11 +645,11 @@ fn this_address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function ‘other’ is not ‘public’ or ‘extern’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             int32 s;
@@ -652,14 +667,14 @@ fn this_address() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function ‘other’ is not ‘public’ or ‘extern’"
     );
 }
 
 #[test]
 fn balance() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             function step1(address j) public returns (uint128) {
@@ -670,11 +685,11 @@ fn balance() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "substrate can only retrieve balance of this, like ‘address(this).balance’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             function step1(b j) public returns (uint128) {
@@ -684,9 +699,9 @@ fn balance() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘balance’ not found");
+    assert_eq!(first_error(ns.diagnostics), "‘balance’ not found");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract b {
             function step1(address payable j) public returns (uint128) {
@@ -697,7 +712,7 @@ fn balance() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "substrate can only retrieve balance of this, like ‘address(this).balance’"
     );
 

@@ -184,3 +184,4 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 .. code-block::
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
+

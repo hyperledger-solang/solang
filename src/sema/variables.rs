@@ -1,33 +1,24 @@
-use super::{ContractVariable, Namespace, Symbol};
+use super::ast::{ContractVariable, ContractVariableType, Namespace, Symbol};
 use output::Output;
 use parser::pt;
-use resolver::cfg::{ControlFlowGraph, Instr, Storage, Vartable};
-use resolver::expression::{cast, expression, Expression};
-use resolver::ContractVariableType;
+use sema::expression::{cast, expression};
+use sema::symtable::Symtable;
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,
     contract_no: usize,
     ns: &mut Namespace,
-    errors: &mut Vec<Output>,
 ) -> bool {
     let mut broken = false;
-    let mut vartab = Vartable::new();
-    let mut cfg = ControlFlowGraph::new();
+    let mut symtable = Symtable::new();
 
     for parts in &def.parts {
         if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {
-            if !var_decl(s, contract_no, ns, &mut cfg, &mut vartab, errors) {
+            if !var_decl(s, contract_no, ns, &mut symtable) {
                 broken = true;
             }
         }
     }
-
-    cfg.add(&mut vartab, Instr::Return { value: Vec::new() });
-
-    cfg.vars = vartab.drain();
-
-    ns.contracts[contract_no].initializer = cfg;
 
     broken
 }
@@ -36,11 +27,9 @@ fn var_decl(
     s: &pt::ContractVariableDefinition,
     contract_no: usize,
     ns: &mut Namespace,
-    cfg: &mut ControlFlowGraph,
-    vartab: &mut Vartable,
-    errors: &mut Vec<Output>,
+    symtable: &mut Symtable,
 ) -> bool {
-    let ty = match ns.resolve_type(Some(contract_no), false, &s.ty, errors) {
+    let ty = match ns.resolve_type(Some(contract_no), false, &s.ty) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -54,7 +43,7 @@ fn var_decl(
         match &attr {
             pt::VariableAttribute::Constant(loc) => {
                 if is_constant {
-                    errors.push(Output::warning(
+                    ns.diagnostics.push(Output::warning(
                         *loc,
                         "duplicate constant attribute".to_string(),
                     ));
@@ -62,7 +51,7 @@ fn var_decl(
                 is_constant = true;
             }
             pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     *loc,
                     "variable cannot be declared external".to_string(),
                 ));
@@ -70,7 +59,7 @@ fn var_decl(
             }
             pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
-                    errors.push(Output::error_with_note(
+                    ns.diagnostics.push(Output::error_with_note(
                         v.loc(),
                         format!("variable visibility redeclared `{}'", v.to_string()),
                         e.loc(),
@@ -95,30 +84,17 @@ fn var_decl(
         ns.contracts[contract_no].top_of_contract_storage += slots;
         ContractVariableType::Storage(storage)
     } else {
-        ContractVariableType::Constant(ns.contracts[contract_no].constants.len())
+        ContractVariableType::Constant
     };
 
     let initializer = if let Some(initializer) = &s.initializer {
-        let expr = if is_constant {
-            expression(&initializer, cfg, Some(contract_no), ns, &mut None, errors)
-        } else {
-            expression(
-                &initializer,
-                cfg,
-                Some(contract_no),
-                ns,
-                &mut Some(vartab),
-                errors,
-            )
-        };
-
-        let (res, resty) = match expr {
-            Ok((res, ty)) => (res, ty),
+        let res = match expression(&initializer, Some(contract_no), ns, &symtable, is_constant) {
+            Ok(res) => res,
             Err(()) => return false,
         };
 
-        // implicityly conversion to correct ty
-        let res = match cast(&s.loc, res, &resty, &ty, true, ns, errors) {
+        // implicitly conversion to correct ty
+        let res = match cast(&s.loc, res, &ty, true, ns) {
             Ok(res) => res,
             Err(_) => return false,
         };
@@ -126,7 +102,7 @@ fn var_decl(
         Some(res)
     } else {
         if is_constant {
-            errors.push(Output::decl_error(
+            ns.diagnostics.push(Output::decl_error(
                 s.loc,
                 "missing initializer for constant".to_string(),
             ));
@@ -140,50 +116,14 @@ fn var_decl(
         name: s.name.name.to_string(),
         doc: s.doc.clone(),
         visibility,
-        ty: ty.clone(),
+        ty,
         var,
+        initializer,
     };
 
     let pos = ns.contracts[contract_no].variables.len();
 
     ns.contracts[contract_no].variables.push(sdecl);
 
-    if !ns.add_symbol(
-        Some(contract_no),
-        &s.name,
-        Symbol::Variable(s.loc, pos),
-        errors,
-    ) {
-        return false;
-    }
-
-    if let Some(res) = initializer {
-        if is_constant {
-            ns.contracts[contract_no].constants.push(res);
-        } else {
-            let var = vartab.find(&s.name, contract_no, ns, errors).unwrap();
-            let loc = res.loc();
-
-            cfg.add(
-                vartab,
-                Instr::Set {
-                    res: var.pos,
-                    expr: res,
-                },
-            );
-
-            if let Storage::Contract(offset) = &var.storage {
-                cfg.add(
-                    vartab,
-                    Instr::SetStorage {
-                        ty,
-                        local: var.pos,
-                        storage: Expression::NumberLiteral(loc, 256, offset.clone()),
-                    },
-                );
-            }
-        }
-    }
-
-    true
+    ns.add_symbol(Some(contract_no), &s.name, Symbol::Variable(s.loc, pos))
 }

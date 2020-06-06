@@ -243,7 +243,7 @@ fn expressions() {
 
 #[test]
 fn test_cast_errors() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foo(uint bar) public {
                 bool is_nonzero = bar;
@@ -253,11 +253,11 @@ fn test_cast_errors() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from uint256 to bool not possible"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foobar(uint foo, int bar) public returns (bool) {
                 return (foo < bar);
@@ -267,11 +267,11 @@ fn test_cast_errors() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would change sign from uint256 to int256"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foobar(int32 foo, uint16 bar) public returns (bool) {
                 foo = bar;
@@ -281,10 +281,10 @@ fn test_cast_errors() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
     // int16 can be negative, so cannot be stored in uint32
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foobar(uint32 foo, int16 bar) public returns (bool) {
                 foo = bar;
@@ -295,11 +295,11 @@ fn test_cast_errors() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion would change sign from int16 to uint32"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract foo {
             uint bar;
 
@@ -331,7 +331,7 @@ fn test_cast_errors() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 }
 
 #[test]
@@ -952,7 +952,7 @@ fn power() {
 
     assert_eq!(runtime.vm.scratch, Val(0).encode());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function power(uint64 base, int64 exp) public returns (uint64) {
                 return base ** exp;
@@ -962,11 +962,11 @@ fn power() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "exponation (**) is not allowed with signed types"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function power(int64 base, uint64 exp) public returns (int64) {
                 return base ** exp;
@@ -976,11 +976,11 @@ fn power() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "exponation (**) is not allowed with signed types"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function power(int64 base, int64 exp) public returns (int64) {
                 return base ** exp;
@@ -990,7 +990,7 @@ fn power() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "exponation (**) is not allowed with signed types"
     );
 }
@@ -1354,7 +1354,7 @@ fn div() {
 
 #[test]
 fn destructure() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foo(uint bar) public {
                 int a;
@@ -1367,11 +1367,11 @@ fn destructure() {
     );
 
     assert_eq!(
-        first_error(errors),
-        "destructuring assignment has 2 values on the left and 3 on the right"
+        first_error(ns.diagnostics),
+        "destructuring assignment has 2 elements on the left and 3 on the right"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foo(uint bar) public {
                 int a;
@@ -1383,9 +1383,9 @@ fn destructure() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "`c\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`c\' is not declared");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foo(uint bar) public {
                 int a;
@@ -1398,11 +1398,11 @@ fn destructure() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "storage modifier ‘memory’ not permitted on assignment"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function foo(uint bar) public {
                 int a;
@@ -1414,7 +1414,7 @@ fn destructure() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "stray comma");
+    assert_eq!(first_error(ns.diagnostics), "stray comma");
 
     // The minus sign can be a unary negative or subtract.
     let mut runtime = build_solidity(

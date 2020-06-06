@@ -9,7 +9,7 @@ struct RevertReturn(u32, String);
 
 #[test]
 fn contract_name() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function test() public {}
         }",
@@ -17,11 +17,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function cannot have same name as the contract"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             enum test { a}
         }",
@@ -29,11 +29,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "test is already defined as a contract name"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             bool test;
         }",
@@ -41,11 +41,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "test is already defined as a contract name"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             struct test { bool a; }
         }",
@@ -53,11 +53,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "test is already defined as a contract name"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function f() public {
                 int test;
@@ -67,11 +67,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "declaration of `test\' shadows contract name"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function f(int test) public {
             }
@@ -80,11 +80,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "declaration of `test\' shadows contract name"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test {
             function f() public returns (int test) {
                 return 0;
@@ -94,11 +94,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_warning(errors),
+        first_warning(ns.diagnostics),
         "declaration of `test\' shadows contract name"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract a {
             function x() public {
@@ -116,11 +116,11 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "circular reference creating contract ‘a’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract a {
             function x() public {
@@ -144,14 +144,14 @@ fn contract_name() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "circular reference creating contract ‘a’"
     );
 }
 
 #[test]
 fn contract_type() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -172,11 +172,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion to address from contract printer not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -186,9 +186,9 @@ fn contract_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -205,11 +205,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion from uint8 to address not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -226,11 +226,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from uint8 to contract printer not possible"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public returns (printer) {
@@ -241,11 +241,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new cannot construct current contract ‘printer’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public returns (printer) {
@@ -256,14 +256,14 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new cannot construct current contract ‘printer’"
     );
 }
 
 #[test]
 fn external_call() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             b x;
@@ -281,11 +281,11 @@ fn external_call() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function expects 1 arguments, 0 provided"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             b x;
@@ -303,11 +303,11 @@ fn external_call() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "function expects 2 arguments, 1 provided"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             b x;
@@ -331,7 +331,10 @@ fn external_call() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "duplicate argument with name ‘t’");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "duplicate argument with name ‘t’"
+    );
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(u32);
@@ -497,7 +500,7 @@ fn external_datatypes() {
 
 #[test]
 fn creation_code() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test() public {
@@ -517,11 +520,11 @@ fn creation_code() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "circular reference creating contract ‘a’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract a {
             function test() public {
@@ -532,7 +535,7 @@ fn creation_code() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "containing our own contract code for ‘a’ would generate infinite size contract"
     );
 

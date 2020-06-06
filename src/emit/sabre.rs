@@ -1,6 +1,6 @@
+use codegen::cfg::HashTy;
 use parser::pt;
-use resolver;
-use resolver::cfg::HashTy;
+use sema::ast;
 use std::str;
 
 use inkwell::context::Context;
@@ -21,8 +21,8 @@ pub struct SabreTarget {
 impl SabreTarget {
     pub fn build<'a>(
         context: &'a Context,
-        contract: &'a resolver::Contract,
-        ns: &'a resolver::Namespace,
+        contract: &'a ast::Contract,
+        ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
@@ -582,7 +582,7 @@ impl TargetRuntime for SabreTarget {
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
         let mut offset = contract.context.i32_type().const_int(
             spec.iter()
@@ -698,7 +698,7 @@ impl TargetRuntime for SabreTarget {
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,
-        spec: &[resolver::Parameter],
+        spec: &[ast::Parameter],
     ) {
         self.abi
             .decode(contract, function, args, data, length, spec);

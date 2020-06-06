@@ -97,6 +97,7 @@ mod test {
                         },
                         fields: vec![
                             VariableDeclaration {
+                                loc: Loc(81, 92),
                                 ty: Expression::Type(Loc(81, 85), Type::Bool),
                                 storage: None,
                                 name: Identifier {
@@ -105,6 +106,7 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
+                                loc: Loc(118, 129),
                                 ty: Expression::Type(Loc(118, 122), Type::Uint(256)),
                                 storage: None,
                                 name: Identifier {
@@ -113,6 +115,7 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
+                                loc: Loc(155, 169),
                                 ty: Expression::Type(Loc(155, 161), Type::Bytes(2)),
                                 storage: None,
                                 name: Identifier {
@@ -121,6 +124,7 @@ mod test {
                                 },
                             },
                             VariableDeclaration {
+                                loc: Loc(195, 209),
                                 ty: Expression::Type(Loc(195, 202), Type::Bytes(32)),
                                 storage: None,
                                 name: Identifier {

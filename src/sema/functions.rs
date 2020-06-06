@@ -1,4 +1,4 @@
-use super::{FunctionDecl, Namespace, Parameter, Symbol, Type};
+use super::ast::{Function, Namespace, Parameter, Symbol, Type};
 use output::Output;
 use parser::pt;
 use Target;
@@ -8,7 +8,6 @@ pub fn function_decl(
     i: usize,
     contract_no: usize,
     ns: &mut Namespace,
-    errors: &mut Vec<Output>,
 ) -> bool {
     let mut success = true;
 
@@ -19,14 +18,14 @@ pub fn function_decl(
             // Function name cannot be the same as the contract name
             if let Some(n) = &f.name {
                 if n.name == ns.contracts[contract_no].name {
-                    errors.push(Output::error(
+                    ns.diagnostics.push(Output::error(
                         f.loc,
                         "function cannot have same name as the contract".to_string(),
                     ));
                     return false;
                 }
             } else {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     f.name_loc,
                     "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?".to_string(),
                 ));
@@ -35,14 +34,14 @@ pub fn function_decl(
         }
         pt::FunctionTy::Constructor => {
             if !f.returns.is_empty() {
-                errors.push(Output::warning(
+                ns.diagnostics.push(Output::warning(
                     f.loc,
                     "constructor cannot have return values".to_string(),
                 ));
                 return false;
             }
             if f.name.is_some() {
-                errors.push(Output::warning(
+                ns.diagnostics.push(Output::warning(
                     f.loc,
                     "constructor cannot have a name".to_string(),
                 ));
@@ -51,21 +50,21 @@ pub fn function_decl(
         }
         pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
             if !f.returns.is_empty() {
-                errors.push(Output::warning(
+                ns.diagnostics.push(Output::warning(
                     f.loc,
                     format!("{} function cannot have return values", f.ty),
                 ));
                 success = false;
             }
             if !f.params.is_empty() {
-                errors.push(Output::warning(
+                ns.diagnostics.push(Output::warning(
                     f.loc,
                     format!("{} function cannot have parameters", f.ty),
                 ));
                 success = false;
             }
             if f.name.is_some() {
-                errors.push(Output::warning(
+                ns.diagnostics.push(Output::warning(
                     f.loc,
                     format!("{} function cannot have a name", f.ty),
                 ));
@@ -81,7 +80,7 @@ pub fn function_decl(
         match &a {
             pt::FunctionAttribute::StateMutability(m) => {
                 if let Some(e) = &mutability {
-                    errors.push(Output::error_with_note(
+                    ns.diagnostics.push(Output::error_with_note(
                         m.loc(),
                         format!("function redeclared `{}'", m.to_string()),
                         e.loc(),
@@ -95,7 +94,7 @@ pub fn function_decl(
             }
             pt::FunctionAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
-                    errors.push(Output::error_with_note(
+                    ns.diagnostics.push(Output::error_with_note(
                         v.loc(),
                         format!("function redeclared `{}'", v.to_string()),
                         e.loc(),
@@ -113,7 +112,8 @@ pub fn function_decl(
     let visibility = match visibility {
         Some(v) => v,
         None => {
-            errors.push(Output::error(f.loc, "no visibility specified".to_string()));
+            ns.diagnostics
+                .push(Output::error(f.loc, "no visibility specified".to_string()));
             success = false;
             // continue processing while assuming it's a public
             pt::Visibility::Public(pt::Loc(0, 0))
@@ -125,7 +125,7 @@ pub fn function_decl(
     let storage_allowed = match visibility {
         pt::Visibility::Internal(_) | pt::Visibility::Private(_) => {
             if let Some(pt::StateMutability::Payable(loc)) = mutability {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     loc,
                     "internal or private function cannot be payable".to_string(),
                 ));
@@ -136,9 +136,9 @@ pub fn function_decl(
         pt::Visibility::Public(_) | pt::Visibility::External(_) => false,
     };
 
-    let (params, params_success) = resolve_params(f, storage_allowed, contract_no, ns, errors);
+    let (params, params_success) = resolve_params(f, storage_allowed, contract_no, ns);
 
-    let (returns, returns_success) = resolve_returns(f, storage_allowed, contract_no, ns, errors);
+    let (returns, returns_success) = resolve_returns(f, storage_allowed, contract_no, ns);
 
     if !success || !returns_success || !params_success {
         return false;
@@ -149,7 +149,7 @@ pub fn function_decl(
         None => "".to_owned(),
     };
 
-    let fdecl = FunctionDecl::new(
+    let fdecl = Function::new(
         f.loc,
         name,
         f.doc.clone(),
@@ -170,7 +170,7 @@ pub fn function_decl(
                 .iter()
                 .find(|f| f.is_constructor())
             {
-                errors.push(Output::error_with_note(
+                ns.diagnostics.push(Output::error_with_note(
                     f.loc,
                     "constructor already defined".to_string(),
                     prev.loc,
@@ -186,7 +186,7 @@ pub fn function_decl(
                 .iter()
                 .find(|f| f.is_constructor() && f.is_payable() != payable)
             {
-                errors.push(Output::error_with_note(
+                ns.diagnostics.push(Output::error_with_note(
                     f.loc,
                     "all constructors should be defined ‘payable’ or not".to_string(),
                     prev.loc,
@@ -200,7 +200,7 @@ pub fn function_decl(
         match fdecl.visibility {
             pt::Visibility::Public(_) => (),
             _ => {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     f.loc,
                     "constructor function must be declared public".to_owned(),
                 ));
@@ -210,14 +210,14 @@ pub fn function_decl(
 
         match fdecl.mutability {
             Some(pt::StateMutability::Pure(loc)) => {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     loc,
                     "constructor cannot be declared pure".to_string(),
                 ));
                 return false;
             }
             Some(pt::StateMutability::View(loc)) => {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     loc,
                     "constructor cannot be declared view".to_string(),
                 ));
@@ -232,7 +232,7 @@ pub fn function_decl(
             .filter(|f| f.is_constructor())
         {
             if v.signature == fdecl.signature {
-                errors.push(Output::error_with_note(
+                ns.diagnostics.push(Output::error_with_note(
                     f.loc,
                     "constructor with this signature already exists".to_string(),
                     v.loc,
@@ -252,7 +252,7 @@ pub fn function_decl(
             .iter()
             .find(|o| o.ty == f.ty)
         {
-            errors.push(Output::error_with_note(
+            ns.diagnostics.push(Output::error_with_note(
                 f.loc,
                 format!("{} function already defined", f.ty),
                 prev.loc,
@@ -264,7 +264,7 @@ pub fn function_decl(
         if let pt::Visibility::External(_) = fdecl.visibility {
             // ok
         } else {
-            errors.push(Output::error(
+            ns.diagnostics.push(Output::error(
                 f.loc,
                 format!("{} function must be declared external", f.ty),
             ));
@@ -273,14 +273,14 @@ pub fn function_decl(
 
         if let Some(pt::StateMutability::Payable(_)) = fdecl.mutability {
             if f.ty == pt::FunctionTy::Fallback {
-                errors.push(Output::error(
+                ns.diagnostics.push(Output::error(
                     f.loc,
                     format!("{} function must not be declare payable, use ‘receive() external payable’ instead", f.ty),
                 ));
                 return false;
             }
         } else if f.ty == pt::FunctionTy::Receive {
-            errors.push(Output::error(
+            ns.diagnostics.push(Output::error(
                 f.loc,
                 format!("{} function must be declared payable", f.ty),
             ));
@@ -299,7 +299,7 @@ pub fn function_decl(
             // check if signature already present
             for o in v.iter() {
                 if ns.contracts[contract_no].functions[o.1].signature == fdecl.signature {
-                    errors.push(Output::error_with_note(
+                    ns.diagnostics.push(Output::error_with_note(
                         f.loc,
                         "overloaded function with this signature already exist".to_string(),
                         o.0,
@@ -321,12 +321,7 @@ pub fn function_decl(
 
         ns.contracts[contract_no].functions.push(fdecl);
 
-        ns.add_symbol(
-            Some(contract_no),
-            id,
-            Symbol::Function(vec![(id.loc, pos)]),
-            errors,
-        );
+        ns.add_symbol(Some(contract_no), id, Symbol::Function(vec![(id.loc, pos)]));
 
         true
     }
@@ -338,26 +333,26 @@ fn resolve_params(
     storage_allowed: bool,
     contract_no: usize,
     ns: &mut Namespace,
-    errors: &mut Vec<Output>,
 ) -> (Vec<Parameter>, bool) {
     let mut params = Vec::new();
     let mut success = true;
 
-    for p in &f.params {
+    for (loc, p) in &f.params {
         let p = match p {
-            (_, Some(p)) => p,
-            (loc, None) => {
-                errors.push(Output::error(*loc, "missing parameter type".to_owned()));
+            Some(p) => p,
+            None => {
+                ns.diagnostics
+                    .push(Output::error(*loc, "missing parameter type".to_owned()));
                 success = false;
                 continue;
             }
         };
 
-        match ns.resolve_type(Some(contract_no), false, &p.ty, errors) {
+        match ns.resolve_type(Some(contract_no), false, &p.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
-                        errors.push(Output::error(
+                        ns.diagnostics.push(Output::error(
                                 *storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
@@ -370,7 +365,7 @@ fn resolve_params(
                     if storage_allowed {
                         Type::StorageRef(Box::new(ty))
                     } else {
-                        errors.push(Output::error(
+                        ns.diagnostics.push(Output::error(
                             loc,
                             "parameter of type ‘storage’ not allowed public or external functions"
                                 .to_string(),
@@ -379,7 +374,7 @@ fn resolve_params(
                         ty
                     }
                 } else if ty.contains_mapping(ns) {
-                    errors.push(Output::error(
+                    ns.diagnostics.push(Output::error(
                         p.ty.loc(),
                         "parameter with mapping type must be of type ‘storage’".to_string(),
                     ));
@@ -390,6 +385,7 @@ fn resolve_params(
                 };
 
                 params.push(Parameter {
+                    loc: *loc,
                     name: p
                         .name
                         .as_ref()
@@ -410,26 +406,26 @@ fn resolve_returns(
     storage_allowed: bool,
     contract_no: usize,
     ns: &mut Namespace,
-    errors: &mut Vec<Output>,
 ) -> (Vec<Parameter>, bool) {
     let mut returns = Vec::new();
     let mut success = true;
 
-    for r in &f.returns {
+    for (loc, r) in &f.returns {
         let r = match r {
-            (_, Some(p)) => p,
-            (loc, None) => {
-                errors.push(Output::error(*loc, "missing return type".to_owned()));
+            Some(r) => r,
+            None => {
+                ns.diagnostics
+                    .push(Output::error(*loc, "missing return type".to_owned()));
                 success = false;
                 continue;
             }
         };
 
-        match ns.resolve_type(Some(contract_no), false, &r.ty, errors) {
+        match ns.resolve_type(Some(contract_no), false, &r.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
-                        errors.push(Output::error(
+                        ns.diagnostics.push(Output::error(
                                 *storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
@@ -441,7 +437,7 @@ fn resolve_returns(
                 } else {
                     match r.storage {
                         Some(pt::StorageLocation::Calldata(loc)) => {
-                            errors.push(Output::error(
+                            ns.diagnostics.push(Output::error(
                                 loc,
                                 "data location ‘calldata’ can not be used for return types"
                                     .to_string(),
@@ -453,7 +449,7 @@ fn resolve_returns(
                             if storage_allowed {
                                 Type::StorageRef(Box::new(ty))
                             } else {
-                                errors.push(Output::error(
+                                ns.diagnostics.push(Output::error(
                                     loc,
                                     "return type of type ‘storage’ not allowed public or external functions"
                                         .to_string(),
@@ -464,7 +460,7 @@ fn resolve_returns(
                         }
                         _ => {
                             if ty.contains_mapping(ns) {
-                                errors.push(Output::error(
+                                ns.diagnostics.push(Output::error(
                                     r.ty.loc(),
                                     "return type containing mapping must be of type ‘storage’"
                                         .to_string(),
@@ -478,6 +474,7 @@ fn resolve_returns(
                 };
 
                 returns.push(Parameter {
+                    loc: *loc,
                     name: r
                         .name
                         .as_ref()
@@ -498,7 +495,7 @@ fn signatures() {
 
     let ns = Namespace::new(Target::Ewasm, 20);
 
-    let fdecl = FunctionDecl::new(
+    let fdecl = Function::new(
         pt::Loc(0, 0),
         "foo".to_owned(),
         vec![],
@@ -508,10 +505,12 @@ fn signatures() {
         pt::Visibility::Public(pt::Loc(0, 0)),
         vec![
             Parameter {
+                loc: pt::Loc(0, 0),
                 name: "".to_string(),
                 ty: Type::Uint(8),
             },
             Parameter {
+                loc: pt::Loc(0, 0),
                 name: "".to_string(),
                 ty: Type::Address(false),
             },

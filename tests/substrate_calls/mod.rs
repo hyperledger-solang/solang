@@ -95,7 +95,7 @@ fn require() {
 
 #[test]
 fn contract_type() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -116,11 +116,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion to address from contract printer not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -130,9 +130,9 @@ fn contract_type() {
         Target::Substrate,
     );
 
-    no_errors(errors);
+    no_errors(ns.diagnostics);
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -149,11 +149,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "implicit conversion from uint8 to address not allowed"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public {
@@ -170,11 +170,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "conversion from uint8 to contract printer not possible"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public returns (printer) {
@@ -185,11 +185,11 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new cannot construct current contract ‘printer’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract printer {
             function test() public returns (printer) {
@@ -200,7 +200,7 @@ fn contract_type() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new cannot construct current contract ‘printer’"
     );
 }
@@ -286,7 +286,7 @@ fn contract_already_exists() {
 
 #[test]
 fn try_catch_external_calls() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -311,11 +311,11 @@ fn try_catch_external_calls() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "try returns list has 2 entries while function returns 1 values"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -340,7 +340,7 @@ fn try_catch_external_calls() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "type ‘int256[2] storage’ does not match return value of function ‘bool’"
     );
 
@@ -395,7 +395,7 @@ fn try_catch_external_calls() {
 
     runtime.function("test", Vec::new());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -420,11 +420,11 @@ fn try_catch_external_calls() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "catch can only take ‘bytes memory’, not ‘string’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -448,9 +448,9 @@ fn try_catch_external_calls() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "x is already declared");
+    assert_eq!(first_error(ns.diagnostics), "x is already declared");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -477,11 +477,11 @@ fn try_catch_external_calls() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "only catch ‘Error’ is supported, not ‘Foo’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -508,7 +508,7 @@ fn try_catch_external_calls() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "catch Error(...) can only take ‘string memory’, not ‘bytes’"
     );
 
@@ -631,7 +631,7 @@ fn try_catch_external_calls() {
 
 #[test]
 fn try_catch_constructor() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -654,11 +654,11 @@ fn try_catch_constructor() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "type ‘int32’ does not match return value of function ‘contract other’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -681,7 +681,7 @@ fn try_catch_constructor() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "constructor returns single contract, not 2 values"
     );
 
@@ -762,7 +762,7 @@ fn try_catch_constructor() {
 
     runtime.function("test", Vec::new());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -785,11 +785,11 @@ fn try_catch_constructor() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "try only supports external calls or constructor calls"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function f() public {
@@ -800,11 +800,11 @@ fn try_catch_constructor() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "expected code block, not list of named arguments"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -824,9 +824,12 @@ fn try_catch_constructor() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "code block missing for no catch");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "code block missing for no catch"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test() public {
@@ -850,9 +853,9 @@ fn try_catch_constructor() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "unexpected code block");
+    assert_eq!(first_error(ns.diagnostics), "unexpected code block");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             function test(other o) public {
@@ -876,7 +879,7 @@ fn try_catch_constructor() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "unexpected code block");
+    assert_eq!(first_error(ns.diagnostics), "unexpected code block");
 }
 
 #[test]
@@ -1081,7 +1084,7 @@ fn payable_functions() {
 
     assert_eq!(runtime.vm.scratch, Ret(2).encode());
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             receive() public {
@@ -1093,11 +1096,11 @@ fn payable_functions() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "receive function must be declared external"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             receive() external  {
@@ -1109,11 +1112,11 @@ fn payable_functions() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "receive function must be declared payable"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             fallback() payable external {
@@ -1125,11 +1128,11 @@ fn payable_functions() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "fallback function must not be declare payable, use ‘receive() external payable’ instead"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r##"
         contract c {
             fallback() public {
@@ -1141,7 +1144,7 @@ fn payable_functions() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "fallback function must be declared external"
     );
 }

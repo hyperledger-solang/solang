@@ -63,8 +63,8 @@ Identifier: Identifier = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <ty:Precedence0> <storage:StorageLocation?> <name:Identifier> => VariableDeclaration {
-        ty, storage, name
+    <l:@L> <ty:Precedence0> <storage:StorageLocation?> <name:Identifier> <r:@R> => VariableDeclaration {
+        loc: Loc(l, r), ty, storage, name
     },
 }
 
@@ -282,7 +282,7 @@ Precedence0: Expression = {
     },
     <l:@L> <a:ParameterList> <r:@R> => {
         if a.len() == 1 {
-            if let Some(Parameter{ ty, storage: None, name: None }) = &a[0].1 {
+            if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
                 // this means "(" Expression ")"
                 return ty.clone();
             }
@@ -325,8 +325,9 @@ HexLiteral: HexLiteral = {
 // and as an added bonus we can generate error messages about missing parameters/returns
 // to functions
 Parameter: Parameter = {
-    <ty:Expression> <storage:StorageLocation?> <name:Identifier?> => {
-        Parameter{ty, storage, name}
+    <l:@L> <ty:Expression> <storage:StorageLocation?> <name:Identifier?> <r:@R> => {
+        let loc = Loc(l, r);
+        Parameter{loc, ty, storage, name}
     }
 }
 

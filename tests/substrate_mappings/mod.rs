@@ -8,7 +8,7 @@ use solang::{parse_and_resolve, Target};
 
 #[test]
 fn bad_mapping_declares() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             struct s {
@@ -25,9 +25,12 @@ fn bad_mapping_declares() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "mapping only allowed in storage");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "mapping only allowed in storage"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             mapping(uint[] => address) data;
@@ -35,9 +38,12 @@ fn bad_mapping_declares() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "key of mapping cannot be array type");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "key of mapping cannot be array type"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             struct foo {
@@ -48,9 +54,12 @@ fn bad_mapping_declares() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "key of mapping cannot be struct type");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "key of mapping cannot be struct type"
+    );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             mapping(int => address) data;
@@ -59,9 +68,9 @@ fn bad_mapping_declares() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "‘data’ is a contract variable");
+    assert_eq!(first_error(ns.diagnostics), "‘data’ is a contract variable");
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function test(mapping(int => address) x) public {
@@ -72,11 +81,11 @@ fn bad_mapping_declares() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "parameter with mapping type must be of type ‘storage’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function test(mapping(int => address) storage x) public {
@@ -87,11 +96,11 @@ fn bad_mapping_declares() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "parameter of type ‘storage’ not allowed public or external functions"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function test() public returns (mapping(int => address) x) {
@@ -102,11 +111,11 @@ fn bad_mapping_declares() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "return type containing mapping must be of type ‘storage’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function test() public returns (mapping(int => address) storage x) {
@@ -117,11 +126,11 @@ fn bad_mapping_declares() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "return type of type ‘storage’ not allowed public or external functions"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             function test() public {
@@ -133,11 +142,11 @@ fn bad_mapping_declares() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "new cannot allocate type ‘mapping(int256 => address)’"
     );
 
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         r#"
         contract c {
             mapping(uint => bool) data;
@@ -149,7 +158,7 @@ fn bad_mapping_declares() {
     );
 
     assert_eq!(
-        first_error(errors),
+        first_error(ns.diagnostics),
         "‘delete’ cannot be applied to mapping type"
     );
 }

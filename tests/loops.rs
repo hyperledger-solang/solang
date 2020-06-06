@@ -12,7 +12,7 @@ fn first_error(errors: Vec<output::Output>) -> String {
 
 #[test]
 fn test_infinite_loop() {
-    let (_, errors) = parse_and_resolve(
+    let ns = parse_and_resolve(
         "contract test3 {
             // The resolver should figure out how many breaks there
             // in the for loop; if there are none, then the basic block
@@ -26,5 +26,5 @@ fn test_infinite_loop() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(errors), "unreachable statement");
+    assert_eq!(first_error(ns.diagnostics), "unreachable statement");
 }
