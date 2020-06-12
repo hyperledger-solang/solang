@@ -155,7 +155,7 @@ First if all clone the llvm repository:
 
 .. code-block:: bash
 
-	git clone https://github.com/llvm/llvm-project
+	git clone git://github.com/llvm/llvm-project
 	cd llvm-project
 
 Now switch to the 8.0 release branch:
@@ -164,26 +164,13 @@ Now switch to the 8.0 release branch:
 
 	git checkout -b release_8.x origin/release/8.x
 
-Ensure that clang will built:
-
-.. code-block:: bash
-
-	ln -s ../../clang llvm/tools/clang
-
-Create a directory where the build and intermediate files will be stored:
-
-.. code-block:: bash
-
-	mkdir build
-	cd build
-
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
 
 .. code-block:: bash
 
-	cmake -G Ninja -DLLVM_TARGETS_TO_BUILD=WebAssembly -DLLVM_ENABLE_ASSERTIONS=On \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=installdir ../llvm
-	cmake --build . --target install
+	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang  \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=installdir -B build llvm
+	cmake --build build --target install
 
 Once the build has succeeded, the *installdir*/bin has to be added to your path so the
 Solang build can find the ``llvm-config`` from this build:
@@ -192,3 +179,8 @@ Solang build can find the ``llvm-config`` from this build:
 
 	export PATH=installdir/bin:$PATH
 
+And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
+
+.. code-block::
+
+	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
