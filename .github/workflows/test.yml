@@ -48,3 +48,41 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Run X
+      run: python ci/x.py
+    - name: Clone LLVM
+      run: git clone -b release/8.x git://github.com/llvm/llvm-project
+    - name: Fix LLVM build problem
+      run: copy MicrosoftDemangleNodes.h llvm-project/llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h
+    - name: Set up VS tools
+      run: C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat
+    - name: CMake LLVM
+      run: cmake -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$(pwd)/llvm-build -B build llvm
+      working-directory: ./llvm-project
+      shell: bash
+    - name: Build LLVM
+      run: cmake --build build --target install
+      working-directory: ./llvm-project
+    - name: setup env
+      run: |
+        echo "::add-path::$(pwd)/llvm-build/bin"
+      shell: bash
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: Compile stdlib
+      run: clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
+      working-directory:  ./stdlib
+    - name: Build
+      run: cargo build --verbose
+
