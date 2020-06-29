@@ -67,10 +67,7 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
         })
         .map(|f| ABI {
             name: f.name.to_owned(),
-            mutability: match &f.mutability {
-                Some(m) => m.to_string(),
-                None => "nonpayable",
-            },
+            mutability: f.print_mutability(),
             ty: f.ty.to_string(),
             inputs: f
                 .params

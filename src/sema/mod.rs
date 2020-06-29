@@ -13,6 +13,7 @@ mod builtin;
 pub mod eval;
 pub mod expression;
 mod functions;
+mod mutability;
 mod statements;
 pub mod symtable;
 mod types;
@@ -56,6 +57,9 @@ pub fn sema(s: pt::SourceUnit, target: Target) -> ast::Namespace {
             contract_no += 1;
         }
     }
+
+    // now check state mutability for all contracts
+    mutability::mutablity(&mut ns);
 
     ns
 }

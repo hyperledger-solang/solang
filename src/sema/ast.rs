@@ -546,6 +546,14 @@ impl Function {
 
         sig
     }
+
+    /// State mutability as string
+    pub fn print_mutability(&self) -> &'static str {
+        match &self.mutability {
+            None => "nonpayable",
+            Some(m) => m.to_string(),
+        }
+    }
 }
 
 impl From<&pt::Type> for Type {
@@ -733,6 +741,149 @@ pub enum Expression {
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
     List(pt::Loc, Vec<Expression>),
     Poison,
+}
+
+impl Expression {
+    /// recurse over the expression
+    pub fn recurse<T>(&self, cx: &mut T, f: fn(expr: &Expression, ctx: &mut T) -> bool) {
+        if f(self, cx) {
+            match self {
+                Expression::StructLiteral(_, _, exprs)
+                | Expression::ArrayLiteral(_, _, _, exprs)
+                | Expression::ConstArrayLiteral(_, _, _, exprs) => {
+                    for e in exprs {
+                        e.recurse(cx, f);
+                    }
+                }
+                Expression::Add(_, _, left, right)
+                | Expression::Subtract(_, _, left, right)
+                | Expression::Multiply(_, _, left, right)
+                | Expression::UDivide(_, _, left, right)
+                | Expression::SDivide(_, _, left, right)
+                | Expression::UModulo(_, _, left, right)
+                | Expression::SModulo(_, _, left, right)
+                | Expression::Power(_, _, left, right)
+                | Expression::BitwiseOr(_, _, left, right)
+                | Expression::BitwiseAnd(_, _, left, right)
+                | Expression::BitwiseXor(_, _, left, right)
+                | Expression::ShiftLeft(_, _, left, right)
+                | Expression::ShiftRight(_, _, left, right, _) => {
+                    left.recurse(cx, f);
+                    right.recurse(cx, f);
+                }
+                Expression::Load(_, _, expr)
+                | Expression::StorageLoad(_, _, expr)
+                | Expression::ZeroExt(_, _, expr)
+                | Expression::SignExt(_, _, expr)
+                | Expression::Trunc(_, _, expr)
+                | Expression::Cast(_, _, expr)
+                | Expression::PreIncrement(_, _, expr)
+                | Expression::PreDecrement(_, _, expr)
+                | Expression::PostIncrement(_, _, expr)
+                | Expression::PostDecrement(_, _, expr) => expr.recurse(cx, f),
+
+                Expression::Assign(_, _, left, right)
+                | Expression::UMore(_, left, right)
+                | Expression::ULess(_, left, right)
+                | Expression::UMoreEqual(_, left, right)
+                | Expression::ULessEqual(_, left, right)
+                | Expression::SMore(_, left, right)
+                | Expression::SLess(_, left, right)
+                | Expression::SMoreEqual(_, left, right)
+                | Expression::SLessEqual(_, left, right)
+                | Expression::Equal(_, left, right)
+                | Expression::NotEqual(_, left, right) => {
+                    left.recurse(cx, f);
+                    right.recurse(cx, f);
+                }
+                Expression::Not(_, expr)
+                | Expression::Complement(_, _, expr)
+                | Expression::UnaryMinus(_, _, expr) => expr.recurse(cx, f),
+
+                Expression::Ternary(_, _, cond, left, right) => {
+                    cond.recurse(cx, f);
+                    left.recurse(cx, f);
+                    right.recurse(cx, f);
+                }
+                Expression::ArraySubscript(_, _, left, right) => {
+                    left.recurse(cx, f);
+                    right.recurse(cx, f);
+                }
+                Expression::StructMember(_, _, expr, _) => expr.recurse(cx, f),
+
+                Expression::AllocDynamicArray(_, _, expr, _)
+                | Expression::DynamicArrayLength(_, expr) => expr.recurse(cx, f),
+                Expression::DynamicArraySubscript(_, _, left, right)
+                | Expression::StorageBytesSubscript(_, left, right)
+                | Expression::StorageBytesPush(_, left, right) => {
+                    left.recurse(cx, f);
+                    right.recurse(cx, f);
+                }
+                Expression::StorageBytesPop(_, expr) | Expression::StorageBytesLength(_, expr) => {
+                    expr.recurse(cx, f)
+                }
+                Expression::StringCompare(_, left, right)
+                | Expression::StringConcat(_, _, left, right) => {
+                    if let StringLocation::RunTime(expr) = left {
+                        expr.recurse(cx, f);
+                    }
+                    if let StringLocation::RunTime(expr) = right {
+                        expr.recurse(cx, f);
+                    }
+                }
+                Expression::Or(_, left, right) | Expression::And(_, left, right) => {
+                    left.recurse(cx, f);
+                    right.recurse(cx, f);
+                }
+                Expression::InternalFunctionCall(_, _, _, args) => {
+                    for e in args {
+                        e.recurse(cx, f);
+                    }
+                }
+                Expression::ExternalFunctionCall {
+                    address,
+                    args,
+                    value,
+                    gas,
+                    ..
+                } => {
+                    for e in args {
+                        e.recurse(cx, f);
+                    }
+                    address.recurse(cx, f);
+                    value.recurse(cx, f);
+                    gas.recurse(cx, f);
+                }
+                Expression::Constructor {
+                    args,
+                    value,
+                    gas,
+                    salt,
+                    ..
+                } => {
+                    for e in args {
+                        e.recurse(cx, f);
+                    }
+                    if let Some(value) = value {
+                        value.recurse(cx, f);
+                    }
+                    gas.recurse(cx, f);
+                    if let Some(salt) = salt {
+                        salt.recurse(cx, f);
+                    }
+                }
+                Expression::Builtin(_, _, _, exprs)
+                | Expression::List(_, exprs)
+                | Expression::Keccak256(_, _, exprs) => {
+                    for e in exprs {
+                        e.recurse(cx, f);
+                    }
+                }
+                Expression::Balance(_, _, expr) => expr.recurse(cx, f),
+                _ => (),
+            }
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Debug)]
