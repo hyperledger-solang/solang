@@ -580,7 +580,7 @@ fn try_catch_external_calls() {
                 c = new child();
             }
         
-            function call_child() public pure returns (int64) {
+            function call_child() public view returns (int64) {
                 return c.get_a();
             }
         

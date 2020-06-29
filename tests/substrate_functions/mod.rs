@@ -227,7 +227,7 @@ fn mutability() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function declared pure but reads contract storage"
+        "function declared ‘pure’ but this expression reads from state"
     );
 
     let ns = parse_and_resolve(
@@ -243,7 +243,7 @@ fn mutability() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function declared view but writes contract storage"
+        "function declared ‘view’ but this expression writes to state"
     );
 }
 
