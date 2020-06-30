@@ -34,6 +34,7 @@ mod substrate_enums;
 mod substrate_expressions;
 
 mod substrate_arrays;
+mod substrate_builtins;
 mod substrate_calls;
 mod substrate_contracts;
 mod substrate_first;

@@ -6,7 +6,7 @@ use num_traits::One;
 use num_traits::ToPrimitive;
 use num_traits::Zero;
 use parser::pt;
-use sema::ast::{Builtin, Expression, Namespace, StringLocation, Type};
+use sema::ast::{Builtin, Expression, Namespace, Parameter, StringLocation, Type};
 use sema::eval::eval_const_number;
 use sema::expression::{cast_shift_arg, try_bigint_to_expression, try_cast};
 use std::collections::HashSet;
@@ -350,7 +350,9 @@ pub fn expression(
 
             Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
         }
-        Expression::InternalFunctionCall(_, _, _, _) | Expression::ExternalFunctionCall { .. } => {
+        Expression::InternalFunctionCall(_, _, _, _)
+        | Expression::ExternalFunctionCall { .. }
+        | Expression::Builtin(_, _, Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, ns, vartab);
 
             assert_eq!(returns.len(), 1);
@@ -900,6 +902,38 @@ pub fn emit_function_call(
             } else {
                 vec![Expression::Poison]
             }
+        }
+        Expression::Builtin(loc, tys, Builtin::AbiDecode, args) => {
+            let data = expression(&args[0], cfg, callee_contract_no, ns, vartab);
+
+            let mut returns = Vec::new();
+            let mut res = Vec::new();
+
+            for ret in tys {
+                let temp_pos = vartab.temp_anonymous(&ret);
+                res.push(temp_pos);
+                returns.push(Expression::Variable(*loc, ret.clone(), temp_pos));
+            }
+
+            cfg.add(
+                vartab,
+                Instr::AbiDecode {
+                    res,
+                    selector: None,
+                    exception: None,
+                    tys: tys
+                        .iter()
+                        .map(|ty| Parameter {
+                            name: "".to_owned(),
+                            loc: *loc,
+                            ty: ty.clone(),
+                        })
+                        .collect(),
+                    data,
+                },
+            );
+
+            returns
         }
         _ => unreachable!(),
     }

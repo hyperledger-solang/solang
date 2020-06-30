@@ -163,13 +163,10 @@ impl ast::Namespace {
         id: &pt::Identifier,
         symbol: ast::Symbol,
     ) -> bool {
-        if builtin::is_builtin_call(&id.name) {
+        if builtin::is_reserved(&id.name) {
             self.diagnostics.push(Output::error(
                 id.loc,
-                format!(
-                    "‘{}’ shadows name of a builtin function",
-                    id.name.to_string()
-                ),
+                format!("‘{}’ shadows name of a builtin", id.name.to_string()),
             ));
 
             return false;

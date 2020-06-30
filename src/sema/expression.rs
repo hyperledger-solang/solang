@@ -3091,8 +3091,8 @@ fn function_call_pos_args(
     }
 
     // is it a builtin
-    if builtin::is_builtin_call(&id.name) {
-        let expr = builtin::resolve(loc, id, resolved_args, ns)?;
+    if builtin::is_builtin_call(None, &id.name) {
+        let expr = builtin::resolve_call(loc, id, resolved_args, ns)?;
 
         return if expr.tys().len() > 1 {
             ns.diagnostics.push(Output::error(
@@ -3349,6 +3349,28 @@ fn method_call_pos_args(
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
+    if let pt::Expression::Variable(namespace) = var {
+        if builtin::is_builtin_call(Some(&namespace.name), &func.name) {
+            if let Some(loc) = call_args_loc {
+                ns.diagnostics.push(Output::error(
+                    loc,
+                    "call arguments not allowed on builtins".to_string(),
+                ));
+                return Err(());
+            }
+
+            return builtin::resolve_method_call(
+                loc,
+                namespace,
+                func,
+                args,
+                contract_no,
+                ns,
+                symtable,
+            );
+        }
+    }
+
     let var_expr = expression(var, contract_no, ns, symtable, false)?;
     let var_ty = var_expr.ty();
 
@@ -3536,7 +3558,7 @@ fn method_call_pos_args(
             // check if arguments can be implicitly casted
             for (i, arg) in resolved_args.iter().enumerate() {
                 match cast(
-                    &pt::Loc(0, 0),
+                    &arg.loc(),
                     *arg.clone(),
                     &ns.contracts[*contract_no].functions[function_no].params[i]
                         .ty
