@@ -910,6 +910,11 @@ pub enum Builtin {
     Sha256,
     Blake2_128,
     Blake2_256,
+    AbiDecode,
+    AbiEncode,
+    AbiEncodePacked,
+    AbiEncodeWithSelector,
+    ABiEncodeWithSignature,
 }
 
 #[derive(Clone, Debug)]
