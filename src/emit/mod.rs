@@ -69,6 +69,17 @@ pub trait TargetRuntime {
         spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>);
 
+    /// ABI encode into a vector for abi.encode* style builtin functions
+    fn abi_encode_to_vector<'b>(
+        &self,
+        contract: &Contract<'b>,
+        selector: Option<IntValue<'b>>,
+        function: FunctionValue,
+        packed: bool,
+        args: &[BasicValueEnum<'b>],
+        spec: &[ast::Type],
+    ) -> PointerValue<'b>;
+
     // Access storage
     fn clear_storage<'a>(
         &self,
@@ -2991,6 +3002,30 @@ impl<'a> Contract<'a> {
 
                             self.builder.position_at_end(success_block);
                         }
+                    }
+                    cfg::Instr::AbiEncodeVector {
+                        res,
+                        tys,
+                        selector,
+                        packed,
+                        args,
+                    } => {
+                        w.vars[*res].value = runtime
+                            .abi_encode_to_vector(
+                                self,
+                                selector.as_ref().map(|s| {
+                                    self.expression(&s, &w.vars, function, runtime)
+                                        .into_int_value()
+                                }),
+                                function,
+                                *packed,
+                                &args
+                                    .iter()
+                                    .map(|a| self.expression(&a, &w.vars, function, runtime))
+                                    .collect::<Vec<BasicValueEnum>>(),
+                                tys,
+                            )
+                            .into();
                     }
                     cfg::Instr::AbiDecode {
                         res,

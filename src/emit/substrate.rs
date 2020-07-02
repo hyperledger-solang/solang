@@ -884,6 +884,7 @@ impl SubstrateTarget {
                         "bool",
                     ),
                 );
+
                 1
             }
             ast::Type::Contract(_)
@@ -961,6 +962,7 @@ impl SubstrateTarget {
         &self,
         contract: &Contract<'a>,
         load: bool,
+        packed: bool,
         function: FunctionValue,
         ty: &ast::Type,
         arg: BasicValueEnum<'a>,
@@ -1016,6 +1018,7 @@ impl SubstrateTarget {
                             self.encode_ty(
                                 contract,
                                 true,
+                                packed,
                                 function,
                                 &ty.deref_any(),
                                 elem.into(),
@@ -1040,17 +1043,19 @@ impl SubstrateTarget {
                         .build_load(len, "array.len")
                         .into_int_value();
 
-                    *data = contract
-                        .builder
-                        .build_call(
-                            contract.module.get_function("compact_encode_u32").unwrap(),
-                            &[(*data).into(), len.into()],
-                            "",
-                        )
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap()
-                        .into_pointer_value();
+                    if !packed {
+                        *data = contract
+                            .builder
+                            .build_call(
+                                contract.module.get_function("compact_encode_u32").unwrap(),
+                                &[(*data).into(), len.into()],
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
+                    }
 
                     // details about our array elements
                     let elem_ty = ty.array_deref();
@@ -1093,6 +1098,7 @@ impl SubstrateTarget {
                             self.encode_ty(
                                 contract,
                                 true,
+                                packed,
                                 function,
                                 &ty.deref_any(),
                                 elem.into(),
@@ -1121,11 +1127,19 @@ impl SubstrateTarget {
                         )
                     };
 
-                    self.encode_ty(contract, true, function, &field.ty, elem.into(), data);
+                    self.encode_ty(
+                        contract,
+                        true,
+                        packed,
+                        function,
+                        &field.ty,
+                        elem.into(),
+                        data,
+                    );
                 }
             }
             ast::Type::Ref(ty) => {
-                self.encode_ty(contract, load, function, ty, arg, data);
+                self.encode_ty(contract, load, packed, function, ty, arg, data);
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
@@ -1134,30 +1148,79 @@ impl SubstrateTarget {
                     arg
                 };
 
-                let function = contract.module.get_function("scale_encode_string").unwrap();
+                if !packed {
+                    let function = contract.module.get_function("scale_encode_string").unwrap();
 
-                *data = contract
-                    .builder
-                    .build_call(
-                        function,
+                    *data = contract
+                        .builder
+                        .build_call(
+                            function,
+                            &[
+                                (*data).into(),
+                                // when we call LinkModules2() some types like vector get renamed to vector.1
+                                contract
+                                    .builder
+                                    .build_pointer_cast(
+                                        arg.into_pointer_value(),
+                                        function.get_type().get_param_types()[1]
+                                            .into_pointer_type(),
+                                        "vector",
+                                    )
+                                    .into(),
+                            ],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+                } else {
+                    let len = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_zero(),
+                            ],
+                            "string.len",
+                        )
+                    };
+
+                    let p = unsafe {
+                        contract.builder.build_gep(
+                            arg.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(2, false),
+                            ],
+                            "string.data",
+                        )
+                    };
+
+                    let len = contract
+                        .builder
+                        .build_load(len, "array.len")
+                        .into_int_value();
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__memcpy").unwrap(),
                         &[
                             (*data).into(),
-                            // when we call LinkModules2() some types like vector get renamed to vector.1
                             contract
                                 .builder
                                 .build_pointer_cast(
-                                    arg.into_pointer_value(),
-                                    function.get_type().get_param_types()[1].into_pointer_type(),
-                                    "vector",
+                                    p,
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "",
                                 )
                                 .into(),
+                            len.into(),
                         ],
                         "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
+                    );
+
+                    *data = unsafe { contract.builder.build_gep(*data, &[len], "") };
+                }
             }
             _ => unreachable!(),
         };
@@ -1171,6 +1234,7 @@ impl SubstrateTarget {
         &self,
         arg: BasicValueEnum<'a>,
         load: bool,
+        packed: bool,
         ty: &ast::Type,
         function: FunctionValue,
         contract: &Contract<'a>,
@@ -1185,9 +1249,14 @@ impl SubstrateTarget {
                 .context
                 .i32_type()
                 .const_int(contract.ns.address_length as u64, false),
-            ast::Type::Enum(n) => {
-                self.encoded_length(arg, load, &contract.ns.enums[*n].ty, function, contract)
-            }
+            ast::Type::Enum(n) => self.encoded_length(
+                arg,
+                load,
+                packed,
+                &contract.ns.enums[*n].ty,
+                function,
+                contract,
+            ),
             ast::Type::Struct(n) => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
@@ -1211,7 +1280,14 @@ impl SubstrateTarget {
 
                     sum = contract.builder.build_int_add(
                         sum,
-                        self.encoded_length(elem.into(), true, &field.ty, function, contract),
+                        self.encoded_length(
+                            elem.into(),
+                            true,
+                            packed,
+                            &field.ty,
+                            function,
+                            contract,
+                        ),
                         "",
                     );
                 }
@@ -1226,8 +1302,9 @@ impl SubstrateTarget {
                 };
 
                 let mut dynamic_array = false;
+                let mut encoded_length = contract.context.i32_type().const_zero();
 
-                let len = match dims.last().unwrap() {
+                let array_length = match dims.last().unwrap() {
                     None => {
                         let len = unsafe {
                             contract.builder.build_gep(
@@ -1241,6 +1318,11 @@ impl SubstrateTarget {
                         };
 
                         dynamic_array = true;
+
+                        // dynamic length array needs length if not packed
+                        if !packed {
+                            encoded_length = contract.context.i32_type().const_int(5, false);
+                        }
 
                         contract
                             .builder
@@ -1257,13 +1339,11 @@ impl SubstrateTarget {
                 let llvm_elem_ty = contract.llvm_var(&elem_ty);
 
                 if elem_ty.is_dynamic(contract.ns) {
-                    let mut sum = contract.context.i32_type().const_zero();
-
                     contract.emit_static_loop_with_int(
                         function,
                         contract.context.i32_type().const_zero(),
-                        len,
-                        &mut sum,
+                        array_length,
+                        &mut encoded_length,
                         |index, sum| {
                             let index = contract.builder.build_int_mul(
                                 index,
@@ -1307,6 +1387,7 @@ impl SubstrateTarget {
                                 self.encoded_length(
                                     elem.into(),
                                     true,
+                                    packed,
                                     &elem_ty,
                                     function,
                                     contract,
@@ -1317,7 +1398,7 @@ impl SubstrateTarget {
                         },
                     );
 
-                    sum
+                    encoded_length
                 } else {
                     let elem = if dynamic_array {
                         let p = unsafe {
@@ -1349,14 +1430,25 @@ impl SubstrateTarget {
                         }
                     };
 
-                    contract.builder.build_int_mul(
-                        self.encoded_length(elem.into(), true, &elem_ty, function, contract),
-                        len,
+                    contract.builder.build_int_add(
+                        encoded_length,
+                        contract.builder.build_int_mul(
+                            self.encoded_length(
+                                elem.into(),
+                                true,
+                                packed,
+                                &elem_ty,
+                                function,
+                                contract,
+                            ),
+                            array_length,
+                            "",
+                        ),
                         "",
                     )
                 }
             }
-            ast::Type::Ref(r) => self.encoded_length(arg, load, r, function, contract),
+            ast::Type::Ref(r) => self.encoded_length(arg, load, packed, r, function, contract),
             ast::Type::String | ast::Type::DynamicBytes => {
                 let arg = if load {
                     contract.builder.build_load(arg.into_pointer_value(), "")
@@ -1378,14 +1470,20 @@ impl SubstrateTarget {
                     )
                 };
 
-                contract.builder.build_int_add(
-                    contract
-                        .builder
-                        .build_load(len, "string.len")
-                        .into_int_value(),
-                    contract.context.i32_type().const_int(5, false),
-                    "",
-                )
+                let len = contract
+                    .builder
+                    .build_load(len, "string.len")
+                    .into_int_value();
+
+                if packed {
+                    len
+                } else {
+                    contract.builder.build_int_add(
+                        len,
+                        contract.context.i32_type().const_int(5, false),
+                        "",
+                    )
+                }
             }
             _ => unreachable!(),
         }
@@ -1896,6 +1994,203 @@ impl TargetRuntime for SubstrateTarget {
         }
     }
 
+    /// ABI encode into a vector for abi.encode* style builtin functions
+    fn abi_encode_to_vector<'b>(
+        &self,
+        contract: &Contract<'b>,
+        selector: Option<IntValue<'b>>,
+        function: FunctionValue,
+        packed: bool,
+        args: &[BasicValueEnum<'b>],
+        tys: &[ast::Type],
+    ) -> PointerValue<'b> {
+        // first calculate how much memory we need to allocate
+        let mut length = contract.context.i32_type().const_zero();
+
+        // note that encoded_length return the exact value for packed encoding
+        for (i, ty) in tys.iter().enumerate() {
+            length = contract.builder.build_int_add(
+                length,
+                self.encoded_length(args[i], false, packed, &ty, function, contract),
+                "",
+            );
+        }
+
+        if selector.is_some() {
+            length = contract.builder.build_int_add(
+                length,
+                contract
+                    .context
+                    .i32_type()
+                    .size_of()
+                    .const_cast(contract.context.i32_type(), false),
+                "",
+            );
+        }
+
+        let malloc_length = contract.builder.build_int_add(
+            length,
+            contract
+                .module
+                .get_type("struct.vector")
+                .unwrap()
+                .size_of()
+                .unwrap()
+                .const_cast(contract.context.i32_type(), false),
+            "size",
+        );
+
+        let p = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[malloc_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let v = contract.builder.build_pointer_cast(
+            p,
+            contract
+                .module
+                .get_type("struct.vector")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "string",
+        );
+
+        // if it's packed, we have the correct length already
+        if packed {
+            let data_len = unsafe {
+                contract.builder.build_gep(
+                    v,
+                    &[
+                        contract.context.i32_type().const_zero(),
+                        contract.context.i32_type().const_zero(),
+                    ],
+                    "data_len",
+                )
+            };
+
+            contract.builder.build_store(data_len, length);
+        }
+
+        let data_size = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(1, false),
+                ],
+                "data_size",
+            )
+        };
+
+        contract.builder.build_store(data_size, length);
+
+        let data = unsafe {
+            contract.builder.build_gep(
+                v,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_int(2, false),
+                ],
+                "data",
+            )
+        };
+
+        // now encode each of the arguments
+        let data = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "",
+        );
+
+        let mut argsdata = data;
+
+        if let Some(selector) = selector {
+            // we need to byte-swap our bytes4 type
+
+            let temp = contract
+                .builder
+                .build_alloca(selector.get_type(), "selector");
+
+            contract.builder.build_store(temp, selector);
+
+            // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+            contract.builder.build_call(
+                contract.module.get_function("__leNtobeN").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            temp,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    data.into(),
+                    contract.context.i32_type().const_int(4, false).into(),
+                ],
+                "",
+            );
+
+            argsdata = unsafe {
+                contract.builder.build_gep(
+                    argsdata,
+                    &[contract
+                        .context
+                        .i32_type()
+                        .size_of()
+                        .const_cast(contract.context.i32_type(), false)],
+                    "",
+                )
+            };
+        }
+
+        for (i, ty) in tys.iter().enumerate() {
+            self.encode_ty(
+                contract,
+                false,
+                packed,
+                function,
+                &ty,
+                args[i],
+                &mut argsdata,
+            );
+        }
+
+        if !packed {
+            let length = contract.builder.build_int_sub(
+                contract
+                    .builder
+                    .build_ptr_to_int(argsdata, contract.context.i32_type(), "end"),
+                contract
+                    .builder
+                    .build_ptr_to_int(data, contract.context.i32_type(), "begin"),
+                "datalength",
+            );
+
+            let data_len = unsafe {
+                contract.builder.build_gep(
+                    v,
+                    &[
+                        contract.context.i32_type().const_zero(),
+                        contract.context.i32_type().const_zero(),
+                    ],
+                    "data_len",
+                )
+            };
+
+            contract.builder.build_store(data_len, length);
+        }
+
+        v
+    }
+
     ///  ABI encode the return values for the function
     fn abi_encode<'b>(
         &self,
@@ -1913,7 +2208,7 @@ impl TargetRuntime for SubstrateTarget {
         for (i, field) in spec.iter().enumerate() {
             length = contract.builder.build_int_add(
                 length,
-                self.encoded_length(args[i], load, &field.ty, function, contract),
+                self.encoded_length(args[i], load, false, &field.ty, function, contract),
                 "",
             );
         }
@@ -1970,7 +2265,15 @@ impl TargetRuntime for SubstrateTarget {
         }
 
         for (i, arg) in spec.iter().enumerate() {
-            self.encode_ty(contract, load, function, &arg.ty, args[i], &mut argsdata);
+            self.encode_ty(
+                contract,
+                load,
+                false,
+                function,
+                &arg.ty,
+                args[i],
+                &mut argsdata,
+            );
         }
 
         // we cannot use the length returned by encoded_length; calculate actual length

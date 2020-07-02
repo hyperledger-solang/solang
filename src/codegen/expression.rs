@@ -717,6 +717,129 @@ pub fn expression(
 
             Expression::Poison
         }
+        Expression::Builtin(loc, _, Builtin::AbiEncode, args) => {
+            let tys = args.iter().map(|a| a.ty()).collect();
+            let args = args
+                .iter()
+                .map(|v| expression(&v, cfg, contract_no, ns, vartab))
+                .collect();
+
+            let res = vartab.temp(
+                &pt::Identifier {
+                    loc: *loc,
+                    name: "encoded".to_owned(),
+                },
+                &Type::DynamicBytes,
+            );
+
+            cfg.add(
+                vartab,
+                Instr::AbiEncodeVector {
+                    res,
+                    tys,
+                    selector: None,
+                    packed: false,
+                    args,
+                },
+            );
+
+            Expression::Variable(*loc, Type::DynamicBytes, res)
+        }
+        Expression::Builtin(loc, _, Builtin::AbiEncodePacked, args) => {
+            let tys = args.iter().map(|a| a.ty()).collect();
+            let args = args
+                .iter()
+                .map(|v| expression(&v, cfg, contract_no, ns, vartab))
+                .collect();
+
+            let res = vartab.temp(
+                &pt::Identifier {
+                    loc: *loc,
+                    name: "encoded".to_owned(),
+                },
+                &Type::DynamicBytes,
+            );
+
+            cfg.add(
+                vartab,
+                Instr::AbiEncodeVector {
+                    res,
+                    tys,
+                    selector: None,
+                    packed: true,
+                    args,
+                },
+            );
+
+            Expression::Variable(*loc, Type::DynamicBytes, res)
+        }
+        Expression::Builtin(loc, _, Builtin::AbiEncodeWithSelector, args) => {
+            let tys = args.iter().skip(1).map(|a| a.ty()).collect();
+            // first argument is selector
+            let mut args_iter = args.iter();
+            let selector = expression(&args_iter.next().unwrap(), cfg, contract_no, ns, vartab);
+            let args = args_iter
+                .map(|v| expression(&v, cfg, contract_no, ns, vartab))
+                .collect();
+
+            let res = vartab.temp(
+                &pt::Identifier {
+                    loc: *loc,
+                    name: "encoded".to_owned(),
+                },
+                &Type::DynamicBytes,
+            );
+
+            cfg.add(
+                vartab,
+                Instr::AbiEncodeVector {
+                    res,
+                    tys,
+                    selector: Some(selector),
+                    packed: false,
+                    args,
+                },
+            );
+
+            Expression::Variable(*loc, Type::DynamicBytes, res)
+        }
+        Expression::Builtin(loc, _, Builtin::AbiEncodeWithSignature, args) => {
+            let tys = args.iter().skip(1).map(|a| a.ty()).collect();
+            // first argument is signature which needs hashing and shifting
+            let mut args_iter = args.iter();
+            let hash = Expression::Builtin(
+                *loc,
+                vec![Type::Bytes(32)],
+                Builtin::Keccak256,
+                vec![args_iter.next().unwrap().clone()],
+            );
+            let hash = expression(&hash, cfg, contract_no, ns, vartab);
+            let selector = try_cast(loc, hash, &Type::Bytes(4), false, ns).unwrap();
+            let args = args_iter
+                .map(|v| expression(&v, cfg, contract_no, ns, vartab))
+                .collect();
+
+            let res = vartab.temp(
+                &pt::Identifier {
+                    loc: *loc,
+                    name: "encoded".to_owned(),
+                },
+                &Type::DynamicBytes,
+            );
+
+            cfg.add(
+                vartab,
+                Instr::AbiEncodeVector {
+                    res,
+                    tys,
+                    selector: Some(selector),
+                    packed: false,
+                    args,
+                },
+            );
+
+            Expression::Variable(*loc, Type::DynamicBytes, res)
+        }
         _ => expr.clone(),
     }
 }

@@ -1168,6 +1168,36 @@ fn hash_tests() {
         r##"
         contract tester {
             function test() public {
+                bytes memory s = "Hello, World!";
+                bytes32 hash = keccak256(s);
+            
+                assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            bytes s = "Hello, World!";
+
+            function test() public {
+                bytes32 hash = keccak256(s);
+            
+                assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract tester {
+            function test() public {
                 bytes32 hash = sha256("Hello, World!");
             
                 assert(hash == hex"dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f");

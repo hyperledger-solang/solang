@@ -1063,6 +1063,19 @@ impl TargetRuntime for EwasmTarget {
         contract.builder.build_unreachable();
     }
 
+    /// ABI encode into a vector for abi.encode* style builtin functions
+    fn abi_encode_to_vector<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _selector: Option<IntValue<'b>>,
+        _function: FunctionValue,
+        _packed: bool,
+        _args: &[BasicValueEnum<'b>],
+        _spec: &[ast::Type],
+    ) -> PointerValue<'b> {
+        unimplemented!();
+    }
+
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,

@@ -88,6 +88,13 @@ pub enum Instr {
         tys: Vec<Parameter>,
         data: Expression,
     },
+    AbiEncodeVector {
+        res: usize,
+        tys: Vec<Type>,
+        packed: bool,
+        selector: Option<Expression>,
+        args: Vec<Expression>,
+    },
     Unreachable,
     SelfDestruct {
         recipient: Expression,
@@ -280,7 +287,7 @@ impl ControlFlowGraph {
                 format!("(load {})", self.expr_to_string(contract, ns, expr))
             }
             Expression::StorageLoad(_, ty, expr) => format!(
-                "({} storage[{}])",
+                "(loadstorage ty:{} {})",
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, expr)
             ),
@@ -676,6 +683,25 @@ impl ControlFlowGraph {
                     .map(|ty| ty.ty.to_string(ns))
                     .collect::<Vec<String>>()
                     .join(", "),
+            ),
+            Instr::AbiEncodeVector {
+                res,
+                selector,
+                packed,
+                args,
+                ..
+            } => format!(
+                "{} = (abiencode{}:(%{} {})",
+                format!("%{}", self.vars[*res].id.name),
+                if *packed { "packed" } else { "" },
+                match selector {
+                    None => "".to_string(),
+                    Some(expr) => self.expr_to_string(contract, ns, expr),
+                },
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
             ),
             Instr::Store { dest, pos } => format!(
                 "store {}, {}",
