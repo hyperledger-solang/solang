@@ -162,7 +162,7 @@ static PROTO_TYPES: [Prototype; 17] = [
         target: None,
     },
     Prototype {
-        builtin: Builtin::ABiEncodeWithSignature,
+        builtin: Builtin::AbiEncodeWithSignature,
         namespace: Some("abi"),
         name: "encodeWithSignature",
         this: None,
@@ -254,7 +254,8 @@ pub fn resolve_call(
 
 /// Resolve a builtin method call. The takes the unresolved arguments, since it has
 /// to handle the special case "abi.decode(foo, (int32, bool, address))" where the
-/// second argument is a type list.
+/// second argument is a type list. The generic expression resolver cannot deal with
+/// this. It is only used in for this specific call.
 pub fn resolve_method_call(
     loc: &pt::Loc,
     namespace: &pt::Identifier,
@@ -266,7 +267,16 @@ pub fn resolve_method_call(
 ) -> Result<Expression, ()> {
     assert_eq!(namespace.name, "abi");
 
-    if id.name == "decode" {
+    let builtin = match id.name.as_str() {
+        "decode" => Builtin::AbiDecode,
+        "encode" => Builtin::AbiEncode,
+        "encodePacked" => Builtin::AbiEncodePacked,
+        "encodeWithSelector" => Builtin::AbiEncodeWithSelector,
+        "encodeWithSignature" => Builtin::AbiEncodeWithSignature,
+        _ => unreachable!(),
+    };
+
+    if builtin == Builtin::AbiDecode {
         if args.len() != 2 {
             ns.diagnostics.push(Output::error(
                 *loc,
@@ -355,8 +365,49 @@ pub fn resolve_method_call(
     }
 
     let mut resolved_args = Vec::new();
+    let mut args_iter = args.iter();
 
-    for arg in args {
+    match builtin {
+        Builtin::AbiEncodeWithSelector => {
+            // first argument is selector
+            if let Some(selector) = args_iter.next() {
+                let selector = expression(selector, contract_no, ns, symtable, false)?;
+
+                resolved_args.insert(
+                    0,
+                    cast(&selector.loc(), selector, &Type::Bytes(4), true, ns)?,
+                );
+            } else {
+                ns.diagnostics.push(Output::error(
+                    *loc,
+                    "function requires one ‘bytes4’ selector argument".to_string(),
+                ));
+
+                return Err(());
+            }
+        }
+        Builtin::AbiEncodeWithSignature => {
+            // first argument is signature
+            if let Some(signature) = args_iter.next() {
+                let signature = expression(signature, contract_no, ns, symtable, false)?;
+
+                resolved_args.insert(
+                    0,
+                    cast(&signature.loc(), signature, &Type::String, true, ns)?,
+                );
+            } else {
+                ns.diagnostics.push(Output::error(
+                    *loc,
+                    "function requires one ‘string’ signature argument".to_string(),
+                ));
+
+                return Err(());
+            }
+        }
+        _ => (),
+    }
+
+    for arg in args_iter {
         let mut expr = expression(arg, contract_no, ns, symtable, false)?;
         let ty = expr.ty();
 
@@ -369,69 +420,20 @@ pub fn resolve_method_call(
             return Err(());
         }
 
-        if ty.is_contract_storage() {
-            expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns)?;
+        expr = cast(&arg.loc(), expr, ty.deref_any(), true, ns)?;
+
+        // A string or hex literal should be encoded as a string
+        if let Expression::BytesLiteral(_, _, _) = &expr {
+            expr = cast(&arg.loc(), expr, &Type::String, true, ns)?;
         }
 
         resolved_args.push(expr);
     }
 
-    match id.name.as_str() {
-        "encode" => Ok(Expression::Builtin(
-            *loc,
-            vec![Type::DynamicBytes],
-            Builtin::AbiEncode,
-            resolved_args,
-        )),
-        "encodePacked" => Ok(Expression::Builtin(
-            *loc,
-            vec![Type::DynamicBytes],
-            Builtin::AbiEncodePacked,
-            resolved_args,
-        )),
-        "encodeWithSelector" => {
-            if resolved_args.is_empty() {
-                ns.diagnostics.push(Output::error(
-                    *loc,
-                    "function requires one ‘bytes4’ selector argument".to_string(),
-                ));
-
-                return Err(());
-            }
-
-            let selector = resolved_args.remove(0);
-            resolved_args.insert(
-                0,
-                cast(&selector.loc(), selector, &Type::Bytes(4), true, ns)?,
-            );
-
-            Ok(Expression::Builtin(
-                *loc,
-                vec![Type::DynamicBytes],
-                Builtin::AbiEncodeWithSelector,
-                resolved_args,
-            ))
-        }
-        "encodeWithSignature" => {
-            if resolved_args.is_empty() {
-                ns.diagnostics.push(Output::error(
-                    *loc,
-                    "function requires one ‘string’ selector argument".to_string(),
-                ));
-
-                return Err(());
-            }
-
-            let selector = resolved_args.remove(0);
-            resolved_args.insert(0, cast(&selector.loc(), selector, &Type::String, true, ns)?);
-
-            Ok(Expression::Builtin(
-                *loc,
-                vec![Type::DynamicBytes],
-                Builtin::ABiEncodeWithSignature,
-                resolved_args,
-            ))
-        }
-        _ => unreachable!(),
-    }
+    Ok(Expression::Builtin(
+        *loc,
+        vec![Type::DynamicBytes],
+        builtin,
+        resolved_args,
+    ))
 }

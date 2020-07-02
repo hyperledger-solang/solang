@@ -552,7 +552,7 @@ pub fn try_cast(
         }
         // Literal strings can be implicitly lengthened
         (&Expression::BytesLiteral(_, _, ref bs), p, &Type::Bytes(to_len)) if p.is_primitive() => {
-            return if bs.len() > to_len as usize {
+            return if bs.len() > to_len as usize && implicit {
                 Err(Output::type_error(
                     *loc,
                     format!(

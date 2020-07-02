@@ -914,7 +914,7 @@ pub enum Builtin {
     AbiEncode,
     AbiEncodePacked,
     AbiEncodeWithSelector,
-    ABiEncodeWithSignature,
+    AbiEncodeWithSignature,
 }
 
 #[derive(Clone, Debug)]
