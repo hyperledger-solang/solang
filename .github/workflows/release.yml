@@ -79,7 +79,7 @@ jobs:
       with:
         name: solang
     - name: Upload linux release
-      id: upload-release-asset
+      id: upload-linux-release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
       with:
         name: solang.exe
     - name: Upload windows release
-      id: upload-release-asset
+      id: upload-windows-release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
