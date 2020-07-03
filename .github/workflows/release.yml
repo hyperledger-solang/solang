@@ -73,8 +73,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        tag_name: ${{ steps.vars.outputs.tag }}
+        release_name: Solang ${{ steps.vars.outputs.tag }}
         draft: true
         prerelease: true
     - name: Download linux release
@@ -89,7 +89,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: linux/solang
-        asset_name: solang_linux_${{ steps.vars.outputs.tag }}
+        asset_name: solang_ubuntu
         asset_content_type: application/octet-stream
     - name: Download Windows release
       uses: actions/download-artifact@v1
@@ -103,5 +103,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: windows/solang.exe
-        asset_name: solang_windows_${{ steps.vars.outputs.tag }}.exe
+        asset_name: solang.exe
         asset_content_type: application/octet-stream
