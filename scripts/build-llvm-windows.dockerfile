@@ -58,8 +58,10 @@ RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ; `
 	$header[8] = '#include <string>' ; `
 	$header | Set-Content .\llvm\include\llvm\Demangle\MicrosoftDemangleNodes.h
 
-# Try -DLLVM_BUILD_LLVM_DYLIB=On -DLLVM_LINK_LLVM_DYLIB=On
-RUN cmake -G Ninja -DLLVM_BUILD_LLVM_DYLIB=On -DLLVM_LINK_LLVM_DYLIB=On -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm80 -B build llvm
+# All llvm targets should be enabled or inkwell refused to link
+RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang `
+	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm80 `
+	-B build llvm
 RUN cmake --build build --target install
 
 WORKDIR \
