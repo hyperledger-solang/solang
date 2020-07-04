@@ -6,7 +6,7 @@ use std::str;
 use super::statements::{statement, LoopScopes};
 use hex;
 use parser::pt;
-use sema::ast::{Contract, Expression, Namespace, Parameter, StringLocation, Type};
+use sema::ast::{CallTy, Contract, Expression, Namespace, Parameter, StringLocation, Type};
 use sema::symtable::Symtable;
 
 #[allow(clippy::large_enum_variant)]
@@ -80,6 +80,7 @@ pub enum Instr {
         args: Vec<Expression>,
         value: Expression,
         gas: Expression,
+        callty: CallTy,
     },
     AbiDecode {
         res: Vec<usize>,
@@ -626,12 +627,14 @@ impl ControlFlowGraph {
                 args,
                 value,
                 gas,
+                callty,
             } => format!(
-                "{} = external call address:{} signature:{} value:{} gas:{} func:{}.{} {}",
+                "{} = external call::{} address:{} signature:{} value:{} gas:{} func:{}.{} {}",
                 match success {
                     Some(i) => format!("%{}", self.vars[*i].id.name),
                     None => "_".to_string(),
                 },
+                callty,
                 self.expr_to_string(contract, ns, address),
                 ns.contracts[*contract_no].functions[*function_no].signature,
                 self.expr_to_string(contract, ns, value),

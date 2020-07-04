@@ -6,7 +6,7 @@ use num_traits::One;
 use num_traits::ToPrimitive;
 use num_traits::Zero;
 use parser::pt;
-use sema::ast::{Builtin, Expression, Namespace, Parameter, StringLocation, Type};
+use sema::ast::{Builtin, CallTy, Expression, Namespace, Parameter, StringLocation, Type};
 use sema::eval::eval_const_number;
 use sema::expression::{cast_shift_arg, try_bigint_to_expression, try_cast};
 use std::collections::HashSet;
@@ -693,6 +693,7 @@ pub fn expression(
                     args: Vec::new(),
                     value,
                     gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
+                    callty: CallTy::Regular,
                 },
             );
 
@@ -712,6 +713,7 @@ pub fn expression(
                     args: Vec::new(),
                     value,
                     gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
+                    callty: CallTy::Regular,
                 },
             );
 
@@ -964,6 +966,40 @@ pub fn emit_function_call(
                 vec![Expression::Poison]
             }
         }
+        Expression::ExternalFunctionCallRaw {
+            loc,
+            address,
+            args,
+            value,
+            gas,
+            ty,
+        } => {
+            let args = expression(args, cfg, callee_contract_no, ns, vartab);
+            let address = expression(address, cfg, callee_contract_no, ns, vartab);
+            let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
+            let value = expression(value, cfg, callee_contract_no, ns, vartab);
+
+            let success = vartab.temp_name("success", &Type::Bool);
+
+            cfg.add(
+                vartab,
+                Instr::ExternalCall {
+                    success: Some(success),
+                    address,
+                    contract_no: None,
+                    function_no: 0,
+                    args: vec![args],
+                    value,
+                    gas,
+                    callty: ty.clone(),
+                },
+            );
+
+            vec![
+                Expression::Variable(*loc, Type::Bool, success),
+                Expression::ReturnData(*loc),
+            ]
+        }
         Expression::ExternalFunctionCall {
             loc,
             contract_no,
@@ -993,6 +1029,7 @@ pub fn emit_function_call(
                     args,
                     value,
                     gas,
+                    callty: CallTy::Regular,
                 },
             );
 

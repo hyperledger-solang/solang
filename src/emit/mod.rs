@@ -200,6 +200,7 @@ pub trait TargetRuntime {
         address: PointerValue<'b>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
+        ty: ast::CallTy,
     ) -> IntValue<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
@@ -2919,6 +2920,7 @@ impl<'a> Contract<'a> {
                         args,
                         value,
                         gas,
+                        callty,
                     } => {
                         let (payload, payload_len) = match contract_no {
                             Some(contract_no) => {
@@ -2943,13 +2945,51 @@ impl<'a> Contract<'a> {
                                     &dest_func.params,
                                 )
                             }
-                            None => (
+                            None if args.is_empty() => (
                                 self.context
                                     .i8_type()
                                     .ptr_type(AddressSpace::Generic)
                                     .const_null(),
                                 self.context.i32_type().const_zero(),
                             ),
+                            None => {
+                                let raw = self
+                                    .expression(&args[0], &w.vars, function, runtime)
+                                    .into_pointer_value();
+
+                                let data = unsafe {
+                                    self.builder.build_gep(
+                                        raw,
+                                        &[
+                                            self.context.i32_type().const_zero(),
+                                            self.context.i32_type().const_int(2, false),
+                                        ],
+                                        "rawdata",
+                                    )
+                                };
+
+                                let data_len = unsafe {
+                                    self.builder.build_gep(
+                                        raw,
+                                        &[
+                                            self.context.i32_type().const_zero(),
+                                            self.context.i32_type().const_zero(),
+                                        ],
+                                        "rawdata_len",
+                                    )
+                                };
+
+                                (
+                                    self.builder.build_pointer_cast(
+                                        data,
+                                        self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                        "data",
+                                    ),
+                                    self.builder
+                                        .build_load(data_len, "data_len")
+                                        .into_int_value(),
+                                )
+                            }
                         };
                         let address = self
                             .expression(address, &w.vars, function, runtime)
@@ -2978,8 +3018,15 @@ impl<'a> Contract<'a> {
                             address,
                         );
 
-                        let ret =
-                            runtime.external_call(self, payload, payload_len, addr, gas, value);
+                        let ret = runtime.external_call(
+                            self,
+                            payload,
+                            payload_len,
+                            addr,
+                            gas,
+                            value,
+                            callty.clone(),
+                        );
 
                         let is_success = self.builder.build_int_compare(
                             IntPredicate::EQ,

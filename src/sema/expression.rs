@@ -12,13 +12,14 @@ use std::collections::HashMap;
 use std::ops::Shl;
 use std::ops::Sub;
 
+use crate::Target;
 use hex;
 use output::Output;
 use parser::pt;
 use parser::pt::Loc;
 use sema::address::to_hexstr_eip55;
 use sema::ast::{
-    Builtin, ContractVariableType, Expression, Function, Namespace, StringLocation, Type,
+    Builtin, CallTy, ContractVariableType, Expression, Function, Namespace, StringLocation, Type,
 };
 use sema::builtin;
 use sema::eval::eval_const_number;
@@ -88,6 +89,7 @@ impl Expression {
             | Expression::ReturnData(loc)
             | Expression::InternalFunctionCall(loc, _, _, _)
             | Expression::ExternalFunctionCall { loc, .. }
+            | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
             | Expression::GetAddress(loc, _)
             | Expression::Balance(loc, _, _)
@@ -172,6 +174,9 @@ impl Expression {
             Expression::StorageBytesSubscript(_, _, _) => {
                 Type::StorageRef(Box::new(Type::Bytes(1)))
             }
+            Expression::ExternalFunctionCallRaw { .. } => {
+                panic!("two return values");
+            }
             Expression::Builtin(_, returns, _, _)
             | Expression::InternalFunctionCall(_, returns, _, _)
             | Expression::ExternalFunctionCall { returns, .. } => {
@@ -186,9 +191,10 @@ impl Expression {
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
             Expression::Poison => unreachable!(),
             // codegen Expressions
-            Expression::ReturnData(_)
-            | Expression::StorageBytesPush(_, _, _)
-            | Expression::StorageBytesPop(_, _) => unreachable!(),
+            Expression::ReturnData(_) => Type::DynamicBytes,
+            Expression::StorageBytesPush(_, _, _) | Expression::StorageBytesPop(_, _) => {
+                unreachable!()
+            }
         }
     }
     /// Is this expression 0
@@ -207,6 +213,7 @@ impl Expression {
             | Expression::InternalFunctionCall(_, returns, _, _)
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
             Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
+            Expression::ExternalFunctionCallRaw { .. } => vec![Type::Bool, Type::DynamicBytes],
             _ => unreachable!(),
         }
     }
@@ -1534,7 +1541,7 @@ pub fn expression(
             if expr.tys().len() > 1 {
                 ns.diagnostics.push(Output::error(
                     *loc,
-                    "in expression context a function cannot return more than one value"
+                    "destucturing statement needed for function that returns multiple values"
                         .to_string(),
                 ));
                 return Err(());
@@ -1611,7 +1618,7 @@ pub fn expression(
             if expr.tys().len() > 1 {
                 ns.diagnostics.push(Output::error(
                     *loc,
-                    "in expression context a function cannot return more than one value"
+                    "destucturing statement needed for function that returns multiple values"
                         .to_string(),
                 ));
                 return Err(());
@@ -3690,6 +3697,52 @@ fn method_call_pos_args(
         }
     }
 
+    if let Type::Address(_) = &var_ty.deref_any() {
+        let ty = match func.name.as_str() {
+            "call" => Some(CallTy::Regular),
+            "delegatecall" if ns.target == Target::Ewasm => Some(CallTy::Delegate),
+            "staticcall" if ns.target == Target::Ewasm => Some(CallTy::Static),
+            _ => None,
+        };
+
+        if let Some(ty) = ty {
+            let call_args = parse_call_args(call_args, true, contract_no, ns, symtable)?;
+
+            if args.len() != 1 {
+                ns.diagnostics.push(Output::error(
+                    *loc,
+                    format!(
+                        "‘{}’ expects 1 argument, {} provided",
+                        func.name,
+                        args.len()
+                    ),
+                ));
+
+                return Err(());
+            }
+
+            let expr = expression(&args[0], contract_no, ns, symtable, false)?;
+
+            let args = cast(&args[0].loc(), expr, &Type::DynamicBytes, true, ns)?;
+
+            let value = call_args.value.unwrap_or_else(|| {
+                Box::new(Expression::NumberLiteral(
+                    pt::Loc(0, 0),
+                    Type::Uint(ns.value_length as u16 * 8),
+                    BigInt::zero(),
+                ))
+            });
+
+            return Ok(Expression::ExternalFunctionCallRaw {
+                loc: *loc,
+                ty,
+                args: Box::new(args),
+                address: Box::new(var_expr),
+                gas: call_args.gas,
+                value,
+            });
+        }
+    }
     ns.diagnostics.push(Output::error(
         func.loc,
         format!("method ‘{}’ does not exist", func.name),

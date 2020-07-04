@@ -2544,6 +2544,7 @@ impl TargetRuntime for SubstrateTarget {
         address: PointerValue<'b>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
+        _ty: ast::CallTy,
     ) -> IntValue<'b> {
         // balance is a u128
         let value_ptr = contract
