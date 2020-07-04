@@ -802,6 +802,69 @@ impl TestRuntime {
             }
         }
     }
+
+    pub fn heap_verify(&self) {
+        let memsize = self.vm.memory.current_size().0 as usize * 0x10000;
+        println!("memory size:{}", memsize);
+        let mut buf = Vec::new();
+        buf.resize(memsize, 0);
+
+        let mut current_elem = 0x10000;
+        let mut last_elem = 0u32;
+
+        loop {
+            let next: u32 = self.vm.memory.get_value(current_elem).unwrap();
+            let prev: u32 = self.vm.memory.get_value(current_elem + 4).unwrap();
+            let length: u32 = self.vm.memory.get_value(current_elem + 8).unwrap();
+            let allocated: u32 = self.vm.memory.get_value(current_elem + 12).unwrap();
+
+            println!(
+                "next:{:08x} prev:{:08x} length:{} allocated:{}",
+                next, prev, length, allocated
+            );
+
+            let buf = self
+                .vm
+                .memory
+                .get(current_elem + 16, length as usize)
+                .unwrap();
+
+            if allocated == 0 {
+                println!("{:08x} {} not allocated", current_elem + 16, length);
+            } else {
+                println!("{:08x} {} allocated", current_elem + 16, length);
+
+                assert_eq!(allocated & 0xffff, 1);
+
+                for offset in (0..buf.len()).step_by(16) {
+                    let mut hex = "\t".to_string();
+                    let mut chars = "\t".to_string();
+                    for i in 0..16 {
+                        if offset + i >= buf.len() {
+                            break;
+                        }
+                        let b = buf[offset + i];
+                        hex.push_str(&format!(" {:02x}", b));
+                        if b >= 0x20 && b <= 0x7e {
+                            chars.push_str(&format!("  {}", b as char));
+                        } else {
+                            chars.push_str("   ");
+                        }
+                    }
+                    println!("{}\n{}", hex, chars);
+                }
+            }
+
+            assert_eq!(last_elem, prev);
+
+            if next == 0 {
+                break;
+            }
+
+            last_elem = current_elem;
+            current_elem = next;
+        }
+    }
 }
 
 pub fn build_solidity(src: &'static str) -> TestRuntime {
