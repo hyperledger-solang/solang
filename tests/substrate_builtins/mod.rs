@@ -277,3 +277,194 @@ fn abi_encode_with_signature() {
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 }
+
+#[test]
+fn call() {
+    let ns = parse_and_resolve(
+        r#"
+        contract main {
+            function test() public {
+                address x = address(0);
+
+                x.delegatecall(hex"1222");
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "method ‘delegatecall’ does not exist"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract main {
+            function test() public {
+                address x = address(0);
+
+                x.staticcall(hex"1222");
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "method ‘staticcall’ does not exist"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract superior {
+            function test() public {
+                inferior i = new inferior();
+
+                bytes x = address(i).call(hex"1222");
+            }
+        }
+
+        contract inferior {
+            function baa() public {
+                print("Baa!");
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "destucturing statement needed for function that returns multiple values"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract superior {
+            function test() public {
+                inferior i = new inferior();
+
+            (bytes x, bool y) = address(i).call(hex"1222");
+            }
+        }
+
+        contract inferior {
+            function baa() public {
+                print("Baa!");
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "conversion from bool to bytes not possible"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract superior {
+            function test1() public {
+                inferior i = new inferior();
+
+                i.test1();
+
+                assert(keccak256("test1()") == hex"6b59084dfb7dcf1c687dd12ad5778be120c9121b21ef90a32ff73565a36c9cd3");
+
+                bytes bs;
+                bool success;
+
+                (success, bs) = address(i).call(hex"6b59084d");
+
+                assert(success == true);
+                assert(bs == hex"");
+            }
+
+            function test2() public {
+                inferior i = new inferior();
+
+                assert(i.test2(257) == 256);
+
+                assert(keccak256("test2(uint64)") == hex"296dacf0801def8823747fbd751fbc1444af573e88de40d29c4d01f6013bf095");
+
+                bytes bs;
+                bool success;
+
+                (success, bs) = address(i).call(hex"296dacf0_0101_0000__0000_0000");
+
+                assert(success == true);
+                assert(bs == hex"0001_0000__0000_0000");
+            }
+        }
+
+        contract inferior {
+            function test1() public {
+                print("Baa!");
+            }
+
+            function test2(uint64 x) public returns (uint64) {
+                return x ^ 1;
+            }
+        }"##,
+    );
+
+    runtime.function("test1", Vec::new());
+    runtime.function("test2", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract superior {
+            function test1() public {
+                inferior i = new inferior();
+
+                assert(keccak256("test1()") == hex"6b59084dfb7dcf1c687dd12ad5778be120c9121b21ef90a32ff73565a36c9cd3");
+
+                bytes bs;
+                bool success;
+
+                (success, bs) = address(i).call(abi.encodeWithSelector(hex"6b59084d"));
+
+                assert(success == true);
+                assert(bs == hex"");
+
+                (success, bs) = address(i).call(abi.encodeWithSignature("test1()"));
+
+                assert(success == true);
+                assert(bs == hex"");
+            }
+
+            function test2() public {
+                inferior i = new inferior();
+                assert(keccak256("test2(uint64)") == hex"296dacf0801def8823747fbd751fbc1444af573e88de40d29c4d01f6013bf095");
+
+                bytes bs;
+                bool success;
+
+                (success, bs) = address(i).call(abi.encodeWithSelector(hex"296dacf0", uint64(257)));
+
+                assert(success == true);
+                
+                assert(abi.decode(bs, (uint64)) == 256);
+
+
+                (success, bs) = address(i).call(abi.encodeWithSignature("test2(uint64)", uint64(0xfeec)));
+
+                assert(success == true);
+                
+                assert(abi.decode(bs, (uint64)) == 0xfeed);
+            }
+        }
+
+        contract inferior {
+            function test1() public {
+                print("Baa!");
+            }
+
+            function test2(uint64 x) public returns (uint64) {
+                return x ^ 1;
+            }
+        }"##,
+    );
+
+    runtime.function("test1", Vec::new());
+    runtime.function("test2", Vec::new());
+}

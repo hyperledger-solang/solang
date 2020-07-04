@@ -5,6 +5,7 @@ use output;
 use parser::pt;
 use sema::symtable::Symtable;
 use std::collections::HashMap;
+use std::fmt;
 use std::ops::Mul;
 use tiny_keccak::keccak256;
 use Target;
@@ -724,6 +725,14 @@ pub enum Expression {
         value: Box<Expression>,
         gas: Box<Expression>,
     },
+    ExternalFunctionCallRaw {
+        loc: pt::Loc,
+        ty: CallTy,
+        address: Box<Expression>,
+        args: Box<Expression>,
+        value: Box<Expression>,
+        gas: Box<Expression>,
+    },
     Constructor {
         loc: pt::Loc,
         contract_no: usize,
@@ -854,6 +863,18 @@ impl Expression {
                     value.recurse(cx, f);
                     gas.recurse(cx, f);
                 }
+                Expression::ExternalFunctionCallRaw {
+                    address,
+                    args,
+                    value,
+                    gas,
+                    ..
+                } => {
+                    args.recurse(cx, f);
+                    address.recurse(cx, f);
+                    value.recurse(cx, f);
+                    gas.recurse(cx, f);
+                }
                 Expression::Constructor {
                     args,
                     value,
@@ -915,6 +936,23 @@ pub enum Builtin {
     AbiEncodePacked,
     AbiEncodeWithSelector,
     AbiEncodeWithSignature,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum CallTy {
+    Regular,
+    Delegate,
+    Static,
+}
+
+impl fmt::Display for CallTy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CallTy::Regular => write!(f, "regular"),
+            CallTy::Static => write!(f, "static"),
+            CallTy::Delegate => write!(f, "delegate"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

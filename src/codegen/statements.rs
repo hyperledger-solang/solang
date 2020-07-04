@@ -4,7 +4,9 @@ use std::collections::LinkedList;
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{assign_single, emit_function_call, expression};
 use parser::pt;
-use sema::ast::{DestructureField, Expression, Function, Namespace, Parameter, Statement, Type};
+use sema::ast::{
+    CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
+};
 use sema::expression::try_cast;
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
@@ -557,6 +559,7 @@ fn try_catch(
                     args,
                     value,
                     gas,
+                    callty: CallTy::Regular,
                 },
             );
 

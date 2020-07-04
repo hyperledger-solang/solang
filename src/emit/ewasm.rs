@@ -83,6 +83,8 @@ impl EwasmTarget {
             "getCodeSize",
             "printMem",
             "call",
+            "staticcall",
+            "delegatecall",
             "create",
             "getReturnDataSize",
             "returnDataCopy",
@@ -389,7 +391,58 @@ impl EwasmTarget {
             ),
             Some(Linkage::External),
         );
-
+        contract.module.add_function(
+            "staticcall",
+            contract.context.i32_type().fn_type(
+                &[
+                    contract.context.i64_type().into(), // gas
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // address
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // valueOffset
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // input offset
+                    contract.context.i32_type().into(), // input length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+        contract.module.add_function(
+            "delegatecall",
+            contract.context.i32_type().fn_type(
+                &[
+                    contract.context.i64_type().into(), // gas
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // address
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // valueOffset
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .into(), // input offset
+                    contract.context.i32_type().into(), // input length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
         contract.module.add_function(
             "getCallValue",
             contract.context.void_type().fn_type(
@@ -1241,6 +1294,7 @@ impl TargetRuntime for EwasmTarget {
         address: PointerValue<'b>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
+        callty: ast::CallTy,
     ) -> IntValue<'b> {
         // value is a u128
         let value_ptr = contract
@@ -1252,7 +1306,14 @@ impl TargetRuntime for EwasmTarget {
         contract
             .builder
             .build_call(
-                contract.module.get_function("call").unwrap(),
+                contract
+                    .module
+                    .get_function(match callty {
+                        ast::CallTy::Regular => "call",
+                        ast::CallTy::Static => "staticcall",
+                        ast::CallTy::Delegate => "delegatecall",
+                    })
+                    .unwrap(),
                 &[
                     gas.into(),
                     address.into(),
