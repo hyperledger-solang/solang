@@ -1572,7 +1572,10 @@ impl<'a> Contract<'a> {
                 array.into()
             }
             Expression::AllocDynamicArray(_, ty, size, init) => {
-                let elem = ty.array_deref();
+                let elem = match ty {
+                    ast::Type::String | ast::Type::DynamicBytes => ast::Type::Bytes(1),
+                    _ => ty.array_deref(),
+                };
 
                 let size = self
                     .expression(size, vartab, function, runtime)

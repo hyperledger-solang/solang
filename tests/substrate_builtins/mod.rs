@@ -123,7 +123,7 @@ fn abi_encode() {
                 string b = "foobar";
                 assert(abi.encode(b) == hex"18666f6f626172");
 
-                // BORKED assert(abi.encode("foobar") == hex"18666f6f626172");
+                assert(abi.encode("foobar") == hex"18666f6f626172");
             }
 
             function test3() public {
@@ -135,10 +135,13 @@ fn abi_encode() {
     );
 
     runtime.function("test", Vec::new());
+    runtime.heap_verify();
 
     runtime.function("test2", Vec::new());
+    runtime.heap_verify();
 
     runtime.function("test3", Vec::new());
+    runtime.heap_verify();
 }
 
 #[test]

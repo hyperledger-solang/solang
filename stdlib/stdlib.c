@@ -97,7 +97,7 @@ void __init_heap()
 	struct chunk *first = (struct chunk *)0x10000;
 	first->next = first->prev = NULL;
 	first->allocated = false;
-	first->length = (size_t)(__builtin_wasm_memory_size(0) -
+	first->length = (size_t)(__builtin_wasm_memory_size(0) * 0x10000 -
 							 (size_t)first - sizeof(struct chunk));
 }
 
