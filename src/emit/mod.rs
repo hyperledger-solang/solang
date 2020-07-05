@@ -42,7 +42,7 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Clone)]
-struct Variable<'a> {
+pub struct Variable<'a> {
     value: BasicValueEnum<'a>,
 }
 
@@ -202,6 +202,16 @@ pub trait TargetRuntime {
         value: IntValue<'b>,
         ty: ast::CallTy,
     ) -> IntValue<'b>;
+
+    /// builtin expressions
+    fn builtin<'b>(
+        &self,
+        contract: &Contract<'b>,
+        expr: &Expression,
+        vartab: &[Variable<'b>],
+        function: FunctionValue<'b>,
+        runtime: &dyn TargetRuntime,
+    ) -> BasicValueEnum<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
     fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b>;
@@ -725,6 +735,7 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
+            Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => self
                 .context

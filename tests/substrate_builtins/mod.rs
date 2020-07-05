@@ -468,3 +468,349 @@ fn call() {
     runtime.function("test1", Vec::new());
     runtime.function("test2", Vec::new());
 }
+
+#[test]
+fn block() {
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public {
+                uint64 b = block.number;
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.number;
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint64 to int64"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public {
+                uint64 b = block.timestamp;
+
+                assert(b == 1594035638);
+
+                assert(now == 1594035638);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.timestamp;
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint64 to int64"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public {
+                uint128 b = block.tombstone_deposit;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.tombstone_deposit;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint128 to int64"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public {
+                uint128 b = block.minimum_balance;
+
+                assert(b == 500);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.minimum_balance;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint128 to int64"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.coinbase;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "`block\' is not declared");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.gaslimit;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "`block\' is not declared");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = block.difficulty;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "`block\' is not declared");
+}
+
+#[test]
+fn tx() {
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public {
+                uint128 b = tx.gasprice;
+
+                assert(b == 59_541_253_813_967);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = tx.gasprice;
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint128 to int64"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = tx.origin;
+
+                assert(b == 93_603_701_976_053);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "`tx\' is not declared");
+}
+
+#[test]
+fn msg() {
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public payable {
+                uint128 b = msg.value;
+
+                assert(b == 145_594_775_678_703_046_797_448_357_509_034_994_219);
+            }
+        }"##,
+    );
+
+    runtime.vm.value = 145_594_775_678_703_046_797_448_357_509_034_994_219;
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = msg.value;
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint128 to int64"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                other o = new other();
+                address foo = o.test();
+
+                assert(foo == address(this));
+            }
+        }
+        
+        contract other {
+            function test() public returns (address) {
+                return msg.sender;
+            }
+        }
+        "##,
+    );
+
+    runtime.function("test", Vec::new());
+}
+
+#[test]
+fn functions() {
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            function test() public {
+                uint64 b = gasleft();
+
+                assert(b == 2_224_097_461);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = gasleft();
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion would change sign from uint64 to int64"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = gasleft(1);
+
+                assert(b == 14_250_083_331_950_119_597);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "builtin function ‘gasleft’ expects 0 arguments, 1 provided"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                bytes32 b = blockhash(1);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "unknown function or type");
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            function test() public {
+                bytes32 o = random(
+                    "abcd"
+                );
+
+                assert(o == hex"429ccf3ebce07f0c6d7cd0d1dead74459f753cdf53ed8359e42728042a91c39c");
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+}

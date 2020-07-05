@@ -1101,6 +1101,10 @@ pub fn expression(
                 };
             }
 
+            if let Some((builtin, ty)) = builtin::builtin_var(None, &id.name, ns) {
+                return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
+            }
+
             let v = ns.resolve_var(contract_no.unwrap(), id)?;
 
             let var = &ns.contracts[contract_no.unwrap()].variables[v];
@@ -2769,6 +2773,10 @@ fn member_access(
 
     // is of the form "enum_name.enum_value"
     if let pt::Expression::Variable(namespace) = e {
+        if let Some((builtin, ty)) = builtin::builtin_var(Some(&namespace.name), &id.name, ns) {
+            return Ok(Expression::Builtin(*loc, vec![ty], builtin, vec![]));
+        }
+
         if let Some(e) = ns.resolve_enum(contract_no, namespace) {
             return match ns.enums[e].values.get(&id.name) {
                 Some((_, val)) => Ok(Expression::NumberLiteral(
@@ -3098,7 +3106,7 @@ fn function_call_pos_args(
     }
 
     // is it a builtin
-    if builtin::is_builtin_call(None, &id.name) {
+    if builtin::is_builtin_call(None, &id.name, ns) {
         let expr = builtin::resolve_call(loc, id, resolved_args, ns)?;
 
         return if expr.tys().len() > 1 {
@@ -3357,7 +3365,7 @@ fn method_call_pos_args(
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
-        if builtin::is_builtin_call(Some(&namespace.name), &func.name) {
+        if builtin::is_builtin_call(Some(&namespace.name), &func.name, ns) {
             if let Some(loc) = call_args_loc {
                 ns.diagnostics.push(Output::error(
                     loc,

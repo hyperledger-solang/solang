@@ -92,21 +92,29 @@ enum SubstrateExternal {
     ext_hash_sha2_256,
     ext_hash_blake2_128,
     ext_hash_blake2_256,
+    ext_block_number,
+    ext_now,
+    ext_gas_price,
+    ext_gas_left,
+    ext_caller,
+    ext_tombstone_deposit,
 }
 
 pub struct VM {
     address: Address,
+    caller: Address,
     memory: MemoryRef,
     pub scratch: Vec<u8>,
     pub value: u128,
 }
 
 impl VM {
-    fn new(address: Address, value: u128) -> Self {
+    fn new(address: Address, caller: Address, value: u128) -> Self {
         VM {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
             scratch: Vec::new(),
             address,
+            caller,
             value,
         }
     }
@@ -386,9 +394,13 @@ impl Externals for TestRuntime {
                     panic!("ext_random: {}", e);
                 }
 
-                println!("ext_random: {}", hex::encode(&buf));
+                let mut hash = [0u8; 32];
 
-                self.vm.scratch = buf;
+                hash.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &buf).as_bytes());
+
+                println!("ext_random: {}", hex::encode(&hash));
+
+                self.vm.scratch = hash.to_vec();
 
                 Ok(None)
             }
@@ -441,7 +453,7 @@ impl Externals for TestRuntime {
                     hex::encode(&input)
                 );
 
-                let mut vm = VM::new(address, value);
+                let mut vm = VM::new(address, self.vm.address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -547,7 +559,7 @@ impl Externals for TestRuntime {
                     panic!("ext_instantiate: {}", e);
                 }
 
-                let mut vm = VM::new(address, value);
+                let mut vm = VM::new(address, self.vm.address, value);
 
                 std::mem::swap(&mut self.vm, &mut vm);
 
@@ -585,10 +597,17 @@ impl Externals for TestRuntime {
 
                 Ok(None)
             }
+            Some(SubstrateExternal::ext_caller) => {
+                self.vm.scratch = self.vm.caller.to_vec();
+
+                println!("ext_caller: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
             Some(SubstrateExternal::ext_balance) => {
                 self.vm.scratch = self.accounts[&self.vm.address].1.to_le_bytes().to_vec();
 
-                println!("ext_address: {}", hex::encode(&self.vm.scratch));
+                println!("ext_balance: {}", hex::encode(&self.vm.scratch));
 
                 Ok(None)
             }
@@ -596,6 +615,41 @@ impl Externals for TestRuntime {
                 self.vm.scratch = 500u128.to_le_bytes().to_vec();
 
                 println!("ext_minimum_balance: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_block_number) => {
+                self.vm.scratch = 14_250_083_331_950_119_597u64.to_le_bytes().to_vec();
+
+                println!("ext_block_number: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_now) => {
+                self.vm.scratch = 1594035638u64.to_le_bytes().to_vec();
+
+                println!("ext_now: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_gas_left) => {
+                self.vm.scratch = 2_224_097_461u64.to_le_bytes().to_vec();
+
+                println!("ext_gas_left: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_gas_price) => {
+                self.vm.scratch = 59_541_253_813_967u128.to_le_bytes().to_vec();
+
+                println!("ext_gas_price: {}", hex::encode(&self.vm.scratch));
+
+                Ok(None)
+            }
+            Some(SubstrateExternal::ext_tombstone_deposit) => {
+                self.vm.scratch = 93_603_701_976_053u128.to_le_bytes().to_vec();
+
+                println!("ext_tombstone_deposit: {}", hex::encode(&self.vm.scratch));
 
                 Ok(None)
             }
@@ -651,6 +705,12 @@ impl ModuleImportResolver for TestRuntime {
             "ext_address" => SubstrateExternal::ext_address,
             "ext_balance" => SubstrateExternal::ext_balance,
             "ext_terminate" => SubstrateExternal::ext_terminate,
+            "ext_block_number" => SubstrateExternal::ext_block_number,
+            "ext_now" => SubstrateExternal::ext_now,
+            "ext_gas_price" => SubstrateExternal::ext_gas_price,
+            "ext_gas_left" => SubstrateExternal::ext_gas_left,
+            "ext_caller" => SubstrateExternal::ext_caller,
+            "ext_tombstone_deposit" => SubstrateExternal::ext_tombstone_deposit,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -888,7 +948,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         printbuf: String::new(),
         store: HashMap::new(),
         contracts: res,
-        vm: VM::new(address, 0),
+        vm: VM::new(address, address_new(), 0),
         abi: abi::substrate::load(&abistr).unwrap(),
     };
 

@@ -7,7 +7,6 @@ use sema::symtable::Symtable;
 
 struct Prototype {
     pub builtin: Builtin,
-    pub this: Option<Type>,
     pub namespace: Option<&'static str>,
     pub name: &'static str,
     pub args: &'static [Type],
@@ -15,13 +14,12 @@ struct Prototype {
     pub target: Option<Target>,
 }
 
-// A list of all Solidity builtins
-static PROTO_TYPES: [Prototype; 17] = [
+// A list of all Solidity builtins functions
+static BUILTIN_FUNCTIONS: [Prototype; 20] = [
     Prototype {
         builtin: Builtin::Assert,
         namespace: None,
         name: "assert",
-        this: None,
         args: &[Type::Bool],
         ret: &[Type::Void],
         target: None,
@@ -30,7 +28,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Print,
         namespace: None,
         name: "print",
-        this: None,
         args: &[Type::String],
         ret: &[Type::Void],
         target: None,
@@ -39,7 +36,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Require,
         namespace: None,
         name: "require",
-        this: None,
         args: &[Type::Bool],
         ret: &[Type::Void],
         target: None,
@@ -48,7 +44,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Require,
         namespace: None,
         name: "require",
-        this: None,
         args: &[Type::Bool, Type::String],
         ret: &[Type::Void],
         target: None,
@@ -57,7 +52,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Revert,
         namespace: None,
         name: "revert",
-        this: None,
         args: &[],
         ret: &[Type::Unreachable],
         target: None,
@@ -66,7 +60,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Revert,
         namespace: None,
         name: "revert",
-        this: None,
         args: &[Type::String],
         ret: &[Type::Unreachable],
         target: None,
@@ -75,7 +68,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::SelfDestruct,
         namespace: None,
         name: "selfdestruct",
-        this: None,
         args: &[Type::Address(true)],
         ret: &[Type::Unreachable],
         target: None,
@@ -84,7 +76,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Keccak256,
         namespace: None,
         name: "keccak256",
-        this: None,
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: None,
@@ -93,7 +84,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Ripemd160,
         namespace: None,
         name: "ripemd160",
-        this: None,
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(20)],
         target: None,
@@ -102,7 +92,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Sha256,
         namespace: None,
         name: "sha256",
-        this: None,
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: None,
@@ -111,7 +100,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Blake2_128,
         namespace: None,
         name: "blake2_128",
-        this: None,
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(16)],
         target: Some(Target::Substrate),
@@ -120,7 +108,30 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::Blake2_256,
         namespace: None,
         name: "blake2_256",
-        this: None,
+        args: &[Type::DynamicBytes],
+        ret: &[Type::Bytes(32)],
+        target: Some(Target::Substrate),
+    },
+    Prototype {
+        builtin: Builtin::Gasleft,
+        namespace: None,
+        name: "gasleft",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::BlockHash,
+        namespace: None,
+        name: "blockhash",
+        args: &[Type::Uint(64)],
+        ret: &[Type::Bytes(32)],
+        target: Some(Target::Ewasm),
+    },
+    Prototype {
+        builtin: Builtin::Random,
+        namespace: None,
+        name: "random",
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: Some(Target::Substrate),
@@ -129,7 +140,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::AbiDecode,
         namespace: Some("abi"),
         name: "decode",
-        this: None,
         args: &[Type::DynamicBytes],
         ret: &[],
         target: None,
@@ -138,7 +148,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::AbiEncode,
         namespace: Some("abi"),
         name: "encode",
-        this: None,
         args: &[],
         ret: &[],
         target: None,
@@ -147,7 +156,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::AbiEncodePacked,
         namespace: Some("abi"),
         name: "encodePacked",
-        this: None,
         args: &[],
         ret: &[],
         target: None,
@@ -156,7 +164,6 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::AbiEncodeWithSelector,
         namespace: Some("abi"),
         name: "encodeWithSelector",
-        this: None,
         args: &[Type::Bytes(4)],
         ret: &[],
         target: None,
@@ -165,18 +172,153 @@ static PROTO_TYPES: [Prototype; 17] = [
         builtin: Builtin::AbiEncodeWithSignature,
         namespace: Some("abi"),
         name: "encodeWithSignature",
-        this: None,
         args: &[Type::String],
         ret: &[],
         target: None,
     },
 ];
 
+// A list of all Solidity builtins variables
+static BUILTIN_VARIABLE: [Prototype; 14] = [
+    Prototype {
+        builtin: Builtin::BlockCoinbase,
+        namespace: Some("block"),
+        name: "coinbase",
+        args: &[],
+        ret: &[Type::Address(true)],
+        target: Some(Target::Ewasm),
+    },
+    Prototype {
+        builtin: Builtin::BlockDifficulty,
+        namespace: Some("block"),
+        name: "difficulty",
+        args: &[],
+        ret: &[Type::Uint(256)],
+        target: Some(Target::Ewasm),
+    },
+    Prototype {
+        builtin: Builtin::GasLimit,
+        namespace: Some("block"),
+        name: "gaslimit",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: Some(Target::Ewasm),
+    },
+    Prototype {
+        builtin: Builtin::BlockNumber,
+        namespace: Some("block"),
+        name: "number",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Timestamp,
+        namespace: Some("block"),
+        name: "timestamp",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::TombstoneDeposit,
+        namespace: Some("block"),
+        name: "tombstone_deposit",
+        args: &[],
+        ret: &[Type::Uint(128)],
+        target: Some(Target::Substrate),
+    },
+    Prototype {
+        builtin: Builtin::MinimumBalance,
+        namespace: Some("block"),
+        name: "minimum_balance",
+        args: &[],
+        ret: &[Type::Uint(128)],
+        target: Some(Target::Substrate),
+    },
+    Prototype {
+        builtin: Builtin::Calldata,
+        namespace: Some("msg"),
+        name: "data",
+        args: &[],
+        ret: &[Type::DynamicBytes],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Sender,
+        namespace: Some("msg"),
+        name: "sender",
+        args: &[],
+        ret: &[Type::Address(true)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Signature,
+        namespace: Some("msg"),
+        name: "sig",
+        args: &[],
+        ret: &[Type::Bytes(4)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Value,
+        namespace: Some("msg"),
+        name: "value",
+        args: &[],
+        ret: &[Type::Uint(128)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Timestamp,
+        namespace: None,
+        name: "now",
+        args: &[],
+        ret: &[Type::Uint(64)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Gasprice,
+        namespace: Some("tx"),
+        name: "gasprice",
+        args: &[],
+        ret: &[Type::Uint(128)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Origin,
+        namespace: Some("tx"),
+        name: "origin",
+        args: &[],
+        ret: &[Type::Address(true)],
+        target: Some(Target::Ewasm),
+    },
+];
+
 /// Does function call match builtin
-pub fn is_builtin_call(namespace: Option<&str>, fname: &str) -> bool {
-    PROTO_TYPES
+pub fn is_builtin_call(namespace: Option<&str>, fname: &str, ns: &Namespace) -> bool {
+    BUILTIN_FUNCTIONS.iter().any(|p| {
+        p.name == fname
+            && p.namespace == namespace
+            && (p.target.is_none() || p.target == Some(ns.target))
+    })
+}
+
+/// Does variable name match builtin
+pub fn builtin_var(
+    namespace: Option<&str>,
+    fname: &str,
+    ns: &Namespace,
+) -> Option<(Builtin, Type)> {
+    if let Some(p) = BUILTIN_VARIABLE
         .iter()
-        .any(|p| p.name == fname && p.this.is_none() && p.namespace == namespace)
+        .find(|p| p.name == fname && p.namespace == namespace)
+    {
+        if p.target.is_none() || p.target == Some(ns.target) {
+            return Some((p.builtin.clone(), p.ret[0].clone()));
+        }
+    }
+
+    None
 }
 
 /// Is name reserved for builtins
@@ -185,7 +327,14 @@ pub fn is_reserved(fname: &str) -> bool {
         return true;
     }
 
-    PROTO_TYPES
+    if BUILTIN_FUNCTIONS
+        .iter()
+        .any(|p| (p.name == fname && p.namespace == None) || (p.namespace == Some(fname)))
+    {
+        return true;
+    }
+
+    BUILTIN_VARIABLE
         .iter()
         .any(|p| (p.name == fname && p.namespace == None) || (p.namespace == Some(fname)))
 }
@@ -197,9 +346,9 @@ pub fn resolve_call(
     args: Vec<Expression>,
     ns: &mut Namespace,
 ) -> Result<Expression, ()> {
-    let matches = PROTO_TYPES
+    let matches = BUILTIN_FUNCTIONS
         .iter()
-        .filter(|p| p.name == id.name && p.this.is_none() && p.namespace.is_none())
+        .filter(|p| p.name == id.name && p.namespace.is_none())
         .collect::<Vec<&Prototype>>();
     let marker = ns.diagnostics.len();
     for func in &matches {

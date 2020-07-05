@@ -12,7 +12,7 @@ use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
-use super::{Contract, TargetRuntime};
+use super::{Contract, TargetRuntime, Variable};
 
 pub struct SabreTarget {
     abi: ethabiencoder::EthAbiEncoder,
@@ -787,6 +787,18 @@ impl TargetRuntime for SabreTarget {
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) {
         panic!("Sabre does not have the concept of selfdestruct");
+    }
+
+    /// builtin expressions
+    fn builtin<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _expr: &ast::Expression,
+        _vartab: &[Variable<'b>],
+        _function: FunctionValue<'b>,
+        _runtime: &dyn TargetRuntime,
+    ) -> BasicValueEnum<'b> {
+        unimplemented!();
     }
 
     /// Crypto Hash
