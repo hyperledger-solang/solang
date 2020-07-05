@@ -15,7 +15,7 @@ use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
-use super::{Contract, TargetRuntime};
+use super::{Contract, TargetRuntime, Variable};
 
 pub struct EwasmTarget {
     abi: ethabiencoder::EthAbiEncoder,
@@ -1666,5 +1666,17 @@ impl TargetRuntime for EwasmTarget {
         );
 
         contract.builder.build_load(temp, "hash").into_int_value()
+    }
+
+    /// builtin expressions
+    fn builtin<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _expr: &ast::Expression,
+        _vartab: &[Variable<'b>],
+        _function: FunctionValue<'b>,
+        _runtime: &dyn TargetRuntime,
+    ) -> BasicValueEnum<'b> {
+        unimplemented!();
     }
 }

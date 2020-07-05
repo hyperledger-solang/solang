@@ -374,6 +374,14 @@ impl ast::Namespace {
     }
 
     pub fn check_shadowing(&mut self, contract_no: usize, id: &pt::Identifier) {
+        if builtin::is_reserved(&id.name) {
+            self.diagnostics.push(Output::warning(
+                id.loc,
+                format!("‘{}’ shadows name of a builtin", id.name.to_string()),
+            ));
+            return;
+        }
+
         let mut s = self.symbols.get(&(Some(contract_no), id.name.to_owned()));
 
         if s.is_none() {

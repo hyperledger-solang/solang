@@ -12,7 +12,7 @@ use parser::pt;
 use sema::ast;
 use std::collections::HashMap;
 
-use super::{Contract, TargetRuntime};
+use super::{Contract, TargetRuntime, Variable};
 
 pub struct SubstrateTarget {
     unique_strings: HashMap<usize, usize>,
@@ -60,6 +60,12 @@ impl SubstrateTarget {
             "ext_random",
             "ext_address",
             "ext_balance",
+            "ext_block_number",
+            "ext_now",
+            "ext_gas_price",
+            "ext_gas_left",
+            "ext_caller",
+            "ext_tombstone_deposit",
             "ext_terminate",
         ]);
 
@@ -406,6 +412,42 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_minimum_balance",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_block_number",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_now",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_tombstone_deposit",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_gas_price",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_gas_left",
+            contract.context.void_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_caller",
             contract.context.void_type().fn_type(&[], false),
             Some(Linkage::External),
         );
@@ -2911,5 +2953,154 @@ impl TargetRuntime for SubstrateTarget {
         );
 
         contract.builder.build_load(temp, "hash").into_int_value()
+    }
+
+    /// builtin expressions
+    fn builtin<'b>(
+        &self,
+        contract: &Contract<'b>,
+        expr: &ast::Expression,
+        vartab: &[Variable<'b>],
+        function: FunctionValue<'b>,
+        runtime: &dyn TargetRuntime,
+    ) -> BasicValueEnum<'b> {
+        macro_rules! get_seal_value {
+            ($name:literal, $func:literal, $width:expr) => {{
+                let value = contract
+                    .builder
+                    .build_alloca(contract.context.custom_width_int_type($width), $name);
+
+                contract.builder.build_call(
+                    contract.module.get_function($func).unwrap(),
+                    &[],
+                    $name,
+                );
+
+                contract.builder.build_call(
+                    contract.module.get_function("ext_scratch_read").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                value,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        contract.context.i32_type().const_zero().into(),
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int($width as u64 / 8, false)
+                            .into(),
+                    ],
+                    $name,
+                );
+
+                contract.builder.build_load(value, $name)
+            }};
+        };
+
+        match expr {
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
+                get_seal_value!("block_number", "ext_block_number", 64)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
+                get_seal_value!("timestamp", "ext_now", 64)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
+                get_seal_value!("gas_left", "ext_gas_left", 64)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => get_seal_value!(
+                "gas_price",
+                "ext_gas_price",
+                contract.ns.value_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
+                get_seal_value!("caller", "ext_caller", 256)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => get_seal_value!(
+                "value",
+                "ext_value_transferred",
+                contract.ns.value_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::MinimumBalance, _) => get_seal_value!(
+                "minimum_balance",
+                "ext_minimum_balance",
+                contract.ns.value_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::TombstoneDeposit, _) => get_seal_value!(
+                "tombstone_deposit",
+                "ext_tombstone_deposit",
+                contract.ns.value_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Random, args) => {
+                let subject = contract
+                    .expression(&args[0], vartab, function, runtime)
+                    .into_pointer_value();
+
+                let subject_data = unsafe {
+                    contract.builder.build_gep(
+                        subject,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "subject_data",
+                    )
+                };
+
+                let subject_len = unsafe {
+                    contract.builder.build_gep(
+                        subject,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "subject_len",
+                    )
+                };
+
+                contract.builder.build_call(
+                    contract.module.get_function("ext_random").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                subject_data,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "subject_data",
+                            )
+                            .into(),
+                        contract.builder.build_load(subject_len, "subject_len"),
+                    ],
+                    "random",
+                );
+
+                let hash = contract
+                    .builder
+                    .build_alloca(contract.context.custom_width_int_type(256), "hash");
+
+                contract.builder.build_call(
+                    contract.module.get_function("ext_scratch_read").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                hash,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        contract.context.i32_type().const_zero().into(),
+                        contract.context.i32_type().const_int(32, false).into(),
+                    ],
+                    "random",
+                );
+
+                contract.builder.build_load(hash, "hash")
+            }
+            _ => unimplemented!(),
+        }
     }
 }
