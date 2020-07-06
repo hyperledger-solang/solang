@@ -2,7 +2,7 @@ use codegen::cfg;
 use hex;
 use parser::pt;
 use sema::ast;
-use sema::ast::{Expression, StringLocation};
+use sema::ast::{Builtin, Expression, StringLocation};
 use std::cell::RefCell;
 use std::path::Path;
 use std::str;
@@ -22,7 +22,7 @@ use inkwell::targets::{CodeModel, FileType, RelocMode, Target, TargetTriple};
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::{BasicType, IntType, StringRadix};
 use inkwell::values::{
-    ArrayValue, BasicValueEnum, FunctionValue, IntValue, PhiValue, PointerValue,
+    ArrayValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -253,6 +253,7 @@ pub struct Contract<'a> {
     wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
     code_size: RefCell<Option<IntValue<'a>>>,
+    selector: GlobalValue<'a>,
 }
 
 impl<'a> Contract<'a> {
@@ -411,6 +412,11 @@ impl<'a> Contract<'a> {
             .iter()
             .any(|f| f.is_constructor() && f.is_payable());
 
+        let selector =
+            module.add_global(context.i32_type(), Some(AddressSpace::Generic), "selector");
+        selector.set_linkage(Linkage::Internal);
+        selector.set_initializer(&context.i32_type().const_zero());
+
         Contract {
             name: contract.name.to_owned(),
             module,
@@ -426,6 +432,7 @@ impl<'a> Contract<'a> {
             wasm: RefCell::new(Vec::new()),
             opt,
             code_size: RefCell::new(None),
+            selector,
         }
     }
 
@@ -735,6 +742,9 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
+            Expression::Builtin(_, _, Builtin::Signature, _) => self
+                .builder
+                .build_load(self.selector.as_pointer_value(), "selector"),
             Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => self
@@ -3321,7 +3331,13 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(switch_block);
 
-        let fid = self.builder.build_load(argsdata, "function_selector");
+        let fid = self
+            .builder
+            .build_load(argsdata, "function_selector")
+            .into_int_value();
+
+        self.builder
+            .build_store(self.selector.as_pointer_value(), fid);
 
         // step over the function selector
         let argsdata = unsafe {
@@ -3429,8 +3445,7 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(switch_block);
 
-        self.builder
-            .build_switch(fid.into_int_value(), no_function_matched, &cases);
+        self.builder.build_switch(fid, no_function_matched, &cases);
 
         if fallback.is_some() {
             return; // caller will generate fallback code
