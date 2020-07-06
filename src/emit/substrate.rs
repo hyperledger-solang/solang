@@ -101,6 +101,11 @@ impl SubstrateTarget {
             .left()
             .unwrap();
 
+        contract.builder.build_store(
+            contract.calldata_len.as_pointer_value(),
+            args_length.into_int_value(),
+        );
+
         let args = contract
             .builder
             .build_call(
@@ -112,6 +117,10 @@ impl SubstrateTarget {
             .left()
             .unwrap()
             .into_pointer_value();
+
+        contract
+            .builder
+            .build_store(contract.calldata_data.as_pointer_value(), args);
 
         contract.builder.build_call(
             contract.module.get_function("ext_scratch_read").unwrap(),
@@ -1387,18 +1396,18 @@ impl SubstrateTarget {
                         array_length,
                         &mut encoded_length,
                         |index, sum| {
-                            let index = contract.builder.build_int_mul(
-                                index,
-                                llvm_elem_ty
-                                    .into_pointer_type()
-                                    .get_element_type()
-                                    .size_of()
-                                    .unwrap()
-                                    .const_cast(contract.context.i32_type(), false),
-                                "",
-                            );
-
                             let elem = if dynamic_array {
+                                let index = contract.builder.build_int_mul(
+                                    index,
+                                    llvm_elem_ty
+                                        .into_pointer_type()
+                                        .get_element_type()
+                                        .size_of()
+                                        .unwrap()
+                                        .const_cast(contract.context.i32_type(), false),
+                                    "",
+                                );
+
                                 let p = unsafe {
                                     contract.builder.build_gep(
                                         arg.into_pointer_value(),

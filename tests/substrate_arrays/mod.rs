@@ -1584,6 +1584,7 @@ fn abi_encode_dynamic_array4() {
 
     runtime.constructor(0, Vec::new());
     runtime.function("test", Vec::new());
+    runtime.heap_verify();
 
     assert_eq!(
         runtime.vm.scratch,

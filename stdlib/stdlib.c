@@ -89,7 +89,7 @@ struct chunk
 {
 	struct chunk *next, *prev;
 	size_t length;
-	bool allocated;
+	size_t allocated;
 };
 
 void __init_heap()
@@ -407,14 +407,14 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 		do
 		{
 			*data++ = *initial++;
-		} while (size_array--);
+		} while (--size_array);
 	}
 	else
 	{
-		do
+		while (size_array--)
 		{
 			*data++ = 0;
-		} while (size_array--);
+		}
 	}
 
 	return v;

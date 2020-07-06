@@ -139,6 +139,11 @@ impl EwasmTarget {
             .left()
             .unwrap();
 
+        contract.builder.build_store(
+            contract.calldata_len.as_pointer_value(),
+            args_length.into_int_value(),
+        );
+
         let args = contract
             .builder
             .build_call(
@@ -150,6 +155,10 @@ impl EwasmTarget {
             .left()
             .unwrap()
             .into_pointer_value();
+
+        contract
+            .builder
+            .build_store(contract.calldata_data.as_pointer_value(), args);
 
         contract.builder.build_call(
             contract.module.get_function("callDataCopy").unwrap(),
@@ -211,6 +220,10 @@ impl EwasmTarget {
             "",
         );
 
+        contract
+            .builder
+            .build_store(contract.calldata_len.as_pointer_value(), args_length);
+
         let args = contract
             .builder
             .build_call(
@@ -222,6 +235,10 @@ impl EwasmTarget {
             .left()
             .unwrap()
             .into_pointer_value();
+
+        contract
+            .builder
+            .build_store(contract.calldata_data.as_pointer_value(), args);
 
         contract.builder.build_call(
             contract.module.get_function("codeCopy").unwrap(),
