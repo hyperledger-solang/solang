@@ -254,6 +254,8 @@ pub struct Contract<'a> {
     opt: OptimizationLevel,
     code_size: RefCell<Option<IntValue<'a>>>,
     selector: GlobalValue<'a>,
+    calldata_data: GlobalValue<'a>,
+    calldata_len: GlobalValue<'a>,
 }
 
 impl<'a> Contract<'a> {
@@ -417,6 +419,27 @@ impl<'a> Contract<'a> {
         selector.set_linkage(Linkage::Internal);
         selector.set_initializer(&context.i32_type().const_zero());
 
+        let calldata_len = module.add_global(
+            context.i32_type(),
+            Some(AddressSpace::Generic),
+            "calldata_len",
+        );
+        calldata_len.set_linkage(Linkage::Internal);
+        calldata_len.set_initializer(&context.i32_type().const_zero());
+
+        let calldata_data = module.add_global(
+            context.i8_type().ptr_type(AddressSpace::Generic),
+            Some(AddressSpace::Generic),
+            "calldata_data",
+        );
+        calldata_data.set_linkage(Linkage::Internal);
+        calldata_data.set_initializer(
+            &context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_zero(),
+        );
+
         Contract {
             name: contract.name.to_owned(),
             module,
@@ -433,6 +456,8 @@ impl<'a> Contract<'a> {
             opt,
             code_size: RefCell::new(None),
             selector,
+            calldata_data,
+            calldata_len,
         }
     }
 
@@ -742,9 +767,53 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
-            Expression::Builtin(_, _, Builtin::Signature, _) => self
+            Expression::Builtin(_, _, Builtin::Calldata, _) => self
                 .builder
-                .build_load(self.selector.as_pointer_value(), "selector"),
+                .build_call(
+                    self.module.get_function("vector_new").unwrap(),
+                    &[
+                        self.builder
+                            .build_load(self.calldata_len.as_pointer_value(), "calldata_len"),
+                        self.context.i32_type().const_int(1, false).into(),
+                        self.builder
+                            .build_load(self.calldata_data.as_pointer_value(), "calldata_data"),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap(),
+            Expression::Builtin(_, _, Builtin::Signature, _) => {
+                // need to byte-reverse selector
+                let selector = self
+                    .builder
+                    .build_alloca(self.context.i32_type(), "selector");
+
+                // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+                self.builder.build_call(
+                    self.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        self.builder
+                            .build_pointer_cast(
+                                self.selector.as_pointer_value(),
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        self.builder
+                            .build_pointer_cast(
+                                selector,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        self.context.i32_type().const_int(4, false).into(),
+                    ],
+                    "",
+                );
+
+                self.builder.build_load(selector, "selector")
+            }
             Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => self
@@ -1567,9 +1636,27 @@ impl<'a> Contract<'a> {
             }
             Expression::ArrayLiteral(_, ty, dims, exprs) => {
                 // non-const array literals should alloca'ed and each element assigned
-                let array = self
+                let ty = self.llvm_type(ty);
+
+                let p = self
                     .builder
-                    .build_alloca(self.llvm_type(ty), "array_literal");
+                    .build_call(
+                        self.module.get_function("__malloc").unwrap(),
+                        &[ty.size_of()
+                            .unwrap()
+                            .const_cast(self.context.i32_type(), false)
+                            .into()],
+                        "array_literal",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let array = self.builder.build_pointer_cast(
+                    p.into_pointer_value(),
+                    ty.ptr_type(AddressSpace::Generic),
+                    "array_literal",
+                );
 
                 for (i, expr) in exprs.iter().enumerate() {
                     let mut ind = vec![self.context.i32_type().const_zero()];
@@ -1596,7 +1683,7 @@ impl<'a> Contract<'a> {
             Expression::AllocDynamicArray(_, ty, size, init) => {
                 let elem = match ty {
                     ast::Type::String | ast::Type::DynamicBytes => ast::Type::Bytes(1),
-                    _ => ty.array_deref(),
+                    _ => ty.array_elem(),
                 };
 
                 let size = self
@@ -2554,10 +2641,30 @@ impl<'a> Contract<'a> {
         for v in &cfg.vars {
             match v.storage {
                 cfg::Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
+                    let ty = self.llvm_type(&v.ty);
+
+                    let p = self
+                        .builder
+                        .build_call(
+                            self.module.get_function("__malloc").unwrap(),
+                            &[ty.size_of()
+                                .unwrap()
+                                .const_cast(self.context.i32_type(), false)
+                                .into()],
+                            &v.id.name,
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
                     vars.push(Variable {
                         value: self
                             .builder
-                            .build_alloca(self.llvm_type(&v.ty), &v.id.name)
+                            .build_pointer_cast(
+                                p.into_pointer_value(),
+                                ty.ptr_type(AddressSpace::Generic),
+                                &v.id.name,
+                            )
                             .into(),
                     });
                 }

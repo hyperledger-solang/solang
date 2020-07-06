@@ -1,3 +1,6 @@
+use parity_scale_codec::Encode;
+use parity_scale_codec_derive::{Decode, Encode};
+
 use super::{build_solidity, first_error};
 use solang::{parse_and_resolve, Target};
 
@@ -813,4 +816,30 @@ fn functions() {
     );
 
     runtime.function("test", Vec::new());
+}
+
+#[test]
+fn data() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Uint32(u32);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct String(Vec<u8>);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract bar {
+            constructor(string memory s) public {
+                assert(msg.data == hex"88eaeb6c18666f6f626172");
+                assert(msg.sig == hex"88ea_eb6c");
+            }
+
+            function test(uint32 x) public {
+                assert(msg.data == hex"e3cff634addeadde");
+                assert(msg.sig == hex"e3cf_f634");
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, String(b"foobar".to_vec()).encode());
+    runtime.function("test", Uint32(0xdeaddead).encode());
 }
