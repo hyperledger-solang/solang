@@ -8,7 +8,7 @@ use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::BasicType;
-use inkwell::types::{BasicTypeEnum, IntType};
+use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -91,6 +91,16 @@ impl EwasmTarget {
             "getCallValue",
             "getAddress",
             "getExternalBalance",
+            "getBlockHash",
+            "getBlockDifficulty",
+            "getGasLeft",
+            "getBlockGasLimit",
+            "getBlockTimestamp",
+            "getBlockNumber",
+            "getTxGasPrice",
+            "getTxOrigin",
+            "getBlockCoinbase",
+            "getCaller",
         ]);
 
         deploy_code
@@ -231,21 +241,12 @@ impl EwasmTarget {
     }
 
     fn declare_externals(&self, contract: &mut Contract) {
-        let ret = contract.context.void_type();
-        let args: Vec<BasicTypeEnum> = vec![
-            contract
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .into(),
-            contract
-                .context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .into(),
-        ];
+        let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
+        let u32_ty = contract.context.i32_type();
+        let u64_ty = contract.context.i64_type();
+        let void_ty = contract.context.void_type();
 
-        let ftype = ret.fn_type(&args, false);
+        let ftype = void_ty.fn_type(&[u8_ptr_ty.into(), u8_ptr_ty.into()], false);
 
         contract
             .module
@@ -256,33 +257,29 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "getCallDataSize",
-            contract.context.i32_type().fn_type(&[], false),
+            u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "getCodeSize",
-            contract.context.i32_type().fn_type(&[], false),
+            u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "getReturnDataSize",
-            contract.context.i32_type().fn_type(&[], false),
+            u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "callDataCopy",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // resultOffset
-                    contract.context.i32_type().into(), // dataOffset
-                    contract.context.i32_type().into(), // length
+                    u8_ptr_ty.into(), // resultOffset
+                    u32_ty.into(),    // dataOffset
+                    u32_ty.into(),    // length
                 ],
                 false,
             ),
@@ -291,15 +288,11 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "codeCopy",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // resultOffset
-                    contract.context.i32_type().into(), // dataOffset
-                    contract.context.i32_type().into(), // length
+                    u8_ptr_ty.into(), // resultOffset
+                    u32_ty.into(),    // dataOffset
+                    u32_ty.into(),    // length
                 ],
                 false,
             ),
@@ -308,15 +301,11 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "returnDataCopy",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // resultOffset
-                    contract.context.i32_type().into(), // dataOffset
-                    contract.context.i32_type().into(), // length
+                    u8_ptr_ty.into(), // resultOffset
+                    u32_ty.into(),    // dataOffset
+                    u32_ty.into(),    // length
                 ],
                 false,
             ),
@@ -325,14 +314,10 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "printMem",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // string_ptr
-                    contract.context.i32_type().into(), // string_length
+                    u8_ptr_ty.into(), // string_ptr
+                    u32_ty.into(),    // string_length
                 ],
                 false,
             ),
@@ -341,24 +326,12 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "create",
-            contract.context.i32_type().fn_type(
+            u32_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // valueOffset
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // input offset
-                    contract.context.i32_type().into(), // input length
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // address result
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // input offset
+                    u32_ty.into(),    // input length
+                    u8_ptr_ty.into(), // address result
                 ],
                 false,
             ),
@@ -367,25 +340,13 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "call",
-            contract.context.i32_type().fn_type(
+            u32_ty.fn_type(
                 &[
-                    contract.context.i64_type().into(), // gas
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // address
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // valueOffset
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // input offset
-                    contract.context.i32_type().into(), // input length
+                    u64_ty.into(),    // gas
+                    u8_ptr_ty.into(), // address
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // input offset
+                    u32_ty.into(),    // input length
                 ],
                 false,
             ),
@@ -393,25 +354,13 @@ impl EwasmTarget {
         );
         contract.module.add_function(
             "staticcall",
-            contract.context.i32_type().fn_type(
+            u32_ty.fn_type(
                 &[
-                    contract.context.i64_type().into(), // gas
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // address
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // valueOffset
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // input offset
-                    contract.context.i32_type().into(), // input length
+                    u64_ty.into(),    // gas
+                    u8_ptr_ty.into(), // address
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // input offset
+                    u32_ty.into(),    // input length
                 ],
                 false,
             ),
@@ -419,25 +368,13 @@ impl EwasmTarget {
         );
         contract.module.add_function(
             "delegatecall",
-            contract.context.i32_type().fn_type(
+            u32_ty.fn_type(
                 &[
-                    contract.context.i64_type().into(), // gas
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // address
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // valueOffset
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // input offset
-                    contract.context.i32_type().into(), // input length
+                    u64_ty.into(),    // gas
+                    u8_ptr_ty.into(), // address
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // input offset
+                    u32_ty.into(),    // input length
                 ],
                 false,
             ),
@@ -445,13 +382,9 @@ impl EwasmTarget {
         );
         contract.module.add_function(
             "getCallValue",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // value_ptr
+                    u8_ptr_ty.into(), // value_ptr
                 ],
                 false,
             ),
@@ -460,13 +393,20 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "getAddress",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // value_ptr
+                    u8_ptr_ty.into(), // value_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getCaller",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // value_ptr
                 ],
                 false,
             ),
@@ -475,18 +415,90 @@ impl EwasmTarget {
 
         contract.module.add_function(
             "getExternalBalance",
-            contract.context.void_type().fn_type(
+            void_ty.fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // address_ptr
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // balance_ptr
+                    u8_ptr_ty.into(), // address_ptr
+                    u8_ptr_ty.into(), // balance_ptr
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getBlockHash",
+            u32_ty.fn_type(
+                &[
+                    u64_ty.into(),    // block number
+                    u8_ptr_ty.into(), // hash_ptr result
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getBlockCoinbase",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // address_ptr result
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getBlockDifficulty",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // u256_ptr result
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getGasLeft",
+            u64_ty.fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getBlockGasLimit",
+            u64_ty.fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getBlockTimestamp",
+            u64_ty.fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getBlockNumber",
+            u64_ty.fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getTxGasPrice",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // value_ptr result
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "getTxOrigin",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // address_ptr result
                 ],
                 false,
             ),
@@ -502,14 +514,10 @@ impl EwasmTarget {
             .module
             .add_function(
                 "finish",
-                contract.context.void_type().fn_type(
+                void_ty.fn_type(
                     &[
-                        contract
-                            .context
-                            .i8_type()
-                            .ptr_type(AddressSpace::Generic)
-                            .into(), // data_ptr
-                        contract.context.i32_type().into(), // data_len
+                        u8_ptr_ty.into(), // data_ptr
+                        u32_ty.into(),    // data_len
                     ],
                     false,
                 ),
@@ -522,14 +530,10 @@ impl EwasmTarget {
             .module
             .add_function(
                 "revert",
-                contract.context.void_type().fn_type(
+                void_ty.fn_type(
                     &[
-                        contract
-                            .context
-                            .i8_type()
-                            .ptr_type(AddressSpace::Generic)
-                            .into(), // data_ptr
-                        contract.context.i32_type().into(), // data_len
+                        u8_ptr_ty.into(), // data_ptr
+                        u32_ty.into(),    // data_len
                     ],
                     false,
                 ),
@@ -542,13 +546,9 @@ impl EwasmTarget {
             .module
             .add_function(
                 "selfDestruct",
-                contract.context.void_type().fn_type(
+                void_ty.fn_type(
                     &[
-                        contract
-                            .context
-                            .i8_type()
-                            .ptr_type(AddressSpace::Generic)
-                            .into(), // address_ptr
+                        u8_ptr_ty.into(), // address_ptr
                     ],
                     false,
                 ),
@@ -1671,12 +1671,109 @@ impl TargetRuntime for EwasmTarget {
     /// builtin expressions
     fn builtin<'b>(
         &self,
-        _contract: &Contract<'b>,
-        _expr: &ast::Expression,
-        _vartab: &[Variable<'b>],
-        _function: FunctionValue<'b>,
-        _runtime: &dyn TargetRuntime,
+        contract: &Contract<'b>,
+        expr: &ast::Expression,
+        vartab: &[Variable<'b>],
+        function: FunctionValue<'b>,
+        runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {
-        unimplemented!();
+        macro_rules! straight_call {
+            ($name:literal, $func:literal) => {{
+                contract
+                    .builder
+                    .build_call(contract.module.get_function($func).unwrap(), &[], $name)
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }};
+        }
+
+        macro_rules! single_value_stack {
+            ($name:literal, $func:literal, $width:expr) => {{
+                let value = contract
+                    .builder
+                    .build_alloca(contract.context.custom_width_int_type($width), $name);
+
+                contract.builder.build_call(
+                    contract.module.get_function($func).unwrap(),
+                    &[contract
+                        .builder
+                        .build_pointer_cast(
+                            value,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into()],
+                    $name,
+                );
+
+                contract.builder.build_load(value, $name)
+            }};
+        }
+
+        match expr {
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
+                straight_call!("block_number", "getBlockNumber")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
+                straight_call!("gas_left", "getGasLeft")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::GasLimit, _) => {
+                straight_call!("gas_limit", "getBlockGasLimit")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
+                straight_call!("time_stamp", "getBlockTimestamp")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockDifficulty, _) => {
+                single_value_stack!("block_difficulty", "getBlockDifficulty", 256)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Origin, _) => single_value_stack!(
+                "origin",
+                "getTxOrigin",
+                contract.ns.address_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
+                single_value_stack!("caller", "getCaller", contract.ns.address_length as u32 * 8)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockCoinbase, _) => single_value_stack!(
+                "coinbase",
+                "getBlockCoinbase",
+                contract.ns.address_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => single_value_stack!(
+                "gas_price",
+                "getTxGasPrice",
+                contract.ns.value_length as u32 * 8
+            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
+                single_value_stack!("value", "getCallValue", contract.ns.value_length as u32 * 8)
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::BlockHash, args) => {
+                let block_number = contract.expression(&args[0], vartab, function, runtime);
+
+                let value = contract
+                    .builder
+                    .build_alloca(contract.context.custom_width_int_type(256), "block_hash");
+
+                contract.builder.build_call(
+                    contract.module.get_function("getBlockHash").unwrap(),
+                    &[
+                        block_number,
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                value,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                    ],
+                    "block_hash",
+                );
+
+                contract.builder.build_load(value, "block_hash")
+            }
+            _ => unimplemented!(),
+        }
     }
 }
