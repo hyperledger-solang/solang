@@ -1954,6 +1954,100 @@ impl<'a> Contract<'a> {
                     .build_int_truncate(quotient, res_ty, "quotient")
                     .into()
             }
+            Expression::Builtin(_, _, Builtin::MulMod, args) => {
+                let arith_ty = self.context.custom_width_int_type(512);
+                let res_ty = self.context.custom_width_int_type(256);
+
+                let x = self
+                    .expression(&args[0], vartab, function, runtime)
+                    .into_int_value();
+                let y = self
+                    .expression(&args[1], vartab, function, runtime)
+                    .into_int_value();
+                let x_m = self.builder.build_alloca(arith_ty, "x_m");
+                let y_m = self.builder.build_alloca(arith_ty, "x_y");
+                let x_times_y_m = self.builder.build_alloca(arith_ty, "x_times_y_m");
+
+                self.builder
+                    .build_store(x_m, self.builder.build_int_z_extend(x, arith_ty, "wide_x"));
+                self.builder
+                    .build_store(y_m, self.builder.build_int_z_extend(y, arith_ty, "wide_y"));
+
+                self.builder.build_call(
+                    self.module.get_function("__mul32").unwrap(),
+                    &[
+                        self.builder
+                            .build_pointer_cast(
+                                x_m,
+                                self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "left",
+                            )
+                            .into(),
+                        self.builder
+                            .build_pointer_cast(
+                                y_m,
+                                self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "right",
+                            )
+                            .into(),
+                        self.builder
+                            .build_pointer_cast(
+                                x_times_y_m,
+                                self.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "output",
+                            )
+                            .into(),
+                        self.context.i32_type().const_int(512 / 32, false).into(),
+                    ],
+                    "",
+                );
+                let k = self
+                    .expression(&args[2], vartab, function, runtime)
+                    .into_int_value();
+                let dividend = self.builder.build_load(x_times_y_m, "x_t_y");
+
+                let divisor = self.builder.build_int_z_extend(k, arith_ty, "wide_k");
+
+                let rem = self.builder.build_alloca(arith_ty, "remainder");
+                let quotient = self.builder.build_alloca(arith_ty, "quotient");
+
+                let ret = self
+                    .builder
+                    .build_call(
+                        self.udivmod(512, runtime),
+                        &[dividend, divisor.into(), rem.into(), quotient.into()],
+                        "quotient",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let success = self.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    self.context.i32_type().const_zero(),
+                    "success",
+                );
+
+                let success_block = self.context.append_basic_block(function, "success");
+                let bail_block = self.context.append_basic_block(function, "bail");
+                self.builder
+                    .build_conditional_branch(success, success_block, bail_block);
+
+                self.builder.position_at_end(bail_block);
+
+                self.builder.build_return(Some(&ret));
+                self.builder.position_at_end(success_block);
+
+                let quotient = self
+                    .builder
+                    .build_load(quotient, "quotient")
+                    .into_int_value();
+
+                self.builder
+                    .build_int_truncate(quotient, res_ty, "quotient")
+                    .into()
+            }
             Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
             _ => panic!("{:?} not implemented", e),
         }

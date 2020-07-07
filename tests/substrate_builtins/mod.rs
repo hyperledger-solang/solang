@@ -931,3 +931,122 @@ fn addmod() {
 
     runtime.function("test", Vec::new());
 }
+
+#[test]
+fn mulmod() {
+    // does it work with small numbers
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(500, 100, 5) == 10000);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // divide by zero
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(500, 100, 0) == 200);
+            }
+        }"##,
+    );
+
+    runtime.function_expect_return("test", Vec::new(), 1);
+
+    // bigger numbers
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(50000, 10000, 5) == 10000_0000);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(18446744073709551616, 18446744073709550403, 1024) == 332306998946228946374486373068439552);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // 2^127 = 170141183460469231731687303715884105728
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(170141183460469231731687303715884105728, 170141183460469231731687303715884105728, 170141183460469231731687303715884105728) == 170141183460469231731687303715884105728);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // 2^128 = 340282366920938463463374607431768211456
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(340282366920938463463374607431768211456, 340282366920938463463374607431768211456, 340282366920938463463374607431768211456) == 340282366920938463463374607431768211456);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // 2^240 = 1766847064778384329583297500742918515827483896875618958121606201292619776
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(1766847064778384329583297500742918515827483896875618958121606201292619776,
+                    1766847064778384329583297500742918515827483896875618958121606201292619776,
+                    1766847064778384329583297500742918515827483896875618958121606201292619776) 
+                    == 1766847064778384329583297500742918515827483896875618958121606201292619776);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // 240 bit prime: 824364134751099588297822369420176791913922347811791536817152126684405253
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(824364134751099588297822369420176791913922347811791536817152126684405253,
+                    824364134751099588297822369420176791913922347811791536817152126684405253,
+                    824364134751099588297822369420176791913922347811791536817152126684405253) 
+                    == 824364134751099588297822369420176791913922347811791536817152126684405253);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // 256 bit prime: 113477814626329405513123655892059150026234290706112418221315641434319827527851
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(mulmod(113477814626329405513123655892059150026234290706112418221315641434319827527851,
+                    113477814626329405513123655892059150026234290706112418221315641434319827527851,
+                    113477814626329405513123655892059150026234290706112418221315641434319827527851) 
+                    == 113477814626329405513123655892059150026234290706112418221315641434319827527851);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+}
