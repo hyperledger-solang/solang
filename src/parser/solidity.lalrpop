@@ -18,8 +18,18 @@ SourceUnitPart: SourceUnitPart = {
     StructDefinition => SourceUnitPart::StructDefinition(<>),
 }
 
-ImportDirective: StringLiteral = {
-    "import" <s:StringLiteral> ";" => s
+ImportDirective: Import = {
+    "import" <s:StringLiteral> ";" => Import::Plain(s),
+    "import" <s:StringLiteral> "as" <id:Identifier> ";" => Import::GlobalSymbol(s, id),
+    "import" "*" "as" <id:Identifier> "from" <s:StringLiteral> ";" => Import::GlobalSymbol(s, id),
+    "import" "{" <rename:CommaOne<ImportRename>> "}" "from" <s:StringLiteral> ";" => {
+        Import::Rename(s, rename)
+    }
+}
+
+ImportRename: (Identifier, Option<Identifier>) = {
+    <Identifier> => (<>, None),
+    <from:Identifier> "as" <to:Identifier> => (from, Some(to)),
 }
 
 PragmaDirective: (Identifier, StringLiteral) = {
@@ -611,6 +621,8 @@ extern {
         "finney" => Token::Finney,
         "ether" => Token::Ether,
         "this" => Token::This,
+        "as" => Token::As,
+        "from" => Token::From,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }
