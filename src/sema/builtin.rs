@@ -15,7 +15,7 @@ struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: [Prototype; 20] = [
+static BUILTIN_FUNCTIONS: [Prototype; 22] = [
     Prototype {
         builtin: Builtin::Assert,
         namespace: None,
@@ -174,6 +174,22 @@ static BUILTIN_FUNCTIONS: [Prototype; 20] = [
         name: "encodeWithSignature",
         args: &[Type::String],
         ret: &[],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::MulMod,
+        namespace: None,
+        name: "mulmod",
+        args: &[Type::Uint(256), Type::Uint(256), Type::Uint(256)],
+        ret: &[Type::Uint(256)],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::AddMod,
+        namespace: None,
+        name: "addmod",
+        args: &[Type::Uint(256), Type::Uint(256), Type::Uint(256)],
+        ret: &[Type::Uint(256)],
         target: None,
     },
 ];

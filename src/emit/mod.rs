@@ -767,54 +767,6 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
         match e {
-            Expression::Builtin(_, _, Builtin::Calldata, _) => self
-                .builder
-                .build_call(
-                    self.module.get_function("vector_new").unwrap(),
-                    &[
-                        self.builder
-                            .build_load(self.calldata_len.as_pointer_value(), "calldata_len"),
-                        self.context.i32_type().const_int(1, false).into(),
-                        self.builder
-                            .build_load(self.calldata_data.as_pointer_value(), "calldata_data"),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap(),
-            Expression::Builtin(_, _, Builtin::Signature, _) => {
-                // need to byte-reverse selector
-                let selector = self
-                    .builder
-                    .build_alloca(self.context.i32_type(), "selector");
-
-                // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-                self.builder.build_call(
-                    self.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        self.builder
-                            .build_pointer_cast(
-                                self.selector.as_pointer_value(),
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        self.builder
-                            .build_pointer_cast(
-                                selector,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        self.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                self.builder.build_load(selector, "selector")
-            }
-            Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => self
                 .context
@@ -1894,6 +1846,115 @@ impl<'a> Contract<'a> {
 
                 runtime.balance(self, addr).into()
             }
+            Expression::Builtin(_, _, Builtin::Calldata, _) => self
+                .builder
+                .build_call(
+                    self.module.get_function("vector_new").unwrap(),
+                    &[
+                        self.builder
+                            .build_load(self.calldata_len.as_pointer_value(), "calldata_len"),
+                        self.context.i32_type().const_int(1, false).into(),
+                        self.builder
+                            .build_load(self.calldata_data.as_pointer_value(), "calldata_data"),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap(),
+            Expression::Builtin(_, _, Builtin::Signature, _) => {
+                // need to byte-reverse selector
+                let selector = self
+                    .builder
+                    .build_alloca(self.context.i32_type(), "selector");
+
+                // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+                self.builder.build_call(
+                    self.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        self.builder
+                            .build_pointer_cast(
+                                self.selector.as_pointer_value(),
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        self.builder
+                            .build_pointer_cast(
+                                selector,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        self.context.i32_type().const_int(4, false).into(),
+                    ],
+                    "",
+                );
+
+                self.builder.build_load(selector, "selector")
+            }
+            Expression::Builtin(_, _, Builtin::AddMod, args) => {
+                let arith_ty = self.context.custom_width_int_type(512);
+                let res_ty = self.context.custom_width_int_type(256);
+
+                let x = self
+                    .expression(&args[0], vartab, function, runtime)
+                    .into_int_value();
+                let y = self
+                    .expression(&args[1], vartab, function, runtime)
+                    .into_int_value();
+                let k = self
+                    .expression(&args[2], vartab, function, runtime)
+                    .into_int_value();
+                let dividend = self.builder.build_int_add(
+                    self.builder.build_int_z_extend(x, arith_ty, "wide_x"),
+                    self.builder.build_int_z_extend(y, arith_ty, "wide_y"),
+                    "x_plus_y",
+                );
+
+                let divisor = self.builder.build_int_z_extend(k, arith_ty, "wide_k");
+
+                let rem = self.builder.build_alloca(arith_ty, "remainder");
+                let quotient = self.builder.build_alloca(arith_ty, "quotient");
+
+                let ret = self
+                    .builder
+                    .build_call(
+                        self.udivmod(512, runtime),
+                        &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                        "quotient",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let success = self.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    self.context.i32_type().const_zero(),
+                    "success",
+                );
+
+                let success_block = self.context.append_basic_block(function, "success");
+                let bail_block = self.context.append_basic_block(function, "bail");
+                self.builder
+                    .build_conditional_branch(success, success_block, bail_block);
+
+                self.builder.position_at_end(bail_block);
+
+                self.builder.build_return(Some(&ret));
+                self.builder.position_at_end(success_block);
+
+                let quotient = self
+                    .builder
+                    .build_load(quotient, "quotient")
+                    .into_int_value();
+
+                self.builder
+                    .build_int_truncate(quotient, res_ty, "quotient")
+                    .into()
+            }
+            Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
             _ => panic!("{:?} not implemented", e),
         }
     }
