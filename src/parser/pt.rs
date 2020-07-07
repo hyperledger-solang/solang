@@ -17,9 +17,16 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 pub enum SourceUnitPart {
     ContractDefinition(Box<ContractDefinition>),
     PragmaDirective(Identifier, StringLiteral),
-    ImportDirective(StringLiteral),
+    ImportDirective(Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Import {
+    Plain(StringLiteral),
+    GlobalSymbol(StringLiteral, Identifier),
+    Rename(StringLiteral, Vec<(Identifier, Option<Identifier>)>),
 }
 
 #[derive(Debug, PartialEq, Clone)]

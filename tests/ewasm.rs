@@ -2065,8 +2065,8 @@ fn selfdestruct() {
     let mut runtime = build_solidity(
         r##"
         contract other {
-            function goaway(address payable from) public returns (bool) {
-                selfdestruct(from);
+            function goaway(address payable recipient) public returns (bool) {
+                selfdestruct(recipient);
             }
         }
 
