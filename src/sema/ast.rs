@@ -952,6 +952,8 @@ pub enum Builtin {
     AbiEncodePacked,
     AbiEncodeWithSelector,
     AbiEncodeWithSignature,
+    MulMod,
+    AddMod,
 }
 
 #[derive(PartialEq, Clone, Debug)]

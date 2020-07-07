@@ -843,3 +843,91 @@ fn data() {
     runtime.constructor(0, String(b"foobar".to_vec()).encode());
     runtime.function("test", Uint32(0xdeaddead).encode());
 }
+
+#[test]
+fn addmod() {
+    // does it work with small numbers
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(addmod(500, 100, 3) == 200);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // divide by zero
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(addmod(500, 100, 0) == 200);
+            }
+        }"##,
+    );
+
+    runtime.function_expect_return("test", Vec::new(), 1);
+
+    // bigger numbers (64 bit)
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                // 8_163_321_534_310_945_187 * 16_473_784_705_703_234_153 = 134_480_801_439_669_508_040_541_782_812_209_371_611
+                assert(addmod(
+                    0,
+                    134_480_801_439_669_508_040_541_782_812_209_371_611,
+                    16_473_784_705_703_234_153) == 8_163_321_534_310_945_187);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // bigger numbers (128 bit)
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                // 254_765_928_331_839_140_628_748_569_208_536_440_801 * 148_872_967_607_295_528_830_315_866_466_318_446_379 = 37_927_759_795_988_462_606_362_647_643_228_779_300_269_446_446_871_437_380_583_919_404_728_626_309_579
+                assert(addmod(
+                    0,
+                    37_927_759_795_988_462_606_362_647_643_228_779_300_269_446_446_871_437_380_583_919_404_728_626_309_579,
+                    148_872_967_607_295_528_830_315_866_466_318_446_379) == 254_765_928_331_839_140_628_748_569_208_536_440_801);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // bigger numbers (256 bit)
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(addmod(
+                    109802613191917590715814365746623394364442484359636492253827647701845853490667,
+                    49050800785888222684575674817707208319566972397745729319314900174750088808217,
+                    233) == 681774308917621516739871418731032629545104964623958032502757716208566275960);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract x {
+            function test() public {
+                assert(addmod(
+                    109802613191917590715814365746623394364442484359636492253827647701845853490667,
+                    109802613191917590715814365746623394364442484359636492253827647701845853490667,
+                    2) == 109802613191917590715814365746623394364442484359636492253827647701845853490667);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+}
