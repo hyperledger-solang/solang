@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use solang::abi;
 use solang::codegen::codegen;
 use solang::output;
+use solang::parsedcache::ParsedCache;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -82,6 +83,14 @@ fn main() {
                 .long("output")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("IMPORTPATH")
+                .help("Directory to search for solidity files")
+                .short("I")
+                .long("importpath")
+                .takes_value(true)
+                .multiple(true),
+        )
         .get_matches();
 
     let mut json = JsonResult {
@@ -100,8 +109,34 @@ fn main() {
         eprintln!("info: Solang version {}", env!("GIT_HASH"));
     }
 
+    let mut cache = ParsedCache::new();
+
+    match PathBuf::from(".").canonicalize() {
+        Ok(p) => cache.add_import_path(p),
+        Err(e) => {
+            eprintln!(
+                "error: cannot add current directory to import path: {}",
+                e.to_string()
+            );
+            std::process::exit(1);
+        }
+    }
+
+    if let Some(paths) = matches.values_of("IMPORTPATH") {
+        for p in paths {
+            let path = PathBuf::from(p);
+            match path.canonicalize() {
+                Ok(p) => cache.add_import_path(p),
+                Err(e) => {
+                    eprintln!("error: import path ‘{}’: {}", p, e.to_string());
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+
     for filename in matches.values_of("INPUT").unwrap() {
-        process_filename(filename, target, &matches, &mut json);
+        process_filename(filename, &mut cache, target, &matches, &mut json);
     }
 
     if matches.is_present("STD-JSON") {
@@ -111,6 +146,7 @@ fn main() {
 
 fn process_filename(
     filename: &str,
+    cache: &mut ParsedCache,
     target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,
@@ -130,24 +166,12 @@ fn process_filename(
 
     let mut json_contracts = HashMap::new();
 
-    let mut f = match File::open(&filename) {
-        Err(err_info) => {
-            eprintln!(
-                "error: cannot open {:?}: {}",
-                &filename,
-                err_info.to_string()
-            );
-            std::process::exit(1);
-        }
-        Ok(file) => file,
-    };
-
-    let mut contents = String::new();
-    f.read_to_string(&mut contents)
-        .expect("something went wrong reading the file");
-
     // resolve phase
-    let mut ns = solang::parse_and_resolve(&contents, target);
+    let mut ns = solang::parse_and_resolve(filename, cache, target);
+
+    output::print_messages(filename, "", &ns.diagnostics, verbose);
+
+    let contents = cache.get_file_contents(filename);
 
     if matches.is_present("STD-JSON") {
         let mut out = output::message_as_json(filename, &contents, &ns.diagnostics);

@@ -1,11 +1,11 @@
 use parity_scale_codec::{Decode, Encode};
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, no_errors};
+use super::{build_solidity, first_error, no_errors, parse_and_resolve};
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use rand::Rng;
-use solang::{parse_and_resolve, Target};
+use solang::Target;
 
 #[test]
 fn celcius_and_fahrenheit() {

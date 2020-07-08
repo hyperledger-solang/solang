@@ -1,14 +1,7 @@
 extern crate solang;
 
-use solang::output;
-use solang::{parse_and_resolve, Target};
-
-fn first_error(errors: Vec<output::Output>) -> String {
-    match errors.iter().find(|m| m.level == output::Level::Error) {
-        Some(m) => m.message.to_owned(),
-        None => panic!("no errors found"),
-    }
-}
+use super::{first_error, parse_and_resolve};
+use solang::Target;
 
 #[test]
 fn test_infinite_loop() {

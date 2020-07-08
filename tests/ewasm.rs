@@ -16,6 +16,7 @@ use wasmi::memory_units::Pages;
 use wasmi::*;
 
 use solang::output;
+use solang::parsedcache::ParsedCache;
 use solang::{compile, Target};
 
 type Address = [u8; 20];
@@ -660,9 +661,13 @@ impl TestRuntime {
 }
 
 fn build_solidity(src: &'static str) -> TestRuntime {
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents("test.sol".to_string(), src.to_string());
+
     let (res, errors) = compile(
-        src,
         "test.sol",
+        &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Ewasm,
     );

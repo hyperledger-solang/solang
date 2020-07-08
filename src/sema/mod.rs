@@ -21,16 +21,46 @@ mod variables;
 
 use codegen::cfg::ControlFlowGraph;
 use emit;
-use sema::ast::Statement;
+use parsedcache::ParsedCache;
 use sema::eval::eval_const_number;
 use sema::expression::expression;
 use sema::symtable::Symtable;
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
-pub fn sema(s: pt::SourceUnit, target: Target) -> ast::Namespace {
+pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target) -> ast::Namespace {
+    let pt = match cache.parse(filename) {
+        Ok(s) => s,
+        Err(errors) => {
+            let mut ns = ast::Namespace::new(target, 32);
+
+            ns.diagnostics = errors;
+
+            return ns;
+        }
+    };
+
+    // resolve imports
+    for part in &(*pt).0 {
+        if let pt::SourceUnitPart::ImportDirective(import) = part {
+            let filename = match import {
+                pt::Import::Plain(f) => f,
+                pt::Import::GlobalSymbol(f, _) => f,
+                pt::Import::Rename(f, _) => f,
+            };
+
+            // recurse; FIXME check for infinite recursion
+            let ns = sema(&filename.string, cache, target);
+
+            // give up if we failed
+            if any_errors(&ns.diagnostics) {
+                return ns;
+            }
+        }
+    }
+
     // first resolve all the types we can find
-    let mut ns = types::resolve(&s, target);
+    let mut ns = types::resolve(&pt, target);
 
     // give up if we failed
     if any_errors(&ns.diagnostics) {
@@ -40,7 +70,7 @@ pub fn sema(s: pt::SourceUnit, target: Target) -> ast::Namespace {
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut contract_no = 0;
-    for part in &s.0 {
+    for part in &(*pt).0 {
         if let pt::SourceUnitPart::ContractDefinition(def) = part {
             resolve_contract_declarations(def, contract_no, target, &mut ns);
 
@@ -50,7 +80,7 @@ pub fn sema(s: pt::SourceUnit, target: Target) -> ast::Namespace {
 
     // Now we can resolve the bodies
     let mut contract_no = 0;
-    for part in &s.0 {
+    for part in &(*pt).0 {
         if let pt::SourceUnitPart::ContractDefinition(def) = part {
             resolve_contract_bodies(def, contract_no, &mut ns);
 
@@ -113,7 +143,7 @@ fn resolve_contract_declarations(
             ns,
         );
 
-        fdecl.body = vec![Statement::Return(pt::Loc(0, 0), Vec::new())];
+        fdecl.body = vec![ast::Statement::Return(pt::Loc(0, 0), Vec::new())];
 
         ns.contracts[contract_no].functions.push(fdecl);
     }
