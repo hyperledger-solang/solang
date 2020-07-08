@@ -1492,6 +1492,53 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
+Calling an external function without encoding
+_____________________________________________
+
+If you call a function on contract, then the function selector and any arguments
+are ABI encoded for you, and any return values are decoded. Sometimes it is useful
+to call a function with raw encoded arguments.
+
+You can call a contract directly by using the ``call()`` method on the address type.
+This takes a single argument, which should be the ABI encoded arguments. The return
+values are a ``boolean`` which indicates success if true, and the ABI encoded
+return value in ``bytes``.
+
+.. code-block:: javascript
+
+    contract a {
+        function test() public {
+            b v = new b();
+
+            // the following four lines are equivalent to "uint32 res = v.foo(3,5);"
+            bytes data = abi.encodeWithSignature("foo(uint32,uint32)", uint32(3) + uint32(5));
+
+            (bool success, bytes rawresult) = address(v).call(data);
+
+            assert(success == true);
+
+            uint32 res = abi.decode(rawresult, (uint32));
+
+            assert(res == 8);
+        }
+    }
+
+    contract b {
+        function foo(uint32 a, uint32 b) public returns (uint32) {
+            return a + b;
+        }
+    }
+
+Any value or gas limit can be specified for the external call. Note that no check is done to see
+if the called function is ``payable``, since the compiler does not know what function you are
+calling.
+
+.. code-block:: javascript
+
+    function test(address foo, bytes rawcalldata) public {
+        (bool success, bytes rawresult) = foo.call{value: 102, gas: 1000}(rawcalldata);
+    }
+
 fallback() and receive() function
 _________________________________
 
@@ -1907,49 +1954,57 @@ might be useful when no error string is expected, and will generate shorter code
 Builtin Functions and Variables
 -------------------------------
 
+The Solidity language has a number of built-in variables and functions which give
+access to the environment or pre-defined functions. Some of these functions will
+be different on different chains.
+
 Block and transaction
 _____________________
+
+The functions and variables give access to block properties like block
+number and transaction properties like gas used, and value sent.
 
 gasleft() returns (uint64)
 ++++++++++++++++++++++++++
 
-Returns the amount of gas remaining the current function.
+Returns the amount of gas remaining the current transaction.
 
 blockhash(uint64 block) returns (bytes32)
 +++++++++++++++++++++++++++++++++++++++++
 
-Returns the blockhash for particular block. This not possible for the current
-block, or any block except for the most recent 256.
+Returns the blockhash for a particular block. This not possible for the current
+block, or any block except for the most recent 256. Do not use this a source of
+randomness unless you know what you are doing.
 
 .. note::
 
-    This function is not available on Parity Substrate. Use ``random()`` instead.
+    This function is not available on Parity Substrate. When using Parity Substrate,
+    use ``random()`` as a source of random data.
 
 random(bytes subject) returns (bytes32)
 +++++++++++++++++++++++++++++++++++++++
 
 Returns random bytes based on the subject. The same subject for the same transaction
-will return the same random bytes, so the result is deterministic. The chain can have
-a ``max_subject_len`` configured, and if the *subject* exceeds that, the transaction
-will be aborted.
+will return the same random bytes, so the result is deterministic. The chain has
+a ``max_subject_len``, and if *subject* exceeds that, the transaction will be aborted.
 
 .. note::
 
-    This function is only available on Parity Substrate. On Ethereum, use ``blockhash()`` instead.
+    This function is only available on Parity Substrate.
 
 ``msg`` properties
 ++++++++++++++++++
 
 uint128 ``msg.value``
-    The amount of value sent with transaction, or 0 if no value was sent.
+    The amount of value sent with a transaction, or 0 if no value was sent.
 
 bytes ``msg.data``
-    The raw ABI encoded arguments passed to make the current.
+    The raw ABI encoded arguments passed to the current call.
 
 bytes4 ``msg.sig``
-    Function selector from the ABI encoded calldata. This might be 0 if no
-    function selector was present. In Ethereum, constructors do not have function
-    selectors but in Parity Substrate they do.
+    Function selector from the ABI encoded calldata, e.g. the first four bytes. This
+    might be 0 if no function selector was present. In Ethereum, constructor calls do not
+    have function selectors but in Parity Substrate they do.
 
 address ``msg.sender``
     The sender of the current call. This is either the address of the contract
@@ -1964,9 +2019,12 @@ Some block properties are always available:
 uint64 ``block.number``
     The current block number.
 
-uint64 ``block.timestamp``
+uint64 ``block.timestamp`` or ``now``
     The time in unix epoch, i.e. seconds since the beginning of 1970. This field
     has an alias ``now``.
+
+Do not use either of these two fields as a source of randomness unless you know what
+you are doing.
 
 The other block properties depend on which chain is being used.
 
@@ -1988,10 +2046,10 @@ uint64 ``block.gaslimit``
     The current block gas limit.
 
 address payable ``block.coinbase``
-    The current block miner's address
+    The current block miner's address.
 
 uint256 ``block.difficulty``
-    The current block's difficulty
+    The current block's difficulty.
 
 
 Error handling
@@ -2081,7 +2139,7 @@ ABI encodes the arguments to bytes. Any number of arguments can be provided.
     uint16 x = 241;
     bytes foo = abi.encode(x);
 
-On Substrate, foo will be ``hex"f100"``. On Ethereum this will be ``hex"000000000000000000000000000000f1"``.
+On Substrate, foo will be ``hex"f100"``. On Ethereum this will be ``hex"00000000000000000000000000000000000000000000000000000000000000f1"``.
 
 abi.encodeWithSelector(bytes4 selector, ...)
 ++++++++++++++++++++++++++++++++++++++++++++
@@ -2093,7 +2151,7 @@ can be provided.
 
     bytes foo = abi.encodeWithSelector(hex"01020304", uint16(0xff00), "ABCD");
 
-On Substrate, foo will be ``hex"04030201f100"``. On Ethereum this will be ``hex"01020304000000000000000000000000000000f1"``.
+On Substrate, foo will be ``hex"0403020100ff"``. On Ethereum this will be ``hex"01020304000000000000000000000000000000000000000000000000000000000000ff00"``.
 
 abi.encodeWithSignature(string signature, ...)
 ++++++++++++++++++++++++++++++++++++++++++++++
@@ -2105,41 +2163,31 @@ can be provided. This is equivalent to ``abi.encodeWithSignature(bytes4(keccak25
 
     bytes foo = abi.encodeWithSignature("test2(uint64)", uint64(257));
 
-On Substrate, foo will be ``hex"296dacf0_0101_0000__0000_0000"``. On Ethereum this will be ``hex"296dacf0_00000000000000000000000000000101"``.
+On Substrate, foo will be ``hex"296dacf0_0101_0000__0000_0000"``. On Ethereum this will be ``hex"296dacf0_0000000000000000000000000000000000000000000000000000000000000101"``.
 
 abi.encodePacked(...)
 +++++++++++++++++++++
 
 ABI encodes the arguments to bytes. Any number of arguments can be provided. The packed encoding only
-encodes the raw data, not the length and offsets. For example, when encoding ``string`` only the string
+encodes the raw data, not the lengths of strings and arrays. For example, when encoding ``string`` only the string
 bytes will be encoded, not the length. It is not possible to decode packed encoding.
 
 .. code-block:: javascript
 
-    bytes foo = abi.encode(uint16(0xff00, "ABCD");
+    bytes foo = abi.encode(uint16(0xff00), "ABCD");
 
 On Substrate, foo will be ``hex"00ff41424344"``. On Ethereum this will be ``hex"ff0041424344"``.
 
-Cryptograhpy
+Cryptography
 ____________
-
-blake2_128(bytes)
-+++++++++++++++++
-
-This returns the ``bytes16`` blake2_128 hash of the bytes. This function is only available on Parity Substrate.
-
-blake2_256(bytes)
-+++++++++++++++++
-
-This returns the ``bytes32`` blake2_256 hash of the bytes. This function is only available on Parity Substrate.
 
 keccak256(bytes)
 ++++++++++++++++
 
 This returns the ``bytes32`` keccak256 hash of the bytes.
 
-ripemd(bytes)
-+++++++++++++
+ripemd160(bytes)
+++++++++++++++++
 
 This returns the ``bytes20`` ripemd160 hash of the bytes.
 
@@ -2147,6 +2195,24 @@ sha256(bytes)
 +++++++++++++
 
 This returns the ``bytes32`` sha256 hash of the bytes.
+
+blake2_128(bytes)
++++++++++++++++++
+
+This returns the ``bytes16`` blake2_128 hash of the bytes.
+
+.. note::
+
+    This function is only available on Parity Substrate.
+
+blake2_256(bytes)
++++++++++++++++++
+
+This returns the ``bytes32`` blake2_256 hash of the bytes.
+
+.. note::
+
+    This function is only available on Parity Substrate.
 
 Mathematical
 ____________
