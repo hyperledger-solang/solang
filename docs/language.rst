@@ -1904,11 +1904,101 @@ might be useful when no error string is expected, and will generate shorter code
         }
     }
 
-Builtin Functions
------------------
+Builtin Functions and Variables
+-------------------------------
+
+Block and transaction
+_____________________
+
+gasleft() returns (uint64)
+++++++++++++++++++++++++++
+
+Returns the amount of gas remaining the current function.
+
+blockhash(uint64 block) returns (bytes32)
++++++++++++++++++++++++++++++++++++++++++
+
+Returns the blockhash for particular block. This not possible for the current
+block, or any block except for the most recent 256.
+
+.. note::
+
+    This function is not available on Parity Substrate. Use ``random()`` instead.
+
+random(bytes subject) returns (bytes32)
++++++++++++++++++++++++++++++++++++++++
+
+Returns random bytes based on the subject. The same subject for the same transaction
+will return the same random bytes, so the result is deterministic. The chain can have
+a ``max_subject_len`` configured, and if the *subject* exceeds that, the transaction
+will be aborted.
+
+.. note::
+
+    This function is only available on Parity Substrate. On Ethereum, use ``blockhash()`` instead.
+
+``msg`` properties
+++++++++++++++++++
+
+uint128 ``msg.value``
+    The amount of value sent with transaction, or 0 if no value was sent.
+
+bytes ``msg.data``
+    The raw ABI encoded arguments passed to make the current.
+
+bytes4 ``msg.sig``
+    Function selector from the ABI encoded calldata. This might be 0 if no
+    function selector was present. In Ethereum, constructors do not have function
+    selectors but in Parity Substrate they do.
+
+address ``msg.sender``
+    The sender of the current call. This is either the address of the contract
+    that called the current contract, or the address that started the transaction
+    if it called the current contract directly.
+
+``block`` properties
+++++++++++++++++++++++
+
+Some block properties are always available:
+
+uint64 ``block.number``
+    The current block number.
+
+uint64 ``block.timestamp``
+    The time in unix epoch, i.e. seconds since the beginning of 1970. This field
+    has an alias ``now``.
+
+The other block properties depend on which chain is being used.
+
+Parity Substrate
+~~~~~~~~~~~~~~~~
+
+uint128 ``block.tombstone_deposit``
+    The amount needed for a tombstone. Without it, contracts will disappear
+    completely if the balance runs out.
+
+uint128 ``block.minimum_deposit``
+    The minimum amonut needed to create a contract. This does not include
+    storage rent.
+
+Ethereum
+~~~~~~~~
+
+uint64 ``block.gaslimit``
+    The current block gas limit.
+
+address payable ``block.coinbase``
+    The current block miner's address
+
+uint256 ``block.difficulty``
+    The current block's difficulty
+
+
+Error handling
+______________
 
 assert(bool)
-____________
+++++++++++++
 
 Assert takes a boolean argument. If that evaluates to false, execution is aborted.
 
@@ -1921,23 +2011,161 @@ Assert takes a boolean argument. If that evaluates to false, execution is aborte
         }
     }
 
+revert() or revert(string)
+++++++++++++++++++++++++++
+
+revert aborts execution of the current contract, and returns to the caller. revert()
+can be called with no arguments, or a single `string` argument, which is called the
+`ReasonCode`. This function can be called at any point, either in a constructor or
+a function.
+
+If the caller is another contract, it can use the `ReasonCode` in a :ref:`try-catch`
+statement.
+
+.. code-block:: javascript
+
+    contract x {
+        constructor(address foobar) public {
+            if (a == address(0)) {
+                revert("foobar must a valid address");
+            }
+        }
+    }
+
+require(bool) or require(bool, string)
+++++++++++++++++++++++++++++++++++++++
+
+This function is used to check that a condition holds true, or abort execution otherwise. So,
+if the first `bool` argument is `true`, this function does nothing, however
+if the `bool` arguments is `false`, then execution is aborted. There is an optional second
+`string` argument which is called the `ReasonCode`, which can be used by the caller
+to identify what the problem is.
+
+.. code-block:: javascript
+
+    contract x {
+        constructor(address foobar) public {
+            require(foobar != address(0), "foobar must a valid address");
+        }
+    }
+
+
+ABI encoding and decoding
+_________________________
+
+The ABI encoding depends on the target being compiled for. Substrate uses the
+`SCALE Codec <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_ and ewasm uses
+`Ethereum ABI encoding <https://substrate.dev/docs/en/knowledgebase/advanced/codec>`_.
+
+abi.decode(bytes, (*type-list*))
+++++++++++++++++++++++++++++++++
+
+This function decodes the first argument and returns the decoded fields. *type-list* is a comma-separated
+list of types. If multiple values are decoded, then a destructure statement must be used.
+
+.. code-block:: javascript
+
+    uint64 foo = abi.decode(bar, (uint64));
+
+.. code-block:: javascript
+
+    (uint64 foo1, bool foo2) = abi.decode(bar, (uint64, bool));
+
+abi.encode(...)
++++++++++++++++
+
+ABI encodes the arguments to bytes. Any number of arguments can be provided.
+
+.. code-block:: javascript
+
+    uint16 x = 241;
+    bytes foo = abi.encode(x);
+
+On Substrate, foo will be ``hex"f100"``. On Ethereum this will be ``hex"000000000000000000000000000000f1"``.
+
+abi.encodeWithSelector(bytes4 selector, ...)
+++++++++++++++++++++++++++++++++++++++++++++
+
+ABI encodes the arguments with the function selector first. After the selector, any number of arguments
+can be provided.
+
+.. code-block:: javascript
+
+    bytes foo = abi.encodeWithSelector(hex"01020304", uint16(0xff00), "ABCD");
+
+On Substrate, foo will be ``hex"04030201f100"``. On Ethereum this will be ``hex"01020304000000000000000000000000000000f1"``.
+
+abi.encodeWithSignature(string signature, ...)
+++++++++++++++++++++++++++++++++++++++++++++++
+
+ABI encodes the arguments with the ``bytes4`` hash of the signature. After the signature, any number of arguments
+can be provided. This is equivalent to ``abi.encodeWithSignature(bytes4(keccak256(signature)), ...)``.
+
+.. code-block:: javascript
+
+    bytes foo = abi.encodeWithSignature("test2(uint64)", uint64(257));
+
+On Substrate, foo will be ``hex"296dacf0_0101_0000__0000_0000"``. On Ethereum this will be ``hex"296dacf0_00000000000000000000000000000101"``.
+
+abi.encodePacked(...)
++++++++++++++++++++++
+
+ABI encodes the arguments to bytes. Any number of arguments can be provided. The packed encoding only
+encodes the raw data, not the length and offsets. For example, when encoding ``string`` only the string
+bytes will be encoded, not the length. It is not possible to decode packed encoding.
+
+.. code-block:: javascript
+
+    bytes foo = abi.encode(uint16(0xff00, "ABCD");
+
+On Substrate, foo will be ``hex"00ff41424344"``. On Ethereum this will be ``hex"ff0041424344"``.
+
+Cryptograhpy
+____________
+
 blake2_128(bytes)
-_________________
++++++++++++++++++
 
 This returns the ``bytes16`` blake2_128 hash of the bytes. This function is only available on Parity Substrate.
 
 blake2_256(bytes)
-_________________
++++++++++++++++++
 
 This returns the ``bytes32`` blake2_256 hash of the bytes. This function is only available on Parity Substrate.
 
 keccak256(bytes)
-________________
+++++++++++++++++
 
 This returns the ``bytes32`` keccak256 hash of the bytes.
 
-print(string)
+ripemd(bytes)
++++++++++++++
+
+This returns the ``bytes20`` ripemd160 hash of the bytes.
+
+sha256(bytes)
++++++++++++++
+
+This returns the ``bytes32`` sha256 hash of the bytes.
+
+Mathematical
+____________
+
+addmod(uint x, uint y, uint, k) returns (uint)
+++++++++++++++++++++++++++++++++++++++++++++++
+
+Add x to y, and then divides by k. x + y will not overflow.
+
+mulmod(uint x, uint y, uint, k) returns (uint)
+++++++++++++++++++++++++++++++++++++++++++++++
+
+Multiply x with y, and then divides by k. x * y will not overflow.
+
+Miscellaneous
 _____________
+
+print(string)
++++++++++++++
 
 print() takes a string argument.
 
@@ -1959,58 +2187,10 @@ print() takes a string argument.
   When using ewasm, the function is only available on hera when compiled with
   debugging.
 
-revert() or revert(string)
-__________________________
-
-revert aborts execution of the current contract, and returns to the caller. revert()
-can be called with no arguments, or a single `string` argument, which is called the
-`ReasonCode`. This function can be called at any point, either in a constructor or
-a function.
-
-If the caller is another contract, it can use the `ReasonCode` in a :ref:`try-catch`
-statement.
-
-.. code-block:: javascript
-
-    contract x {
-        constructor(address foobar) public {
-            if (a == address(0)) {
-                revert("foobar must a valid address");
-            }
-        }
-    }
-
-require(bool) or require(bool, string)
-______________________________________
-
-This function is used to check that a condition holds true, or abort execution otherwise. So,
-if the first `bool` argument is `true`, this function does nothing, however
-if the `bool` arguments is `false`, then execution is aborted. There is an optional second
-`string` argument which is called the `ReasonCode`, which can be used by the caller
-to identify what the problem is.
-
-.. code-block:: javascript
-
-    contract x {
-        constructor(address foobar) public {
-            require(foobar != address(0), "foobar must a valid address");
-        }
-    }
-
-ripemd(bytes)
-_____________
-
-This returns the ``bytes20`` ripemd160 hash of the bytes.
-
-sha256(bytes)
-_____________
-
-This returns the ``bytes32`` sha256 hash of the bytes.
-
 .. _selfdestruct:
 
 selfdestruct(address payable recipient)
-_______________________________________
++++++++++++++++++++++++++++++++++++++++
 
 The ``selfdestruct()`` function causes the current contract to be deleted, and any
 remaining balance to be sent to `recipient`. This functions does not return, as the
