@@ -1,8 +1,8 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error};
-use solang::{parse_and_resolve, Target};
+use super::{build_solidity, first_error, parse_and_resolve};
+use solang::Target;
 
 #[test]
 fn abi_decode() {

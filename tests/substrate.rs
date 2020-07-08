@@ -26,6 +26,8 @@ use wasmi::*;
 
 use solang::abi;
 use solang::output;
+use solang::parsedcache::ParsedCache;
+use solang::sema::ast::Namespace;
 use solang::{compile, Target};
 
 mod substrate_enums;
@@ -39,11 +41,13 @@ mod substrate_calls;
 mod substrate_contracts;
 mod substrate_first;
 mod substrate_functions;
+mod substrate_loops;
 mod substrate_mappings;
 mod substrate_primitives;
 mod substrate_strings;
 mod substrate_structs;
 mod substrate_value;
+mod substrate_variables;
 
 type StorageKey = [u8; 32];
 type Address = [u8; 32];
@@ -927,10 +931,22 @@ impl TestRuntime {
     }
 }
 
+pub fn parse_and_resolve(src: &'static str, target: Target) -> Namespace {
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents("test.sol".to_string(), src.to_string());
+
+    solang::parse_and_resolve("test.sol", &mut cache, target)
+}
+
 pub fn build_solidity(src: &'static str) -> TestRuntime {
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents("test.sol".to_string(), src.to_string());
+
     let (res, errors) = compile(
-        src,
         "test.sol",
+        &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Substrate,
     );

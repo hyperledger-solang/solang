@@ -2,8 +2,8 @@ use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 use rand::Rng;
 
-use super::{build_solidity, first_error};
-use solang::{parse_and_resolve, Target};
+use super::{build_solidity, first_error, parse_and_resolve};
+use solang::Target;
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 struct Val32(u32);

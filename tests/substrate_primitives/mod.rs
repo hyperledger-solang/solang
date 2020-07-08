@@ -1,8 +1,8 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, first_warning, no_errors};
-use solang::{parse_and_resolve, Target};
+use super::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
+use solang::Target;
 
 #[test]
 fn various_constants() {

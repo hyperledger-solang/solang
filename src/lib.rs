@@ -19,10 +19,12 @@ pub mod codegen;
 mod emit;
 pub mod link;
 pub mod output;
+pub mod parsedcache;
 mod parser;
-mod sema;
+pub mod sema;
 
 use inkwell::OptimizationLevel;
+use parsedcache::ParsedCache;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
@@ -54,22 +56,15 @@ impl fmt::Display for Target {
 ///
 /// The ctx is the inkwell llvm context.
 pub fn compile(
-    src: &str,
     filename: &str,
+    cache: &mut ParsedCache,
     opt: OptimizationLevel,
     target: Target,
 ) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();
 
-    let pt = match parser::parse(src) {
-        Ok(s) => s,
-        Err(errors) => {
-            return (Vec::new(), errors);
-        }
-    };
-
     // resolve
-    let mut ns = sema::sema(pt, target);
+    let mut ns = sema::sema(&filename, cache, target);
 
     if output::any_errors(&ns.diagnostics) {
         return (Vec::new(), ns.diagnostics);
@@ -101,18 +96,11 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(src: &str, target: Target) -> sema::ast::Namespace {
-    let pt = match parser::parse(src) {
-        Ok(s) => s,
-        Err(errors) => {
-            let mut ns = sema::ast::Namespace::new(target, 32);
-
-            ns.diagnostics = errors;
-
-            return ns;
-        }
-    };
-
+pub fn parse_and_resolve(
+    filename: &str,
+    cache: &mut ParsedCache,
+    target: Target,
+) -> sema::ast::Namespace {
     // resolve
-    sema::sema(pt, target)
+    sema::sema(filename, cache, target)
 }
