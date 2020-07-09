@@ -3015,7 +3015,17 @@ impl TargetRuntime for SubstrateTarget {
                 get_seal_value!("block_number", "ext_block_number", 64)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
-                get_seal_value!("timestamp", "ext_now", 64)
+                let milliseconds = get_seal_value!("timestamp", "ext_now", 64).into_int_value();
+
+                // Solidity expects the timestamp in seconds, not milliseconds
+                contract
+                    .builder
+                    .build_int_unsigned_div(
+                        milliseconds,
+                        contract.context.i64_type().const_int(1000, false),
+                        "seconds",
+                    )
+                    .into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
                 get_seal_value!("gas_left", "ext_gas_left", 64)

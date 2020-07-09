@@ -626,7 +626,7 @@ impl Externals for TestRuntime {
                 Ok(None)
             }
             Some(SubstrateExternal::ext_now) => {
-                self.vm.scratch = 1594035638u64.to_le_bytes().to_vec();
+                self.vm.scratch = 1594035638000u64.to_le_bytes().to_vec();
 
                 println!("ext_now: {}", hex::encode(&self.vm.scratch));
 
