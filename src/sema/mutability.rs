@@ -203,6 +203,19 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         }
         Expression::Balance(loc, _, _) | Expression::GetAddress(loc, _) => state.read(loc),
 
+        Expression::Builtin(loc, _, Builtin::BlockNumber, _)
+        | Expression::Builtin(loc, _, Builtin::Timestamp, _)
+        | Expression::Builtin(loc, _, Builtin::BlockCoinbase, _)
+        | Expression::Builtin(loc, _, Builtin::BlockDifficulty, _)
+        | Expression::Builtin(loc, _, Builtin::BlockHash, _)
+        | Expression::Builtin(loc, _, Builtin::Sender, _)
+        | Expression::Builtin(loc, _, Builtin::Origin, _)
+        | Expression::Builtin(loc, _, Builtin::Gasleft, _)
+        | Expression::Builtin(loc, _, Builtin::Gasprice, _)
+        | Expression::Builtin(loc, _, Builtin::GasLimit, _)
+        | Expression::Builtin(loc, _, Builtin::TombstoneDeposit, _)
+        | Expression::Builtin(loc, _, Builtin::MinimumBalance, _)
+        | Expression::Builtin(loc, _, Builtin::Random, _) => state.read(loc),
         Expression::Builtin(loc, _, Builtin::PayableSend, _)
         | Expression::Builtin(loc, _, Builtin::PayableTransfer, _)
         | Expression::Builtin(loc, _, Builtin::ArrayPush, _)
