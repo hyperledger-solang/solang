@@ -3,7 +3,7 @@ on:
     tags:
     - 'v*'
 
-name: Upload Release Asset
+name: Build Release Binaries
 
 jobs:
   linux:
@@ -27,11 +27,13 @@ jobs:
       run: cargo build --verbose --release
     - name: Run tests
       run: cargo test --verbose --release
-    - name: Upload result
-      uses: actions/upload-artifact@v1
+    - name: Upload binary
+      uses: svenstaro/upload-release-action@v2
       with:
-        name: linux
-        path: target/release/solang
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/release/solang
+        asset_name: solang_ubuntu
+        tag: ${{ github.ref }}
 
   windows:
     name: Windows
@@ -53,55 +55,10 @@ jobs:
       run: cargo build --release --verbose
     - name: Run tests
       run: cargo test --release --verbose
-    - name: Upload result
-      uses: actions/upload-artifact@v1
+    - name: Upload binary
+      uses: svenstaro/upload-release-action@v2
       with:
-        name: windows
-        path: target/release/solang.exe
-
-  release:
-    name: Upload Release Asset
-    needs: [linux, windows]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Get release tag
-      id: vars
-      run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.vars.outputs.tag }}
-        release_name: Solang ${{ steps.vars.outputs.tag }}
-        draft: true
-        prerelease: true
-    - name: Download linux release
-      uses: actions/download-artifact@v1
-      with:
-        name: linux
-    - name: Upload linux release
-      id: upload-linux-release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: linux/solang
-        asset_name: solang_ubuntu
-        asset_content_type: application/octet-stream
-    - name: Download Windows release
-      uses: actions/download-artifact@v1
-      with:
-        name: windows
-    - name: Upload windows release
-      id: upload-windows-release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: windows/solang.exe
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/release/solang.exe
         asset_name: solang.exe
-        asset_content_type: application/octet-stream
+        tag: ${{ github.ref }}
