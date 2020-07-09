@@ -156,7 +156,7 @@ fn process_filename(
         output::print_messages(filename, &contents, &ns.diagnostics, verbose);
     }
 
-    if ns.contracts.is_empty() {
+    if ns.contracts.is_empty() || output::any_errors(&ns.diagnostics) {
         eprintln!("{}: error: no contracts found", filename);
         std::process::exit(1);
     }
