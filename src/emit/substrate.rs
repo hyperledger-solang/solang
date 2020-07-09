@@ -3012,7 +3012,18 @@ impl TargetRuntime for SubstrateTarget {
 
         match expr {
             ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
-                get_seal_value!("block_number", "ext_block_number", 64)
+                let block_number =
+                    get_seal_value!("block_number", "ext_block_number", 32).into_int_value();
+
+                // Cast to 64 bit
+                contract
+                    .builder
+                    .build_int_z_extend_or_bit_cast(
+                        block_number,
+                        contract.context.i64_type(),
+                        "block_number",
+                    )
+                    .into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
                 let milliseconds = get_seal_value!("timestamp", "ext_now", 64).into_int_value();

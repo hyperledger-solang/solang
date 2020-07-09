@@ -480,7 +480,7 @@ fn block() {
             function test() public {
                 uint64 b = block.number;
 
-                assert(b == 14_250_083_331_950_119_597);
+                assert(b == 950_119_597);
             }
         }"##,
     );

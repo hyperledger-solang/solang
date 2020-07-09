@@ -619,7 +619,7 @@ impl Externals for TestRuntime {
                 Ok(None)
             }
             Some(SubstrateExternal::ext_block_number) => {
-                self.vm.scratch = 14_250_083_331_950_119_597u64.to_le_bytes().to_vec();
+                self.vm.scratch = 950_119_597u32.to_le_bytes().to_vec();
 
                 println!("ext_block_number: {}", hex::encode(&self.vm.scratch));
 
