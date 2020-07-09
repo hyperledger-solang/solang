@@ -1492,7 +1492,7 @@ values. Here is an example of an overloaded function:
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
 
-Calling an external function without encoding
+Calling an external function using ``call()``
 _____________________________________________
 
 If you call a function on contract, then the function selector and any arguments
@@ -1538,6 +1538,11 @@ calling.
     function test(address foo, bytes rawcalldata) public {
         (bool success, bytes rawresult) = foo.call{value: 102, gas: 1000}(rawcalldata);
     }
+
+.. note::
+
+    ewasm also supports ``staticcall()`` and ``delegatecall()`` on the address type. These
+    call types are not supported on Parity Substrate.
 
 fallback() and receive() function
 _________________________________
