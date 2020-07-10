@@ -4432,7 +4432,7 @@ impl<'a> Contract<'a> {
     /// Return the llvm type for a variable holding the type, not the type itself
     fn llvm_var(&self, ty: &ast::Type) -> BasicTypeEnum<'a> {
         let llvm_ty = self.llvm_type(ty);
-        match ty.deref() {
+        match ty.deref_memory() {
             ast::Type::Struct(_)
             | ast::Type::Array(_, _)
             | ast::Type::DynamicBytes

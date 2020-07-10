@@ -348,7 +348,7 @@ impl Type {
     }
 
     /// If the type is Ref, get the underlying type
-    pub fn deref(&self) -> &Self {
+    pub fn deref_memory(&self) -> &Self {
         match self {
             Type::Ref(r) => r,
             _ => self,

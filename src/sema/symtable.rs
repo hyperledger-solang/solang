@@ -97,6 +97,12 @@ pub struct LoopScope {
 
 pub struct LoopScopes(LinkedList<LoopScope>);
 
+impl Default for LoopScopes {
+    fn default() -> Self {
+        LoopScopes::new()
+    }
+}
+
 impl LoopScopes {
     pub fn new() -> Self {
         LoopScopes(LinkedList::new())
