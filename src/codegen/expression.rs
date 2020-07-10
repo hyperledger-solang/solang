@@ -863,7 +863,7 @@ pub fn assign_single(
         }
         _ => {
             let left_ty = left.ty();
-            let ty = left_ty.deref();
+            let ty = left_ty.deref_memory();
 
             let pos = vartab.temp_anonymous(&ty);
 
@@ -1243,7 +1243,7 @@ fn array_subscript(
             ns,
         )
     } else {
-        match array_ty.deref() {
+        match array_ty.deref_memory() {
             Type::Bytes(array_length) => {
                 let res_ty = Type::Bytes(1);
                 let from_ty = Type::Bytes(*array_length);
