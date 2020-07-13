@@ -1015,6 +1015,137 @@ fn storage_dynamic_array_length() {
 }
 
 #[test]
+fn dynamic_array_push() {
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int[] bar = new int[](2);
+                assert(bar.length == 0);
+                bar.push(102, 20);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "method ‘push()’ takes at most 1 argument"
+    );
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](1);
+
+                bar[0] = 128;
+                bar.push(64);
+
+                assert(bar.length == 2);
+                assert(bar[1] == 64);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                bytes bar = new bytes(1);
+
+                bar[0] = 128;
+                bar.push(64);
+
+                assert(bar.length == 2);
+                assert(bar[1] == 64);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+            function test() public {
+                s[] bar = new s[](1);
+
+                bar[0] = s({f1: 0, f2: false});
+                bar.push(s({f1: 1, f2: true}));
+
+                assert(bar.length == 2);
+                assert(bar[1].f1 == 1);
+                assert(bar[1].f2 == true);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            enum enum1 { val1, val2, val3 }
+            function test() public {
+                enum1[] bar = new enum1[](1);
+
+                bar[0] = enum1.val1;
+                bar.push(enum1.val2);
+
+                assert(bar.length == 2);
+                assert(bar[1] == enum1.val2);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    // push() returns a reference to the thing
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+
+            function test() public {
+                s[] bar = new s[](0);
+                s memory n = bar.push();
+                n.f1 = 102;
+                n.f2 = true;
+
+                assert(bar[0].f1 == 102);
+                assert(bar[0].f2 == true);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+}
+
+#[test]
 fn storage_dynamic_array_push() {
     let ns = parse_and_resolve(
         r#"

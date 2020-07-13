@@ -25,6 +25,12 @@ pub enum Instr {
         storage: Box<Expression>,
         offset: Box<Expression>,
     },
+    PushMemory {
+        res: usize,
+        ty: Type,
+        array: usize,
+        value: Box<Expression>,
+    },
     Set {
         res: usize,
         expr: Expression,
@@ -603,6 +609,18 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, storage),
                 self.expr_to_string(contract, ns, offset),
                 self.vars[*local].id.name
+            ),
+            Instr::PushMemory {
+                res,
+                ty,
+                array,
+                value,
+            } => format!(
+                "%{}, %{} = push array ty:{} value:{}",
+                self.vars[*res].id.name,
+                self.vars[*array].id.name,
+                ty.to_string(ns),
+                self.expr_to_string(contract, ns, value),
             ),
             Instr::AssertFailure { expr: None } => "assert-failure".to_string(),
             Instr::AssertFailure { expr: Some(expr) } => {

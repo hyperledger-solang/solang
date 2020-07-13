@@ -754,6 +754,7 @@ pub enum Expression {
     AllocDynamicArray(pt::Loc, Type, Box<Expression>, Option<Vec<u8>>),
     DynamicArrayLength(pt::Loc, Box<Expression>),
     DynamicArraySubscript(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    DynamicArrayPush(pt::Loc, Box<Expression>, Type, Box<Expression>),
     StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
     StorageBytesPush(pt::Loc, Box<Expression>, Box<Expression>),
     StorageBytesPop(pt::Loc, Box<Expression>),
@@ -873,7 +874,8 @@ impl Expression {
                 | Expression::DynamicArrayLength(_, expr) => expr.recurse(cx, f),
                 Expression::DynamicArraySubscript(_, _, left, right)
                 | Expression::StorageBytesSubscript(_, left, right)
-                | Expression::StorageBytesPush(_, left, right) => {
+                | Expression::StorageBytesPush(_, left, right)
+                | Expression::DynamicArrayPush(_, left, _, right) => {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }

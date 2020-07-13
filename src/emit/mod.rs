@@ -3012,6 +3012,137 @@ impl<'a> Contract<'a> {
                             value.into_int_value(),
                         );
                     }
+                    cfg::Instr::PushMemory {
+                        res,
+                        ty,
+                        array,
+                        value,
+                    } => {
+                        let a = w.vars[*array].value.into_pointer_value();
+                        let len = unsafe {
+                            self.builder.build_gep(
+                                a,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_zero(),
+                                ],
+                                "array_len",
+                            )
+                        };
+                        let a = self.builder.build_pointer_cast(
+                            a,
+                            self.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "a",
+                        );
+                        let llvm_ty = self.llvm_type(ty);
+
+                        // Calculate total size for reallocation
+                        let elem_ty = match ty {
+                            ast::Type::Array(..) => match self.llvm_type(&ty.array_elem()) {
+                                elem @ BasicTypeEnum::StructType(_) => {
+                                    // We don't store structs directly in the array, instead we store references to structs
+                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+                                }
+                                elem => elem,
+                            },
+                            ast::Type::DynamicBytes => self.context.i8_type().into(),
+                            _ => unreachable!(),
+                        };
+                        let elem_size = elem_ty
+                            .size_of()
+                            .unwrap()
+                            .const_cast(self.context.i32_type(), false);
+                        let len = self.builder.build_load(len, "array_len").into_int_value();
+                        let new_len = self.builder.build_int_add(
+                            len,
+                            self.context.i32_type().const_int(1, false),
+                            "",
+                        );
+                        let vec_size = self
+                            .module
+                            .get_type("struct.vector")
+                            .unwrap()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(self.context.i32_type(), false);
+                        let size = self.builder.build_int_mul(elem_size, new_len, "");
+                        let size = self.builder.build_int_add(size, vec_size, "");
+
+                        // Reallocate and reassign the array pointer
+                        let new = self
+                            .builder
+                            .build_call(
+                                self.module.get_function("__realloc").unwrap(),
+                                &[a.into(), size.into()],
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
+                        let dest = self.builder.build_pointer_cast(
+                            new,
+                            llvm_ty.ptr_type(AddressSpace::Generic),
+                            "dest",
+                        );
+                        w.vars[*array].value = dest.into();
+
+                        // Store the value into the last element
+                        let slot_ptr = unsafe {
+                            self.builder.build_gep(
+                                dest,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(2, false),
+                                    self.builder.build_int_mul(len, elem_size, ""),
+                                ],
+                                "data",
+                            )
+                        };
+                        let value = self.expression(value, &w.vars, function, runtime);
+                        let elem_ptr = self.builder.build_pointer_cast(
+                            slot_ptr,
+                            elem_ty.ptr_type(AddressSpace::Generic),
+                            "element pointer",
+                        );
+                        self.builder.build_store(elem_ptr, value);
+                        w.vars[*res].value = value;
+
+                        // Update the len and size field of the vector struct
+                        let len_ptr = unsafe {
+                            self.builder.build_gep(
+                                dest,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_zero(),
+                                ],
+                                "len",
+                            )
+                        };
+                        let len_field = self.builder.build_pointer_cast(
+                            len_ptr,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "len field",
+                        );
+                        self.builder.build_store(len_field, new_len);
+
+                        let size_ptr = unsafe {
+                            self.builder.build_gep(
+                                dest,
+                                &[
+                                    self.context.i32_type().const_zero(),
+                                    self.context.i32_type().const_int(1, false),
+                                ],
+                                "size",
+                            )
+                        };
+                        let size_field = self.builder.build_pointer_cast(
+                            size_ptr,
+                            self.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "size field",
+                        );
+                        self.builder.build_store(size_field, new_len);
+                    }
                     cfg::Instr::AssertFailure { expr: None } => {
                         runtime.assert_failure(
                             self,
