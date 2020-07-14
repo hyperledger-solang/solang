@@ -84,31 +84,25 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
 
     if FunctionTy::Function == func.ty {
         if !state.does_write_state && !state.does_read_state {
-            if let Some(StateMutability::Pure(_)) = func.mutability {
-                //
-            } else {
-                state.diagnostics.push(Output::warning(
-                    func.loc,
-                    format!(
-                        "function declared ‘{}’ can be declared ‘pure’",
-                        func.print_mutability()
-                    ),
-                ));
-            }
-        }
-        if !state.does_write_state && state.does_read_state {
             match func.mutability {
-                Some(StateMutability::View(_)) | Some(StateMutability::Pure(_)) => (),
+                Some(StateMutability::Payable(_)) | Some(StateMutability::Pure(_)) => (),
                 _ => {
                     state.diagnostics.push(Output::warning(
                         func.loc,
                         format!(
-                            "function declared ‘{}’ can be declared ‘view’",
+                            "function declared ‘{}’ can be declared ‘pure’",
                             func.print_mutability()
                         ),
                     ));
                 }
             }
+        }
+
+        if !state.does_write_state && state.does_read_state && func.mutability.is_none() {
+            state.diagnostics.push(Output::warning(
+                func.loc,
+                "function declared can be declared ‘view’".to_string(),
+            ));
         }
     }
 
