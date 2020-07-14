@@ -980,3 +980,13 @@ pub fn no_errors(errors: Vec<output::Output>) {
             == 0
     );
 }
+
+pub fn no_warnings_errors(errors: Vec<output::Output>) {
+    assert!(
+        errors
+            .iter()
+            .filter(|m| m.level == output::Level::Error || m.level == output::Level::Warning)
+            .count()
+            == 0
+    );
+}

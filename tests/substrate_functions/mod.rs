@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, first_warning};
+use super::{build_solidity, first_error, first_warning, no_warnings_errors};
 use solang::{parse_and_resolve, Target};
 
 #[test]
@@ -244,6 +244,44 @@ fn mutability() {
     assert_eq!(
         first_error(ns.diagnostics),
         "function declared ‘view’ but this expression writes to state"
+    );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            int64 foo = 1844674;
+
+            function bar() public payable returns (int64) {
+                return foo;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    no_warnings_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        "contract test {
+            function bar() public payable returns (int64) {
+                return 102;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    no_warnings_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        "contract test {
+            function bar() public view returns (int64) {
+                return 102;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(ns.diagnostics),
+        "function declared ‘view’ can be declared ‘pure’"
     );
 }
 
