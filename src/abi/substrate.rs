@@ -503,7 +503,10 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Registry) -> Pa
                         display_name: vec![],
                     }
                 } else {
-                    // FIXME:
+                    param_ty = ParamType {
+                        ty: registry.builtin_slice_type(param_ty.ty),
+                        display_name: vec![],
+                    }
                 }
             }
 
