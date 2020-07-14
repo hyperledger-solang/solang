@@ -1,6 +1,6 @@
 use super::ast::{Builtin, DestructureField, Expression, Function, Namespace, Statement};
 use output::Output;
-use parser::pt::{FunctionTy, Loc, StateMutability};
+use parser::pt;
 
 /// check state mutablity
 pub fn mutablity(ns: &mut Namespace) {
@@ -26,7 +26,7 @@ struct StateCheck<'a> {
 }
 
 impl<'a> StateCheck<'a> {
-    fn write(&mut self, loc: &Loc) {
+    fn write(&mut self, loc: &pt::Loc) {
         if !self.can_write_state {
             self.diagnostics.push(Output::error(
                 *loc,
@@ -40,7 +40,7 @@ impl<'a> StateCheck<'a> {
         self.does_write_state = true;
     }
 
-    fn read(&mut self, loc: &Loc) {
+    fn read(&mut self, loc: &pt::Loc) {
         if !self.can_read_state {
             self.diagnostics.push(Output::error(
                 *loc,
@@ -70,11 +70,11 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
     };
 
     match func.mutability {
-        Some(StateMutability::Pure(_)) => (),
-        Some(StateMutability::View(_)) => {
+        Some(pt::StateMutability::Pure(_)) => (),
+        Some(pt::StateMutability::View(_)) => {
             state.can_read_state = true;
         }
-        Some(StateMutability::Payable(_)) | None => {
+        Some(pt::StateMutability::Payable(_)) | None => {
             state.can_read_state = true;
             state.can_write_state = true;
         }
@@ -82,10 +82,10 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
 
     recurse_statements(&func.body, &mut state);
 
-    if FunctionTy::Function == func.ty {
+    if pt::FunctionTy::Function == func.ty {
         if !state.does_write_state && !state.does_read_state {
             match func.mutability {
-                Some(StateMutability::Payable(_)) | Some(StateMutability::Pure(_)) => (),
+                Some(pt::StateMutability::Payable(_)) | Some(pt::StateMutability::Pure(_)) => (),
                 _ => {
                     state.diagnostics.push(Output::warning(
                         func.loc,
@@ -222,9 +222,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         }
         Expression::InternalFunctionCall(loc, _, function_no, _) => {
             match &state.ns.contracts[state.contract_no].functions[*function_no].mutability {
-                None | Some(StateMutability::Payable(_)) => state.write(loc),
-                Some(StateMutability::View(_)) => state.read(loc),
-                Some(StateMutability::Pure(_)) => (),
+                None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
+                Some(pt::StateMutability::View(_)) => state.read(loc),
+                Some(pt::StateMutability::Pure(_)) => (),
             };
         }
         Expression::ExternalFunctionCall {
@@ -234,9 +234,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
             ..
         } => {
             match &state.ns.contracts[*contract_no].functions[*function_no].mutability {
-                None | Some(StateMutability::Payable(_)) => state.write(loc),
-                Some(StateMutability::View(_)) => state.read(loc),
-                Some(StateMutability::Pure(_)) => (),
+                None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
+                Some(pt::StateMutability::View(_)) => state.read(loc),
+                Some(pt::StateMutability::Pure(_)) => (),
             };
         }
         _ => {

@@ -6,14 +6,14 @@ use num_traits::Zero;
 
 use super::ast::{Expression, Namespace};
 use output::Output;
-use parser::pt::Loc;
+use parser::pt;
 
 /// Resolve an expression where a compile-time constant is expected
 pub fn eval_const_number(
     expr: &Expression,
     contract_no: Option<usize>,
     ns: &Namespace,
-) -> Result<(Loc, BigInt), Output> {
+) -> Result<(pt::Loc, BigInt), Output> {
     match expr {
         Expression::Add(loc, _, l, r) => Ok((
             *loc,

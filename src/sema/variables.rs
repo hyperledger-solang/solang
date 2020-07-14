@@ -6,6 +6,7 @@ use sema::symtable::Symtable;
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,
+    file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
 ) -> bool {
@@ -14,7 +15,7 @@ pub fn contract_variables(
 
     for parts in &def.parts {
         if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {
-            if !var_decl(s, contract_no, ns, &mut symtable) {
+            if !var_decl(s, file_no, contract_no, ns, &mut symtable) {
                 broken = true;
             }
         }
@@ -25,11 +26,12 @@ pub fn contract_variables(
 
 fn var_decl(
     s: &pt::ContractVariableDefinition,
+    file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
     symtable: &mut Symtable,
 ) -> bool {
-    let ty = match ns.resolve_type(Some(contract_no), false, &s.ty) {
+    let ty = match ns.resolve_type(file_no, Some(contract_no), false, &s.ty) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -75,7 +77,7 @@ fn var_decl(
 
     let visibility = match visibility {
         Some(v) => v,
-        None => pt::Visibility::Private(pt::Loc(0, 0)),
+        None => pt::Visibility::Private(pt::Loc(0, 0, 0)),
     };
 
     let var = if !is_constant {
@@ -88,7 +90,14 @@ fn var_decl(
     };
 
     let initializer = if let Some(initializer) = &s.initializer {
-        let res = match expression(&initializer, Some(contract_no), ns, &symtable, is_constant) {
+        let res = match expression(
+            &initializer,
+            file_no,
+            Some(contract_no),
+            ns,
+            &symtable,
+            is_constant,
+        ) {
             Ok(res) => res,
             Err(()) => return false,
         };
@@ -114,6 +123,7 @@ fn var_decl(
 
     let sdecl = ContractVariable {
         name: s.name.name.to_string(),
+        loc: s.loc,
         doc: s.doc.clone(),
         visibility,
         ty,
@@ -125,5 +135,10 @@ fn var_decl(
 
     ns.contracts[contract_no].variables.push(sdecl);
 
-    ns.add_symbol(Some(contract_no), &s.name, Symbol::Variable(s.loc, pos))
+    ns.add_symbol(
+        file_no,
+        Some(contract_no),
+        &s.name,
+        Symbol::Variable(s.loc, pos),
+    )
 }

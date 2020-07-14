@@ -1,4 +1,4 @@
-use parser::pt;
+use parser::pt::Loc;
 use serde::Serialize;
 
 #[derive(Debug, PartialEq)]
@@ -20,7 +20,7 @@ pub enum ErrorType {
 
 #[derive(Debug, PartialEq)]
 pub struct Note {
-    pub pos: pt::Loc,
+    pub pos: Loc,
     pub message: String,
 }
 
@@ -28,7 +28,7 @@ pub struct Note {
 pub struct Output {
     pub level: Level,
     pub ty: ErrorType,
-    pub pos: pt::Loc,
+    pub pos: Loc,
     pub message: String,
     pub notes: Vec<Note>,
 }
@@ -44,7 +44,7 @@ impl Level {
 }
 
 impl Output {
-    pub fn info(pos: pt::Loc, message: String) -> Self {
+    pub fn info(pos: Loc, message: String) -> Self {
         Output {
             level: Level::Info,
             ty: ErrorType::None,
@@ -54,7 +54,7 @@ impl Output {
         }
     }
 
-    pub fn parser_error(pos: pt::Loc, message: String) -> Self {
+    pub fn parser_error(pos: Loc, message: String) -> Self {
         Output {
             level: Level::Error,
             ty: ErrorType::ParserError,
@@ -64,7 +64,7 @@ impl Output {
         }
     }
 
-    pub fn error(pos: pt::Loc, message: String) -> Self {
+    pub fn error(pos: Loc, message: String) -> Self {
         Output {
             level: Level::Error,
             ty: ErrorType::SyntaxError,
@@ -74,7 +74,7 @@ impl Output {
         }
     }
 
-    pub fn decl_error(pos: pt::Loc, message: String) -> Self {
+    pub fn decl_error(pos: Loc, message: String) -> Self {
         Output {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
@@ -84,7 +84,7 @@ impl Output {
         }
     }
 
-    pub fn type_error(pos: pt::Loc, message: String) -> Self {
+    pub fn type_error(pos: Loc, message: String) -> Self {
         Output {
             level: Level::Error,
             ty: ErrorType::TypeError,
@@ -94,7 +94,7 @@ impl Output {
         }
     }
 
-    pub fn warning(pos: pt::Loc, message: String) -> Self {
+    pub fn warning(pos: Loc, message: String) -> Self {
         Output {
             level: Level::Warning,
             ty: ErrorType::Warning,
@@ -104,12 +104,7 @@ impl Output {
         }
     }
 
-    pub fn warning_with_note(
-        pos: pt::Loc,
-        message: String,
-        note_pos: pt::Loc,
-        note: String,
-    ) -> Self {
+    pub fn warning_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
         Output {
             level: Level::Warning,
             ty: ErrorType::Warning,
@@ -122,7 +117,7 @@ impl Output {
         }
     }
 
-    pub fn warning_with_notes(pos: pt::Loc, message: String, notes: Vec<Note>) -> Self {
+    pub fn warning_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
         Output {
             level: Level::Warning,
             ty: ErrorType::Warning,
@@ -132,7 +127,7 @@ impl Output {
         }
     }
 
-    pub fn error_with_note(pos: pt::Loc, message: String, note_pos: pt::Loc, note: String) -> Self {
+    pub fn error_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
         Output {
             level: Level::Error,
             ty: ErrorType::None,
@@ -145,7 +140,7 @@ impl Output {
         }
     }
 
-    pub fn error_with_notes(pos: pt::Loc, message: String, notes: Vec<Note>) -> Self {
+    pub fn error_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
         Output {
             level: Level::Error,
             ty: ErrorType::None,
@@ -257,7 +252,7 @@ impl FilePostitions {
         FilePostitions(line_starts)
     }
 
-    fn to_string(&self, loc: pt::Loc) -> String {
+    fn to_string(&self, loc: Loc) -> String {
         let (from_line, from_column) = self.convert(loc.0);
         let (to_line, to_column) = self.convert(loc.1);
 

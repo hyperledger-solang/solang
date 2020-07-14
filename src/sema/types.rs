@@ -2,19 +2,12 @@ use super::ast::{Contract, EnumDecl, Namespace, StructDecl, StructField, Symbol,
 use output::Output;
 use parser::pt;
 use std::collections::HashMap;
+#[cfg(test)]
 use Target;
 
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
 /// structs as fields, including ones that have not been declared yet.
-pub fn resolve(s: &pt::SourceUnit, target: Target) -> Namespace {
-    let mut ns = Namespace::new(
-        target,
-        match target {
-            Target::Ewasm => 20,
-            Target::Substrate => 32,
-            Target::Sabre => 0, // substrate has no address type
-        },
-    );
+pub fn resolve(s: &pt::SourceUnit, file_no: usize, ns: &mut Namespace) {
     let mut structs = Vec::new();
 
     // Find all the types: contracts, enums, and structs. Either in a contract or not
@@ -25,17 +18,17 @@ pub fn resolve(s: &pt::SourceUnit, target: Target) -> Namespace {
             pt::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
                     ns.diagnostics.push(Output::info(
-                        pt::Loc(name.loc.0, value.loc.1),
+                        pt::Loc(name.loc.0, name.loc.1, value.loc.2),
                         "pragma ‘solidity’ is ignored".to_string(),
                     ));
                 } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
                     ns.diagnostics.push(Output::info(
-                        pt::Loc(name.loc.0, value.loc.1),
+                        pt::Loc(name.loc.0, name.loc.1, value.loc.2),
                         "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
                     ));
                 } else {
                     ns.diagnostics.push(Output::warning(
-                        pt::Loc(name.loc.0, value.loc.1),
+                        pt::Loc(name.loc.0, name.loc.1, value.loc.2),
                         format!(
                             "unknown pragma ‘{}’ with value ‘{}’ ignored",
                             name.name, value.string
@@ -44,13 +37,14 @@ pub fn resolve(s: &pt::SourceUnit, target: Target) -> Namespace {
                 }
             }
             pt::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(&def, &mut structs, &mut ns);
+                resolve_contract(&def, file_no, &mut structs, ns);
             }
             pt::SourceUnitPart::EnumDefinition(def) => {
-                let _ = enum_decl(&def, None, &mut ns);
+                let _ = enum_decl(&def, file_no, None, ns);
             }
             pt::SourceUnitPart::StructDefinition(def) => {
                 if ns.add_symbol(
+                    file_no,
                     None,
                     &def.name,
                     Symbol::Struct(def.name.loc, ns.structs.len()),
@@ -71,7 +65,7 @@ pub fn resolve(s: &pt::SourceUnit, target: Target) -> Namespace {
 
     // now we can resolve the fields for the structs
     for (mut decl, def, contract) in structs {
-        if let Some(fields) = struct_decl(def, contract, &mut ns) {
+        if let Some(fields) = struct_decl(def, file_no, contract, ns) {
             decl.fields = fields;
             ns.structs.push(decl);
         }
@@ -80,7 +74,7 @@ pub fn resolve(s: &pt::SourceUnit, target: Target) -> Namespace {
     // struct can contain other structs, and we have to check for recursiveness,
     // i.e. "struct a { b f1; } struct b { a f1; }"
     for s in 0..ns.structs.len() {
-        fn check(s: usize, struct_fields: &mut Vec<usize>, ns: &mut Namespace) {
+        fn check(s: usize, file_no: usize, struct_fields: &mut Vec<usize>, ns: &mut Namespace) {
             let def = ns.structs[s].clone();
             let mut types_seen = Vec::new();
 
@@ -101,38 +95,43 @@ pub fn resolve(s: &pt::SourceUnit, target: Target) -> Namespace {
                         ));
                     } else {
                         struct_fields.push(n);
-                        check(n, struct_fields, ns);
+                        check(n, file_no, struct_fields, ns);
                     }
                 }
             }
         };
 
-        check(s, &mut vec![s], &mut ns);
+        check(s, file_no, &mut vec![s], ns);
     }
-
-    ns
 }
 
 /// Resolve all the types in a contract
 fn resolve_contract<'a>(
     def: &'a pt::ContractDefinition,
+    file_no: usize,
     structs: &mut Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)>,
     ns: &mut Namespace,
 ) -> bool {
     let contract_no = ns.contracts.len();
-    ns.contracts.push(Contract::new(&def.name.name));
+    ns.contracts.push(Contract::new(&def.name.name, def.loc));
 
-    let mut broken = !ns.add_symbol(None, &def.name, Symbol::Contract(def.loc, contract_no));
+    let mut broken = !ns.add_symbol(
+        file_no,
+        None,
+        &def.name,
+        Symbol::Contract(def.loc, contract_no),
+    );
 
     for parts in &def.parts {
         match parts {
             pt::ContractPart::EnumDefinition(ref e) => {
-                if !enum_decl(e, Some(contract_no), ns) {
+                if !enum_decl(e, file_no, Some(contract_no), ns) {
                     broken = true;
                 }
             }
             pt::ContractPart::StructDefinition(ref s) => {
                 if ns.add_symbol(
+                    file_no,
                     Some(contract_no),
                     &s.name,
                     Symbol::Struct(s.name.loc, structs.len()),
@@ -162,6 +161,7 @@ fn resolve_contract<'a>(
 /// of the contract, even if the struct contains an invalid definition.
 pub fn struct_decl(
     def: &pt::StructDefinition,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> Option<Vec<StructField>> {
@@ -169,7 +169,7 @@ pub fn struct_decl(
     let mut fields: Vec<StructField> = Vec::new();
 
     for field in &def.fields {
-        let ty = match ns.resolve_type(contract_no, false, &field.ty) {
+        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty) {
             Ok(s) => s,
             Err(()) => {
                 valid = false;
@@ -233,7 +233,12 @@ pub fn struct_decl(
 
 /// Parse enum declaration. If the declaration is invalid, it is still generated
 /// so that we can continue parsing, with errors recorded.
-fn enum_decl(enum_: &pt::EnumDefinition, contract_no: Option<usize>, ns: &mut Namespace) -> bool {
+fn enum_decl(
+    enum_: &pt::EnumDefinition,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+) -> bool {
     let mut valid = true;
 
     let mut bits = if enum_.values.is_empty() {
@@ -277,6 +282,7 @@ fn enum_decl(enum_: &pt::EnumDefinition, contract_no: Option<usize>, ns: &mut Na
 
     let decl = EnumDecl {
         name: enum_.name.name.to_string(),
+        loc: enum_.loc,
         contract: match contract_no {
             Some(c) => Some(ns.contracts[c].name.to_owned()),
             None => None,
@@ -289,7 +295,12 @@ fn enum_decl(enum_: &pt::EnumDefinition, contract_no: Option<usize>, ns: &mut Na
 
     ns.enums.push(decl);
 
-    if !ns.add_symbol(contract_no, &enum_.name, Symbol::Enum(enum_.name.loc, pos)) {
+    if !ns.add_symbol(
+        file_no,
+        contract_no,
+        &enum_.name,
+        Symbol::Enum(enum_.name.loc, pos),
+    ) {
         valid = false;
     }
 
@@ -300,26 +311,27 @@ fn enum_decl(enum_: &pt::EnumDefinition, contract_no: Option<usize>, ns: &mut Na
 fn enum_256values_is_uint8() {
     let mut e = pt::EnumDefinition {
         doc: vec![],
+        loc: pt::Loc(0, 0, 0),
         name: pt::Identifier {
-            loc: pt::Loc(0, 0),
+            loc: pt::Loc(0, 0, 0),
             name: "foo".into(),
         },
         values: Vec::new(),
     };
 
-    let mut ns = Namespace::new(Target::Ewasm, 20);
+    let mut ns = Namespace::new(Target::Ewasm, 20, 16);
 
     e.values.push(pt::Identifier {
-        loc: pt::Loc(0, 0),
+        loc: pt::Loc(0, 0, 0),
         name: "first".into(),
     });
 
-    assert!(enum_decl(&e, None, &mut ns));
+    assert!(enum_decl(&e, 0, None, &mut ns));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     for i in 1..256 {
         e.values.push(pt::Identifier {
-            loc: pt::Loc(0, 0),
+            loc: pt::Loc(0, 0, 0),
             name: format!("val{}", i),
         })
     }
@@ -327,15 +339,15 @@ fn enum_256values_is_uint8() {
     assert_eq!(e.values.len(), 256);
 
     e.name.name = "foo2".to_owned();
-    assert!(enum_decl(&e, None, &mut ns));
+    assert!(enum_decl(&e, 0, None, &mut ns));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(8));
 
     e.values.push(pt::Identifier {
-        loc: pt::Loc(0, 0),
+        loc: pt::Loc(0, 0, 0),
         name: "another".into(),
     });
 
     e.name.name = "foo3".to_owned();
-    assert!(enum_decl(&e, None, &mut ns));
+    assert!(enum_decl(&e, 0, None, &mut ns));
     assert_eq!(ns.enums.last().unwrap().ty, Type::Uint(16));
 }
