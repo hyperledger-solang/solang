@@ -3036,7 +3036,7 @@ impl<'a> Contract<'a> {
                             function,
                             &[v],
                             &[ast::Parameter {
-                                loc: pt::Loc(0, 0),
+                                loc: pt::Loc(0, 0, 0),
                                 name: "error".to_owned(),
                                 ty: ast::Type::String,
                             }],

@@ -2,7 +2,7 @@ use num_bigint::BigInt;
 use std::fmt;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Loc(pub usize, pub usize);
+pub struct Loc(pub usize, pub usize, pub usize);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Identifier {
@@ -98,6 +98,7 @@ pub struct VariableDeclaration {
 #[derive(Debug, PartialEq)]
 #[allow(clippy::vec_box)]
 pub struct StructDefinition {
+    pub loc: Loc,
     pub doc: Vec<String>,
     pub name: Identifier,
     pub fields: Vec<VariableDeclaration>,
@@ -145,6 +146,7 @@ pub struct EventDefinition {
 
 #[derive(Debug, PartialEq)]
 pub struct EnumDefinition {
+    pub loc: Loc,
     pub doc: Vec<String>,
     pub name: Identifier,
     pub values: Vec<Identifier>,

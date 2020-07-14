@@ -16,7 +16,6 @@ use crate::Target;
 use hex;
 use output::Output;
 use parser::pt;
-use parser::pt::Loc;
 use sema::address::to_hexstr_eip55;
 use sema::ast::{
     Builtin, CallTy, ContractVariableType, Expression, Function, Namespace, StringLocation, Type,
@@ -27,7 +26,7 @@ use sema::symtable::Symtable;
 
 impl Expression {
     /// Return the location for this expression
-    pub fn loc(&self) -> Loc {
+    pub fn loc(&self) -> pt::Loc {
         match self {
             Expression::FunctionArg(loc, _, _)
             | Expression::BoolLiteral(loc, _)
@@ -220,7 +219,7 @@ impl Expression {
 }
 
 /// Unescape a string literal
-fn unescape(literal: &str, start: usize, ns: &mut Namespace) -> String {
+fn unescape(literal: &str, start: usize, file_no: usize, ns: &mut Namespace) -> String {
     let mut s = String::new();
     let mut indeces = literal.char_indices();
 
@@ -246,14 +245,18 @@ fn unescape(literal: &str, start: usize, ns: &mut Namespace) -> String {
                     Some(ch) => s.push(ch),
                     None => {
                         ns.diagnostics.push(Output::error(
-                            pt::Loc(start + i, start + i + 4),
+                            pt::Loc(file_no, start + i, start + i + 4),
                             format!("\\x{:02x} is not a valid unicode character", ch),
                         ));
                     }
                 },
                 Err(offset) => {
                     ns.diagnostics.push(Output::error(
-                        pt::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
+                        pt::Loc(
+                            file_no,
+                            start + i,
+                            start + std::cmp::min(literal.len(), offset),
+                        ),
                         "\\x escape should be followed by two hex digits".to_string(),
                     ));
                 }
@@ -263,21 +266,25 @@ fn unescape(literal: &str, start: usize, ns: &mut Namespace) -> String {
                     Some(ch) => s.push(ch),
                     None => {
                         ns.diagnostics.push(Output::error(
-                            pt::Loc(start + i, start + i + 6),
+                            pt::Loc(file_no, start + i, start + i + 6),
                             format!("\\u{:04x} is not a valid unicode character", ch),
                         ));
                     }
                 },
                 Err(offset) => {
                     ns.diagnostics.push(Output::error(
-                        pt::Loc(start + i, start + std::cmp::min(literal.len(), offset)),
+                        pt::Loc(
+                            file_no,
+                            start + i,
+                            start + std::cmp::min(literal.len(), offset),
+                        ),
                         "\\u escape should be followed by four hex digits".to_string(),
                     ));
                 }
             },
             Some((i, ch)) => {
                 ns.diagnostics.push(Output::error(
-                    pt::Loc(start + i, start + i + ch.len_utf8()),
+                    pt::Loc(file_no, start + i, start + i + ch.len_utf8()),
                     format!("unknown escape character '{}'", ch),
                 ));
             }
@@ -995,8 +1002,10 @@ fn cast_types(
     }
 }
 
+/// Resolve a parsed expression into an AST expression
 pub fn expression(
     expr: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -1004,17 +1013,17 @@ pub fn expression(
 ) -> Result<Expression, ()> {
     match expr {
         pt::Expression::ArrayLiteral(loc, exprs) => {
-            resolve_array_literal(loc, exprs, contract_no, ns, symtable, is_constant)
+            resolve_array_literal(loc, exprs, file_no, contract_no, ns, symtable, is_constant)
         }
         pt::Expression::BoolLiteral(loc, v) => Ok(Expression::BoolLiteral(*loc, *v)),
         pt::Expression::StringLiteral(v) => {
             // Concatenate the strings
             let mut result = Vec::new();
-            let mut loc = pt::Loc(v[0].loc.0, 0);
+            let mut loc = v[0].loc;
 
             for s in v {
-                result.extend_from_slice(unescape(&s.string, s.loc.0, ns).as_bytes());
-                loc.1 = s.loc.1;
+                result.extend_from_slice(unescape(&s.string, s.loc.1, file_no, ns).as_bytes());
+                loc.2 = s.loc.2;
             }
 
             let length = result.len();
@@ -1027,7 +1036,7 @@ pub fn expression(
         }
         pt::Expression::HexLiteral(v) => {
             let mut result = Vec::new();
-            let mut loc = pt::Loc(0, 0);
+            let mut loc = v[0].loc;
 
             for s in v {
                 if (s.hex.len() % 2) != 0 {
@@ -1038,10 +1047,7 @@ pub fn expression(
                     return Err(());
                 } else {
                     result.extend_from_slice(&hex::decode(&s.hex).unwrap());
-                    if loc.0 == 0 {
-                        loc.0 = s.loc.0;
-                    }
-                    loc.1 = s.loc.1;
+                    loc.2 = s.loc.2;
                 }
             }
 
@@ -1105,7 +1111,7 @@ pub fn expression(
                 return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
             }
 
-            let v = ns.resolve_var(contract_no.unwrap(), id)?;
+            let v = ns.resolve_var(file_no, contract_no.unwrap(), id)?;
 
             let var = &ns.contracts[contract_no.unwrap()].variables[v];
 
@@ -1134,11 +1140,11 @@ pub fn expression(
             }
         }
         pt::Expression::Add(loc, l, r) => {
-            addition(loc, l, r, contract_no, ns, symtable, is_constant)
+            addition(loc, l, r, file_no, contract_no, ns, symtable, is_constant)
         }
         pt::Expression::Subtract(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), false, ns)?;
 
@@ -1150,8 +1156,8 @@ pub fn expression(
             ))
         }
         pt::Expression::BitwiseOr(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1163,8 +1169,8 @@ pub fn expression(
             ))
         }
         pt::Expression::BitwiseAnd(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1176,8 +1182,8 @@ pub fn expression(
             ))
         }
         pt::Expression::BitwiseXor(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1189,8 +1195,8 @@ pub fn expression(
             ))
         }
         pt::Expression::ShiftLeft(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             // left hand side may be bytes/int/uint
             // right hand size may be int/uint
@@ -1207,8 +1213,8 @@ pub fn expression(
             ))
         }
         pt::Expression::ShiftRight(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let left_type = left.ty();
             // left hand side may be bytes/int/uint
@@ -1225,8 +1231,8 @@ pub fn expression(
             ))
         }
         pt::Expression::Multiply(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), false, ns)?;
 
@@ -1238,8 +1244,8 @@ pub fn expression(
             ))
         }
         pt::Expression::Divide(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), false, ns)?;
 
@@ -1260,8 +1266,8 @@ pub fn expression(
             }
         }
         pt::Expression::Modulo(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), false, ns)?;
 
@@ -1282,8 +1288,8 @@ pub fn expression(
             }
         }
         pt::Expression::Power(loc, b, e) => {
-            let base = expression(b, contract_no, ns, symtable, is_constant)?;
-            let exp = expression(e, contract_no, ns, symtable, is_constant)?;
+            let base = expression(b, file_no, contract_no, ns, symtable, is_constant)?;
+            let exp = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
 
             let base_type = base.ty();
             let exp_type = exp.ty();
@@ -1309,8 +1315,8 @@ pub fn expression(
 
         // compare
         pt::Expression::More(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1329,8 +1335,8 @@ pub fn expression(
             }
         }
         pt::Expression::Less(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1349,8 +1355,8 @@ pub fn expression(
             }
         }
         pt::Expression::MoreEqual(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1369,8 +1375,8 @@ pub fn expression(
             }
         }
         pt::Expression::LessEqual(loc, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
@@ -1389,16 +1395,25 @@ pub fn expression(
             }
         }
         pt::Expression::Equal(loc, l, r) => {
-            equal(loc, l, r, contract_no, ns, symtable, is_constant)
+            equal(loc, l, r, file_no, contract_no, ns, symtable, is_constant)
         }
 
         pt::Expression::NotEqual(loc, l, r) => Ok(Expression::Not(
             *loc,
-            Box::new(equal(loc, l, r, contract_no, ns, symtable, is_constant)?),
+            Box::new(equal(
+                loc,
+                l,
+                r,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+                is_constant,
+            )?),
         )),
         // unary expressions
         pt::Expression::Not(loc, e) => {
-            let expr = expression(e, contract_no, ns, symtable, is_constant)?;
+            let expr = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
 
             Ok(Expression::Not(
                 *loc,
@@ -1406,7 +1421,7 @@ pub fn expression(
             ))
         }
         pt::Expression::Complement(loc, e) => {
-            let expr = expression(e, contract_no, ns, symtable, is_constant)?;
+            let expr = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
 
             let expr_ty = expr.ty();
 
@@ -1415,7 +1430,7 @@ pub fn expression(
             Ok(Expression::Complement(*loc, expr_ty, Box::new(expr)))
         }
         pt::Expression::UnaryMinus(loc, e) => {
-            let expr = expression(e, contract_no, ns, symtable, is_constant)?;
+            let expr = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
 
             let expr_type = expr.ty();
 
@@ -1428,7 +1443,7 @@ pub fn expression(
             }
         }
         pt::Expression::UnaryPlus(loc, e) => {
-            let expr = expression(e, contract_no, ns, symtable, is_constant)?;
+            let expr = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
             let expr_type = expr.ty();
 
             get_int_length(&expr_type, loc, false, ns)?;
@@ -1437,9 +1452,9 @@ pub fn expression(
         }
 
         pt::Expression::Ternary(loc, c, l, r) => {
-            let left = expression(l, contract_no, ns, symtable, is_constant)?;
-            let right = expression(r, contract_no, ns, symtable, is_constant)?;
-            let cond = expression(c, contract_no, ns, symtable, is_constant)?;
+            let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+            let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
+            let cond = expression(c, file_no, contract_no, ns, symtable, is_constant)?;
 
             let cond = cast(&c.loc(), cond, &Type::Bool, true, ns)?;
 
@@ -1467,7 +1482,7 @@ pub fn expression(
                 return Err(());
             };
 
-            incr_decr(var, expr, contract_no, ns, symtable)
+            incr_decr(var, expr, file_no, contract_no, ns, symtable)
         }
 
         // assignment
@@ -1480,7 +1495,7 @@ pub fn expression(
                 return Err(());
             };
 
-            assign_single(loc, var, e, contract_no, ns, symtable)
+            assign_single(loc, var, e, file_no, contract_no, ns, symtable)
         }
 
         pt::Expression::AssignAdd(loc, var, e)
@@ -1501,18 +1516,19 @@ pub fn expression(
                 return Err(());
             };
 
-            assign_expr(loc, var, expr, e, contract_no, ns, symtable)
+            assign_expr(loc, var, expr, e, file_no, contract_no, ns, symtable)
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
             let marker = ns.diagnostics.len();
 
             // is it a struct literal
-            match ns.resolve_type(contract_no, true, ty) {
+            match ns.resolve_type(file_no, contract_no, true, ty) {
                 Ok(Type::Struct(n)) => {
                     return named_struct_literal(
                         loc,
                         n,
                         args,
+                        file_no,
                         contract_no,
                         ns,
                         symtable,
@@ -1540,7 +1556,7 @@ pub fn expression(
                 return Err(());
             }
 
-            let expr = named_function_call_expr(loc, ty, args, contract_no, ns, symtable)?;
+            let expr = named_function_call_expr(loc, ty, args, file_no, contract_no, ns, symtable)?;
 
             if expr.tys().len() > 1 {
                 ns.diagnostics.push(Output::error(
@@ -1564,10 +1580,10 @@ pub fn expression(
 
             match call.as_ref() {
                 pt::Expression::FunctionCall(_, ty, args) => {
-                    new(loc, ty, args, contract_no, ns, symtable)
+                    new(loc, ty, args, file_no, contract_no, ns, symtable)
                 }
                 pt::Expression::NamedFunctionCall(_, ty, args) => {
-                    constructor_named_args(loc, ty, args, contract_no, ns, symtable)
+                    constructor_named_args(loc, ty, args, file_no, contract_no, ns, symtable)
                 }
                 _ => unreachable!(),
             }
@@ -1582,9 +1598,18 @@ pub fn expression(
         pt::Expression::FunctionCall(loc, ty, args) => {
             let marker = ns.diagnostics.len();
 
-            match ns.resolve_type(contract_no, true, ty) {
+            match ns.resolve_type(file_no, contract_no, true, ty) {
                 Ok(Type::Struct(n)) => {
-                    return struct_literal(loc, n, args, contract_no, ns, symtable, is_constant);
+                    return struct_literal(
+                        loc,
+                        n,
+                        args,
+                        file_no,
+                        contract_no,
+                        ns,
+                        symtable,
+                        is_constant,
+                    );
                 }
                 Ok(to) => {
                     // Cast
@@ -1599,7 +1624,8 @@ pub fn expression(
                         ));
                         Err(())
                     } else {
-                        let expr = expression(&args[0], contract_no, ns, symtable, is_constant)?;
+                        let expr =
+                            expression(&args[0], file_no, contract_no, ns, symtable, is_constant)?;
 
                         cast(loc, expr, &to, false, ns)
                     };
@@ -1617,7 +1643,7 @@ pub fn expression(
                 return Err(());
             }
 
-            let expr = function_call_expr(loc, ty, args, contract_no, ns, symtable)?;
+            let expr = function_call_expr(loc, ty, args, file_no, contract_no, ns, symtable)?;
 
             if expr.tys().len() > 1 {
                 ns.diagnostics.push(Output::error(
@@ -1638,24 +1664,31 @@ pub fn expression(
 
             Err(())
         }
-        pt::Expression::ArraySubscript(loc, array, Some(index)) => {
-            array_subscript(loc, array, index, contract_no, ns, symtable, is_constant)
-        }
+        pt::Expression::ArraySubscript(loc, array, Some(index)) => array_subscript(
+            loc,
+            array,
+            index,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+            is_constant,
+        ),
         pt::Expression::MemberAccess(loc, e, id) => {
-            member_access(loc, e, id, contract_no, ns, symtable, is_constant)
+            member_access(loc, e, id, file_no, contract_no, ns, symtable, is_constant)
         }
         pt::Expression::Or(loc, left, right) => {
             let boolty = Type::Bool;
             let l = cast(
                 &loc,
-                expression(left, contract_no, ns, symtable, is_constant)?,
+                expression(left, file_no, contract_no, ns, symtable, is_constant)?,
                 &boolty,
                 true,
                 ns,
             )?;
             let r = cast(
                 &loc,
-                expression(right, contract_no, ns, symtable, is_constant)?,
+                expression(right, file_no, contract_no, ns, symtable, is_constant)?,
                 &boolty,
                 true,
                 ns,
@@ -1667,14 +1700,14 @@ pub fn expression(
             let boolty = Type::Bool;
             let l = cast(
                 &loc,
-                expression(left, contract_no, ns, symtable, is_constant)?,
+                expression(left, file_no, contract_no, ns, symtable, is_constant)?,
                 &boolty,
                 true,
                 ns,
             )?;
             let r = cast(
                 &loc,
-                expression(right, contract_no, ns, symtable, is_constant)?,
+                expression(right, file_no, contract_no, ns, symtable, is_constant)?,
                 &boolty,
                 true,
                 ns,
@@ -1768,6 +1801,7 @@ fn constructor(
     no: usize,
     args: &[pt::Expression],
     call_args: CallArgs,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -1815,7 +1849,7 @@ fn constructor(
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(arg, Some(contract_no), ns, symtable, false)?;
+        let expr = expression(arg, file_no, Some(contract_no), ns, symtable, false)?;
 
         resolved_args.push(Box::new(expr));
     }
@@ -1926,15 +1960,16 @@ pub fn constructor_named_args(
     loc: &pt::Loc,
     ty: &pt::Expression,
     args: &[pt::NamedArgument],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
     let (ty, call_args, _) = collect_call_args(ty, ns)?;
 
-    let call_args = parse_call_args(&call_args, false, contract_no, ns, symtable)?;
+    let call_args = parse_call_args(&call_args, false, file_no, contract_no, ns, symtable)?;
 
-    let no = match ns.resolve_type(contract_no, false, ty)? {
+    let no = match ns.resolve_type(file_no, contract_no, false, ty)? {
         Type::Contract(n) => n,
         _ => {
             ns.diagnostics
@@ -1988,7 +2023,7 @@ pub fn constructor_named_args(
     for arg in args {
         arguments.insert(
             arg.name.name.to_string(),
-            expression(&arg.expr, Some(contract_no), ns, symtable, false)?,
+            expression(&arg.expr, file_no, Some(contract_no), ns, symtable, false)?,
         );
     }
 
@@ -2035,7 +2070,7 @@ pub fn constructor_named_args(
                 }
             };
 
-            match cast(&pt::Loc(0, 0), arg.clone(), &param.ty, true, ns) {
+            match cast(&pt::Loc(file_no, 0, 0), arg.clone(), &param.ty, true, ns) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
@@ -2091,6 +2126,7 @@ pub fn type_name_expr(
     loc: &pt::Loc,
     args: &[pt::Expression],
     field: &pt::Identifier,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> Result<Expression, ()> {
@@ -2110,7 +2146,7 @@ pub fn type_name_expr(
         return Err(());
     }
 
-    let ty = ns.resolve_type(contract_no, false, &args[0])?;
+    let ty = ns.resolve_type(file_no, contract_no, false, &args[0])?;
 
     match (&ty, field.name.as_str()) {
         (Type::Uint(_), "min") => bigint_to_expression(loc, &BigInt::zero(), ns),
@@ -2198,13 +2234,14 @@ pub fn new(
     loc: &pt::Loc,
     ty: &pt::Expression,
     args: &[pt::Expression],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
     let (ty, call_args, call_args_loc) = collect_call_args(ty, ns)?;
 
-    let ty = ns.resolve_type(contract_no, false, ty)?;
+    let ty = ns.resolve_type(file_no, contract_no, false, ty)?;
 
     match &ty {
         Type::Array(ty, dim) => {
@@ -2229,9 +2266,9 @@ pub fn new(
         }
         Type::String | Type::DynamicBytes => {}
         Type::Contract(n) => {
-            let call_args = parse_call_args(&call_args, false, contract_no, ns, symtable)?;
+            let call_args = parse_call_args(&call_args, false, file_no, contract_no, ns, symtable)?;
 
-            return constructor(loc, *n, args, call_args, contract_no, ns, symtable);
+            return constructor(loc, *n, args, call_args, file_no, contract_no, ns, symtable);
         }
         _ => {
             ns.diagnostics.push(Output::error(
@@ -2259,7 +2296,7 @@ pub fn new(
     }
     let size_loc = args[0].loc();
 
-    let size_expr = expression(&args[0], contract_no, ns, symtable, false)?;
+    let size_expr = expression(&args[0], file_no, contract_no, ns, symtable, false)?;
     let size_ty = size_expr.ty();
 
     let size_width = match &size_ty {
@@ -2297,13 +2334,14 @@ fn equal(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
     is_constant: bool,
 ) -> Result<Expression, ()> {
-    let left = expression(l, contract_no, ns, symtable, is_constant)?;
-    let right = expression(r, contract_no, ns, symtable, is_constant)?;
+    let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+    let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
     // Comparing stringliteral against stringliteral
     if let (Expression::BytesLiteral(_, _, l), Expression::BytesLiteral(_, _, r)) = (&left, &right)
@@ -2389,13 +2427,14 @@ fn addition(
     loc: &pt::Loc,
     l: &pt::Expression,
     r: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
     is_constant: bool,
 ) -> Result<Expression, ()> {
-    let left = expression(l, contract_no, ns, symtable, is_constant)?;
-    let right = expression(r, contract_no, ns, symtable, is_constant)?;
+    let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
+    let right = expression(r, file_no, contract_no, ns, symtable, is_constant)?;
 
     // Concatenate stringliteral with stringliteral
     if let (Expression::BytesLiteral(_, _, l), Expression::BytesLiteral(_, _, r)) = (&left, &right)
@@ -2465,13 +2504,14 @@ pub fn assign_single(
     loc: &pt::Loc,
     left: &pt::Expression,
     right: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    let var = expression(left, contract_no, ns, symtable, false)?;
+    let var = expression(left, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var.ty();
-    let val = expression(right, contract_no, ns, symtable, false)?;
+    let val = expression(right, file_no, contract_no, ns, symtable, false)?;
 
     match &var {
         Expression::ConstantVariable(loc, _, n) => {
@@ -2520,11 +2560,12 @@ fn assign_expr(
     left: &pt::Expression,
     expr: &pt::Expression,
     right: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    let set = expression(right, contract_no, ns, symtable, false)?;
+    let set = expression(right, file_no, contract_no, ns, symtable, false)?;
     let set_type = set.ty();
 
     let op = |assign: Expression, ty: &Type, ns: &mut Namespace| -> Result<Expression, ()> {
@@ -2595,7 +2636,7 @@ fn assign_expr(
         })
     };
 
-    let var = expression(left, contract_no, ns, symtable, false)?;
+    let var = expression(left, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var.ty();
 
     match &var {
@@ -2662,6 +2703,7 @@ fn assign_expr(
 fn incr_decr(
     v: &pt::Expression,
     expr: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -2680,7 +2722,7 @@ fn incr_decr(
         }
     };
 
-    let var = expression(v, contract_no, ns, symtable, false)?;
+    let var = expression(v, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var.ty();
 
     match &var {
@@ -2738,6 +2780,7 @@ fn member_access(
     loc: &pt::Loc,
     e: &pt::Expression,
     id: &pt::Identifier,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -2746,8 +2789,8 @@ fn member_access(
     // is of the form "contract_name.enum_name.enum_value"
     if let pt::Expression::MemberAccess(_, e, enum_name) = e {
         if let pt::Expression::Variable(contract_name) = e.as_ref() {
-            if let Some(contract_no) = ns.resolve_contract(contract_name) {
-                if let Some(e) = ns.resolve_enum(Some(contract_no), enum_name) {
+            if let Some(contract_no) = ns.resolve_contract(file_no, contract_name) {
+                if let Some(e) = ns.resolve_enum(file_no, Some(contract_no), enum_name) {
                     return match ns.enums[e].values.get(&id.name) {
                         Some((_, val)) => Ok(Expression::NumberLiteral(
                             *loc,
@@ -2777,7 +2820,7 @@ fn member_access(
             return Ok(Expression::Builtin(*loc, vec![ty], builtin, vec![]));
         }
 
-        if let Some(e) = ns.resolve_enum(contract_no, namespace) {
+        if let Some(e) = ns.resolve_enum(file_no, contract_no, namespace) {
             return match ns.enums[e].values.get(&id.name) {
                 Some((_, val)) => Ok(Expression::NumberLiteral(
                     *loc,
@@ -2803,12 +2846,12 @@ fn member_access(
     if let pt::Expression::FunctionCall(_, name, args) = e {
         if let pt::Expression::Variable(func_name) = name.as_ref() {
             if func_name.name == "type" {
-                return type_name_expr(loc, args, id, contract_no, ns);
+                return type_name_expr(loc, args, id, file_no, contract_no, ns);
             }
         }
     }
 
-    let expr = expression(e, contract_no, ns, symtable, is_constant)?;
+    let expr = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
     let expr_ty = expr.ty();
 
     // Dereference if need to. This could be struct-in-struct for
@@ -2965,12 +3008,13 @@ fn array_subscript(
     loc: &pt::Loc,
     array: &pt::Expression,
     index: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
     is_constant: bool,
 ) -> Result<Expression, ()> {
-    let array_expr = expression(array, contract_no, ns, symtable, is_constant)?;
+    let array_expr = expression(array, file_no, contract_no, ns, symtable, is_constant)?;
     let array_ty = array_expr.ty();
 
     if array_expr.ty().is_mapping() {
@@ -2978,6 +3022,7 @@ fn array_subscript(
             loc,
             array_expr,
             index,
+            file_no,
             contract_no,
             ns,
             symtable,
@@ -2985,7 +3030,7 @@ fn array_subscript(
         );
     }
 
-    let index_expr = expression(index, contract_no, ns, symtable, is_constant)?;
+    let index_expr = expression(index, file_no, contract_no, ns, symtable, is_constant)?;
 
     match index_expr.ty() {
         Type::Uint(_) => (),
@@ -3055,6 +3100,7 @@ fn struct_literal(
     loc: &pt::Loc,
     struct_no: usize,
     args: &[pt::Expression],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3077,7 +3123,7 @@ fn struct_literal(
         let mut fields = Vec::new();
 
         for (i, a) in args.iter().enumerate() {
-            let expr = expression(&a, contract_no, ns, symtable, is_constant)?;
+            let expr = expression(&a, file_no, contract_no, ns, symtable, is_constant)?;
 
             fields.push(cast(loc, expr, &struct_def.fields[i].ty, true, ns)?);
         }
@@ -3093,6 +3139,7 @@ fn function_call_pos_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
     args: &[pt::Expression],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3100,7 +3147,7 @@ fn function_call_pos_args(
     let mut resolved_args = Vec::new();
 
     for arg in args {
-        let expr = expression(arg, contract_no, ns, symtable, false)?;
+        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
 
         resolved_args.push(expr);
     }
@@ -3121,7 +3168,7 @@ fn function_call_pos_args(
     }
 
     // Try to resolve as a function call
-    let funcs = ns.resolve_func(contract_no.unwrap(), &id)?;
+    let funcs = ns.resolve_func(file_no, contract_no.unwrap(), &id)?;
 
     let marker = ns.diagnostics.len();
 
@@ -3195,12 +3242,13 @@ fn function_call_with_named_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
     args: &[pt::NamedArgument],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
     // Try to resolve as a function call
-    let funcs = ns.resolve_func(contract_no.unwrap(), &id)?;
+    let funcs = ns.resolve_func(file_no, contract_no.unwrap(), &id)?;
 
     let mut arguments = HashMap::new();
 
@@ -3215,7 +3263,7 @@ fn function_call_with_named_args(
 
         arguments.insert(
             arg.name.name.to_string(),
-            expression(&arg.expr, contract_no, ns, symtable, false)?,
+            expression(&arg.expr, file_no, contract_no, ns, symtable, false)?,
         );
     }
 
@@ -3302,6 +3350,7 @@ fn named_struct_literal(
     loc: &pt::Loc,
     struct_no: usize,
     args: &[pt::NamedArgument],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3331,7 +3380,8 @@ fn named_struct_literal(
                 .find(|(_, f)| f.name == a.name.name)
             {
                 Some((i, f)) => {
-                    let expr = expression(&a.expr, contract_no, ns, symtable, is_constant)?;
+                    let expr =
+                        expression(&a.expr, file_no, contract_no, ns, symtable, is_constant)?;
 
                     fields[i] = cast(loc, expr, &f.ty, true, ns)?;
                 }
@@ -3360,6 +3410,7 @@ fn method_call_pos_args(
     args: &[pt::Expression],
     call_args: &[&pt::NamedArgument],
     call_args_loc: Option<pt::Loc>,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3376,6 +3427,7 @@ fn method_call_pos_args(
 
             return builtin::resolve_method_call(
                 loc,
+                file_no,
                 namespace,
                 func,
                 args,
@@ -3386,7 +3438,7 @@ fn method_call_pos_args(
         }
     }
 
-    let var_expr = expression(var, contract_no, ns, symtable, false)?;
+    let var_expr = expression(var, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var_expr.ty();
 
     if let Type::StorageRef(ty) = &var_ty {
@@ -3414,7 +3466,8 @@ fn method_call_pos_args(
 
                     let ret_ty = match args.len() {
                         1 => {
-                            let expr = expression(&args[0], contract_no, ns, symtable, false)?;
+                            let expr =
+                                expression(&args[0], file_no, contract_no, ns, symtable, false)?;
 
                             builtin_args.push(cast(&args[0].loc(), expr, &elem_ty, true, ns)?);
 
@@ -3488,7 +3541,8 @@ fn method_call_pos_args(
 
                     let ret_ty = match args.len() {
                         1 => {
-                            let expr = expression(&args[0], contract_no, ns, symtable, false)?;
+                            let expr =
+                                expression(&args[0], file_no, contract_no, ns, symtable, false)?;
 
                             builtin_args.push(cast(&args[0].loc(), expr, &elem_ty, true, ns)?);
 
@@ -3534,12 +3588,13 @@ fn method_call_pos_args(
     }
 
     if let Type::Contract(contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(call_args, true, Some(*contract_no), ns, symtable)?;
+        let call_args =
+            parse_call_args(call_args, true, file_no, Some(*contract_no), ns, symtable)?;
 
         let mut resolved_args = Vec::new();
 
         for arg in args {
-            let expr = expression(arg, Some(*contract_no), ns, symtable, false)?;
+            let expr = expression(arg, file_no, Some(*contract_no), ns, symtable, false)?;
             resolved_args.push(Box::new(expr));
         }
 
@@ -3616,7 +3671,7 @@ fn method_call_pos_args(
                     value
                 } else {
                     Box::new(Expression::NumberLiteral(
-                        pt::Loc(0, 0),
+                        pt::Loc(0, 0, 0),
                         Type::Uint(ns.value_length as u16 * 8),
                         BigInt::zero(),
                     ))
@@ -3677,7 +3732,7 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            let expr = expression(&args[0], contract_no, ns, symtable, false)?;
+            let expr = expression(&args[0], file_no, contract_no, ns, symtable, false)?;
 
             let value = cast(
                 &args[0].loc(),
@@ -3714,7 +3769,7 @@ fn method_call_pos_args(
         };
 
         if let Some(ty) = ty {
-            let call_args = parse_call_args(call_args, true, contract_no, ns, symtable)?;
+            let call_args = parse_call_args(call_args, true, file_no, contract_no, ns, symtable)?;
 
             if args.len() != 1 {
                 ns.diagnostics.push(Output::error(
@@ -3729,13 +3784,13 @@ fn method_call_pos_args(
                 return Err(());
             }
 
-            let expr = expression(&args[0], contract_no, ns, symtable, false)?;
+            let expr = expression(&args[0], file_no, contract_no, ns, symtable, false)?;
 
             let args = cast(&args[0].loc(), expr, &Type::DynamicBytes, true, ns)?;
 
             let value = call_args.value.unwrap_or_else(|| {
                 Box::new(Expression::NumberLiteral(
-                    pt::Loc(0, 0),
+                    pt::Loc(0, 0, 0),
                     Type::Uint(ns.value_length as u16 * 8),
                     BigInt::zero(),
                 ))
@@ -3765,15 +3820,16 @@ fn method_call_named_args(
     func_name: &pt::Identifier,
     args: &[pt::NamedArgument],
     call_args: &[&pt::NamedArgument],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    let var_expr = expression(var, contract_no, ns, symtable, false)?;
+    let var_expr = expression(var, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var_expr.ty();
 
     if let Type::Contract(external_contract_no) = &var_ty.deref_any() {
-        let call_args = parse_call_args(&call_args, true, contract_no, ns, symtable)?;
+        let call_args = parse_call_args(&call_args, true, file_no, contract_no, ns, symtable)?;
 
         let mut arguments = HashMap::new();
 
@@ -3788,7 +3844,7 @@ fn method_call_named_args(
 
             arguments.insert(
                 arg.name.name.to_string(),
-                expression(&arg.expr, contract_no, ns, symtable, false)?,
+                expression(&arg.expr, file_no, contract_no, ns, symtable, false)?,
             );
         }
 
@@ -3839,7 +3895,7 @@ fn method_call_named_args(
                         break;
                     }
                 };
-                match cast(&pt::Loc(0, 0), arg.clone(), &param.ty, true, ns) {
+                match cast(&pt::Loc(0, 0, 0), arg.clone(), &param.ty, true, ns) {
                     Ok(expr) => cast_args.push(expr),
                     Err(()) => {
                         matches = false;
@@ -3874,7 +3930,7 @@ fn method_call_named_args(
                     value
                 } else {
                     Box::new(Expression::NumberLiteral(
-                        pt::Loc(0, 0),
+                        pt::Loc(0, 0, 0),
                         Type::Uint(ns.value_length as u16 * 8),
                         BigInt::zero(),
                     ))
@@ -3962,6 +4018,7 @@ pub fn cast_shift_arg(
 fn resolve_array_literal(
     loc: &pt::Loc,
     exprs: &[pt::Expression],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3986,6 +4043,7 @@ fn resolve_array_literal(
     // type of the first element
     let first = expression(
         flattened.next().unwrap(),
+        file_no,
         contract_no,
         ns,
         symtable,
@@ -3996,7 +4054,7 @@ fn resolve_array_literal(
     let mut exprs = vec![first];
 
     for e in flattened {
-        let mut other = expression(e, contract_no, ns, symtable, is_constant)?;
+        let mut other = expression(e, file_no, contract_no, ns, symtable, is_constant)?;
 
         if other.ty() != ty {
             other = cast(&e.loc(), other, &ty, true, ns)?;
@@ -4094,7 +4152,7 @@ pub fn collect_call_args<'a>(
         match block.as_ref() {
             pt::Statement::Args(_, args) => {
                 if let Some(l) = loc {
-                    loc = Some(pt::Loc(l.0, block.loc().1));
+                    loc = Some(pt::Loc(l.0, l.1, block.loc().2));
                 } else {
                     loc = Some(block.loc());
                 }
@@ -4135,6 +4193,7 @@ struct CallArgs {
 fn parse_call_args(
     call_args: &[&pt::NamedArgument],
     external_call: bool,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -4157,7 +4216,7 @@ fn parse_call_args(
 
     let mut res = CallArgs {
         gas: Box::new(Expression::NumberLiteral(
-            pt::Loc(0, 0),
+            pt::Loc(0, 0, 0),
             Type::Uint(64),
             BigInt::zero(),
         )),
@@ -4168,14 +4227,14 @@ fn parse_call_args(
     for arg in args.values() {
         match arg.name.name.as_str() {
             "value" => {
-                let expr = expression(&arg.expr, contract_no, ns, symtable, false)?;
+                let expr = expression(&arg.expr, file_no, contract_no, ns, symtable, false)?;
 
                 let ty = Type::Uint(ns.value_length as u16 * 8);
 
                 res.value = Some(Box::new(cast(&arg.expr.loc(), expr, &ty, true, ns)?));
             }
             "gas" => {
-                let expr = expression(&arg.expr, contract_no, ns, symtable, false)?;
+                let expr = expression(&arg.expr, file_no, contract_no, ns, symtable, false)?;
 
                 let ty = Type::Uint(64);
 
@@ -4190,7 +4249,7 @@ fn parse_call_args(
                     return Err(());
                 }
 
-                let expr = expression(&arg.expr, contract_no, ns, symtable, false)?;
+                let expr = expression(&arg.expr, file_no, contract_no, ns, symtable, false)?;
 
                 let ty = Type::Uint(256);
 
@@ -4214,6 +4273,7 @@ pub fn function_call_expr(
     loc: &pt::Loc,
     ty: &pt::Expression,
     args: &[pt::Expression],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -4228,6 +4288,7 @@ pub fn function_call_expr(
             args,
             &call_args,
             call_args_loc,
+            file_no,
             contract_no,
             ns,
             symtable,
@@ -4241,7 +4302,7 @@ pub fn function_call_expr(
                 return Err(());
             }
 
-            function_call_pos_args(loc, &id, args, contract_no, ns, symtable)
+            function_call_pos_args(loc, &id, args, file_no, contract_no, ns, symtable)
         }
         pt::Expression::ArraySubscript(_, _, _) => {
             ns.diagnostics
@@ -4263,6 +4324,7 @@ pub fn named_function_call_expr(
     loc: &pt::Loc,
     ty: &pt::Expression,
     args: &[pt::NamedArgument],
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -4276,6 +4338,7 @@ pub fn named_function_call_expr(
             func,
             args,
             &call_args,
+            file_no,
             contract_no,
             ns,
             symtable,
@@ -4289,7 +4352,7 @@ pub fn named_function_call_expr(
                 return Err(());
             }
 
-            function_call_with_named_args(loc, &id, args, contract_no, ns, symtable)
+            function_call_with_named_args(loc, &id, args, file_no, contract_no, ns, symtable)
         }
         pt::Expression::ArraySubscript(_, _, _) => {
             ns.diagnostics
@@ -4322,6 +4385,7 @@ fn mapping_subscript(
     loc: &pt::Loc,
     mapping: Expression,
     index: &pt::Expression,
+    file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -4336,7 +4400,7 @@ fn mapping_subscript(
 
     let index_expr = cast(
         &index.loc(),
-        expression(index, contract_no, ns, symtable, is_constant)?,
+        expression(index, file_no, contract_no, ns, symtable, is_constant)?,
         key_ty,
         true,
         ns,

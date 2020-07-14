@@ -593,7 +593,7 @@ fn try_catch(
                         selector: None,
                         exception: None,
                         tys: ftype.returns.clone(),
-                        data: Expression::ReturnData(pt::Loc(0, 0)),
+                        data: Expression::ReturnData(pt::Loc(0, 0, 0)),
                     },
                 );
             }
@@ -686,7 +686,7 @@ fn try_catch(
                 exception: Some(no_reason_block),
                 res: vec![error_var],
                 tys: vec![error_param.clone()],
-                data: Expression::ReturnData(pt::Loc(0, 0)),
+                data: Expression::ReturnData(pt::Loc(0, 0, 0)),
             },
         );
 
@@ -709,7 +709,7 @@ fn try_catch(
             vartab,
             Instr::Set {
                 res: *pos,
-                expr: Expression::ReturnData(pt::Loc(0, 0)),
+                expr: Expression::ReturnData(pt::Loc(0, 0, 0)),
             },
         );
     }
@@ -768,20 +768,22 @@ impl Type {
     pub fn default(&self, ns: &Namespace) -> Expression {
         match self {
             Type::Address(_) | Type::Uint(_) | Type::Int(_) => {
-                Expression::NumberLiteral(pt::Loc(0, 0), self.clone(), BigInt::from(0))
+                Expression::NumberLiteral(pt::Loc(0, 0, 0), self.clone(), BigInt::from(0))
             }
-            Type::Bool => Expression::BoolLiteral(pt::Loc(0, 0), false),
+            Type::Bool => Expression::BoolLiteral(pt::Loc(0, 0, 0), false),
             Type::Bytes(n) => {
                 let mut l = Vec::new();
                 l.resize(*n as usize, 0);
-                Expression::BytesLiteral(pt::Loc(0, 0), self.clone(), l)
+                Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), l)
             }
             Type::Enum(e) => ns.enums[*e].ty.default(ns),
-            Type::Struct(_) => Expression::StructLiteral(pt::Loc(0, 0), self.clone(), Vec::new()),
+            Type::Struct(_) => {
+                Expression::StructLiteral(pt::Loc(0, 0, 0), self.clone(), Vec::new())
+            }
             Type::Ref(_) => unreachable!(),
             Type::StorageRef(_) => Expression::Poison,
             Type::String | Type::DynamicBytes => {
-                Expression::BytesLiteral(pt::Loc(0, 0), self.clone(), vec![])
+                Expression::BytesLiteral(pt::Loc(0, 0, 0), self.clone(), vec![])
             }
             _ => unreachable!(),
         }

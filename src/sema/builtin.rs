@@ -386,7 +386,7 @@ pub fn resolve_call(
 
         // check if arguments can be implicitly casted
         for (i, arg) in args.iter().enumerate() {
-            match cast(&pt::Loc(0, 0), arg.clone(), &func.args[i], true, ns) {
+            match cast(&pt::Loc(0, 0, 0), arg.clone(), &func.args[i], true, ns) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
                     matches = false;
@@ -423,6 +423,7 @@ pub fn resolve_call(
 /// this. It is only used in for this specific call.
 pub fn resolve_method_call(
     loc: &pt::Loc,
+    file_no: usize,
     namespace: &pt::Identifier,
     id: &pt::Identifier,
     args: &[pt::Expression],
@@ -454,7 +455,7 @@ pub fn resolve_method_call(
         // first args
         let data = cast(
             &args[0].loc(),
-            expression(&args[0], contract_no, ns, symtable, false)?,
+            expression(&args[0], file_no, contract_no, ns, symtable, false)?,
             &Type::DynamicBytes,
             true,
             ns,
@@ -467,7 +468,7 @@ pub fn resolve_method_call(
             pt::Expression::List(_, list) => {
                 for (loc, param) in list {
                     if let Some(param) = param {
-                        let ty = ns.resolve_type(contract_no, false, &param.ty)?;
+                        let ty = ns.resolve_type(file_no, contract_no, false, &param.ty)?;
 
                         if let Some(storage) = &param.storage {
                             ns.diagnostics.push(Output::error(
@@ -503,7 +504,7 @@ pub fn resolve_method_call(
                 }
             }
             _ => {
-                let ty = ns.resolve_type(contract_no, false, &args[1])?;
+                let ty = ns.resolve_type(file_no, contract_no, false, &args[1])?;
 
                 if ty.is_mapping() {
                     ns.diagnostics.push(Output::error(
@@ -536,7 +537,7 @@ pub fn resolve_method_call(
         Builtin::AbiEncodeWithSelector => {
             // first argument is selector
             if let Some(selector) = args_iter.next() {
-                let selector = expression(selector, contract_no, ns, symtable, false)?;
+                let selector = expression(selector, file_no, contract_no, ns, symtable, false)?;
 
                 resolved_args.insert(
                     0,
@@ -554,7 +555,7 @@ pub fn resolve_method_call(
         Builtin::AbiEncodeWithSignature => {
             // first argument is signature
             if let Some(signature) = args_iter.next() {
-                let signature = expression(signature, contract_no, ns, symtable, false)?;
+                let signature = expression(signature, file_no, contract_no, ns, symtable, false)?;
 
                 resolved_args.insert(
                     0,
@@ -573,7 +574,7 @@ pub fn resolve_method_call(
     }
 
     for arg in args_iter {
-        let mut expr = expression(arg, contract_no, ns, symtable, false)?;
+        let mut expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
         let ty = expr.ty();
 
         if ty.is_mapping() {

@@ -25,6 +25,7 @@ pub mod sema;
 
 use inkwell::OptimizationLevel;
 use parsedcache::ParsedCache;
+use sema::ast;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
@@ -63,8 +64,19 @@ pub fn compile(
 ) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
     let ctx = inkwell::context::Context::create();
 
+    let mut ns = ast::Namespace::new(
+        target,
+        filename,
+        match target {
+            Target::Ewasm => 20,
+            Target::Substrate => 32,
+            Target::Sabre => 0, // Sabre has no address type
+        },
+        16,
+    );
+
     // resolve
-    let mut ns = sema::sema(&filename, cache, target);
+    sema::sema(&filename, cache, target, &mut ns);
 
     if output::any_errors(&ns.diagnostics) {
         return (Vec::new(), ns.diagnostics);
@@ -101,6 +113,18 @@ pub fn parse_and_resolve(
     cache: &mut ParsedCache,
     target: Target,
 ) -> sema::ast::Namespace {
+    let mut ns = ast::Namespace::new(
+        target,
+        match target {
+            Target::Ewasm => 20,
+            Target::Substrate => 32,
+            Target::Sabre => 0, // Sabre has no address type
+        },
+        16,
+    );
+
     // resolve
-    sema::sema(filename, cache, target)
+    sema::sema(filename, cache, target, &mut ns);
+
+    ns
 }

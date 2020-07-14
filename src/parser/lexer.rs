@@ -325,14 +325,14 @@ impl fmt::Display for LexicalError {
 }
 
 impl LexicalError {
-    pub fn loc(&self) -> Loc {
+    pub fn loc(&self, file_no: usize) -> Loc {
         match self {
-            LexicalError::EndOfFileInComment(start, end) => Loc(*start, *end),
-            LexicalError::EndOfFileInString(start, end) => Loc(*start, *end),
-            LexicalError::EndofFileInHex(start, end) => Loc(*start, *end),
-            LexicalError::MissingNumber(start, end) => Loc(*start, *end),
-            LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(*pos, *pos),
-            LexicalError::UnrecognisedToken(start, end, _) => Loc(*start, *end),
+            LexicalError::EndOfFileInComment(start, end) => Loc(file_no, *start, *end),
+            LexicalError::EndOfFileInString(start, end) => Loc(file_no, *start, *end),
+            LexicalError::EndofFileInHex(start, end) => Loc(file_no, *start, *end),
+            LexicalError::MissingNumber(start, end) => Loc(file_no, *start, *end),
+            LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(file_no, *pos, *pos),
+            LexicalError::UnrecognisedToken(start, end, _) => Loc(file_no, *start, *end),
         }
     }
 }

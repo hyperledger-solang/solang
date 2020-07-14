@@ -385,6 +385,7 @@ impl StructDecl {
 pub struct EnumDecl {
     pub name: String,
     pub contract: Option<String>,
+    pub loc: pt::Loc,
     pub ty: Type,
     pub values: HashMap<String, (pt::Loc, usize)>,
 }
@@ -583,6 +584,7 @@ pub enum ContractVariableType {
 pub struct ContractVariable {
     pub doc: Vec<String>,
     pub name: String,
+    pub loc: pt::Loc,
     pub ty: Type,
     pub visibility: pt::Visibility,
     pub var: ContractVariableType,
@@ -600,7 +602,7 @@ impl ContractVariable {
 
     pub fn get_storage_slot(&self) -> Expression {
         if let ContractVariableType::Storage(n) = &self.var {
-            Expression::NumberLiteral(pt::Loc(0, 0), Type::Uint(256), n.clone())
+            Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Uint(256), n.clone())
         } else {
             panic!("get_storage_slot called on non-storage variable");
         }
@@ -618,17 +620,20 @@ pub enum Symbol {
 /// When resolving a Solidity file, this holds all the resolved items
 pub struct Namespace {
     pub target: Target,
+    pub files: Vec<String>,
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
     pub contracts: Vec<Contract>,
     pub address_length: usize,
     pub value_length: usize,
     pub diagnostics: Vec<output::Output>,
-    pub symbols: HashMap<(Option<usize>, String), Symbol>,
+    /// Symbol key is file_no, contract, identifier
+    pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
 }
 
 pub struct Contract {
     pub doc: Vec<String>,
+    pub loc: pt::Loc,
     pub name: String,
     // events
     pub functions: Vec<Function>,

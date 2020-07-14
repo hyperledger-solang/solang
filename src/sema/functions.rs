@@ -6,6 +6,7 @@ use Target;
 pub fn function_decl(
     f: &pt::FunctionDefinition,
     i: usize,
+    file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
 ) -> bool {
@@ -116,7 +117,7 @@ pub fn function_decl(
                 .push(Output::error(f.loc, "no visibility specified".to_string()));
             success = false;
             // continue processing while assuming it's a public
-            pt::Visibility::Public(pt::Loc(0, 0))
+            pt::Visibility::Public(pt::Loc(0, 0, 0))
         }
     };
 
@@ -136,9 +137,9 @@ pub fn function_decl(
         pt::Visibility::Public(_) | pt::Visibility::External(_) => false,
     };
 
-    let (params, params_success) = resolve_params(f, storage_allowed, contract_no, ns);
+    let (params, params_success) = resolve_params(f, storage_allowed, file_no, contract_no, ns);
 
-    let (returns, returns_success) = resolve_returns(f, storage_allowed, contract_no, ns);
+    let (returns, returns_success) = resolve_returns(f, storage_allowed, file_no, contract_no, ns);
 
     if !success || !returns_success || !params_success {
         return false;
@@ -294,7 +295,8 @@ pub fn function_decl(
         let id = f.name.as_ref().unwrap();
 
         if let Some(Symbol::Function(ref mut v)) =
-            ns.symbols.get_mut(&(Some(contract_no), id.name.to_owned()))
+            ns.symbols
+                .get_mut(&(file_no, Some(contract_no), id.name.to_owned()))
         {
             // check if signature already present
             for o in v.iter() {
@@ -321,7 +323,12 @@ pub fn function_decl(
 
         ns.contracts[contract_no].functions.push(fdecl);
 
-        ns.add_symbol(Some(contract_no), id, Symbol::Function(vec![(id.loc, pos)]));
+        ns.add_symbol(
+            file_no,
+            Some(contract_no),
+            id,
+            Symbol::Function(vec![(id.loc, pos)]),
+        );
 
         true
     }
@@ -331,6 +338,7 @@ pub fn function_decl(
 fn resolve_params(
     f: &pt::FunctionDefinition,
     storage_allowed: bool,
+    file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
 ) -> (Vec<Parameter>, bool) {
@@ -348,12 +356,12 @@ fn resolve_params(
             }
         };
 
-        match ns.resolve_type(Some(contract_no), false, &p.ty) {
+        match ns.resolve_type(file_no, Some(contract_no), false, &p.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
                         ns.diagnostics.push(Output::error(
-                                *storage.loc(),
+                            *storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
                             ));
@@ -404,6 +412,7 @@ fn resolve_params(
 fn resolve_returns(
     f: &pt::FunctionDefinition,
     storage_allowed: bool,
+    file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
 ) -> (Vec<Parameter>, bool) {
@@ -421,12 +430,12 @@ fn resolve_returns(
             }
         };
 
-        match ns.resolve_type(Some(contract_no), false, &r.ty) {
+        match ns.resolve_type(file_no, Some(contract_no), false, &r.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
                         ns.diagnostics.push(Output::error(
-                                *storage.loc(),
+                            *storage.loc(),
                                 format!("data location ‘{}’ can only be specified for array, struct or mapping",
                                 storage)
                             ));
@@ -493,24 +502,24 @@ fn resolve_returns(
 fn signatures() {
     use super::*;
 
-    let ns = Namespace::new(Target::Ewasm, 20);
+    let ns = Namespace::new(Target::Ewasm, 20, 16);
 
     let fdecl = Function::new(
-        pt::Loc(0, 0),
+        pt::Loc(0, 0, 0),
         "foo".to_owned(),
         vec![],
         pt::FunctionTy::Function,
         Some(0),
         None,
-        pt::Visibility::Public(pt::Loc(0, 0)),
+        pt::Visibility::Public(pt::Loc(0, 0, 0)),
         vec![
             Parameter {
-                loc: pt::Loc(0, 0),
+                loc: pt::Loc(0, 0, 0),
                 name: "".to_string(),
                 ty: Type::Uint(8),
             },
             Parameter {
-                loc: pt::Loc(0, 0),
+                loc: pt::Loc(0, 0, 0),
                 name: "".to_string(),
                 ty: Type::Address(false),
             },

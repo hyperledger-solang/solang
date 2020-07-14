@@ -1,6 +1,6 @@
 use output::Output;
 use parser::parse;
-use parser::pt::{Loc, SourceUnit};
+use parser::pt::SourceUnit;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -72,70 +72,73 @@ impl ParsedCache {
         self.files[*pos].source_code.clone()
     }
 
+    /// Load the given file into the cache
+    pub fn populate_cache(&mut self, filename: &str) -> Result<(), String> {
+        if self.by_name.contains_key(filename) {
+            // already in the cache
+            return Ok(());
+        }
+
+        if let Some(path) = self.resolve_file(filename) {
+            if let Some(pos) = self.by_path.get(&path) {
+                // we found a different name for the same file
+                self.by_name.insert(filename.to_string(), *pos);
+
+                return Ok(());
+            }
+
+            // read the file
+            let mut f = match File::open(&path) {
+                Err(err_info) => {
+                    return Err(format!(
+                        "cannot open file ‘{}’: {}",
+                        filename,
+                        err_info.to_string()
+                    ));
+                }
+                Ok(file) => file,
+            };
+
+            let mut contents = String::new();
+            if let Err(e) = f.read_to_string(&mut contents) {
+                return Err(format!(
+                    "failed to read file ‘{}’: {}",
+                    filename,
+                    e.to_string()
+                ));
+            }
+
+            let pos = self.files.len();
+
+            self.files.push(ParsedFile {
+                source_code: Rc::new(contents),
+                parse_tree: None,
+            });
+
+            self.by_name.insert(filename.to_string(), pos);
+            self.by_path.insert(path, pos);
+
+            Ok(())
+        } else {
+            Err(format!("file not found ‘{}’", filename))
+        }
+    }
+
     /// Parse the given file. Return cached parse tree if available; else read file
     /// and parse.
-    pub fn parse(&mut self, filename: &str) -> Result<Rc<SourceUnit>, Vec<Output>> {
-        let file = match self.by_name.get(filename) {
-            Some(pos) => *pos,
-            None => {
-                if let Some(path) = self.resolve_file(filename) {
-                    if let Some(pos) = self.by_path.get(&path) {
-                        // we found a different name for the same file
-                        self.by_name.insert(filename.to_string(), *pos);
+    pub fn parse(&mut self, file_no: usize, filename: &str) -> Result<Rc<SourceUnit>, Vec<Output>> {
+        let file = self
+            .by_name
+            .get(filename)
+            .expect("file should be populated in the cache");
 
-                        *pos
-                    } else {
-                        // read the file
-                        let mut f = match File::open(&path) {
-                            Err(err_info) => {
-                                return Err(vec![Output::error(
-                                    Loc(0, 0),
-                                    format!(
-                                        "cannot open file ‘{}’: {}",
-                                        filename,
-                                        err_info.to_string()
-                                    ),
-                                )]);
-                            }
-                            Ok(file) => file,
-                        };
-
-                        let mut contents = String::new();
-                        if let Err(e) = f.read_to_string(&mut contents) {
-                            return Err(vec![Output::error(
-                                Loc(0, 0),
-                                format!("failed to read file ‘{}’: {}", filename, e.to_string()),
-                            )]);
-                        }
-
-                        let pos = self.files.len();
-
-                        self.files.push(ParsedFile {
-                            source_code: Rc::new(contents),
-                            parse_tree: None,
-                        });
-
-                        self.by_name.insert(filename.to_string(), pos);
-                        self.by_path.insert(path, pos);
-
-                        pos
-                    }
-                } else {
-                    return Err(vec![Output::error(
-                        Loc(0, 0),
-                        format!("file not found ‘{}’", filename),
-                    )]);
-                }
-            }
-        };
-
-        if let Some(pt) = &self.files[file].parse_tree {
+        if let Some(pt) = &self.files[*file].parse_tree {
             return Ok(pt.clone());
         }
 
-        let pt = Rc::new(parse(&self.files[file].source_code)?);
+        let pt = Rc::new(parse(&self.files[*file].source_code, file_no)?);
 
-        self.files[file].parse_tree = Some(pt.clone());
+        self.files[*file].parse_tree = Some(pt.clone());
 
         Ok(pt)
     }

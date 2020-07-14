@@ -917,7 +917,7 @@ impl Vartable {
         self.vars.push(Variable {
             id: pt::Identifier {
                 name: format!("temp.{}", pos),
-                loc: pt::Loc(0, 0),
+                loc: pt::Loc(0, 0, 0),
             },
             ty: ty.clone(),
             pos,
@@ -949,7 +949,7 @@ impl Vartable {
         self.vars.push(Variable {
             id: pt::Identifier {
                 name: format!("{}.temp.{}", name, pos),
-                loc: pt::Loc(0, 0),
+                loc: pt::Loc(0, 0, 0),
             },
             ty: ty.clone(),
             pos,

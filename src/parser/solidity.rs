@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.19.0"
-// sha256: d2417ded6d14a583e54cd9b2d6f8d2c21f99f394ac2ecb82736273f1cdfc1b6
+// sha256: 611f95ecffadecb498ede1d638a0dab94b58aad95ec6bd8a459368eb989a80
 use std::str::FromStr;
 use num_bigint::BigInt;
 use parser::pt::*;
@@ -2568,6 +2568,7 @@ mod __parse__SourceUnit {
     where 
     {
         input: &'input str,
+        file_no: usize,
         __phantom: ::std::marker::PhantomData<(&'input ())>,
     }
     impl<'input> __state_machine::ParserDefinition for __StateMachine<'input>
@@ -2649,6 +2650,7 @@ mod __parse__SourceUnit {
         ) -> Option<__state_machine::ParseResult<Self>> {
             __reduce(
                 self.input,
+                self.file_no,
                 action,
                 start_location,
                 states,
@@ -2835,6 +2837,7 @@ mod __parse__SourceUnit {
         >(
             &self,
             input: &'input str,
+            file_no: usize,
             __tokens0: __TOKENS,
         ) -> Result<SourceUnit, __lalrpop_util::ParseError<usize, Token<'input>, LexicalError>>
         {
@@ -2843,6 +2846,7 @@ mod __parse__SourceUnit {
             __state_machine::Parser::drive(
                 __StateMachine {
                     input,
+                    file_no,
                     __phantom: ::std::marker::PhantomData::<(&())>,
                 },
                 __tokens,
@@ -2853,6 +2857,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __action: i16,
         __lookahead_start: Option<&usize>,
         __states: &mut ::std::vec::Vec<i16>,
@@ -2862,980 +2867,980 @@ mod __parse__SourceUnit {
     {
         let (__pop_states, __nonterminal) = match __action {
             0 => {
-                __reduce0(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce0(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             1 => {
-                __reduce1(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce1(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             2 => {
-                __reduce2(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce2(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             3 => {
-                __reduce3(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce3(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             4 => {
-                __reduce4(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce4(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             5 => {
-                __reduce5(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce5(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             6 => {
-                __reduce6(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce6(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             7 => {
-                __reduce7(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce7(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             8 => {
-                __reduce8(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce8(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             9 => {
-                __reduce9(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce9(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             10 => {
-                __reduce10(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce10(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             11 => {
-                __reduce11(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce11(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             12 => {
-                __reduce12(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce12(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             13 => {
-                __reduce13(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce13(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             14 => {
-                __reduce14(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce14(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             15 => {
-                __reduce15(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce15(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             16 => {
-                __reduce16(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce16(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             17 => {
-                __reduce17(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce17(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             18 => {
-                __reduce18(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce18(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             19 => {
-                __reduce19(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce19(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             20 => {
-                __reduce20(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce20(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             21 => {
-                __reduce21(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce21(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             22 => {
-                __reduce22(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce22(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             23 => {
-                __reduce23(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce23(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             24 => {
-                __reduce24(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce24(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             25 => {
-                __reduce25(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce25(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             26 => {
-                __reduce26(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce26(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             27 => {
-                __reduce27(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce27(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             28 => {
-                __reduce28(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce28(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             29 => {
-                __reduce29(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce29(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             30 => {
-                __reduce30(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce30(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             31 => {
-                __reduce31(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce31(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             32 => {
-                __reduce32(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce32(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             33 => {
-                __reduce33(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce33(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             34 => {
-                __reduce34(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce34(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             35 => {
-                __reduce35(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce35(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             36 => {
-                __reduce36(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce36(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             37 => {
-                __reduce37(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce37(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             38 => {
-                __reduce38(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce38(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             39 => {
-                __reduce39(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce39(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             40 => {
-                __reduce40(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce40(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             41 => {
-                __reduce41(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce41(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             42 => {
-                __reduce42(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce42(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             43 => {
-                __reduce43(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce43(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             44 => {
-                __reduce44(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce44(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             45 => {
-                __reduce45(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce45(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             46 => {
-                __reduce46(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce46(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             47 => {
-                __reduce47(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce47(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             48 => {
-                __reduce48(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce48(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             49 => {
-                __reduce49(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce49(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             50 => {
-                __reduce50(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce50(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             51 => {
-                __reduce51(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce51(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             52 => {
-                __reduce52(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce52(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             53 => {
-                __reduce53(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce53(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             54 => {
-                __reduce54(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce54(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             55 => {
-                __reduce55(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce55(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             56 => {
-                __reduce56(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce56(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             57 => {
-                __reduce57(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce57(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             58 => {
-                __reduce58(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce58(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             59 => {
-                __reduce59(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce59(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             60 => {
-                __reduce60(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce60(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             61 => {
-                __reduce61(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce61(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             62 => {
-                __reduce62(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce62(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             63 => {
-                __reduce63(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce63(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             64 => {
-                __reduce64(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce64(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             65 => {
-                __reduce65(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce65(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             66 => {
-                __reduce66(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce66(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             67 => {
-                __reduce67(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce67(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             68 => {
-                __reduce68(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce68(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             69 => {
-                __reduce69(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce69(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             70 => {
-                __reduce70(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce70(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             71 => {
-                __reduce71(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce71(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             72 => {
-                __reduce72(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce72(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             73 => {
-                __reduce73(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce73(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             74 => {
-                __reduce74(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce74(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             75 => {
-                __reduce75(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce75(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             76 => {
-                __reduce76(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce76(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             77 => {
-                __reduce77(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce77(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             78 => {
-                __reduce78(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce78(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             79 => {
-                __reduce79(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce79(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             80 => {
-                __reduce80(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce80(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             81 => {
-                __reduce81(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce81(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             82 => {
-                __reduce82(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce82(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             83 => {
-                __reduce83(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce83(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             84 => {
-                __reduce84(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce84(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             85 => {
-                __reduce85(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce85(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             86 => {
-                __reduce86(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce86(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             87 => {
-                __reduce87(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce87(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             88 => {
-                __reduce88(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce88(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             89 => {
-                __reduce89(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce89(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             90 => {
-                __reduce90(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce90(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             91 => {
-                __reduce91(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce91(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             92 => {
-                __reduce92(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce92(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             93 => {
-                __reduce93(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce93(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             94 => {
-                __reduce94(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce94(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             95 => {
-                __reduce95(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce95(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             96 => {
-                __reduce96(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce96(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             97 => {
-                __reduce97(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce97(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             98 => {
-                __reduce98(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce98(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             99 => {
-                __reduce99(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce99(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             100 => {
-                __reduce100(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce100(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             101 => {
-                __reduce101(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce101(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             102 => {
-                __reduce102(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce102(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             103 => {
-                __reduce103(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce103(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             104 => {
-                __reduce104(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce104(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             105 => {
-                __reduce105(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce105(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             106 => {
-                __reduce106(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce106(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             107 => {
-                __reduce107(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce107(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             108 => {
-                __reduce108(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce108(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             109 => {
-                __reduce109(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce109(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             110 => {
-                __reduce110(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce110(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             111 => {
-                __reduce111(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce111(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             112 => {
-                __reduce112(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce112(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             113 => {
-                __reduce113(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce113(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             114 => {
-                __reduce114(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce114(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             115 => {
-                __reduce115(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce115(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             116 => {
-                __reduce116(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce116(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             117 => {
-                __reduce117(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce117(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             118 => {
-                __reduce118(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce118(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             119 => {
-                __reduce119(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce119(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             120 => {
-                __reduce120(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce120(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             121 => {
-                __reduce121(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce121(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             122 => {
-                __reduce122(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce122(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             123 => {
-                __reduce123(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce123(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             124 => {
-                __reduce124(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce124(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             125 => {
-                __reduce125(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce125(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             126 => {
-                __reduce126(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce126(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             127 => {
-                __reduce127(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce127(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             128 => {
-                __reduce128(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce128(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             129 => {
-                __reduce129(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce129(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             130 => {
-                __reduce130(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce130(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             131 => {
-                __reduce131(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce131(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             132 => {
-                __reduce132(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce132(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             133 => {
-                __reduce133(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce133(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             134 => {
-                __reduce134(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce134(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             135 => {
-                __reduce135(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce135(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             136 => {
-                __reduce136(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce136(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             137 => {
-                __reduce137(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce137(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             138 => {
-                __reduce138(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce138(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             139 => {
-                __reduce139(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce139(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             140 => {
-                __reduce140(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce140(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             141 => {
-                __reduce141(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce141(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             142 => {
-                __reduce142(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce142(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             143 => {
-                __reduce143(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce143(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             144 => {
-                __reduce144(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce144(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             145 => {
-                __reduce145(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce145(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             146 => {
-                __reduce146(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce146(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             147 => {
-                __reduce147(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce147(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             148 => {
-                __reduce148(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce148(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             149 => {
-                __reduce149(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce149(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             150 => {
-                __reduce150(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce150(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             151 => {
-                __reduce151(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce151(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             152 => {
-                __reduce152(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce152(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             153 => {
-                __reduce153(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce153(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             154 => {
-                __reduce154(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce154(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             155 => {
-                __reduce155(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce155(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             156 => {
-                __reduce156(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce156(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             157 => {
-                __reduce157(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce157(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             158 => {
-                __reduce158(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce158(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             159 => {
-                __reduce159(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce159(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             160 => {
-                __reduce160(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce160(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             161 => {
-                __reduce161(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce161(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             162 => {
-                __reduce162(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce162(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             163 => {
-                __reduce163(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce163(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             164 => {
-                __reduce164(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce164(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             165 => {
-                __reduce165(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce165(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             166 => {
-                __reduce166(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce166(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             167 => {
-                __reduce167(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce167(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             168 => {
-                __reduce168(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce168(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             169 => {
-                __reduce169(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce169(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             170 => {
-                __reduce170(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce170(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             171 => {
-                __reduce171(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce171(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             172 => {
-                __reduce172(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce172(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             173 => {
-                __reduce173(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce173(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             174 => {
-                __reduce174(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce174(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             175 => {
-                __reduce175(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce175(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             176 => {
-                __reduce176(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce176(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             177 => {
-                __reduce177(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce177(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             178 => {
-                __reduce178(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce178(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             179 => {
-                __reduce179(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce179(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             180 => {
-                __reduce180(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce180(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             181 => {
-                __reduce181(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce181(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             182 => {
-                __reduce182(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce182(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             183 => {
-                __reduce183(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce183(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             184 => {
-                __reduce184(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce184(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             185 => {
-                __reduce185(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce185(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             186 => {
-                __reduce186(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce186(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             187 => {
-                __reduce187(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce187(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             188 => {
-                __reduce188(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce188(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             189 => {
-                __reduce189(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce189(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             190 => {
-                __reduce190(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce190(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             191 => {
-                __reduce191(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce191(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             192 => {
-                __reduce192(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce192(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             193 => {
-                __reduce193(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce193(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             194 => {
-                __reduce194(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce194(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             195 => {
-                __reduce195(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce195(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             196 => {
-                __reduce196(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce196(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             197 => {
-                __reduce197(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce197(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             198 => {
-                __reduce198(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce198(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             199 => {
-                __reduce199(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce199(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             200 => {
-                __reduce200(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce200(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             201 => {
-                __reduce201(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce201(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             202 => {
-                __reduce202(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce202(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             203 => {
-                __reduce203(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce203(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             204 => {
-                __reduce204(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce204(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             205 => {
-                __reduce205(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce205(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             206 => {
-                __reduce206(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce206(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             207 => {
-                __reduce207(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce207(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             208 => {
-                __reduce208(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce208(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             209 => {
-                __reduce209(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce209(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             210 => {
-                __reduce210(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce210(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             211 => {
-                __reduce211(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce211(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             212 => {
-                __reduce212(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce212(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             213 => {
-                __reduce213(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce213(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             214 => {
-                __reduce214(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce214(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             215 => {
-                __reduce215(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce215(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             216 => {
-                __reduce216(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce216(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             217 => {
-                __reduce217(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce217(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             218 => {
-                __reduce218(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce218(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             219 => {
-                __reduce219(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce219(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             220 => {
-                __reduce220(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce220(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             221 => {
-                __reduce221(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce221(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             222 => {
-                __reduce222(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce222(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             223 => {
-                __reduce223(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce223(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             224 => {
-                __reduce224(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce224(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             225 => {
-                __reduce225(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce225(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             226 => {
-                __reduce226(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce226(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             227 => {
-                __reduce227(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce227(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             228 => {
-                __reduce228(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce228(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             229 => {
-                __reduce229(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce229(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             230 => {
-                __reduce230(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce230(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             231 => {
-                __reduce231(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce231(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             232 => {
-                __reduce232(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce232(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             233 => {
-                __reduce233(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce233(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             234 => {
-                __reduce234(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce234(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             235 => {
-                __reduce235(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce235(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             236 => {
-                __reduce236(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce236(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             237 => {
-                __reduce237(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce237(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             238 => {
-                __reduce238(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce238(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             239 => {
-                __reduce239(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce239(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             240 => {
-                __reduce240(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce240(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             241 => {
-                __reduce241(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce241(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             242 => {
-                __reduce242(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce242(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             243 => {
-                __reduce243(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce243(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             244 => {
-                __reduce244(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce244(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             245 => {
-                __reduce245(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce245(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             246 => {
-                __reduce246(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce246(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             247 => {
-                __reduce247(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce247(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             248 => {
-                __reduce248(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce248(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             249 => {
-                __reduce249(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce249(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             250 => {
-                __reduce250(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce250(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             251 => {
-                __reduce251(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce251(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             252 => {
-                __reduce252(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce252(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             253 => {
-                __reduce253(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce253(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             254 => {
-                __reduce254(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce254(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             255 => {
-                __reduce255(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce255(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             256 => {
-                __reduce256(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce256(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             257 => {
-                __reduce257(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce257(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             258 => {
-                __reduce258(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce258(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             259 => {
-                __reduce259(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce259(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             260 => {
-                __reduce260(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce260(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             261 => {
-                __reduce261(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce261(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             262 => {
-                __reduce262(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce262(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             263 => {
-                __reduce263(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce263(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             264 => {
-                __reduce264(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce264(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             265 => {
-                __reduce265(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce265(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             266 => {
-                __reduce266(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce266(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             267 => {
-                __reduce267(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce267(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             268 => {
-                __reduce268(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce268(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             269 => {
-                __reduce269(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce269(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             270 => {
-                __reduce270(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce270(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             271 => {
-                __reduce271(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce271(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             272 => {
-                __reduce272(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce272(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             273 => {
-                __reduce273(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce273(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             274 => {
-                __reduce274(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce274(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             275 => {
-                __reduce275(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce275(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             276 => {
-                __reduce276(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce276(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             277 => {
-                __reduce277(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce277(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             278 => {
-                __reduce278(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce278(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             279 => {
-                __reduce279(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce279(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             280 => {
-                __reduce280(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce280(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             281 => {
-                __reduce281(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce281(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             282 => {
-                __reduce282(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce282(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             283 => {
-                __reduce283(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce283(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             284 => {
-                __reduce284(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce284(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             285 => {
-                __reduce285(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce285(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             286 => {
-                __reduce286(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce286(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             287 => {
-                __reduce287(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce287(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             288 => {
-                __reduce288(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce288(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             289 => {
-                __reduce289(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce289(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             290 => {
-                __reduce290(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce290(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             291 => {
-                __reduce291(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce291(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             292 => {
-                __reduce292(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce292(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             293 => {
-                __reduce293(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce293(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             294 => {
-                __reduce294(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce294(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             295 => {
-                __reduce295(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce295(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             296 => {
-                __reduce296(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce296(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             297 => {
-                __reduce297(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce297(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             298 => {
-                __reduce298(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce298(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             299 => {
-                __reduce299(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce299(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             300 => {
-                __reduce300(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce300(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             301 => {
-                __reduce301(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce301(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             302 => {
-                __reduce302(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce302(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             303 => {
-                __reduce303(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce303(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             304 => {
-                __reduce304(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce304(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             305 => {
-                __reduce305(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce305(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             306 => {
-                __reduce306(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce306(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             307 => {
-                __reduce307(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce307(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             308 => {
-                __reduce308(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce308(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             309 => {
-                __reduce309(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce309(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             310 => {
-                __reduce310(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce310(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             311 => {
-                __reduce311(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce311(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             312 => {
-                __reduce312(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce312(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             313 => {
-                __reduce313(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce313(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             314 => {
-                __reduce314(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce314(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             315 => {
-                __reduce315(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce315(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             316 => {
-                __reduce316(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce316(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             317 => {
-                __reduce317(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce317(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             318 => {
-                __reduce318(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce318(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             319 => {
-                __reduce319(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce319(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             320 => {
-                __reduce320(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce320(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             321 => {
-                __reduce321(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce321(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             322 => {
-                __reduce322(input, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce322(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
             }
             323 => {
                 // __SourceUnit = SourceUnit => ActionFn(0);
                 let __sym0 = __pop_Variant54(__symbols);
                 let __start = __sym0.0.clone();
                 let __end = __sym0.2.clone();
-                let __nt = super::__action0::<>(input, __sym0);
+                let __nt = super::__action0::<>(input, file_no, __sym0);
                 return Some(Ok(__nt));
             }
             _ => panic!("invalid action code {}", __action)
@@ -4636,6 +4641,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4645,7 +4651,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action217::<>(input, __sym0);
+        let __nt = super::__action217::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant5(__nt), __end));
         (1, 0)
     }
@@ -4653,6 +4659,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4661,7 +4668,7 @@ mod __parse__SourceUnit {
         // "anonymous"? =  => ActionFn(218);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action218::<>(input, &__start, &__end);
+        let __nt = super::__action218::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant5(__nt), __end));
         (0, 0)
     }
@@ -4669,6 +4676,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4678,7 +4686,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action222::<>(input, __sym0);
+        let __nt = super::__action222::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant5(__nt), __end));
         (1, 1)
     }
@@ -4686,6 +4694,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4694,7 +4703,7 @@ mod __parse__SourceUnit {
         // "indexed"? =  => ActionFn(223);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action223::<>(input, &__start, &__end);
+        let __nt = super::__action223::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant5(__nt), __end));
         (0, 1)
     }
@@ -4702,6 +4711,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4713,7 +4723,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action248::<>(input, __sym0, __sym1);
+        let __nt = super::__action248::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 2)
     }
@@ -4721,6 +4731,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4729,7 +4740,7 @@ mod __parse__SourceUnit {
         // ("," <EventParameter>)* =  => ActionFn(246);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action246::<>(input, &__start, &__end);
+        let __nt = super::__action246::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant7(__nt), __end));
         (0, 3)
     }
@@ -4737,6 +4748,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4746,7 +4758,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant7(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action247::<>(input, __sym0);
+        let __nt = super::__action247::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant7(__nt), __end));
         (1, 3)
     }
@@ -4754,6 +4766,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4765,7 +4778,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action282::<>(input, __sym0, __sym1);
+        let __nt = super::__action282::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant7(__nt), __end));
         (2, 4)
     }
@@ -4773,6 +4786,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4785,7 +4799,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant7(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action283::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action283::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant7(__nt), __end));
         (3, 4)
     }
@@ -4793,6 +4807,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4804,7 +4819,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action254::<>(input, __sym0, __sym1);
+        let __nt = super::__action254::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 5)
     }
@@ -4812,6 +4827,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4820,7 +4836,7 @@ mod __parse__SourceUnit {
         // ("," <Expression>)* =  => ActionFn(252);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action252::<>(input, &__start, &__end);
+        let __nt = super::__action252::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant9(__nt), __end));
         (0, 6)
     }
@@ -4828,6 +4844,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4837,7 +4854,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant9(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action253::<>(input, __sym0);
+        let __nt = super::__action253::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant9(__nt), __end));
         (1, 6)
     }
@@ -4845,6 +4862,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4856,7 +4874,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action286::<>(input, __sym0, __sym1);
+        let __nt = super::__action286::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant9(__nt), __end));
         (2, 7)
     }
@@ -4864,6 +4882,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4876,7 +4895,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant9(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action287::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action287::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant9(__nt), __end));
         (3, 7)
     }
@@ -4884,6 +4903,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4895,7 +4915,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action271::<>(input, __sym0, __sym1);
+        let __nt = super::__action271::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant10(__nt), __end));
         (2, 8)
     }
@@ -4903,6 +4923,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4911,7 +4932,7 @@ mod __parse__SourceUnit {
         // ("," <Identifier>)* =  => ActionFn(269);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action269::<>(input, &__start, &__end);
+        let __nt = super::__action269::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant11(__nt), __end));
         (0, 9)
     }
@@ -4919,6 +4940,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4928,7 +4950,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant11(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action270::<>(input, __sym0);
+        let __nt = super::__action270::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant11(__nt), __end));
         (1, 9)
     }
@@ -4936,6 +4958,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4947,7 +4970,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action290::<>(input, __sym0, __sym1);
+        let __nt = super::__action290::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant11(__nt), __end));
         (2, 10)
     }
@@ -4955,6 +4978,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4967,7 +4991,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant11(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action291::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action291::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant11(__nt), __end));
         (3, 10)
     }
@@ -4975,6 +4999,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -4986,7 +5011,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action241::<>(input, __sym0, __sym1);
+        let __nt = super::__action241::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (2, 11)
     }
@@ -4994,6 +5019,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5002,7 +5028,7 @@ mod __parse__SourceUnit {
         // ("," <ImportRename>)* =  => ActionFn(239);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action239::<>(input, &__start, &__end);
+        let __nt = super::__action239::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant13(__nt), __end));
         (0, 12)
     }
@@ -5010,6 +5036,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5019,7 +5046,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant13(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action240::<>(input, __sym0);
+        let __nt = super::__action240::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant13(__nt), __end));
         (1, 12)
     }
@@ -5027,6 +5054,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5038,7 +5066,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action294::<>(input, __sym0, __sym1);
+        let __nt = super::__action294::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant13(__nt), __end));
         (2, 13)
     }
@@ -5046,6 +5074,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5058,7 +5087,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant13(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action295::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action295::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant13(__nt), __end));
         (3, 13)
     }
@@ -5066,6 +5095,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5077,7 +5107,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action264::<>(input, __sym0, __sym1);
+        let __nt = super::__action264::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant14(__nt), __end));
         (2, 14)
     }
@@ -5085,6 +5115,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5093,7 +5124,7 @@ mod __parse__SourceUnit {
         // ("," <NamedArgument>)* =  => ActionFn(262);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action262::<>(input, &__start, &__end);
+        let __nt = super::__action262::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant15(__nt), __end));
         (0, 15)
     }
@@ -5101,6 +5132,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5110,7 +5142,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant15(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action263::<>(input, __sym0);
+        let __nt = super::__action263::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant15(__nt), __end));
         (1, 15)
     }
@@ -5118,6 +5150,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5129,7 +5162,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action298::<>(input, __sym0, __sym1);
+        let __nt = super::__action298::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant15(__nt), __end));
         (2, 16)
     }
@@ -5137,6 +5170,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5149,7 +5183,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant15(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action299::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action299::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant15(__nt), __end));
         (3, 16)
     }
@@ -5157,6 +5191,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5168,7 +5203,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action257::<>(input, __sym0, __sym1);
+        let __nt = super::__action257::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant16(__nt), __end));
         (2, 17)
     }
@@ -5176,6 +5211,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5187,7 +5223,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action302::<>(input, __sym0, __sym1);
+        let __nt = super::__action302::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant17(__nt), __end));
         (2, 18)
     }
@@ -5195,6 +5231,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5207,7 +5244,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant17(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action303::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action303::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant17(__nt), __end));
         (3, 18)
     }
@@ -5215,6 +5252,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5226,7 +5264,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action212::<>(input, __sym0, __sym1);
+        let __nt = super::__action212::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 19)
     }
@@ -5234,6 +5272,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5245,7 +5284,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action304::<>(input, __sym0, __sym1);
+        let __nt = super::__action304::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant18(__nt), __end));
         (2, 20)
     }
@@ -5253,6 +5292,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5261,7 +5301,7 @@ mod __parse__SourceUnit {
         // ("=" <Expression>)? =  => ActionFn(211);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action211::<>(input, &__start, &__end);
+        let __nt = super::__action211::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant18(__nt), __end));
         (0, 20)
     }
@@ -5269,6 +5309,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5280,7 +5321,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action193::<>(input, __sym0, __sym1);
+        let __nt = super::__action193::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (2, 21)
     }
@@ -5288,6 +5329,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5299,7 +5341,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action309::<>(input, __sym0, __sym1);
+        let __nt = super::__action309::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant20(__nt), __end));
         (2, 22)
     }
@@ -5307,6 +5349,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5315,7 +5358,7 @@ mod __parse__SourceUnit {
         // ("returns" <ParameterList>)? =  => ActionFn(192);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action192::<>(input, &__start, &__end);
+        let __nt = super::__action192::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant20(__nt), __end));
         (0, 22)
     }
@@ -5323,6 +5366,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5332,7 +5376,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant21(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action226::<>(input, __sym0);
+        let __nt = super::__action226::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant21(__nt), __end));
         (1, 23)
     }
@@ -5340,6 +5384,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5349,7 +5394,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant21(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action312::<>(input, __sym0);
+        let __nt = super::__action312::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant22(__nt), __end));
         (1, 24)
     }
@@ -5357,6 +5402,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5368,7 +5414,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant22(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action313::<>(input, __sym0, __sym1);
+        let __nt = super::__action313::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant22(__nt), __end));
         (2, 24)
     }
@@ -5376,6 +5422,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5387,7 +5434,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant23(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action229::<>(input, __sym0, __sym1);
+        let __nt = super::__action229::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant23(__nt), __end));
         (2, 25)
     }
@@ -5395,6 +5442,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5403,7 +5451,7 @@ mod __parse__SourceUnit {
         // (<VariableDeclaration> ";")* =  => ActionFn(227);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action227::<>(input, &__start, &__end);
+        let __nt = super::__action227::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant24(__nt), __end));
         (0, 26)
     }
@@ -5411,6 +5459,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5420,7 +5469,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant24(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action228::<>(input, __sym0);
+        let __nt = super::__action228::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant24(__nt), __end));
         (1, 26)
     }
@@ -5428,6 +5477,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5439,7 +5489,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant23(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action314::<>(input, __sym0, __sym1);
+        let __nt = super::__action314::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant24(__nt), __end));
         (2, 27)
     }
@@ -5447,6 +5497,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5459,7 +5510,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant24(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action315::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action315::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant24(__nt), __end));
         (3, 27)
     }
@@ -5467,6 +5518,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5475,7 +5527,7 @@ mod __parse__SourceUnit {
         // @L =  => ActionFn(233);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action233::<>(input, &__start, &__end);
+        let __nt = super::__action233::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant25(__nt), __end));
         (0, 28)
     }
@@ -5483,6 +5535,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5491,7 +5544,7 @@ mod __parse__SourceUnit {
         // @R =  => ActionFn(232);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action232::<>(input, &__start, &__end);
+        let __nt = super::__action232::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant25(__nt), __end));
         (0, 29)
     }
@@ -5499,6 +5552,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5510,7 +5564,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action25::<>(input, __sym0, __sym1);
+        let __nt = super::__action25::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant26(__nt), __end));
         (2, 30)
     }
@@ -5518,6 +5572,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5530,7 +5585,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action26::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action26::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant26(__nt), __end));
         (3, 30)
     }
@@ -5538,18 +5593,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // BlockStatement = "{", "}" => ActionFn(586);
+        // BlockStatement = "{", "}" => ActionFn(592);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action586::<>(input, __sym0, __sym1);
+        let __nt = super::__action592::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 31)
     }
@@ -5557,19 +5613,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // BlockStatement = "{", Statement+, "}" => ActionFn(587);
+        // BlockStatement = "{", Statement+, "}" => ActionFn(593);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant58(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action587::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action593::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (3, 31)
     }
@@ -5577,19 +5634,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // BlockStatement = "{", CommaOne<NamedArgument>, "}" => ActionFn(430);
+        // BlockStatement = "{", CommaOne<NamedArgument>, "}" => ActionFn(433);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant32(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action430::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action433::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (3, 31)
     }
@@ -5597,16 +5655,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // BlockStatementOrSemiColon = ";" => ActionFn(431);
+        // BlockStatementOrSemiColon = ";" => ActionFn(434);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action431::<>(input, __sym0);
+        let __nt = super::__action434::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 32)
     }
@@ -5614,6 +5673,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5623,7 +5683,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action154::<>(input, __sym0);
+        let __nt = super::__action154::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 32)
     }
@@ -5631,6 +5691,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5646,7 +5707,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action170::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action170::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant28(__nt), __end));
         (6, 33)
     }
@@ -5654,6 +5715,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5663,7 +5725,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant28(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action182::<>(input, __sym0);
+        let __nt = super::__action182::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant29(__nt), __end));
         (1, 34)
     }
@@ -5671,6 +5733,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5679,7 +5742,7 @@ mod __parse__SourceUnit {
         // CatchError? =  => ActionFn(183);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action183::<>(input, &__start, &__end);
+        let __nt = super::__action183::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant29(__nt), __end));
         (0, 34)
     }
@@ -5687,6 +5750,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -5696,7 +5760,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action161::<>(input, __sym0);
+        let __nt = super::__action161::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 35)
     }
@@ -5704,12 +5768,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "if", "(", Expression, ")", ClosedStatement, "else", ClosedStatement => ActionFn(432);
+        // ClosedStatement = "if", "(", Expression, ")", ClosedStatement, "else", ClosedStatement => ActionFn(435);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -5720,7 +5785,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action432::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action435::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -5728,12 +5793,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "while", "(", Expression, ")", ClosedStatement => ActionFn(433);
+        // ClosedStatement = "while", "(", Expression, ")", ClosedStatement => ActionFn(436);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -5742,7 +5808,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action433::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action436::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (5, 35)
     }
@@ -5750,12 +5816,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(570);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(576);
         assert!(__symbols.len() >= 9);
         let __sym8 = __pop_Variant27(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
@@ -5768,7 +5835,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym8.2.clone();
-        let __nt = super::__action570::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
+        let __nt = super::__action576::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (9, 35)
     }
@@ -5776,12 +5843,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ClosedStatement => ActionFn(571);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ClosedStatement => ActionFn(577);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -5793,7 +5861,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action571::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action577::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 35)
     }
@@ -5801,12 +5869,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(572);
+        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(578);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -5818,7 +5887,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action572::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action578::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 35)
     }
@@ -5826,12 +5895,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ClosedStatement => ActionFn(573);
+        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ClosedStatement => ActionFn(579);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -5842,7 +5912,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action573::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action579::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -5850,12 +5920,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(574);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(580);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -5867,7 +5938,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action574::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action580::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 35)
     }
@@ -5875,12 +5946,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ClosedStatement => ActionFn(575);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ClosedStatement => ActionFn(581);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -5891,7 +5963,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action575::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action581::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -5899,12 +5971,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(576);
+        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(582);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -5915,7 +5988,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action576::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action582::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -5923,12 +5996,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", ")", ClosedStatement => ActionFn(577);
+        // ClosedStatement = "for", "(", ";", ";", ")", ClosedStatement => ActionFn(583);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant27(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -5938,7 +6012,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action577::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action583::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (6, 35)
     }
@@ -5946,12 +6020,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(578);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(584);
         assert!(__symbols.len() >= 9);
         let __sym8 = __pop_Variant0(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
@@ -5964,7 +6039,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym8.2.clone();
-        let __nt = super::__action578::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
+        let __nt = super::__action584::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (9, 35)
     }
@@ -5972,12 +6047,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ";" => ActionFn(579);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ";" => ActionFn(585);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -5989,7 +6065,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action579::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action585::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 35)
     }
@@ -5997,12 +6073,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(580);
+        // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(586);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -6014,7 +6091,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action580::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action586::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 35)
     }
@@ -6022,12 +6099,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ";" => ActionFn(581);
+        // ClosedStatement = "for", "(", ";", Expression, ";", ")", ";" => ActionFn(587);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -6038,7 +6116,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action581::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action587::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -6046,12 +6124,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ";" => ActionFn(582);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ";" => ActionFn(588);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant0(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -6063,7 +6142,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action582::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action588::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 35)
     }
@@ -6071,12 +6150,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ";" => ActionFn(583);
+        // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ";" => ActionFn(589);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -6087,7 +6167,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action583::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action589::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -6095,12 +6175,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ";" => ActionFn(584);
+        // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ";" => ActionFn(590);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -6111,7 +6192,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action584::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action590::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 35)
     }
@@ -6119,12 +6200,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ClosedStatement = "for", "(", ";", ";", ")", ";" => ActionFn(585);
+        // ClosedStatement = "for", "(", ";", ";", ")", ";" => ActionFn(591);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -6134,7 +6216,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action585::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action591::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (6, 35)
     }
@@ -6142,6 +6224,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6150,7 +6233,7 @@ mod __parse__SourceUnit {
         // Comma<Expression> =  => ActionFn(208);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action208::<>(input, &__start, &__end);
+        let __nt = super::__action208::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (0, 36)
     }
@@ -6158,6 +6241,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6167,7 +6251,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant30(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action209::<>(input, __sym0);
+        let __nt = super::__action209::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (1, 36)
     }
@@ -6175,6 +6259,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6183,7 +6268,7 @@ mod __parse__SourceUnit {
         // Comma<Identifier> =  => ActionFn(215);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action215::<>(input, &__start, &__end);
+        let __nt = super::__action215::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant31(__nt), __end));
         (0, 37)
     }
@@ -6191,6 +6276,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6200,7 +6286,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant31(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action216::<>(input, __sym0);
+        let __nt = super::__action216::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant31(__nt), __end));
         (1, 37)
     }
@@ -6208,6 +6294,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6216,7 +6303,7 @@ mod __parse__SourceUnit {
         // Comma<NamedArgument> =  => ActionFn(206);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action206::<>(input, &__start, &__end);
+        let __nt = super::__action206::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant32(__nt), __end));
         (0, 38)
     }
@@ -6224,6 +6311,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6233,7 +6321,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant32(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action207::<>(input, __sym0);
+        let __nt = super::__action207::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant32(__nt), __end));
         (1, 38)
     }
@@ -6241,6 +6329,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6250,7 +6339,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action284::<>(input, __sym0);
+        let __nt = super::__action284::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant33(__nt), __end));
         (1, 39)
     }
@@ -6258,6 +6347,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6269,7 +6359,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant6(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action285::<>(input, __sym0, __sym1);
+        let __nt = super::__action285::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant33(__nt), __end));
         (2, 39)
     }
@@ -6277,6 +6367,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6286,7 +6377,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action288::<>(input, __sym0);
+        let __nt = super::__action288::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (1, 40)
     }
@@ -6294,6 +6385,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6305,7 +6397,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action289::<>(input, __sym0, __sym1);
+        let __nt = super::__action289::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant30(__nt), __end));
         (2, 40)
     }
@@ -6313,6 +6405,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6322,7 +6415,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action292::<>(input, __sym0);
+        let __nt = super::__action292::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant31(__nt), __end));
         (1, 41)
     }
@@ -6330,6 +6423,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6341,7 +6435,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action293::<>(input, __sym0, __sym1);
+        let __nt = super::__action293::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant31(__nt), __end));
         (2, 41)
     }
@@ -6349,6 +6443,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6358,7 +6453,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant12(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action296::<>(input, __sym0);
+        let __nt = super::__action296::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant34(__nt), __end));
         (1, 42)
     }
@@ -6366,6 +6461,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6377,7 +6473,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant12(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action297::<>(input, __sym0, __sym1);
+        let __nt = super::__action297::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant34(__nt), __end));
         (2, 42)
     }
@@ -6385,6 +6481,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6394,7 +6491,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant14(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action300::<>(input, __sym0);
+        let __nt = super::__action300::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant32(__nt), __end));
         (1, 43)
     }
@@ -6402,6 +6499,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6413,7 +6511,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant14(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action301::<>(input, __sym0, __sym1);
+        let __nt = super::__action301::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant32(__nt), __end));
         (2, 43)
     }
@@ -6421,6 +6519,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6432,7 +6531,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant16(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action196::<>(input, __sym0, __sym1);
+        let __nt = super::__action196::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (2, 44)
     }
@@ -6440,12 +6539,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractDefinition = DocComments, ContractType, Identifier, "{", (<ContractPart>)+, "}" => ActionFn(436);
+        // ContractDefinition = DocComments, ContractType, Identifier, "{", (<ContractPart>)+, "}" => ActionFn(439);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant22(__symbols);
@@ -6455,7 +6555,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action436::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action439::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant35(__nt), __end));
         (6, 45)
     }
@@ -6463,6 +6563,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6472,7 +6573,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant63(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action36::<>(input, __sym0);
+        let __nt = super::__action36::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant21(__nt), __end));
         (1, 46)
     }
@@ -6480,6 +6581,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6489,7 +6591,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant41(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action37::<>(input, __sym0);
+        let __nt = super::__action37::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant21(__nt), __end));
         (1, 46)
     }
@@ -6497,6 +6599,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6506,7 +6609,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant40(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action38::<>(input, __sym0);
+        let __nt = super::__action38::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant21(__nt), __end));
         (1, 46)
     }
@@ -6514,6 +6617,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6523,7 +6627,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant37(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action39::<>(input, __sym0);
+        let __nt = super::__action39::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant21(__nt), __end));
         (1, 46)
     }
@@ -6531,6 +6635,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6540,7 +6645,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant44(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action40::<>(input, __sym0);
+        let __nt = super::__action40::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant21(__nt), __end));
         (1, 46)
     }
@@ -6548,6 +6653,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6557,7 +6663,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action33::<>(input, __sym0);
+        let __nt = super::__action33::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant36(__nt), __end));
         (1, 47)
     }
@@ -6565,6 +6671,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6574,7 +6681,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action34::<>(input, __sym0);
+        let __nt = super::__action34::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant36(__nt), __end));
         (1, 47)
     }
@@ -6582,6 +6689,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6591,7 +6699,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action35::<>(input, __sym0);
+        let __nt = super::__action35::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant36(__nt), __end));
         (1, 47)
     }
@@ -6599,12 +6707,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Precedence0, Identifier, "=", Expression, ";" => ActionFn(598);
+        // ContractVariableDefinition = DocComments, Precedence0, Identifier, "=", Expression, ";" => ActionFn(604);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
@@ -6614,7 +6723,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action598::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action604::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (6, 48)
     }
@@ -6622,12 +6731,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Precedence0, VariableAttribute+, Identifier, "=", Expression, ";" => ActionFn(599);
+        // ContractVariableDefinition = DocComments, Precedence0, VariableAttribute+, Identifier, "=", Expression, ";" => ActionFn(605);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant8(__symbols);
@@ -6638,7 +6748,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action599::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action605::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (7, 48)
     }
@@ -6646,12 +6756,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Precedence0, Identifier, ";" => ActionFn(600);
+        // ContractVariableDefinition = DocComments, Precedence0, Identifier, ";" => ActionFn(606);
         assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant10(__symbols);
@@ -6659,7 +6770,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action600::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action606::<>(input, file_no, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (4, 48)
     }
@@ -6667,12 +6778,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ContractVariableDefinition = DocComments, Precedence0, VariableAttribute+, Identifier, ";" => ActionFn(601);
+        // ContractVariableDefinition = DocComments, Precedence0, VariableAttribute+, Identifier, ";" => ActionFn(607);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant10(__symbols);
@@ -6681,7 +6793,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action601::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action607::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant37(__nt), __end));
         (5, 48)
     }
@@ -6689,6 +6801,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6697,7 +6810,7 @@ mod __parse__SourceUnit {
         // DocComment* =  => ActionFn(234);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action234::<>(input, &__start, &__end);
+        let __nt = super::__action234::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant38(__nt), __end));
         (0, 49)
     }
@@ -6705,6 +6818,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6714,7 +6828,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant38(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action235::<>(input, __sym0);
+        let __nt = super::__action235::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant38(__nt), __end));
         (1, 49)
     }
@@ -6722,6 +6836,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6731,7 +6846,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant2(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action242::<>(input, __sym0);
+        let __nt = super::__action242::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant38(__nt), __end));
         (1, 50)
     }
@@ -6739,6 +6854,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6750,7 +6866,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant38(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action243::<>(input, __sym0, __sym1);
+        let __nt = super::__action243::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant38(__nt), __end));
         (2, 50)
     }
@@ -6758,15 +6874,16 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // DocComments =  => ActionFn(542);
+        // DocComments =  => ActionFn(548);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action542::<>(input, &__start, &__end);
+        let __nt = super::__action548::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant39(__nt), __end));
         (0, 51)
     }
@@ -6774,16 +6891,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // DocComments = DocComment+ => ActionFn(543);
+        // DocComments = DocComment+ => ActionFn(549);
         let __sym0 = __pop_Variant38(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action543::<>(input, __sym0);
+        let __nt = super::__action549::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant39(__nt), __end));
         (1, 51)
     }
@@ -6791,12 +6909,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EnumDefinition = DocComments, "enum", Identifier, "{", Comma<Identifier>, "}" => ActionFn(44);
+        // EnumDefinition = DocComments, "enum", Identifier, "{", Comma<Identifier>, "}" => ActionFn(442);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant31(__symbols);
@@ -6806,7 +6925,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action44::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action442::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant40(__nt), __end));
         (6, 52)
     }
@@ -6814,6 +6933,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6831,7 +6951,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action278::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action278::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant41(__nt), __end));
         (8, 53)
     }
@@ -6839,6 +6959,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6855,7 +6976,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action279::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action279::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant41(__nt), __end));
         (7, 53)
     }
@@ -6863,19 +6984,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Precedence0, "indexed", Identifier => ActionFn(554);
+        // EventParameter = Precedence0, "indexed", Identifier => ActionFn(560);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant10(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action554::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action560::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (3, 54)
     }
@@ -6883,18 +7005,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Precedence0, "indexed" => ActionFn(555);
+        // EventParameter = Precedence0, "indexed" => ActionFn(561);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action555::<>(input, __sym0, __sym1);
+        let __nt = super::__action561::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 54)
     }
@@ -6902,18 +7025,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Precedence0, Identifier => ActionFn(556);
+        // EventParameter = Precedence0, Identifier => ActionFn(562);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant10(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action556::<>(input, __sym0, __sym1);
+        let __nt = super::__action562::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (2, 54)
     }
@@ -6921,16 +7045,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // EventParameter = Precedence0 => ActionFn(557);
+        // EventParameter = Precedence0 => ActionFn(563);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action557::<>(input, __sym0);
+        let __nt = super::__action563::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant6(__nt), __end));
         (1, 54)
     }
@@ -6938,6 +7063,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6947,7 +7073,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action52::<>(input, __sym0);
+        let __nt = super::__action52::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 55)
     }
@@ -6955,6 +7081,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6964,7 +7091,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action204::<>(input, __sym0);
+        let __nt = super::__action204::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant18(__nt), __end));
         (1, 56)
     }
@@ -6972,6 +7099,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6980,7 +7108,7 @@ mod __parse__SourceUnit {
         // Expression? =  => ActionFn(205);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action205::<>(input, &__start, &__end);
+        let __nt = super::__action205::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant18(__nt), __end));
         (0, 56)
     }
@@ -6988,6 +7116,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -6997,7 +7126,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant57(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action147::<>(input, __sym0);
+        let __nt = super::__action147::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant42(__nt), __end));
         (1, 57)
     }
@@ -7005,6 +7134,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7014,7 +7144,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant70(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action148::<>(input, __sym0);
+        let __nt = super::__action148::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant42(__nt), __end));
         (1, 57)
     }
@@ -7022,6 +7152,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7030,7 +7161,7 @@ mod __parse__SourceUnit {
         // FunctionAttribute* =  => ActionFn(194);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action194::<>(input, &__start, &__end);
+        let __nt = super::__action194::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant43(__nt), __end));
         (0, 58)
     }
@@ -7038,6 +7169,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7047,7 +7179,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant43(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action195::<>(input, __sym0);
+        let __nt = super::__action195::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant43(__nt), __end));
         (1, 58)
     }
@@ -7055,6 +7187,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7064,7 +7197,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant42(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action258::<>(input, __sym0);
+        let __nt = super::__action258::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant43(__nt), __end));
         (1, 59)
     }
@@ -7072,6 +7205,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7083,7 +7217,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant43(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action259::<>(input, __sym0, __sym1);
+        let __nt = super::__action259::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant43(__nt), __end));
         (2, 59)
     }
@@ -7091,12 +7225,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionCall = Precedence0, "(", Comma<Expression>, ")" => ActionFn(439);
+        // FunctionCall = Precedence0, "(", Comma<Expression>, ")" => ActionFn(443);
         assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant30(__symbols);
@@ -7104,7 +7239,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action439::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action443::<>(input, file_no, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (4, 60)
     }
@@ -7112,18 +7247,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionCall = Precedence0, BlockStatement => ActionFn(440);
+        // FunctionCall = Precedence0, BlockStatement => ActionFn(444);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant27(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action440::<>(input, __sym0, __sym1);
+        let __nt = super::__action444::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 60)
     }
@@ -7131,12 +7267,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionCall = Precedence0, "(", "{", Comma<NamedArgument>, "}", ")" => ActionFn(441);
+        // FunctionCall = Precedence0, "(", "{", Comma<NamedArgument>, "}", ")" => ActionFn(445);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -7146,7 +7283,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action441::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action445::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (6, 60)
     }
@@ -7154,12 +7291,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(558);
+        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(564);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant19(__symbols);
@@ -7170,7 +7308,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action558::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action564::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (7, 61)
     }
@@ -7178,12 +7316,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, ParameterList, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(559);
+        // FunctionDefinition = DocComments, FunctionTy, ParameterList, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(565);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant27(__symbols);
         let __sym4 = __pop_Variant19(__symbols);
@@ -7193,7 +7332,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action559::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action565::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (6, 61)
     }
@@ -7201,12 +7340,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(560);
+        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(566);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant19(__symbols);
@@ -7218,7 +7358,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action560::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action566::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (8, 61)
     }
@@ -7226,12 +7366,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(561);
+        // FunctionDefinition = DocComments, FunctionTy, ParameterList, FunctionAttribute+, "returns", ParameterList, BlockStatementOrSemiColon => ActionFn(567);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant19(__symbols);
@@ -7242,7 +7383,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action561::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action567::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (7, 61)
     }
@@ -7250,12 +7391,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, BlockStatementOrSemiColon => ActionFn(562);
+        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, BlockStatementOrSemiColon => ActionFn(568);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant19(__symbols);
@@ -7264,7 +7406,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action562::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action568::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (5, 61)
     }
@@ -7272,12 +7414,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, ParameterList, BlockStatementOrSemiColon => ActionFn(563);
+        // FunctionDefinition = DocComments, FunctionTy, ParameterList, BlockStatementOrSemiColon => ActionFn(569);
         assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant27(__symbols);
         let __sym2 = __pop_Variant19(__symbols);
@@ -7285,7 +7428,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action563::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action569::<>(input, file_no, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (4, 61)
     }
@@ -7293,12 +7436,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(564);
+        // FunctionDefinition = DocComments, FunctionTy, Identifier, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(570);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant27(__symbols);
         let __sym4 = __pop_Variant43(__symbols);
@@ -7308,7 +7452,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action564::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action570::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (6, 61)
     }
@@ -7316,12 +7460,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // FunctionDefinition = DocComments, FunctionTy, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(565);
+        // FunctionDefinition = DocComments, FunctionTy, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(571);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant43(__symbols);
@@ -7330,7 +7475,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action565::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action571::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant44(__nt), __end));
         (5, 61)
     }
@@ -7338,6 +7483,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7347,7 +7493,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action149::<>(input, __sym0);
+        let __nt = super::__action149::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant45(__nt), __end));
         (1, 62)
     }
@@ -7355,6 +7501,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7364,7 +7511,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action150::<>(input, __sym0);
+        let __nt = super::__action150::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant45(__nt), __end));
         (1, 62)
     }
@@ -7372,6 +7519,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7381,7 +7529,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action151::<>(input, __sym0);
+        let __nt = super::__action151::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant45(__nt), __end));
         (1, 62)
     }
@@ -7389,6 +7537,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7398,7 +7547,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action152::<>(input, __sym0);
+        let __nt = super::__action152::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant45(__nt), __end));
         (1, 62)
     }
@@ -7406,16 +7555,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // HexLiteral = LexHexLiteral => ActionFn(444);
+        // HexLiteral = LexHexLiteral => ActionFn(448);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action444::<>(input, __sym0);
+        let __nt = super::__action448::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant46(__nt), __end));
         (1, 63)
     }
@@ -7423,6 +7573,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7432,7 +7583,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant46(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action200::<>(input, __sym0);
+        let __nt = super::__action200::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant47(__nt), __end));
         (1, 64)
     }
@@ -7440,6 +7591,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7451,7 +7603,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant47(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action201::<>(input, __sym0, __sym1);
+        let __nt = super::__action201::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant47(__nt), __end));
         (2, 64)
     }
@@ -7459,16 +7611,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Identifier = LexIdentifier => ActionFn(445);
+        // Identifier = LexIdentifier => ActionFn(449);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action445::<>(input, __sym0);
+        let __nt = super::__action449::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant10(__nt), __end));
         (1, 65)
     }
@@ -7476,6 +7629,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7485,7 +7639,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action220::<>(input, __sym0);
+        let __nt = super::__action220::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant48(__nt), __end));
         (1, 66)
     }
@@ -7493,6 +7647,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7501,7 +7656,7 @@ mod __parse__SourceUnit {
         // Identifier? =  => ActionFn(221);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action221::<>(input, &__start, &__end);
+        let __nt = super::__action221::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant48(__nt), __end));
         (0, 66)
     }
@@ -7509,6 +7664,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7521,7 +7677,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action7::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action7::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant49(__nt), __end));
         (3, 67)
     }
@@ -7529,6 +7685,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7543,7 +7700,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action8::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action8::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant49(__nt), __end));
         (5, 67)
     }
@@ -7551,6 +7708,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7567,7 +7725,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action9::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action9::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant49(__nt), __end));
         (7, 67)
     }
@@ -7575,6 +7733,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7591,7 +7750,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action10::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action10::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant49(__nt), __end));
         (7, 67)
     }
@@ -7599,6 +7758,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7608,7 +7768,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action11::<>(input, __sym0);
+        let __nt = super::__action11::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (1, 68)
     }
@@ -7616,6 +7776,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7628,7 +7789,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action12::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action12::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant12(__nt), __end));
         (3, 68)
     }
@@ -7636,19 +7797,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NamedArgument = Identifier, ":", Expression => ActionFn(446);
+        // NamedArgument = Identifier, ":", Expression => ActionFn(450);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action446::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action450::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant14(__nt), __end));
         (3, 69)
     }
@@ -7656,6 +7818,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7665,7 +7828,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action172::<>(input, __sym0);
+        let __nt = super::__action172::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 70)
     }
@@ -7673,6 +7836,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -7684,7 +7848,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action173::<>(input, __sym0, __sym1);
+        let __nt = super::__action173::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 70)
     }
@@ -7692,18 +7856,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "_", ";" => ActionFn(447);
+        // NonIfStatement = "_", ";" => ActionFn(451);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action447::<>(input, __sym0, __sym1);
+        let __nt = super::__action451::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 70)
     }
@@ -7711,12 +7876,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "do", Statement, "while", "(", Expression, ")", ";" => ActionFn(448);
+        // NonIfStatement = "do", Statement, "while", "(", Expression, ")", ";" => ActionFn(452);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant0(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -7727,7 +7893,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action448::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action452::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 70)
     }
@@ -7735,18 +7901,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "continue", ";" => ActionFn(449);
+        // NonIfStatement = "continue", ";" => ActionFn(453);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action449::<>(input, __sym0, __sym1);
+        let __nt = super::__action453::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 70)
     }
@@ -7754,18 +7921,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "break", ";" => ActionFn(450);
+        // NonIfStatement = "break", ";" => ActionFn(454);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action450::<>(input, __sym0, __sym1);
+        let __nt = super::__action454::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 70)
     }
@@ -7773,18 +7941,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "return", ";" => ActionFn(451);
+        // NonIfStatement = "return", ";" => ActionFn(455);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action451::<>(input, __sym0, __sym1);
+        let __nt = super::__action455::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (2, 70)
     }
@@ -7792,19 +7961,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "return", Expression, ";" => ActionFn(452);
+        // NonIfStatement = "return", Expression, ";" => ActionFn(456);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action452::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action456::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (3, 70)
     }
@@ -7812,12 +7982,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "try", Expression, TryReturns, CatchError, "catch", "(", Parameter, ")", BlockStatement => ActionFn(594);
+        // NonIfStatement = "try", Expression, TryReturns, CatchError, "catch", "(", Parameter, ")", BlockStatement => ActionFn(600);
         assert!(__symbols.len() >= 9);
         let __sym8 = __pop_Variant27(__symbols);
         let __sym7 = __pop_Variant0(__symbols);
@@ -7830,7 +8001,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym8.2.clone();
-        let __nt = super::__action594::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
+        let __nt = super::__action600::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7, __sym8);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (9, 70)
     }
@@ -7838,12 +8009,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "try", Expression, CatchError, "catch", "(", Parameter, ")", BlockStatement => ActionFn(595);
+        // NonIfStatement = "try", Expression, CatchError, "catch", "(", Parameter, ")", BlockStatement => ActionFn(601);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -7855,7 +8027,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action595::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action601::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 70)
     }
@@ -7863,12 +8035,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "try", Expression, TryReturns, "catch", "(", Parameter, ")", BlockStatement => ActionFn(596);
+        // NonIfStatement = "try", Expression, TryReturns, "catch", "(", Parameter, ")", BlockStatement => ActionFn(602);
         assert!(__symbols.len() >= 8);
         let __sym7 = __pop_Variant27(__symbols);
         let __sym6 = __pop_Variant0(__symbols);
@@ -7880,7 +8053,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym7.2.clone();
-        let __nt = super::__action596::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
+        let __nt = super::__action602::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6, __sym7);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (8, 70)
     }
@@ -7888,12 +8061,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "try", Expression, "catch", "(", Parameter, ")", BlockStatement => ActionFn(597);
+        // NonIfStatement = "try", Expression, "catch", "(", Parameter, ")", BlockStatement => ActionFn(603);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -7904,7 +8078,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action597::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action603::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 70)
     }
@@ -7912,12 +8086,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // NonIfStatement = "emit", Identifier, "(", CommaOne<Expression>, ")", ";" => ActionFn(454);
+        // NonIfStatement = "emit", Identifier, "(", CommaOne<Expression>, ")", ";" => ActionFn(458);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant0(__symbols);
@@ -7927,7 +8102,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action454::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action458::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (6, 70)
     }
@@ -7935,12 +8110,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // OpenStatement = "if", "(", Expression, ")", Statement => ActionFn(455);
+        // OpenStatement = "if", "(", Expression, ")", Statement => ActionFn(459);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -7949,7 +8125,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action455::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action459::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (5, 71)
     }
@@ -7957,12 +8133,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // OpenStatement = "if", "(", Expression, ")", ClosedStatement, "else", OpenStatement => ActionFn(456);
+        // OpenStatement = "if", "(", Expression, ")", ClosedStatement, "else", OpenStatement => ActionFn(460);
         assert!(__symbols.len() >= 7);
         let __sym6 = __pop_Variant27(__symbols);
         let __sym5 = __pop_Variant0(__symbols);
@@ -7973,7 +8150,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym6.2.clone();
-        let __nt = super::__action456::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
+        let __nt = super::__action460::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5, __sym6);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (7, 71)
     }
@@ -7981,12 +8158,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // OpenStatement = "while", "(", Expression, ")", OpenStatement => ActionFn(457);
+        // OpenStatement = "while", "(", Expression, ")", OpenStatement => ActionFn(461);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant27(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -7995,7 +8173,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action457::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action461::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (5, 71)
     }
@@ -8003,16 +8181,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // OptParameter = Parameter => ActionFn(568);
+        // OptParameter = Parameter => ActionFn(574);
         let __sym0 = __pop_Variant50(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action568::<>(input, __sym0);
+        let __nt = super::__action574::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant16(__nt), __end));
         (1, 72)
     }
@@ -8020,15 +8199,16 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // OptParameter =  => ActionFn(569);
+        // OptParameter =  => ActionFn(575);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action569::<>(input, &__start, &__end);
+        let __nt = super::__action575::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant16(__nt), __end));
         (0, 72)
     }
@@ -8036,19 +8216,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Expression, StorageLocation, Identifier => ActionFn(588);
+        // Parameter = Expression, StorageLocation, Identifier => ActionFn(594);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant10(__symbols);
         let __sym1 = __pop_Variant59(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action588::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action594::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (3, 73)
     }
@@ -8056,18 +8237,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Expression, Identifier => ActionFn(589);
+        // Parameter = Expression, Identifier => ActionFn(595);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant10(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action589::<>(input, __sym0, __sym1);
+        let __nt = super::__action595::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (2, 73)
     }
@@ -8075,18 +8257,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Expression, StorageLocation => ActionFn(590);
+        // Parameter = Expression, StorageLocation => ActionFn(596);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant59(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action590::<>(input, __sym0, __sym1);
+        let __nt = super::__action596::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (2, 73)
     }
@@ -8094,16 +8277,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Parameter = Expression => ActionFn(591);
+        // Parameter = Expression => ActionFn(597);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action591::<>(input, __sym0);
+        let __nt = super::__action597::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant50(__nt), __end));
         (1, 73)
     }
@@ -8111,6 +8295,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8120,7 +8305,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant50(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action197::<>(input, __sym0);
+        let __nt = super::__action197::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant51(__nt), __end));
         (1, 74)
     }
@@ -8128,6 +8313,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8136,7 +8322,7 @@ mod __parse__SourceUnit {
         // Parameter? =  => ActionFn(198);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action198::<>(input, &__start, &__end);
+        let __nt = super::__action198::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant51(__nt), __end));
         (0, 74)
     }
@@ -8144,6 +8330,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8155,7 +8342,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action141::<>(input, __sym0, __sym1);
+        let __nt = super::__action141::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (2, 75)
     }
@@ -8163,19 +8350,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // ParameterList = "(", Parameter, ")" => ActionFn(460);
+        // ParameterList = "(", Parameter, ")" => ActionFn(464);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant50(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action460::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action464::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (3, 75)
     }
@@ -8183,6 +8371,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8195,7 +8384,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action143::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action143::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant19(__nt), __end));
         (3, 75)
     }
@@ -8203,6 +8392,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8216,7 +8406,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action13::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action13::<>(input, file_no, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant52(__nt), __end));
         (4, 76)
     }
@@ -8224,18 +8414,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "++" => ActionFn(461);
+        // Precedence0 = Precedence0, "++" => ActionFn(465);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action461::<>(input, __sym0, __sym1);
+        let __nt = super::__action465::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 77)
     }
@@ -8243,18 +8434,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "--" => ActionFn(462);
+        // Precedence0 = Precedence0, "--" => ActionFn(466);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action462::<>(input, __sym0, __sym1);
+        let __nt = super::__action466::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 77)
     }
@@ -8262,6 +8454,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8271,7 +8464,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action112::<>(input, __sym0);
+        let __nt = super::__action112::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8279,12 +8472,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "[", Expression, "]" => ActionFn(548);
+        // Precedence0 = Precedence0, "[", Expression, "]" => ActionFn(554);
         assert!(__symbols.len() >= 4);
         let __sym3 = __pop_Variant0(__symbols);
         let __sym2 = __pop_Variant8(__symbols);
@@ -8292,7 +8486,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym3.2.clone();
-        let __nt = super::__action548::<>(input, __sym0, __sym1, __sym2, __sym3);
+        let __nt = super::__action554::<>(input, file_no, __sym0, __sym1, __sym2, __sym3);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (4, 77)
     }
@@ -8300,19 +8494,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, "[", "]" => ActionFn(549);
+        // Precedence0 = Precedence0, "[", "]" => ActionFn(555);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action549::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action555::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 77)
     }
@@ -8320,19 +8515,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, ".", Identifier => ActionFn(464);
+        // Precedence0 = Precedence0, ".", Identifier => ActionFn(468);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant10(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action464::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action468::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 77)
     }
@@ -8340,19 +8536,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, ".", "address" => ActionFn(465);
+        // Precedence0 = Precedence0, ".", "address" => ActionFn(469);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action465::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action469::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 77)
     }
@@ -8360,16 +8557,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "true" => ActionFn(466);
+        // Precedence0 = "true" => ActionFn(470);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action466::<>(input, __sym0);
+        let __nt = super::__action470::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8377,16 +8575,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "false" => ActionFn(467);
+        // Precedence0 = "false" => ActionFn(471);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action467::<>(input, __sym0);
+        let __nt = super::__action471::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8394,6 +8593,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8403,7 +8603,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant62(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action118::<>(input, __sym0);
+        let __nt = super::__action118::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8411,6 +8611,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8420,7 +8621,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant47(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action119::<>(input, __sym0);
+        let __nt = super::__action119::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8428,16 +8629,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Type => ActionFn(468);
+        // Precedence0 = Type => ActionFn(472);
         let __sym0 = __pop_Variant66(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action468::<>(input, __sym0);
+        let __nt = super::__action472::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8445,19 +8647,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "[", CommaOne<Expression>, "]" => ActionFn(469);
+        // Precedence0 = "[", CommaOne<Expression>, "]" => ActionFn(473);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant0(__symbols);
         let __sym1 = __pop_Variant30(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action469::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action473::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 77)
     }
@@ -8465,6 +8668,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8474,7 +8678,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant10(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action122::<>(input, __sym0);
+        let __nt = super::__action122::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8482,18 +8686,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = Precedence0, Unit => ActionFn(470);
+        // Precedence0 = Precedence0, Unit => ActionFn(474);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant67(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action470::<>(input, __sym0, __sym1);
+        let __nt = super::__action474::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 77)
     }
@@ -8501,16 +8706,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = LexNumber => ActionFn(471);
+        // Precedence0 = LexNumber => ActionFn(475);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action471::<>(input, __sym0);
+        let __nt = super::__action475::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8518,16 +8724,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = LexHexNumber => ActionFn(472);
+        // Precedence0 = LexHexNumber => ActionFn(476);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action472::<>(input, __sym0);
+        let __nt = super::__action476::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8535,16 +8742,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = ParameterList => ActionFn(473);
+        // Precedence0 = ParameterList => ActionFn(477);
         let __sym0 = __pop_Variant19(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action473::<>(input, __sym0);
+        let __nt = super::__action477::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8552,16 +8760,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence0 = "this" => ActionFn(474);
+        // Precedence0 = "this" => ActionFn(478);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action474::<>(input, __sym0);
+        let __nt = super::__action478::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 77)
     }
@@ -8569,19 +8778,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, "<", Precedence9 => ActionFn(475);
+        // Precedence10 = Precedence10, "<", Precedence9 => ActionFn(479);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action475::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action479::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 78)
     }
@@ -8589,19 +8799,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, ">", Precedence9 => ActionFn(476);
+        // Precedence10 = Precedence10, ">", Precedence9 => ActionFn(480);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action476::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action480::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 78)
     }
@@ -8609,19 +8820,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, "<=", Precedence9 => ActionFn(477);
+        // Precedence10 = Precedence10, "<=", Precedence9 => ActionFn(481);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action477::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action481::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 78)
     }
@@ -8629,19 +8841,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence10 = Precedence10, ">=", Precedence9 => ActionFn(478);
+        // Precedence10 = Precedence10, ">=", Precedence9 => ActionFn(482);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action478::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action482::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 78)
     }
@@ -8649,6 +8862,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8658,7 +8872,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action78::<>(input, __sym0);
+        let __nt = super::__action78::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 78)
     }
@@ -8666,19 +8880,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence11 = Precedence11, "==", Precedence10 => ActionFn(479);
+        // Precedence11 = Precedence11, "==", Precedence10 => ActionFn(483);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action479::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action483::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 79)
     }
@@ -8686,19 +8901,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence11 = Precedence11, "!=", Precedence10 => ActionFn(480);
+        // Precedence11 = Precedence11, "!=", Precedence10 => ActionFn(484);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action480::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action484::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 79)
     }
@@ -8706,6 +8922,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8715,7 +8932,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action73::<>(input, __sym0);
+        let __nt = super::__action73::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 79)
     }
@@ -8723,19 +8940,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence12 = Precedence12, "&&", Precedence11 => ActionFn(481);
+        // Precedence12 = Precedence12, "&&", Precedence11 => ActionFn(485);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action481::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action485::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 80)
     }
@@ -8743,6 +8961,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8752,7 +8971,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action70::<>(input, __sym0);
+        let __nt = super::__action70::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 80)
     }
@@ -8760,19 +8979,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence13 = Precedence13, "||", Precedence12 => ActionFn(482);
+        // Precedence13 = Precedence13, "||", Precedence12 => ActionFn(486);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action482::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action486::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 81)
     }
@@ -8780,6 +9000,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8789,7 +9010,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action68::<>(input, __sym0);
+        let __nt = super::__action68::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 81)
     }
@@ -8797,12 +9018,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence14 = Precedence14, "?", Precedence13, ":", Precedence13 => ActionFn(483);
+        // Precedence14 = Precedence14, "?", Precedence13, ":", Precedence13 => ActionFn(487);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant8(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -8811,7 +9033,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action483::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action487::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (5, 82)
     }
@@ -8819,6 +9041,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -8828,7 +9051,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action66::<>(input, __sym0);
+        let __nt = super::__action66::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 82)
     }
@@ -8836,19 +9059,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "=", Precedence15 => ActionFn(484);
+        // Precedence15 = Precedence14, "=", Precedence15 => ActionFn(488);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action484::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action488::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8856,19 +9080,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "|=", Precedence15 => ActionFn(485);
+        // Precedence15 = Precedence14, "|=", Precedence15 => ActionFn(489);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action485::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action489::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8876,19 +9101,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "^=", Precedence15 => ActionFn(486);
+        // Precedence15 = Precedence14, "^=", Precedence15 => ActionFn(490);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action486::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action490::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8896,19 +9122,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "&=", Precedence15 => ActionFn(487);
+        // Precedence15 = Precedence14, "&=", Precedence15 => ActionFn(491);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action487::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action491::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8916,19 +9143,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "<<=", Precedence15 => ActionFn(488);
+        // Precedence15 = Precedence14, "<<=", Precedence15 => ActionFn(492);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action488::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action492::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8936,19 +9164,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, ">>=", Precedence15 => ActionFn(489);
+        // Precedence15 = Precedence14, ">>=", Precedence15 => ActionFn(493);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action489::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action493::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8956,19 +9185,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "+=", Precedence15 => ActionFn(490);
+        // Precedence15 = Precedence14, "+=", Precedence15 => ActionFn(494);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action490::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action494::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8976,19 +9206,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "-=", Precedence15 => ActionFn(491);
+        // Precedence15 = Precedence14, "-=", Precedence15 => ActionFn(495);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action491::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action495::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -8996,19 +9227,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "*=", Precedence15 => ActionFn(492);
+        // Precedence15 = Precedence14, "*=", Precedence15 => ActionFn(496);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action492::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action496::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -9016,19 +9248,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "/=", Precedence15 => ActionFn(493);
+        // Precedence15 = Precedence14, "/=", Precedence15 => ActionFn(497);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action493::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action497::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -9036,19 +9269,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence15 = Precedence14, "%=", Precedence15 => ActionFn(494);
+        // Precedence15 = Precedence14, "%=", Precedence15 => ActionFn(498);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action494::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action498::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 83)
     }
@@ -9056,6 +9290,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9065,7 +9300,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action64::<>(input, __sym0);
+        let __nt = super::__action64::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 83)
     }
@@ -9073,18 +9308,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "!", Precedence2 => ActionFn(495);
+        // Precedence2 = "!", Precedence2 => ActionFn(499);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action495::<>(input, __sym0, __sym1);
+        let __nt = super::__action499::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9092,18 +9328,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "~", Precedence2 => ActionFn(496);
+        // Precedence2 = "~", Precedence2 => ActionFn(500);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action496::<>(input, __sym0, __sym1);
+        let __nt = super::__action500::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9111,18 +9348,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "delete", Precedence2 => ActionFn(497);
+        // Precedence2 = "delete", Precedence2 => ActionFn(501);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action497::<>(input, __sym0, __sym1);
+        let __nt = super::__action501::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9130,18 +9368,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "new", FunctionCall => ActionFn(498);
+        // Precedence2 = "new", FunctionCall => ActionFn(502);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action498::<>(input, __sym0, __sym1);
+        let __nt = super::__action502::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9149,18 +9388,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "++", Precedence2 => ActionFn(499);
+        // Precedence2 = "++", Precedence2 => ActionFn(503);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action499::<>(input, __sym0, __sym1);
+        let __nt = super::__action503::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9168,18 +9408,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "--", Precedence2 => ActionFn(500);
+        // Precedence2 = "--", Precedence2 => ActionFn(504);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action500::<>(input, __sym0, __sym1);
+        let __nt = super::__action504::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9187,18 +9428,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "+", Precedence2 => ActionFn(501);
+        // Precedence2 = "+", Precedence2 => ActionFn(505);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action501::<>(input, __sym0, __sym1);
+        let __nt = super::__action505::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9206,18 +9448,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence2 = "-", Precedence2 => ActionFn(502);
+        // Precedence2 = "-", Precedence2 => ActionFn(506);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant8(__symbols);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action502::<>(input, __sym0, __sym1);
+        let __nt = super::__action506::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (2, 84)
     }
@@ -9225,6 +9468,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9234,7 +9478,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action105::<>(input, __sym0);
+        let __nt = super::__action105::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 84)
     }
@@ -9242,19 +9486,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence3 = Precedence3, "**", Precedence2 => ActionFn(503);
+        // Precedence3 = Precedence3, "**", Precedence2 => ActionFn(507);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action503::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action507::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 85)
     }
@@ -9262,6 +9507,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9271,7 +9517,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action96::<>(input, __sym0);
+        let __nt = super::__action96::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 85)
     }
@@ -9279,19 +9525,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence4 = Precedence4, "*", Precedence3 => ActionFn(504);
+        // Precedence4 = Precedence4, "*", Precedence3 => ActionFn(508);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action504::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action508::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 86)
     }
@@ -9299,19 +9546,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence4 = Precedence4, "/", Precedence3 => ActionFn(505);
+        // Precedence4 = Precedence4, "/", Precedence3 => ActionFn(509);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action505::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action509::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 86)
     }
@@ -9319,19 +9567,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence4 = Precedence4, "%", Precedence3 => ActionFn(506);
+        // Precedence4 = Precedence4, "%", Precedence3 => ActionFn(510);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action506::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action510::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 86)
     }
@@ -9339,6 +9588,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9348,7 +9598,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action94::<>(input, __sym0);
+        let __nt = super::__action94::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 86)
     }
@@ -9356,19 +9606,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence5 = Precedence5, "+", Precedence4 => ActionFn(507);
+        // Precedence5 = Precedence5, "+", Precedence4 => ActionFn(511);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action507::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action511::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 87)
     }
@@ -9376,19 +9627,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence5 = Precedence5, "-", Precedence4 => ActionFn(508);
+        // Precedence5 = Precedence5, "-", Precedence4 => ActionFn(512);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action508::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action512::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 87)
     }
@@ -9396,6 +9648,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9405,7 +9658,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action90::<>(input, __sym0);
+        let __nt = super::__action90::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 87)
     }
@@ -9413,19 +9666,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence6 = Precedence6, "<<", Precedence5 => ActionFn(509);
+        // Precedence6 = Precedence6, "<<", Precedence5 => ActionFn(513);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action509::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action513::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 88)
     }
@@ -9433,19 +9687,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence6 = Precedence6, ">>", Precedence5 => ActionFn(510);
+        // Precedence6 = Precedence6, ">>", Precedence5 => ActionFn(514);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action510::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action514::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 88)
     }
@@ -9453,6 +9708,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9462,7 +9718,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action87::<>(input, __sym0);
+        let __nt = super::__action87::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 88)
     }
@@ -9470,19 +9726,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence7 = Precedence7, "&", Precedence6 => ActionFn(511);
+        // Precedence7 = Precedence7, "&", Precedence6 => ActionFn(515);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action511::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action515::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 89)
     }
@@ -9490,6 +9747,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9499,7 +9757,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action84::<>(input, __sym0);
+        let __nt = super::__action84::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 89)
     }
@@ -9507,19 +9765,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence8 = Precedence8, "^", Precedence7 => ActionFn(512);
+        // Precedence8 = Precedence8, "^", Precedence7 => ActionFn(516);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action512::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action516::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 90)
     }
@@ -9527,6 +9786,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9536,7 +9796,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action82::<>(input, __sym0);
+        let __nt = super::__action82::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 90)
     }
@@ -9544,19 +9804,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Precedence9 = Precedence9, "|", Precedence8 => ActionFn(513);
+        // Precedence9 = Precedence9, "|", Precedence8 => ActionFn(517);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action513::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action517::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (3, 91)
     }
@@ -9564,6 +9825,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9573,7 +9835,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action80::<>(input, __sym0);
+        let __nt = super::__action80::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant8(__nt), __end));
         (1, 91)
     }
@@ -9581,19 +9843,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // SimpleStatement = VariableDeclaration, "=", Expression => ActionFn(514);
+        // SimpleStatement = VariableDeclaration, "=", Expression => ActionFn(518);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant8(__symbols);
         let __sym1 = __pop_Variant0(__symbols);
         let __sym0 = __pop_Variant23(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action514::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action518::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (3, 92)
     }
@@ -9601,16 +9864,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // SimpleStatement = VariableDeclaration => ActionFn(515);
+        // SimpleStatement = VariableDeclaration => ActionFn(519);
         let __sym0 = __pop_Variant23(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action515::<>(input, __sym0);
+        let __nt = super::__action519::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 92)
     }
@@ -9618,16 +9882,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // SimpleStatement = Expression => ActionFn(516);
+        // SimpleStatement = Expression => ActionFn(520);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action516::<>(input, __sym0);
+        let __nt = super::__action520::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 92)
     }
@@ -9635,6 +9900,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9644,7 +9910,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action186::<>(input, __sym0);
+        let __nt = super::__action186::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant53(__nt), __end));
         (1, 93)
     }
@@ -9652,6 +9918,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9660,7 +9927,7 @@ mod __parse__SourceUnit {
         // SimpleStatement? =  => ActionFn(187);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action187::<>(input, &__start, &__end);
+        let __nt = super::__action187::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant53(__nt), __end));
         (0, 93)
     }
@@ -9668,6 +9935,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9677,7 +9945,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant56(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action1::<>(input, __sym0);
+        let __nt = super::__action1::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant54(__nt), __end));
         (1, 94)
     }
@@ -9685,6 +9953,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9694,7 +9963,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant35(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action2::<>(input, __sym0);
+        let __nt = super::__action2::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant55(__nt), __end));
         (1, 95)
     }
@@ -9702,6 +9971,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9711,7 +9981,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant52(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action3::<>(input, __sym0);
+        let __nt = super::__action3::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant55(__nt), __end));
         (1, 95)
     }
@@ -9719,6 +9989,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9728,7 +9999,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant49(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action4::<>(input, __sym0);
+        let __nt = super::__action4::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant55(__nt), __end));
         (1, 95)
     }
@@ -9736,6 +10007,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9745,7 +10017,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant40(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action5::<>(input, __sym0);
+        let __nt = super::__action5::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant55(__nt), __end));
         (1, 95)
     }
@@ -9753,6 +10025,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9762,7 +10035,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant63(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action6::<>(input, __sym0);
+        let __nt = super::__action6::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant55(__nt), __end));
         (1, 95)
     }
@@ -9770,6 +10043,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9779,7 +10053,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant55(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action237::<>(input, __sym0);
+        let __nt = super::__action237::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant56(__nt), __end));
         (1, 96)
     }
@@ -9787,6 +10061,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9798,7 +10073,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant56(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action238::<>(input, __sym0, __sym1);
+        let __nt = super::__action238::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant56(__nt), __end));
         (2, 96)
     }
@@ -9806,16 +10081,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StateMutability = "pure" => ActionFn(517);
+        // StateMutability = "pure" => ActionFn(521);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action517::<>(input, __sym0);
+        let __nt = super::__action521::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 97)
     }
@@ -9823,16 +10099,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StateMutability = "view" => ActionFn(518);
+        // StateMutability = "view" => ActionFn(522);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action518::<>(input, __sym0);
+        let __nt = super::__action522::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 97)
     }
@@ -9840,16 +10117,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StateMutability = "payable" => ActionFn(519);
+        // StateMutability = "payable" => ActionFn(523);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action519::<>(input, __sym0);
+        let __nt = super::__action523::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant57(__nt), __end));
         (1, 97)
     }
@@ -9857,6 +10135,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9866,7 +10145,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action166::<>(input, __sym0);
+        let __nt = super::__action166::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 98)
     }
@@ -9874,6 +10153,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9883,7 +10163,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action167::<>(input, __sym0);
+        let __nt = super::__action167::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant27(__nt), __end));
         (1, 98)
     }
@@ -9891,6 +10171,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9899,7 +10180,7 @@ mod __parse__SourceUnit {
         // Statement* =  => ActionFn(189);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action189::<>(input, &__start, &__end);
+        let __nt = super::__action189::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant58(__nt), __end));
         (0, 99)
     }
@@ -9907,6 +10188,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9916,7 +10198,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant58(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action190::<>(input, __sym0);
+        let __nt = super::__action190::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant58(__nt), __end));
         (1, 99)
     }
@@ -9924,6 +10206,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9933,7 +10216,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant27(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action260::<>(input, __sym0);
+        let __nt = super::__action260::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant58(__nt), __end));
         (1, 100)
     }
@@ -9941,6 +10224,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -9952,7 +10236,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant58(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action261::<>(input, __sym0, __sym1);
+        let __nt = super::__action261::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant58(__nt), __end));
         (2, 100)
     }
@@ -9960,16 +10244,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StorageLocation = "memory" => ActionFn(520);
+        // StorageLocation = "memory" => ActionFn(524);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action520::<>(input, __sym0);
+        let __nt = super::__action524::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant59(__nt), __end));
         (1, 101)
     }
@@ -9977,16 +10262,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StorageLocation = "storage" => ActionFn(521);
+        // StorageLocation = "storage" => ActionFn(525);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action521::<>(input, __sym0);
+        let __nt = super::__action525::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant59(__nt), __end));
         (1, 101)
     }
@@ -9994,16 +10280,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StorageLocation = "calldata" => ActionFn(522);
+        // StorageLocation = "calldata" => ActionFn(526);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action522::<>(input, __sym0);
+        let __nt = super::__action526::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant59(__nt), __end));
         (1, 101)
     }
@@ -10011,6 +10298,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10020,7 +10308,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant59(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action230::<>(input, __sym0);
+        let __nt = super::__action230::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant60(__nt), __end));
         (1, 102)
     }
@@ -10028,6 +10316,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10036,7 +10325,7 @@ mod __parse__SourceUnit {
         // StorageLocation? =  => ActionFn(231);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action231::<>(input, &__start, &__end);
+        let __nt = super::__action231::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant60(__nt), __end));
         (0, 102)
     }
@@ -10044,16 +10333,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StringLiteral = LexStringLiteral => ActionFn(523);
+        // StringLiteral = LexStringLiteral => ActionFn(527);
         let __sym0 = __pop_Variant4(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action523::<>(input, __sym0);
+        let __nt = super::__action527::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant61(__nt), __end));
         (1, 103)
     }
@@ -10061,6 +10351,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10070,7 +10361,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant61(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action202::<>(input, __sym0);
+        let __nt = super::__action202::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant62(__nt), __end));
         (1, 104)
     }
@@ -10078,6 +10369,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10089,7 +10381,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant62(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action203::<>(input, __sym0, __sym1);
+        let __nt = super::__action203::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant62(__nt), __end));
         (2, 104)
     }
@@ -10097,12 +10389,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StructDefinition = DocComments, "struct", Identifier, "{", "}" => ActionFn(316);
+        // StructDefinition = DocComments, "struct", Identifier, "{", "}" => ActionFn(528);
         assert!(__symbols.len() >= 5);
         let __sym4 = __pop_Variant0(__symbols);
         let __sym3 = __pop_Variant0(__symbols);
@@ -10111,7 +10404,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym4.2.clone();
-        let __nt = super::__action316::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
+        let __nt = super::__action528::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4);
         __symbols.push((__start, __Symbol::Variant63(__nt), __end));
         (5, 105)
     }
@@ -10119,12 +10412,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // StructDefinition = DocComments, "struct", Identifier, "{", (<VariableDeclaration> ";")+, "}" => ActionFn(317);
+        // StructDefinition = DocComments, "struct", Identifier, "{", (<VariableDeclaration> ";")+, "}" => ActionFn(529);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant24(__symbols);
@@ -10134,7 +10428,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant39(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action317::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action529::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant63(__nt), __end));
         (6, 105)
     }
@@ -10142,6 +10436,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10154,7 +10449,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action171::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action171::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant64(__nt), __end));
         (3, 106)
     }
@@ -10162,6 +10457,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10171,7 +10467,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant64(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action184::<>(input, __sym0);
+        let __nt = super::__action184::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant65(__nt), __end));
         (1, 107)
     }
@@ -10179,6 +10475,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10187,7 +10484,7 @@ mod __parse__SourceUnit {
         // TryReturns? =  => ActionFn(185);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action185::<>(input, &__start, &__end);
+        let __nt = super::__action185::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant65(__nt), __end));
         (0, 107)
     }
@@ -10195,6 +10492,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10204,7 +10502,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action15::<>(input, __sym0);
+        let __nt = super::__action15::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10212,6 +10510,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10221,7 +10520,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action16::<>(input, __sym0);
+        let __nt = super::__action16::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10229,6 +10528,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10240,7 +10540,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action17::<>(input, __sym0, __sym1);
+        let __nt = super::__action17::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (2, 108)
     }
@@ -10248,6 +10548,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10257,7 +10558,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action18::<>(input, __sym0);
+        let __nt = super::__action18::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10265,6 +10566,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10274,7 +10576,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action19::<>(input, __sym0);
+        let __nt = super::__action19::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10282,6 +10584,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10291,7 +10594,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action20::<>(input, __sym0);
+        let __nt = super::__action20::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10299,6 +10602,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10308,7 +10612,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant3(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action21::<>(input, __sym0);
+        let __nt = super::__action21::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10316,6 +10620,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10325,7 +10630,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant3(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action22::<>(input, __sym0);
+        let __nt = super::__action22::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10333,6 +10638,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10342,7 +10648,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant1(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action23::<>(input, __sym0);
+        let __nt = super::__action23::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (1, 108)
     }
@@ -10350,12 +10656,13 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Type = "mapping", "(", Precedence0, "=>", Precedence0, ")" => ActionFn(524);
+        // Type = "mapping", "(", Precedence0, "=>", Precedence0, ")" => ActionFn(530);
         assert!(__symbols.len() >= 6);
         let __sym5 = __pop_Variant0(__symbols);
         let __sym4 = __pop_Variant8(__symbols);
@@ -10365,7 +10672,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym5.2.clone();
-        let __nt = super::__action524::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
+        let __nt = super::__action530::<>(input, file_no, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
         __symbols.push((__start, __Symbol::Variant66(__nt), __end));
         (6, 108)
     }
@@ -10373,16 +10680,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "seconds" => ActionFn(525);
+        // Unit = "seconds" => ActionFn(531);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action525::<>(input, __sym0);
+        let __nt = super::__action531::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10390,16 +10698,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "minutes" => ActionFn(526);
+        // Unit = "minutes" => ActionFn(532);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action526::<>(input, __sym0);
+        let __nt = super::__action532::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10407,16 +10716,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "hours" => ActionFn(527);
+        // Unit = "hours" => ActionFn(533);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action527::<>(input, __sym0);
+        let __nt = super::__action533::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10424,16 +10734,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "days" => ActionFn(528);
+        // Unit = "days" => ActionFn(534);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action528::<>(input, __sym0);
+        let __nt = super::__action534::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10441,16 +10752,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "weeks" => ActionFn(529);
+        // Unit = "weeks" => ActionFn(535);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action529::<>(input, __sym0);
+        let __nt = super::__action535::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10458,16 +10770,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "wei" => ActionFn(530);
+        // Unit = "wei" => ActionFn(536);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action530::<>(input, __sym0);
+        let __nt = super::__action536::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10475,16 +10788,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "szabo" => ActionFn(531);
+        // Unit = "szabo" => ActionFn(537);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action531::<>(input, __sym0);
+        let __nt = super::__action537::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10492,16 +10806,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "finney" => ActionFn(532);
+        // Unit = "finney" => ActionFn(538);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action532::<>(input, __sym0);
+        let __nt = super::__action538::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10509,16 +10824,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Unit = "ether" => ActionFn(533);
+        // Unit = "ether" => ActionFn(539);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action533::<>(input, __sym0);
+        let __nt = super::__action539::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant67(__nt), __end));
         (1, 109)
     }
@@ -10526,6 +10842,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10535,7 +10852,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant70(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action50::<>(input, __sym0);
+        let __nt = super::__action50::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant68(__nt), __end));
         (1, 110)
     }
@@ -10543,16 +10860,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // VariableAttribute = "constant" => ActionFn(534);
+        // VariableAttribute = "constant" => ActionFn(540);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action534::<>(input, __sym0);
+        let __nt = super::__action540::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant68(__nt), __end));
         (1, 110)
     }
@@ -10560,6 +10878,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10568,7 +10887,7 @@ mod __parse__SourceUnit {
         // VariableAttribute* =  => ActionFn(213);
         let __start = __lookahead_start.cloned().or_else(|| __symbols.last().map(|s| s.2.clone())).unwrap_or_default();
         let __end = __start.clone();
-        let __nt = super::__action213::<>(input, &__start, &__end);
+        let __nt = super::__action213::<>(input, file_no, &__start, &__end);
         __symbols.push((__start, __Symbol::Variant69(__nt), __end));
         (0, 111)
     }
@@ -10576,6 +10895,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10585,7 +10905,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant69(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action214::<>(input, __sym0);
+        let __nt = super::__action214::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant69(__nt), __end));
         (1, 111)
     }
@@ -10593,6 +10913,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10602,7 +10923,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant68(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action250::<>(input, __sym0);
+        let __nt = super::__action250::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant69(__nt), __end));
         (1, 112)
     }
@@ -10610,6 +10931,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
@@ -10621,7 +10943,7 @@ mod __parse__SourceUnit {
         let __sym0 = __pop_Variant69(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action251::<>(input, __sym0, __sym1);
+        let __nt = super::__action251::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant69(__nt), __end));
         (2, 112)
     }
@@ -10629,19 +10951,20 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // VariableDeclaration = Precedence0, StorageLocation, Identifier => ActionFn(592);
+        // VariableDeclaration = Precedence0, StorageLocation, Identifier => ActionFn(598);
         assert!(__symbols.len() >= 3);
         let __sym2 = __pop_Variant10(__symbols);
         let __sym1 = __pop_Variant59(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym2.2.clone();
-        let __nt = super::__action592::<>(input, __sym0, __sym1, __sym2);
+        let __nt = super::__action598::<>(input, file_no, __sym0, __sym1, __sym2);
         __symbols.push((__start, __Symbol::Variant23(__nt), __end));
         (3, 113)
     }
@@ -10649,18 +10972,19 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // VariableDeclaration = Precedence0, Identifier => ActionFn(593);
+        // VariableDeclaration = Precedence0, Identifier => ActionFn(599);
         assert!(__symbols.len() >= 2);
         let __sym1 = __pop_Variant10(__symbols);
         let __sym0 = __pop_Variant8(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym1.2.clone();
-        let __nt = super::__action593::<>(input, __sym0, __sym1);
+        let __nt = super::__action599::<>(input, file_no, __sym0, __sym1);
         __symbols.push((__start, __Symbol::Variant23(__nt), __end));
         (2, 113)
     }
@@ -10668,16 +10992,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "public" => ActionFn(536);
+        // Visibility = "public" => ActionFn(542);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action536::<>(input, __sym0);
+        let __nt = super::__action542::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant70(__nt), __end));
         (1, 114)
     }
@@ -10685,16 +11010,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "external" => ActionFn(537);
+        // Visibility = "external" => ActionFn(543);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action537::<>(input, __sym0);
+        let __nt = super::__action543::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant70(__nt), __end));
         (1, 114)
     }
@@ -10702,16 +11028,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "internal" => ActionFn(538);
+        // Visibility = "internal" => ActionFn(544);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action538::<>(input, __sym0);
+        let __nt = super::__action544::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant70(__nt), __end));
         (1, 114)
     }
@@ -10719,16 +11046,17 @@ mod __parse__SourceUnit {
         'input,
     >(
         input: &'input str,
+        file_no: usize,
         __lookahead_start: Option<&usize>,
         __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
         _: ::std::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
-        // Visibility = "private" => ActionFn(539);
+        // Visibility = "private" => ActionFn(545);
         let __sym0 = __pop_Variant0(__symbols);
         let __start = __sym0.0.clone();
         let __end = __sym0.2.clone();
-        let __nt = super::__action539::<>(input, __sym0);
+        let __nt = super::__action545::<>(input, file_no, __sym0);
         __symbols.push((__start, __Symbol::Variant70(__nt), __end));
         (1, 114)
     }
@@ -10740,6 +11068,7 @@ fn __action0<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, SourceUnit, usize),
 ) -> SourceUnit
 {
@@ -10751,6 +11080,7 @@ fn __action1<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
 ) -> SourceUnit
 {
@@ -10762,6 +11092,7 @@ fn __action2<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<ContractDefinition>, usize),
 ) -> SourceUnitPart
 {
@@ -10773,6 +11104,7 @@ fn __action3<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, (Identifier, StringLiteral), usize),
 ) -> SourceUnitPart
 {
@@ -10784,6 +11116,7 @@ fn __action4<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Import, usize),
 ) -> SourceUnitPart
 {
@@ -10795,6 +11128,7 @@ fn __action5<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<EnumDefinition>, usize),
 ) -> SourceUnitPart
 {
@@ -10806,6 +11140,7 @@ fn __action6<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<StructDefinition>, usize),
 ) -> SourceUnitPart
 {
@@ -10817,6 +11152,7 @@ fn __action7<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, s, _): (usize, StringLiteral, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -10830,6 +11166,7 @@ fn __action8<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, s, _): (usize, StringLiteral, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -10845,6 +11182,7 @@ fn __action9<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -10862,6 +11200,7 @@ fn __action10<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, rename, _): (usize, Vec<(Identifier, Option<Identifier>)>, usize),
@@ -10881,6 +11220,7 @@ fn __action11<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Identifier, usize),
 ) -> (Identifier, Option<Identifier>)
 {
@@ -10892,6 +11232,7 @@ fn __action12<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, from, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, to, _): (usize, Identifier, usize),
@@ -10905,6 +11246,7 @@ fn __action13<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, i, _): (usize, Identifier, usize),
     (_, s, _): (usize, StringLiteral, usize),
@@ -10919,6 +11261,7 @@ fn __action14<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
 ) -> Vec<String>
 {
@@ -10930,6 +11273,7 @@ fn __action15<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
@@ -10941,6 +11285,7 @@ fn __action16<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
@@ -10952,6 +11297,7 @@ fn __action17<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, Token<'input>, usize),
 ) -> Type
@@ -10964,6 +11310,7 @@ fn __action18<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
@@ -10975,6 +11322,7 @@ fn __action19<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
@@ -10986,6 +11334,7 @@ fn __action20<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> Type
 {
@@ -10997,6 +11346,7 @@ fn __action21<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, u16, usize),
 ) -> Type
 {
@@ -11008,6 +11358,7 @@ fn __action22<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, u16, usize),
 ) -> Type
 {
@@ -11019,6 +11370,7 @@ fn __action23<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, u8, usize),
 ) -> Type
 {
@@ -11030,6 +11382,7 @@ fn __action24<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11041,7 +11394,7 @@ fn __action24<
 ) -> Type
 {
     {
-        Type::Mapping(Loc(l, r), Box::new(k), Box::new(v))
+        Type::Mapping(Loc(file_no, l, r), Box::new(k), Box::new(v))
     }
 }
 
@@ -11050,6 +11403,7 @@ fn __action25<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, Token<'input>, usize),
 ) -> Option<Expression>
@@ -11062,6 +11416,7 @@ fn __action26<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11075,12 +11430,13 @@ fn __action27<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StorageLocation
 {
-    StorageLocation::Memory(Loc(l, r))
+    StorageLocation::Memory(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11088,12 +11444,13 @@ fn __action28<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StorageLocation
 {
-    StorageLocation::Storage(Loc(l, r))
+    StorageLocation::Storage(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11101,12 +11458,13 @@ fn __action29<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StorageLocation
 {
-    StorageLocation::Calldata(Loc(l, r))
+    StorageLocation::Calldata(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11114,12 +11472,13 @@ fn __action30<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, n, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Identifier
 {
-    Identifier{loc: Loc(l, r), name: n.to_string()}
+    Identifier{loc: Loc(file_no, l, r), name: n.to_string()}
 }
 
 #[allow(unused_variables)]
@@ -11127,6 +11486,7 @@ fn __action31<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
     (_, storage, _): (usize, ::std::option::Option<StorageLocation>, usize),
@@ -11135,7 +11495,7 @@ fn __action31<
 ) -> VariableDeclaration
 {
     VariableDeclaration {
-        loc: Loc(l, r), ty, storage, name
+        loc: Loc(file_no, l, r), ty, storage, name
     }
 }
 
@@ -11144,16 +11504,19 @@ fn __action32<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, doc, _): (usize, Vec<String>, usize),
+    (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, fields, _): (usize, ::std::vec::Vec<VariableDeclaration>, usize),
     (_, _, _): (usize, Token<'input>, usize),
+    (_, r, _): (usize, usize, usize),
 ) -> Box<StructDefinition>
 {
     {
-        Box::new(StructDefinition{doc, name, fields})
+        Box::new(StructDefinition{loc: Loc(file_no, l, r), doc, name, fields})
     }
 }
 
@@ -11162,6 +11525,7 @@ fn __action33<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> ContractType
 {
@@ -11173,6 +11537,7 @@ fn __action34<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> ContractType
 {
@@ -11184,6 +11549,7 @@ fn __action35<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> ContractType
 {
@@ -11195,6 +11561,7 @@ fn __action36<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<StructDefinition>, usize),
 ) -> ContractPart
 {
@@ -11206,6 +11573,7 @@ fn __action37<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<EventDefinition>, usize),
 ) -> ContractPart
 {
@@ -11217,6 +11585,7 @@ fn __action38<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<EnumDefinition>, usize),
 ) -> ContractPart
 {
@@ -11228,6 +11597,7 @@ fn __action39<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<ContractVariableDefinition>, usize),
 ) -> ContractPart
 {
@@ -11239,6 +11609,7 @@ fn __action40<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Box<FunctionDefinition>, usize),
 ) -> ContractPart
 {
@@ -11250,6 +11621,7 @@ fn __action41<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, doc, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, ContractType, usize),
@@ -11261,7 +11633,7 @@ fn __action41<
 ) -> Box<ContractDefinition>
 {
     {
-        Box::new(ContractDefinition{doc, loc: Loc(l, r), ty, name, parts})
+        Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, parts})
     }
 }
 
@@ -11270,6 +11642,7 @@ fn __action42<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, ty, _): (usize, Expression, usize),
     (_, i, _): (usize, ::std::option::Option<Token<'input>>, usize),
     (_, name, _): (usize, ::std::option::Option<Identifier>, usize),
@@ -11285,6 +11658,7 @@ fn __action43<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, doc, _): (usize, Vec<String>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, name, _): (usize, Identifier, usize),
@@ -11307,16 +11681,19 @@ fn __action44<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, doc, _): (usize, Vec<String>, usize),
+    (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, values, _): (usize, Vec<Identifier>, usize),
     (_, _, _): (usize, Token<'input>, usize),
+    (_, r, _): (usize, usize, usize),
 ) -> Box<EnumDefinition>
 {
     {
-        Box::new(EnumDefinition{doc, name, values})
+        Box::new(EnumDefinition{loc: Loc(file_no, l, r), doc, name, values})
     }
 }
 
@@ -11325,6 +11702,7 @@ fn __action45<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, doc, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
@@ -11337,7 +11715,7 @@ fn __action45<
 {
     {
         Box::new(ContractVariableDefinition{
-            doc, loc: Loc(l, r), ty, attrs, name, initializer: e,
+            doc, loc: Loc(file_no, l, r), ty, attrs, name, initializer: e,
         })
     }
 }
@@ -11347,12 +11725,13 @@ fn __action46<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Visibility
 {
-    Visibility::Public(Loc(l, r))
+    Visibility::Public(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11360,12 +11739,13 @@ fn __action47<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Visibility
 {
-    Visibility::External(Loc(l, r))
+    Visibility::External(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11373,12 +11753,13 @@ fn __action48<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Visibility
 {
-    Visibility::Internal(Loc(l, r))
+    Visibility::Internal(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11386,12 +11767,13 @@ fn __action49<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Visibility
 {
-    Visibility::Private(Loc(l, r))
+    Visibility::Private(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11399,6 +11781,7 @@ fn __action50<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Visibility, usize),
 ) -> VariableAttribute
 {
@@ -11410,12 +11793,13 @@ fn __action51<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> VariableAttribute
 {
-    VariableAttribute::Constant(Loc(l, r))
+    VariableAttribute::Constant(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -11423,6 +11807,7 @@ fn __action52<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11434,6 +11819,7 @@ fn __action53<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11441,7 +11827,7 @@ fn __action53<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Assign(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Assign(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11449,6 +11835,7 @@ fn __action54<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11456,7 +11843,7 @@ fn __action54<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignOr(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignOr(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11464,6 +11851,7 @@ fn __action55<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11471,7 +11859,7 @@ fn __action55<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignXor(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignXor(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11479,6 +11867,7 @@ fn __action56<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11486,7 +11875,7 @@ fn __action56<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignAnd(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignAnd(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11494,6 +11883,7 @@ fn __action57<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11501,7 +11891,7 @@ fn __action57<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignShiftLeft(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignShiftLeft(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11509,6 +11899,7 @@ fn __action58<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11516,7 +11907,7 @@ fn __action58<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignShiftRight(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignShiftRight(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11524,6 +11915,7 @@ fn __action59<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11531,7 +11923,7 @@ fn __action59<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignAdd(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignAdd(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11539,6 +11931,7 @@ fn __action60<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11546,7 +11939,7 @@ fn __action60<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignSubtract(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignSubtract(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11554,6 +11947,7 @@ fn __action61<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11561,7 +11955,7 @@ fn __action61<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignMultiply(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignMultiply(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11569,6 +11963,7 @@ fn __action62<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11576,7 +11971,7 @@ fn __action62<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignDivide(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignDivide(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11584,6 +11979,7 @@ fn __action63<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11591,7 +11987,7 @@ fn __action63<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::AssignModulo(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::AssignModulo(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11599,6 +11995,7 @@ fn __action64<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11610,6 +12007,7 @@ fn __action65<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, c, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11619,7 +12017,7 @@ fn __action65<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Ternary(Loc(a, b), Box::new(c), Box::new(l), Box::new(r))
+    Expression::Ternary(Loc(file_no, a, b), Box::new(c), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11627,6 +12025,7 @@ fn __action66<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11638,6 +12037,7 @@ fn __action67<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11645,7 +12045,7 @@ fn __action67<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Or(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Or(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11653,6 +12053,7 @@ fn __action68<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11664,6 +12065,7 @@ fn __action69<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11671,7 +12073,7 @@ fn __action69<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::And(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::And(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11679,6 +12081,7 @@ fn __action70<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11690,6 +12093,7 @@ fn __action71<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11697,7 +12101,7 @@ fn __action71<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Equal(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Equal(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11705,6 +12109,7 @@ fn __action72<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11712,7 +12117,7 @@ fn __action72<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::NotEqual(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::NotEqual(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11720,6 +12125,7 @@ fn __action73<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11731,6 +12137,7 @@ fn __action74<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11738,7 +12145,7 @@ fn __action74<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Less(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Less(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11746,6 +12153,7 @@ fn __action75<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11753,7 +12161,7 @@ fn __action75<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::More(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::More(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11761,6 +12169,7 @@ fn __action76<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11768,7 +12177,7 @@ fn __action76<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::LessEqual(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::LessEqual(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11776,6 +12185,7 @@ fn __action77<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11783,7 +12193,7 @@ fn __action77<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::MoreEqual(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::MoreEqual(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11791,6 +12201,7 @@ fn __action78<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11802,6 +12213,7 @@ fn __action79<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11809,7 +12221,7 @@ fn __action79<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::BitwiseOr(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::BitwiseOr(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11817,6 +12229,7 @@ fn __action80<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11828,6 +12241,7 @@ fn __action81<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11835,7 +12249,7 @@ fn __action81<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::BitwiseXor(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::BitwiseXor(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11843,6 +12257,7 @@ fn __action82<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11854,6 +12269,7 @@ fn __action83<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11861,7 +12277,7 @@ fn __action83<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::BitwiseAnd(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::BitwiseAnd(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11869,6 +12285,7 @@ fn __action84<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11880,6 +12297,7 @@ fn __action85<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11887,7 +12305,7 @@ fn __action85<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::ShiftLeft(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::ShiftLeft(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11895,6 +12313,7 @@ fn __action86<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11902,7 +12321,7 @@ fn __action86<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::ShiftRight(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::ShiftRight(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11910,6 +12329,7 @@ fn __action87<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11921,6 +12341,7 @@ fn __action88<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11928,7 +12349,7 @@ fn __action88<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Add(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Add(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11936,6 +12357,7 @@ fn __action89<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11943,7 +12365,7 @@ fn __action89<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Subtract(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Subtract(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11951,6 +12373,7 @@ fn __action90<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -11962,6 +12385,7 @@ fn __action91<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11969,7 +12393,7 @@ fn __action91<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Multiply(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Multiply(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11977,6 +12401,7 @@ fn __action92<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11984,7 +12409,7 @@ fn __action92<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Divide(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Divide(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -11992,6 +12417,7 @@ fn __action93<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -11999,7 +12425,7 @@ fn __action93<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Modulo(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Modulo(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -12007,6 +12433,7 @@ fn __action94<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -12018,6 +12445,7 @@ fn __action95<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, Expression, usize),
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12025,7 +12453,7 @@ fn __action95<
     (_, r, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Power(Loc(a, b), Box::new(l), Box::new(r))
+    Expression::Power(Loc(file_no, a, b), Box::new(l), Box::new(r))
 }
 
 #[allow(unused_variables)]
@@ -12033,6 +12461,7 @@ fn __action96<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -12044,13 +12473,14 @@ fn __action97<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Not(Loc(a, b), Box::new(e))
+    Expression::Not(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12058,13 +12488,14 @@ fn __action98<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Complement(Loc(a, b), Box::new(e))
+    Expression::Complement(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12072,13 +12503,14 @@ fn __action99<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::Delete(Loc(a, b), Box::new(e))
+    Expression::Delete(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12086,13 +12518,14 @@ fn __action100<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, call, _): (usize, Expression, usize),
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::New(Loc(a, b), Box::new(call))
+    Expression::New(Loc(file_no, a, b), Box::new(call))
 }
 
 #[allow(unused_variables)]
@@ -12100,13 +12533,14 @@ fn __action101<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::PreIncrement(Loc(a, b), Box::new(e))
+    Expression::PreIncrement(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12114,13 +12548,14 @@ fn __action102<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::PreDecrement(Loc(a, b), Box::new(e))
+    Expression::PreDecrement(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12128,13 +12563,14 @@ fn __action103<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::UnaryPlus(Loc(a, b), Box::new(e))
+    Expression::UnaryPlus(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12142,13 +12578,14 @@ fn __action104<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> Expression
 {
-    Expression::UnaryMinus(Loc(a, b), Box::new(e))
+    Expression::UnaryMinus(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12156,6 +12593,7 @@ fn __action105<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -12167,6 +12605,7 @@ fn __action106<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12175,7 +12614,7 @@ fn __action106<
 ) -> NamedArgument
 {
     {
-        NamedArgument{ loc: Loc(l, r), name, expr }
+        NamedArgument{ loc: Loc(file_no, l, r), name, expr }
     }
 }
 
@@ -12184,6 +12623,7 @@ fn __action107<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, i, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12193,7 +12633,7 @@ fn __action107<
 ) -> Expression
 {
     {
-        Expression::FunctionCall(Loc(a, b), Box::new(i), v)
+        Expression::FunctionCall(Loc(file_no, a, b), Box::new(i), v)
     }
 }
 
@@ -12202,6 +12642,7 @@ fn __action108<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, i, _): (usize, Expression, usize),
     (_, l, _): (usize, usize, usize),
     (_, block, _): (usize, Statement, usize),
@@ -12209,7 +12650,7 @@ fn __action108<
 ) -> Expression
 {
     {
-        Expression::FunctionCallBlock(Loc(l, r), Box::new(i), Box::new(block))
+        Expression::FunctionCallBlock(Loc(file_no, l, r), Box::new(i), Box::new(block))
     }
 }
 
@@ -12218,6 +12659,7 @@ fn __action109<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, i, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12229,7 +12671,7 @@ fn __action109<
 ) -> Expression
 {
     {
-        Expression::NamedFunctionCall(Loc(a, b), Box::new(i), v)
+        Expression::NamedFunctionCall(Loc(file_no, a, b), Box::new(i), v)
     }
 }
 
@@ -12238,13 +12680,14 @@ fn __action110<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::PostIncrement(Loc(a, b), Box::new(e))
+    Expression::PostIncrement(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12252,13 +12695,14 @@ fn __action111<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::PostDecrement(Loc(a, b), Box::new(e))
+    Expression::PostDecrement(Loc(file_no, a, b), Box::new(e))
 }
 
 #[allow(unused_variables)]
@@ -12266,6 +12710,7 @@ fn __action112<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
 {
@@ -12277,6 +12722,7 @@ fn __action113<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12285,7 +12731,7 @@ fn __action113<
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::ArraySubscript(Loc(a, b), Box::new(e), box_option(i))
+    Expression::ArraySubscript(Loc(file_no, a, b), Box::new(e), box_option(i))
 }
 
 #[allow(unused_variables)]
@@ -12293,6 +12739,7 @@ fn __action114<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12300,7 +12747,7 @@ fn __action114<
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::MemberAccess(Loc(a, b), Box::new(e), i)
+    Expression::MemberAccess(Loc(file_no, a, b), Box::new(e), i)
 }
 
 #[allow(unused_variables)]
@@ -12308,6 +12755,7 @@ fn __action115<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12317,8 +12765,8 @@ fn __action115<
 ) -> Expression
 {
     {
-        Expression::MemberAccess(Loc(a, b), Box::new(e),
-            Identifier { loc: Loc(al, b), name: "address".to_string() })
+        Expression::MemberAccess(Loc(file_no, a, b), Box::new(e),
+            Identifier { loc: Loc(file_no, al, b), name: "address".to_string() })
     }
 }
 
@@ -12327,12 +12775,13 @@ fn __action116<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::BoolLiteral(Loc(a, b), true)
+    Expression::BoolLiteral(Loc(file_no, a, b), true)
 }
 
 #[allow(unused_variables)]
@@ -12340,12 +12789,13 @@ fn __action117<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::BoolLiteral(Loc(a, b), false)
+    Expression::BoolLiteral(Loc(file_no, a, b), false)
 }
 
 #[allow(unused_variables)]
@@ -12353,6 +12803,7 @@ fn __action118<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, ::std::vec::Vec<StringLiteral>, usize),
 ) -> Expression
 {
@@ -12364,6 +12815,7 @@ fn __action119<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, ::std::vec::Vec<HexLiteral>, usize),
 ) -> Expression
 {
@@ -12375,12 +12827,13 @@ fn __action120<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Type, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::Type(Loc(l, r), ty)
+    Expression::Type(Loc(file_no, l, r), ty)
 }
 
 #[allow(unused_variables)]
@@ -12388,6 +12841,7 @@ fn __action121<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, a, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, v, _): (usize, Vec<Expression>, usize),
@@ -12396,7 +12850,7 @@ fn __action121<
 ) -> Expression
 {
     {
-        Expression::ArrayLiteral(Loc(a, b), v)
+        Expression::ArrayLiteral(Loc(file_no, a, b), v)
     }
 }
 
@@ -12405,6 +12859,7 @@ fn __action122<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Identifier, usize),
 ) -> Expression
 {
@@ -12416,13 +12871,14 @@ fn __action123<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, u, _): (usize, Unit, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::Unit(Loc(l, r), Box::new(e), u)
+    Expression::Unit(Loc(file_no, l, r), Box::new(e), u)
 }
 
 #[allow(unused_variables)]
@@ -12430,6 +12886,7 @@ fn __action124<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, n, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
@@ -12438,7 +12895,7 @@ fn __action124<
     {
         let s: String = n.chars().filter(|v| *v != '_').collect();
 
-        Expression::NumberLiteral(Loc(l, r), BigInt::from_str(&s).unwrap())
+        Expression::NumberLiteral(Loc(file_no, l, r), BigInt::from_str(&s).unwrap())
     }
 }
 
@@ -12447,13 +12904,14 @@ fn __action125<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, n, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Expression
 {
     {
-        Expression::HexNumberLiteral(Loc(l, r), n.to_owned())
+        Expression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
     }
 }
 
@@ -12462,6 +12920,7 @@ fn __action126<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, a, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
     (_, r, _): (usize, usize, usize),
@@ -12475,7 +12934,7 @@ fn __action126<
             }
         }
 
-        Expression::List(Loc(l, r), a)
+        Expression::List(Loc(file_no, l, r), a)
     }
 }
 
@@ -12484,12 +12943,13 @@ fn __action127<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Expression
 {
-    Expression::This(Loc(__0, __1))
+    Expression::This(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12497,12 +12957,13 @@ fn __action128<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Seconds(Loc(__0, __1))
+    Unit::Seconds(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12510,12 +12971,13 @@ fn __action129<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Minutes(Loc(__0, __1))
+    Unit::Minutes(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12523,12 +12985,13 @@ fn __action130<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Hours(Loc(__0, __1))
+    Unit::Hours(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12536,12 +12999,13 @@ fn __action131<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Days(Loc(__0, __1))
+    Unit::Days(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12549,12 +13013,13 @@ fn __action132<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Weeks(Loc(__0, __1))
+    Unit::Weeks(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12562,12 +13027,13 @@ fn __action133<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Wei(Loc(__0, __1))
+    Unit::Wei(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12575,12 +13041,13 @@ fn __action134<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Szabo(Loc(__0, __1))
+    Unit::Szabo(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12588,12 +13055,13 @@ fn __action135<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Finney(Loc(__0, __1))
+    Unit::Finney(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12601,12 +13069,13 @@ fn __action136<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, usize, usize),
 ) -> Unit
 {
-    Unit::Ether(Loc(__0, __1))
+    Unit::Ether(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12614,13 +13083,14 @@ fn __action137<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, s, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StringLiteral
 {
     {
-        StringLiteral{ loc: Loc(l, r), string: s.to_string() }
+        StringLiteral{ loc: Loc(file_no, l, r), string: s.to_string() }
     }
 }
 
@@ -12629,6 +13099,7 @@ fn __action138<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, s, _): (usize, &'input str, usize),
     (_, r, _): (usize, usize, usize),
@@ -12638,7 +13109,7 @@ fn __action138<
         let v = s.to_string();
         let hex_len = v.len() - 5;
 
-        HexLiteral{ loc: Loc(l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"').collect() }
+        HexLiteral{ loc: Loc(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"').collect() }
     }
 }
 
@@ -12647,6 +13118,7 @@ fn __action139<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
     (_, storage, _): (usize, ::std::option::Option<StorageLocation>, usize),
@@ -12655,7 +13127,7 @@ fn __action139<
 ) -> Parameter
 {
     {
-        let loc = Loc(l, r);
+        let loc = Loc(file_no, l, r);
         Parameter{loc, ty, storage, name}
     }
 }
@@ -12665,12 +13137,13 @@ fn __action140<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, p, _): (usize, ::std::option::Option<Parameter>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> (Loc, Option<Parameter>)
 {
-    (Loc(l, r), p)
+    (Loc(file_no, l, r), p)
 }
 
 #[allow(unused_variables)]
@@ -12678,6 +13151,7 @@ fn __action141<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
     (_, __1, _): (usize, Token<'input>, usize),
 ) -> Vec<(Loc, Option<Parameter>)>
@@ -12690,6 +13164,7 @@ fn __action142<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, l, _): (usize, usize, usize),
     (_, p, _): (usize, Parameter, usize),
@@ -12697,7 +13172,7 @@ fn __action142<
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Vec<(Loc, Option<Parameter>)>
 {
-    vec!((Loc(l, r), Some(p)))
+    vec!((Loc(file_no, l, r), Some(p)))
 }
 
 #[allow(unused_variables)]
@@ -12705,6 +13180,7 @@ fn __action143<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12718,12 +13194,13 @@ fn __action144<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StateMutability
 {
-    StateMutability::Pure(Loc(l, r))
+    StateMutability::Pure(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -12731,12 +13208,13 @@ fn __action145<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StateMutability
 {
-    StateMutability::View(Loc(l, r))
+    StateMutability::View(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -12744,12 +13222,13 @@ fn __action146<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> StateMutability
 {
-    StateMutability::Payable(Loc(l, r))
+    StateMutability::Payable(Loc(file_no, l, r))
 }
 
 #[allow(unused_variables)]
@@ -12757,6 +13236,7 @@ fn __action147<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, StateMutability, usize),
 ) -> FunctionAttribute
 {
@@ -12768,6 +13248,7 @@ fn __action148<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Visibility, usize),
 ) -> FunctionAttribute
 {
@@ -12779,6 +13260,7 @@ fn __action149<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> FunctionTy
 {
@@ -12790,6 +13272,7 @@ fn __action150<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> FunctionTy
 {
@@ -12801,6 +13284,7 @@ fn __action151<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> FunctionTy
 {
@@ -12812,6 +13296,7 @@ fn __action152<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> FunctionTy
 {
@@ -12823,12 +13308,13 @@ fn __action153<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, usize, usize),
     (_, __1, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Statement
 {
-    Statement::Empty(Loc(__0, __1))
+    Statement::Empty(Loc(file_no, __0, __1))
 }
 
 #[allow(unused_variables)]
@@ -12836,6 +13322,7 @@ fn __action154<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
@@ -12847,6 +13334,7 @@ fn __action155<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, doc, _): (usize, Vec<String>, usize),
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, FunctionTy, usize),
@@ -12865,10 +13353,10 @@ fn __action155<
 
         Box::new(FunctionDefinition{
             doc,
-            loc: Loc(l, r),
+            loc: Loc(file_no, l, r),
             ty,
             name,
-            name_loc: Loc(nl, nr),
+            name_loc: Loc(file_no, nl, nr),
             params,
             attributes,
             returns,
@@ -12882,6 +13370,7 @@ fn __action156<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, s, _): (usize, ::std::vec::Vec<Statement>, usize),
@@ -12889,7 +13378,7 @@ fn __action156<
     (_, r, _): (usize, usize, usize),
 ) -> Statement
 {
-    Statement::Block(Loc(l, r), s)
+    Statement::Block(Loc(file_no, l, r), s)
 }
 
 #[allow(unused_variables)]
@@ -12897,6 +13386,7 @@ fn __action157<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, v, _): (usize, Vec<NamedArgument>, usize),
@@ -12904,7 +13394,7 @@ fn __action157<
     (_, r, _): (usize, usize, usize),
 ) -> Statement
 {
-    Statement::Args(Loc(l, r), v)
+    Statement::Args(Loc(file_no, l, r), v)
 }
 
 #[allow(unused_variables)]
@@ -12912,6 +13402,7 @@ fn __action158<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12922,7 +13413,7 @@ fn __action158<
 ) -> Statement
 {
     {
-        Statement::If(Loc(l, r), cond, Box::new(body), None)
+        Statement::If(Loc(file_no, l, r), cond, Box::new(body), None)
     }
 }
 
@@ -12931,6 +13422,7 @@ fn __action159<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12943,7 +13435,7 @@ fn __action159<
 ) -> Statement
 {
     {
-        Statement::If(Loc(l, r), cond, Box::new(body), Some(Box::new(o)))
+        Statement::If(Loc(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     }
 }
 
@@ -12952,6 +13444,7 @@ fn __action160<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12962,7 +13455,7 @@ fn __action160<
 ) -> Statement
 {
     {
-        Statement::While(Loc(l, r), e, Box::new(b))
+        Statement::While(Loc(file_no, l, r), e, Box::new(b))
     }
 }
 
@@ -12971,6 +13464,7 @@ fn __action161<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
@@ -12982,6 +13476,7 @@ fn __action162<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -12994,7 +13489,7 @@ fn __action162<
 ) -> Statement
 {
     {
-        Statement::If(Loc(l, r), cond, Box::new(body), Some(Box::new(o)))
+        Statement::If(Loc(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     }
 }
 
@@ -13003,6 +13498,7 @@ fn __action163<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -13013,7 +13509,7 @@ fn __action163<
 ) -> Statement
 {
     {
-        Statement::While(Loc(l, r), e, Box::new(b))
+        Statement::While(Loc(file_no, l, r), e, Box::new(b))
     }
 }
 
@@ -13022,6 +13518,7 @@ fn __action164<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -13036,7 +13533,7 @@ fn __action164<
 ) -> Statement
 {
     {
-        Statement::For(Loc(l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
+        Statement::For(Loc(file_no, l, r), box_option(b), box_option(c), box_option(n), Some(Box::new(block)))
     }
 }
 
@@ -13045,6 +13542,7 @@ fn __action165<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -13059,7 +13557,7 @@ fn __action165<
 ) -> Statement
 {
     {
-        Statement::For(Loc(l, r), box_option(b), box_option(c), box_option(n), None)
+        Statement::For(Loc(file_no, l, r), box_option(b), box_option(c), box_option(n), None)
     }
 }
 
@@ -13068,6 +13566,7 @@ fn __action166<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
@@ -13079,6 +13578,7 @@ fn __action167<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
@@ -13090,6 +13590,7 @@ fn __action168<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, v, _): (usize, VariableDeclaration, usize),
     (_, e, _): (usize, ::std::option::Option<Expression>, usize),
@@ -13097,7 +13598,7 @@ fn __action168<
 ) -> Statement
 {
     {
-        Statement::VariableDefinition(Loc(l, r), v, e)
+        Statement::VariableDefinition(Loc(file_no, l, r), v, e)
     }
 }
 
@@ -13106,13 +13607,14 @@ fn __action169<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Statement
 {
     {
-        Statement::Expression(Loc(l, r), e)
+        Statement::Expression(Loc(file_no, l, r), e)
     }
 }
 
@@ -13121,6 +13623,7 @@ fn __action170<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, id, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
@@ -13139,6 +13642,7 @@ fn __action171<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, list, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
     (_, ok, _): (usize, Statement, usize),
@@ -13152,6 +13656,7 @@ fn __action172<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> Statement
 {
@@ -13163,6 +13668,7 @@ fn __action173<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Statement
@@ -13175,6 +13681,7 @@ fn __action174<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
@@ -13182,7 +13689,7 @@ fn __action174<
 ) -> Statement
 {
     {
-        Statement::PlaceHolder(Loc(l, r))
+        Statement::PlaceHolder(Loc(file_no, l, r))
     }
 }
 
@@ -13191,6 +13698,7 @@ fn __action175<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, Statement, usize),
@@ -13203,7 +13711,7 @@ fn __action175<
 ) -> Statement
 {
     {
-        Statement::DoWhile(Loc(l, r), Box::new(b), e)
+        Statement::DoWhile(Loc(file_no, l, r), Box::new(b), e)
     }
 }
 
@@ -13212,6 +13720,7 @@ fn __action176<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
@@ -13219,7 +13728,7 @@ fn __action176<
 ) -> Statement
 {
     {
-        Statement::Continue(Loc(l, r))
+        Statement::Continue(Loc(file_no, l, r))
     }
 }
 
@@ -13228,6 +13737,7 @@ fn __action177<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
@@ -13235,7 +13745,7 @@ fn __action177<
 ) -> Statement
 {
     {
-        Statement::Break(Loc(l, r))
+        Statement::Break(Loc(file_no, l, r))
     }
 }
 
@@ -13244,6 +13754,7 @@ fn __action178<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
@@ -13251,7 +13762,7 @@ fn __action178<
 ) -> Statement
 {
     {
-        Statement::Return(Loc(l, r), None)
+        Statement::Return(Loc(file_no, l, r), None)
     }
 }
 
@@ -13260,6 +13771,7 @@ fn __action179<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, e, _): (usize, Expression, usize),
@@ -13268,7 +13780,7 @@ fn __action179<
 ) -> Statement
 {
     {
-        Statement::Return(Loc(l, r), Some(e))
+        Statement::Return(Loc(file_no, l, r), Some(e))
     }
 }
 
@@ -13277,6 +13789,7 @@ fn __action180<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, e, _): (usize, Expression, usize),
@@ -13291,7 +13804,7 @@ fn __action180<
 ) -> Statement
 {
     {
-            Statement::Try(Loc(l, r), e, returns,
+            Statement::Try(Loc(file_no, l, r), e, returns,
                 box_option(error),
                 Box::new((p, b)))
     }
@@ -13302,6 +13815,7 @@ fn __action181<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, id, _): (usize, Identifier, usize),
@@ -13313,7 +13827,7 @@ fn __action181<
 ) -> Statement
 {
     {
-        Statement::Emit(Loc(l, r), id, v)
+        Statement::Emit(Loc(file_no, l, r), id, v)
     }
 }
 
@@ -13322,6 +13836,7 @@ fn __action182<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, (Identifier, Parameter, Statement), usize),
 ) -> ::std::option::Option<(Identifier, Parameter, Statement)>
 {
@@ -13333,6 +13848,7 @@ fn __action183<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<(Identifier, Parameter, Statement)>
@@ -13345,6 +13861,7 @@ fn __action184<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, (Vec<(Loc, Option<Parameter>)>, Box<Statement>), usize),
 ) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>
 {
@@ -13356,6 +13873,7 @@ fn __action185<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>
@@ -13368,6 +13886,7 @@ fn __action186<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> ::std::option::Option<Statement>
 {
@@ -13379,6 +13898,7 @@ fn __action187<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Statement>
@@ -13391,6 +13911,7 @@ fn __action188<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, e, _): (usize, NamedArgument, usize),
     (_, v, _): (usize, ::std::vec::Vec<NamedArgument>, usize),
 ) -> Vec<NamedArgument>
@@ -13407,6 +13928,7 @@ fn __action189<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<Statement>
@@ -13419,6 +13941,7 @@ fn __action190<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<Statement>, usize),
 ) -> ::std::vec::Vec<Statement>
 {
@@ -13430,6 +13953,7 @@ fn __action191<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
 ) -> ::std::option::Option<Vec<(Loc, Option<Parameter>)>>
 {
@@ -13441,6 +13965,7 @@ fn __action192<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Vec<(Loc, Option<Parameter>)>>
@@ -13453,6 +13978,7 @@ fn __action193<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
 ) -> Vec<(Loc, Option<Parameter>)>
@@ -13465,6 +13991,7 @@ fn __action194<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<FunctionAttribute>
@@ -13477,6 +14004,7 @@ fn __action195<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
 ) -> ::std::vec::Vec<FunctionAttribute>
 {
@@ -13488,6 +14016,7 @@ fn __action196<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, e, _): (usize, (Loc, Option<Parameter>), usize),
     (_, v, _): (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize),
 ) -> Vec<(Loc, Option<Parameter>)>
@@ -13504,6 +14033,7 @@ fn __action197<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Parameter, usize),
 ) -> ::std::option::Option<Parameter>
 {
@@ -13515,6 +14045,7 @@ fn __action198<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Parameter>
@@ -13527,6 +14058,7 @@ fn __action199<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, e, _): (usize, Expression, usize),
     (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
 ) -> Vec<Expression>
@@ -13543,6 +14075,7 @@ fn __action200<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, HexLiteral, usize),
 ) -> ::std::vec::Vec<HexLiteral>
 {
@@ -13554,6 +14087,7 @@ fn __action201<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<HexLiteral>, usize),
     (_, e, _): (usize, HexLiteral, usize),
 ) -> ::std::vec::Vec<HexLiteral>
@@ -13566,6 +14100,7 @@ fn __action202<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, StringLiteral, usize),
 ) -> ::std::vec::Vec<StringLiteral>
 {
@@ -13577,6 +14112,7 @@ fn __action203<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<StringLiteral>, usize),
     (_, e, _): (usize, StringLiteral, usize),
 ) -> ::std::vec::Vec<StringLiteral>
@@ -13589,6 +14125,7 @@ fn __action204<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> ::std::option::Option<Expression>
 {
@@ -13600,6 +14137,7 @@ fn __action205<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Expression>
@@ -13612,6 +14150,7 @@ fn __action206<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> Vec<NamedArgument>
@@ -13624,6 +14163,7 @@ fn __action207<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Vec<NamedArgument>, usize),
 ) -> Vec<NamedArgument>
 {
@@ -13635,6 +14175,7 @@ fn __action208<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> Vec<Expression>
@@ -13647,6 +14188,7 @@ fn __action209<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Vec<Expression>, usize),
 ) -> Vec<Expression>
 {
@@ -13658,6 +14200,7 @@ fn __action210<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> ::std::option::Option<Expression>
 {
@@ -13669,6 +14212,7 @@ fn __action211<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Expression>
@@ -13681,6 +14225,7 @@ fn __action212<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
@@ -13693,6 +14238,7 @@ fn __action213<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<VariableAttribute>
@@ -13705,6 +14251,7 @@ fn __action214<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
 ) -> ::std::vec::Vec<VariableAttribute>
 {
@@ -13716,6 +14263,7 @@ fn __action215<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> Vec<Identifier>
@@ -13728,6 +14276,7 @@ fn __action216<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Vec<Identifier>, usize),
 ) -> Vec<Identifier>
 {
@@ -13739,6 +14288,7 @@ fn __action217<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> ::std::option::Option<Token<'input>>
 {
@@ -13750,6 +14300,7 @@ fn __action218<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Token<'input>>
@@ -13762,6 +14313,7 @@ fn __action219<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, e, _): (usize, EventParameter, usize),
     (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
 ) -> Vec<EventParameter>
@@ -13778,6 +14330,7 @@ fn __action220<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Identifier, usize),
 ) -> ::std::option::Option<Identifier>
 {
@@ -13789,6 +14342,7 @@ fn __action221<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Identifier>
@@ -13801,6 +14355,7 @@ fn __action222<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
 ) -> ::std::option::Option<Token<'input>>
 {
@@ -13812,6 +14367,7 @@ fn __action223<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<Token<'input>>
@@ -13824,6 +14380,7 @@ fn __action224<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, ContractPart, usize),
 ) -> ::std::vec::Vec<ContractPart>
 {
@@ -13835,6 +14392,7 @@ fn __action225<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<ContractPart>, usize),
     (_, e, _): (usize, ContractPart, usize),
 ) -> ::std::vec::Vec<ContractPart>
@@ -13847,6 +14405,7 @@ fn __action226<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, ContractPart, usize),
 ) -> ContractPart
 {
@@ -13858,6 +14417,7 @@ fn __action227<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<VariableDeclaration>
@@ -13870,6 +14430,7 @@ fn __action228<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<VariableDeclaration>, usize),
 ) -> ::std::vec::Vec<VariableDeclaration>
 {
@@ -13881,6 +14442,7 @@ fn __action229<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, VariableDeclaration, usize),
     (_, _, _): (usize, Token<'input>, usize),
 ) -> VariableDeclaration
@@ -13893,6 +14455,7 @@ fn __action230<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, StorageLocation, usize),
 ) -> ::std::option::Option<StorageLocation>
 {
@@ -13904,6 +14467,7 @@ fn __action231<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::option::Option<StorageLocation>
@@ -13916,6 +14480,7 @@ fn __action232<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> usize
@@ -13928,6 +14493,7 @@ fn __action233<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> usize
@@ -13940,6 +14506,7 @@ fn __action234<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<(CommentType, &'input str)>
@@ -13952,6 +14519,7 @@ fn __action235<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
 ) -> ::std::vec::Vec<(CommentType, &'input str)>
 {
@@ -13963,6 +14531,7 @@ fn __action236<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, e, _): (usize, (Identifier, Option<Identifier>), usize),
     (_, v, _): (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
 ) -> Vec<(Identifier, Option<Identifier>)>
@@ -13979,6 +14548,7 @@ fn __action237<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, SourceUnitPart, usize),
 ) -> ::std::vec::Vec<SourceUnitPart>
 {
@@ -13990,6 +14560,7 @@ fn __action238<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
     (_, e, _): (usize, SourceUnitPart, usize),
 ) -> ::std::vec::Vec<SourceUnitPart>
@@ -14002,6 +14573,7 @@ fn __action239<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
@@ -14014,6 +14586,7 @@ fn __action240<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
 ) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
 {
@@ -14025,6 +14598,7 @@ fn __action241<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, (Identifier, Option<Identifier>), usize),
 ) -> (Identifier, Option<Identifier>)
@@ -14037,6 +14611,7 @@ fn __action242<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, (CommentType, &'input str), usize),
 ) -> ::std::vec::Vec<(CommentType, &'input str)>
 {
@@ -14048,6 +14623,7 @@ fn __action243<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
     (_, e, _): (usize, (CommentType, &'input str), usize),
 ) -> ::std::vec::Vec<(CommentType, &'input str)>
@@ -14060,6 +14636,7 @@ fn __action244<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, VariableDeclaration, usize),
 ) -> ::std::vec::Vec<VariableDeclaration>
 {
@@ -14071,6 +14648,7 @@ fn __action245<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<VariableDeclaration>, usize),
     (_, e, _): (usize, VariableDeclaration, usize),
 ) -> ::std::vec::Vec<VariableDeclaration>
@@ -14083,6 +14661,7 @@ fn __action246<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<EventParameter>
@@ -14095,6 +14674,7 @@ fn __action247<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
 ) -> ::std::vec::Vec<EventParameter>
 {
@@ -14106,6 +14686,7 @@ fn __action248<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, EventParameter, usize),
 ) -> EventParameter
@@ -14118,6 +14699,7 @@ fn __action249<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, e, _): (usize, Identifier, usize),
     (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
 ) -> Vec<Identifier>
@@ -14134,6 +14716,7 @@ fn __action250<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, VariableAttribute, usize),
 ) -> ::std::vec::Vec<VariableAttribute>
 {
@@ -14145,6 +14728,7 @@ fn __action251<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
     (_, e, _): (usize, VariableAttribute, usize),
 ) -> ::std::vec::Vec<VariableAttribute>
@@ -14157,6 +14741,7 @@ fn __action252<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<Expression>
@@ -14169,6 +14754,7 @@ fn __action253<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
 ) -> ::std::vec::Vec<Expression>
 {
@@ -14180,6 +14766,7 @@ fn __action254<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Expression, usize),
 ) -> Expression
@@ -14192,6 +14779,7 @@ fn __action255<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, (Loc, Option<Parameter>), usize),
 ) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
 {
@@ -14203,6 +14791,7 @@ fn __action256<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize),
     (_, e, _): (usize, (Loc, Option<Parameter>), usize),
 ) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
@@ -14215,6 +14804,7 @@ fn __action257<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, (Loc, Option<Parameter>), usize),
 ) -> (Loc, Option<Parameter>)
@@ -14227,6 +14817,7 @@ fn __action258<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, FunctionAttribute, usize),
 ) -> ::std::vec::Vec<FunctionAttribute>
 {
@@ -14238,6 +14829,7 @@ fn __action259<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
     (_, e, _): (usize, FunctionAttribute, usize),
 ) -> ::std::vec::Vec<FunctionAttribute>
@@ -14250,6 +14842,7 @@ fn __action260<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Statement, usize),
 ) -> ::std::vec::Vec<Statement>
 {
@@ -14261,6 +14854,7 @@ fn __action261<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<Statement>, usize),
     (_, e, _): (usize, Statement, usize),
 ) -> ::std::vec::Vec<Statement>
@@ -14273,6 +14867,7 @@ fn __action262<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<NamedArgument>
@@ -14285,6 +14880,7 @@ fn __action263<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<NamedArgument>, usize),
 ) -> ::std::vec::Vec<NamedArgument>
 {
@@ -14296,6 +14892,7 @@ fn __action264<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, NamedArgument, usize),
 ) -> NamedArgument
@@ -14308,6 +14905,7 @@ fn __action265<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, NamedArgument, usize),
 ) -> ::std::vec::Vec<NamedArgument>
 {
@@ -14319,6 +14917,7 @@ fn __action266<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<NamedArgument>, usize),
     (_, e, _): (usize, NamedArgument, usize),
 ) -> ::std::vec::Vec<NamedArgument>
@@ -14331,6 +14930,7 @@ fn __action267<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Expression, usize),
 ) -> ::std::vec::Vec<Expression>
 {
@@ -14342,6 +14942,7 @@ fn __action268<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
     (_, e, _): (usize, Expression, usize),
 ) -> ::std::vec::Vec<Expression>
@@ -14354,6 +14955,7 @@ fn __action269<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> ::std::vec::Vec<Identifier>
@@ -14366,6 +14968,7 @@ fn __action270<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
 ) -> ::std::vec::Vec<Identifier>
 {
@@ -14377,6 +14980,7 @@ fn __action271<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Identifier, usize),
 ) -> Identifier
@@ -14389,6 +14993,7 @@ fn __action272<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, EventParameter, usize),
 ) -> ::std::vec::Vec<EventParameter>
 {
@@ -14400,6 +15005,7 @@ fn __action273<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
     (_, e, _): (usize, EventParameter, usize),
 ) -> ::std::vec::Vec<EventParameter>
@@ -14412,6 +15018,7 @@ fn __action274<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, (Identifier, Option<Identifier>), usize),
 ) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
 {
@@ -14423,6 +15030,7 @@ fn __action275<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
     (_, e, _): (usize, (Identifier, Option<Identifier>), usize),
 ) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
@@ -14435,6 +15043,7 @@ fn __action276<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, __0, _): (usize, Identifier, usize),
 ) -> ::std::vec::Vec<Identifier>
 {
@@ -14446,6 +15055,7 @@ fn __action277<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
     (_, e, _): (usize, Identifier, usize),
 ) -> ::std::vec::Vec<Identifier>
@@ -14458,6 +15068,7 @@ fn __action278<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
@@ -14472,11 +15083,13 @@ fn __action278<
     let __end0 = __6.2.clone();
     let __temp0 = __action217(
         input,
+        file_no,
         __6,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action43(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -14493,6 +15106,7 @@ fn __action279<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
@@ -14506,12 +15120,14 @@ fn __action279<
     let __end0 = __6.0.clone();
     let __temp0 = __action218(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action43(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -14528,6 +15144,7 @@ fn __action280<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -14537,11 +15154,13 @@ fn __action280<
     let __end0 = __1.2.clone();
     let __temp0 = __action222(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action42(
         input,
+        file_no,
         __0,
         __temp0,
         __2,
@@ -14553,6 +15172,7 @@ fn __action281<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, ::std::option::Option<Identifier>, usize),
 ) -> EventParameter
@@ -14561,12 +15181,14 @@ fn __action281<
     let __end0 = __1.0.clone();
     let __temp0 = __action223(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action42(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -14578,6 +15200,7 @@ fn __action282<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, EventParameter, usize),
 ) -> ::std::vec::Vec<EventParameter>
@@ -14586,12 +15209,14 @@ fn __action282<
     let __end0 = __1.2.clone();
     let __temp0 = __action248(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action272(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -14601,6 +15226,7 @@ fn __action283<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<EventParameter>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, EventParameter, usize),
@@ -14610,12 +15236,14 @@ fn __action283<
     let __end0 = __2.2.clone();
     let __temp0 = __action248(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action273(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14626,6 +15254,7 @@ fn __action284<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, EventParameter, usize),
 ) -> Vec<EventParameter>
 {
@@ -14633,12 +15262,14 @@ fn __action284<
     let __end0 = __0.2.clone();
     let __temp0 = __action246(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action219(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14649,6 +15280,7 @@ fn __action285<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, EventParameter, usize),
     __1: (usize, ::std::vec::Vec<EventParameter>, usize),
 ) -> Vec<EventParameter>
@@ -14657,11 +15289,13 @@ fn __action285<
     let __end0 = __1.2.clone();
     let __temp0 = __action247(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action219(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14672,6 +15306,7 @@ fn __action286<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
 ) -> ::std::vec::Vec<Expression>
@@ -14680,12 +15315,14 @@ fn __action286<
     let __end0 = __1.2.clone();
     let __temp0 = __action254(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action267(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -14695,6 +15332,7 @@ fn __action287<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<Expression>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -14704,12 +15342,14 @@ fn __action287<
     let __end0 = __2.2.clone();
     let __temp0 = __action254(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action268(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14720,6 +15360,7 @@ fn __action288<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
 ) -> Vec<Expression>
 {
@@ -14727,12 +15368,14 @@ fn __action288<
     let __end0 = __0.2.clone();
     let __temp0 = __action252(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action199(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14743,6 +15386,7 @@ fn __action289<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, ::std::vec::Vec<Expression>, usize),
 ) -> Vec<Expression>
@@ -14751,11 +15395,13 @@ fn __action289<
     let __end0 = __1.2.clone();
     let __temp0 = __action253(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action199(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14766,6 +15412,7 @@ fn __action290<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Identifier, usize),
 ) -> ::std::vec::Vec<Identifier>
@@ -14774,12 +15421,14 @@ fn __action290<
     let __end0 = __1.2.clone();
     let __temp0 = __action271(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action276(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -14789,6 +15438,7 @@ fn __action291<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<Identifier>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
@@ -14798,12 +15448,14 @@ fn __action291<
     let __end0 = __2.2.clone();
     let __temp0 = __action271(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action277(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14814,6 +15466,7 @@ fn __action292<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Identifier, usize),
 ) -> Vec<Identifier>
 {
@@ -14821,12 +15474,14 @@ fn __action292<
     let __end0 = __0.2.clone();
     let __temp0 = __action269(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action249(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14837,6 +15492,7 @@ fn __action293<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Identifier, usize),
     __1: (usize, ::std::vec::Vec<Identifier>, usize),
 ) -> Vec<Identifier>
@@ -14845,11 +15501,13 @@ fn __action293<
     let __end0 = __1.2.clone();
     let __temp0 = __action270(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action249(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14860,6 +15518,7 @@ fn __action294<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, (Identifier, Option<Identifier>), usize),
 ) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
@@ -14868,12 +15527,14 @@ fn __action294<
     let __end0 = __1.2.clone();
     let __temp0 = __action241(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action274(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -14883,6 +15544,7 @@ fn __action295<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, (Identifier, Option<Identifier>), usize),
@@ -14892,12 +15554,14 @@ fn __action295<
     let __end0 = __2.2.clone();
     let __temp0 = __action241(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action275(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14908,6 +15572,7 @@ fn __action296<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, (Identifier, Option<Identifier>), usize),
 ) -> Vec<(Identifier, Option<Identifier>)>
 {
@@ -14915,12 +15580,14 @@ fn __action296<
     let __end0 = __0.2.clone();
     let __temp0 = __action239(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action236(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14931,6 +15598,7 @@ fn __action297<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, (Identifier, Option<Identifier>), usize),
     __1: (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
 ) -> Vec<(Identifier, Option<Identifier>)>
@@ -14939,11 +15607,13 @@ fn __action297<
     let __end0 = __1.2.clone();
     let __temp0 = __action240(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action236(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -14954,6 +15624,7 @@ fn __action298<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, NamedArgument, usize),
 ) -> ::std::vec::Vec<NamedArgument>
@@ -14962,12 +15633,14 @@ fn __action298<
     let __end0 = __1.2.clone();
     let __temp0 = __action264(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action265(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -14977,6 +15650,7 @@ fn __action299<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<NamedArgument>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, NamedArgument, usize),
@@ -14986,12 +15660,14 @@ fn __action299<
     let __end0 = __2.2.clone();
     let __temp0 = __action264(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action266(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -15002,6 +15678,7 @@ fn __action300<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, NamedArgument, usize),
 ) -> Vec<NamedArgument>
 {
@@ -15009,12 +15686,14 @@ fn __action300<
     let __end0 = __0.2.clone();
     let __temp0 = __action262(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action188(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -15025,6 +15704,7 @@ fn __action301<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, NamedArgument, usize),
     __1: (usize, ::std::vec::Vec<NamedArgument>, usize),
 ) -> Vec<NamedArgument>
@@ -15033,11 +15713,13 @@ fn __action301<
     let __end0 = __1.2.clone();
     let __temp0 = __action263(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action188(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -15048,6 +15730,7 @@ fn __action302<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, (Loc, Option<Parameter>), usize),
 ) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
@@ -15056,12 +15739,14 @@ fn __action302<
     let __end0 = __1.2.clone();
     let __temp0 = __action257(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action255(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -15071,6 +15756,7 @@ fn __action303<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, (Loc, Option<Parameter>), usize),
@@ -15080,12 +15766,14 @@ fn __action303<
     let __end0 = __2.2.clone();
     let __temp0 = __action257(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action256(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -15096,6 +15784,7 @@ fn __action304<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
 ) -> ::std::option::Option<Expression>
@@ -15104,12 +15793,14 @@ fn __action304<
     let __end0 = __1.2.clone();
     let __temp0 = __action212(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action210(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -15119,6 +15810,7 @@ fn __action305<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -15134,12 +15826,14 @@ fn __action305<
     let __end0 = __6.2.clone();
     let __temp0 = __action304(
         input,
+        file_no,
         __5,
         __6,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action45(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -15156,6 +15850,7 @@ fn __action306<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -15169,12 +15864,14 @@ fn __action306<
     let __end0 = __5.0.clone();
     let __temp0 = __action211(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action45(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -15191,6 +15888,7 @@ fn __action307<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, usize, usize),
     __1: (usize, VariableDeclaration, usize),
     __2: (usize, Token<'input>, usize),
@@ -15202,12 +15900,14 @@ fn __action307<
     let __end0 = __3.2.clone();
     let __temp0 = __action304(
         input,
+        file_no,
         __2,
         __3,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action168(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -15220,6 +15920,7 @@ fn __action308<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, usize, usize),
     __1: (usize, VariableDeclaration, usize),
     __2: (usize, usize, usize),
@@ -15229,12 +15930,14 @@ fn __action308<
     let __end0 = __2.0.clone();
     let __temp0 = __action211(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action168(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -15247,6 +15950,7 @@ fn __action309<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
 ) -> ::std::option::Option<Vec<(Loc, Option<Parameter>)>>
@@ -15255,12 +15959,14 @@ fn __action309<
     let __end0 = __1.2.clone();
     let __temp0 = __action193(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action191(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -15270,6 +15976,7 @@ fn __action310<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, FunctionTy, usize),
@@ -15288,12 +15995,14 @@ fn __action310<
     let __end0 = __9.2.clone();
     let __temp0 = __action309(
         input,
+        file_no,
         __8,
         __9,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action155(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -15313,6 +16022,7 @@ fn __action311<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, usize, usize),
     __2: (usize, FunctionTy, usize),
@@ -15329,12 +16039,14 @@ fn __action311<
     let __end0 = __8.0.clone();
     let __temp0 = __action192(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action155(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -15354,6 +16066,7 @@ fn __action312<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ContractPart, usize),
 ) -> ::std::vec::Vec<ContractPart>
 {
@@ -15361,11 +16074,13 @@ fn __action312<
     let __end0 = __0.2.clone();
     let __temp0 = __action226(
         input,
+        file_no,
         __0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action224(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -15375,6 +16090,7 @@ fn __action313<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<ContractPart>, usize),
     __1: (usize, ContractPart, usize),
 ) -> ::std::vec::Vec<ContractPart>
@@ -15383,11 +16099,13 @@ fn __action313<
     let __end0 = __1.2.clone();
     let __temp0 = __action226(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action225(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -15398,6 +16116,7 @@ fn __action314<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, VariableDeclaration, usize),
     __1: (usize, Token<'input>, usize),
 ) -> ::std::vec::Vec<VariableDeclaration>
@@ -15406,12 +16125,14 @@ fn __action314<
     let __end0 = __1.2.clone();
     let __temp0 = __action229(
         input,
+        file_no,
         __0,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action244(
         input,
+        file_no,
         __temp0,
     )
 }
@@ -15421,6 +16142,7 @@ fn __action315<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
     __1: (usize, VariableDeclaration, usize),
     __2: (usize, Token<'input>, usize),
@@ -15430,12 +16152,14 @@ fn __action315<
     let __end0 = __2.2.clone();
     let __temp0 = __action229(
         input,
+        file_no,
         __1,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action245(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -15446,29 +16170,36 @@ fn __action316<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Identifier, usize),
-    __3: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, usize, usize),
 ) -> Box<StructDefinition>
 {
-    let __start0 = __3.2.clone();
-    let __end0 = __4.0.clone();
+    let __start0 = __4.2.clone();
+    let __end0 = __5.0.clone();
     let __temp0 = __action227(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action32(
         input,
+        file_no,
         __0,
         __1,
         __2,
         __3,
-        __temp0,
         __4,
+        __temp0,
+        __5,
+        __6,
     )
 }
 
@@ -15477,29 +16208,36 @@ fn __action317<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Identifier, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
-    __5: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Identifier, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, usize, usize),
 ) -> Box<StructDefinition>
 {
-    let __start0 = __4.0.clone();
-    let __end0 = __4.2.clone();
+    let __start0 = __5.0.clone();
+    let __end0 = __5.2.clone();
     let __temp0 = __action228(
         input,
-        __4,
+        file_no,
+        __5,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action32(
         input,
+        file_no,
         __0,
         __1,
         __2,
         __3,
+        __4,
         __temp0,
-        __5,
+        __6,
+        __7,
     )
 }
 
@@ -15508,6 +16246,7 @@ fn __action318<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, ::std::vec::Vec<Statement>, usize),
     __2: (usize, Token<'input>, usize),
@@ -15518,12 +16257,14 @@ fn __action318<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action156(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15537,6 +16278,7 @@ fn __action319<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<NamedArgument>, usize),
     __2: (usize, Token<'input>, usize),
@@ -15547,12 +16289,14 @@ fn __action319<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action157(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15566,6 +16310,7 @@ fn __action320<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, usize, usize),
     __1: (usize, Token<'input>, usize),
 ) -> Statement
@@ -15574,12 +16319,14 @@ fn __action320<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action153(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15591,6 +16338,7 @@ fn __action321<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -15605,12 +16353,14 @@ fn __action321<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action162(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15628,6 +16378,7 @@ fn __action322<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -15640,12 +16391,14 @@ fn __action322<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action163(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15661,6 +16414,7 @@ fn __action323<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Statement>, usize),
@@ -15677,12 +16431,14 @@ fn __action323<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action164(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15702,6 +16458,7 @@ fn __action324<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Statement>, usize),
@@ -15718,12 +16475,14 @@ fn __action324<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action165(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15743,6 +16502,7 @@ fn __action325<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, ContractType, usize),
     __2: (usize, Identifier, usize),
@@ -15756,12 +16516,14 @@ fn __action325<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action41(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -15778,6 +16540,7 @@ fn __action326<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -15792,12 +16555,14 @@ fn __action326<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action305(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -15815,6 +16580,7 @@ fn __action327<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -15827,12 +16593,14 @@ fn __action327<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action306(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -15848,6 +16616,45 @@ fn __action328<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Vec<Identifier>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, usize, usize),
+) -> Box<EnumDefinition>
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action44(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action329<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Expression>, usize),
@@ -15859,12 +16666,14 @@ fn __action328<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action107(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15875,10 +16684,11 @@ fn __action328<
 }
 
 #[allow(unused_variables)]
-fn __action329<
+fn __action330<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Statement, usize),
     __2: (usize, usize, usize),
@@ -15888,12 +16698,14 @@ fn __action329<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action108(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -15902,10 +16714,11 @@ fn __action329<
 }
 
 #[allow(unused_variables)]
-fn __action330<
+fn __action331<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -15919,12 +16732,14 @@ fn __action330<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action109(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -15937,10 +16752,11 @@ fn __action330<
 }
 
 #[allow(unused_variables)]
-fn __action331<
+fn __action332<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -15959,18 +16775,21 @@ fn __action331<
     let __end1 = __2.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action233(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
     __action310(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -15987,10 +16806,11 @@ fn __action331<
 }
 
 #[allow(unused_variables)]
-fn __action332<
+fn __action333<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -16007,18 +16827,21 @@ fn __action332<
     let __end1 = __2.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action233(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
     __action311(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -16033,10 +16856,11 @@ fn __action332<
 }
 
 #[allow(unused_variables)]
-fn __action333<
+fn __action334<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
 ) -> HexLiteral
@@ -16045,37 +16869,14 @@ fn __action333<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action138(
         input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action334<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-    __1: (usize, usize, usize),
-) -> Identifier
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action30(
-        input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16087,6 +16888,35 @@ fn __action335<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, &'input str, usize),
+    __1: (usize, usize, usize),
+) -> Identifier
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action30(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action336<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Identifier, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -16097,12 +16927,14 @@ fn __action335<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action106(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16112,10 +16944,11 @@ fn __action335<
 }
 
 #[allow(unused_variables)]
-fn __action336<
+fn __action337<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
@@ -16125,12 +16958,14 @@ fn __action336<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action174(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16139,10 +16974,11 @@ fn __action336<
 }
 
 #[allow(unused_variables)]
-fn __action337<
+fn __action338<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Statement, usize),
     __2: (usize, Token<'input>, usize),
@@ -16157,12 +16993,14 @@ fn __action337<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action175(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16176,10 +17014,11 @@ fn __action337<
 }
 
 #[allow(unused_variables)]
-fn __action338<
+fn __action339<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
@@ -16189,39 +17028,14 @@ fn __action338<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action176(
         input,
-        __temp0,
-        __0,
-        __1,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action339<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-    __2: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action177(
-        input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16234,6 +17048,7 @@ fn __action340<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Token<'input>, usize),
@@ -16243,12 +17058,14 @@ fn __action340<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action178(
+    __action177(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16261,6 +17078,37 @@ fn __action341<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+    __2: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action178(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action342<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, usize, usize),
@@ -16271,12 +17119,14 @@ fn __action341<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action179(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16286,10 +17136,11 @@ fn __action341<
 }
 
 #[allow(unused_variables)]
-fn __action342<
+fn __action343<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
@@ -16306,12 +17157,14 @@ fn __action342<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action180(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16327,10 +17180,11 @@ fn __action342<
 }
 
 #[allow(unused_variables)]
-fn __action343<
+fn __action344<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, Token<'input>, usize),
@@ -16344,12 +17198,14 @@ fn __action343<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action181(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16362,10 +17218,11 @@ fn __action343<
 }
 
 #[allow(unused_variables)]
-fn __action344<
+fn __action345<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -16378,12 +17235,14 @@ fn __action344<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action158(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16395,10 +17254,11 @@ fn __action344<
 }
 
 #[allow(unused_variables)]
-fn __action345<
+fn __action346<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -16413,12 +17273,14 @@ fn __action345<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action159(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16432,10 +17294,11 @@ fn __action345<
 }
 
 #[allow(unused_variables)]
-fn __action346<
+fn __action347<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -16448,12 +17311,14 @@ fn __action346<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action160(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16465,10 +17330,11 @@ fn __action346<
 }
 
 #[allow(unused_variables)]
-fn __action347<
+fn __action348<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::option::Option<Parameter>, usize),
     __1: (usize, usize, usize),
 ) -> (Loc, Option<Parameter>)
@@ -16477,12 +17343,14 @@ fn __action347<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action140(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16490,10 +17358,11 @@ fn __action347<
 }
 
 #[allow(unused_variables)]
-fn __action348<
+fn __action349<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, ::std::option::Option<StorageLocation>, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -16504,43 +17373,16 @@ fn __action348<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action139(
         input,
+        file_no,
         __temp0,
         __0,
-        __1,
-        __2,
-        __3,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action349<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Parameter, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Token<'input>, usize),
-) -> Vec<(Loc, Option<Parameter>)>
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action142(
-        input,
-        __0,
-        __temp0,
         __1,
         __2,
         __3,
@@ -16552,25 +17394,30 @@ fn __action350<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Parameter, usize),
     __2: (usize, usize, usize),
-) -> Expression
+    __3: (usize, Token<'input>, usize),
+) -> Vec<(Loc, Option<Parameter>)>
 {
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action110(
+    __action142(
         input,
-        __temp0,
+        file_no,
         __0,
+        __temp0,
         __1,
         __2,
+        __3,
     )
 }
 
@@ -16579,6 +17426,7 @@ fn __action351<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -16588,12 +17436,14 @@ fn __action351<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action111(
+    __action110(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16606,6 +17456,37 @@ fn __action352<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, usize, usize),
+) -> Expression
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action111(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action353<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Expression>, usize),
@@ -16617,12 +17498,14 @@ fn __action352<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action113(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16633,10 +17516,11 @@ fn __action352<
 }
 
 #[allow(unused_variables)]
-fn __action353<
+fn __action354<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
@@ -16647,12 +17531,14 @@ fn __action353<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action114(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16662,10 +17548,11 @@ fn __action353<
 }
 
 #[allow(unused_variables)]
-fn __action354<
+fn __action355<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -16678,18 +17565,21 @@ fn __action354<
     let __end1 = __2.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action233(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
     __action115(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16700,10 +17590,11 @@ fn __action354<
 }
 
 #[allow(unused_variables)]
-fn __action355<
+fn __action356<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Expression
@@ -16712,37 +17603,14 @@ fn __action355<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action116(
         input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action356<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> Expression
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action117(
-        input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16754,7 +17622,8 @@ fn __action357<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Type, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Expression
 {
@@ -16762,12 +17631,14 @@ fn __action357<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action120(
+    __action117(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16779,6 +17650,35 @@ fn __action358<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Type, usize),
+    __1: (usize, usize, usize),
+) -> Expression
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action120(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action359<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<Expression>, usize),
     __2: (usize, Token<'input>, usize),
@@ -16789,12 +17689,14 @@ fn __action358<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action121(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16804,10 +17706,11 @@ fn __action358<
 }
 
 #[allow(unused_variables)]
-fn __action359<
+fn __action360<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Unit, usize),
     __2: (usize, usize, usize),
@@ -16817,12 +17720,14 @@ fn __action359<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action123(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16831,10 +17736,11 @@ fn __action359<
 }
 
 #[allow(unused_variables)]
-fn __action360<
+fn __action361<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
 ) -> Expression
@@ -16843,37 +17749,14 @@ fn __action360<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action124(
         input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action361<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, &'input str, usize),
-    __1: (usize, usize, usize),
-) -> Expression
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action125(
-        input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16885,7 +17768,8 @@ fn __action362<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Vec<(Loc, Option<Parameter>)>, usize),
+    file_no: usize,
+    __0: (usize, &'input str, usize),
     __1: (usize, usize, usize),
 ) -> Expression
 {
@@ -16893,12 +17777,14 @@ fn __action362<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action126(
+    __action125(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16910,7 +17796,8 @@ fn __action363<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
+    file_no: usize,
+    __0: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __1: (usize, usize, usize),
 ) -> Expression
 {
@@ -16918,12 +17805,14 @@ fn __action363<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action127(
+    __action126(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -16935,27 +17824,26 @@ fn __action364<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action74(
+    __action127(
         input,
-        __0,
+        file_no,
         __temp0,
+        __0,
         __1,
-        __2,
-        __3,
     )
 }
 
@@ -16964,6 +17852,7 @@ fn __action365<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -16974,12 +17863,14 @@ fn __action365<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action75(
+    __action74(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -16993,6 +17884,7 @@ fn __action366<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17003,12 +17895,14 @@ fn __action366<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action76(
+    __action75(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17022,6 +17916,7 @@ fn __action367<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17032,12 +17927,14 @@ fn __action367<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action77(
+    __action76(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17051,6 +17948,7 @@ fn __action368<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17061,12 +17959,14 @@ fn __action368<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action71(
+    __action77(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17080,6 +17980,7 @@ fn __action369<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17090,12 +17991,14 @@ fn __action369<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action72(
+    __action71(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17109,6 +18012,7 @@ fn __action370<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17119,12 +18023,14 @@ fn __action370<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action69(
+    __action72(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17138,6 +18044,7 @@ fn __action371<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17148,12 +18055,14 @@ fn __action371<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action67(
+    __action69(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17167,6 +18076,39 @@ fn __action372<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, usize, usize),
+    __3: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action67(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+        __2,
+        __3,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action373<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -17179,12 +18121,14 @@ fn __action372<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action65(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17196,10 +18140,11 @@ fn __action372<
 }
 
 #[allow(unused_variables)]
-fn __action373<
+fn __action374<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17210,41 +18155,14 @@ fn __action373<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action53(
         input,
-        __0,
-        __temp0,
-        __1,
-        __2,
-        __3,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action374<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action54(
-        input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17258,6 +18176,7 @@ fn __action375<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17268,12 +18187,14 @@ fn __action375<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action55(
+    __action54(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17287,6 +18208,7 @@ fn __action376<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17297,12 +18219,14 @@ fn __action376<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action56(
+    __action55(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17316,6 +18240,7 @@ fn __action377<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17326,12 +18251,14 @@ fn __action377<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action57(
+    __action56(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17345,6 +18272,7 @@ fn __action378<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17355,12 +18283,14 @@ fn __action378<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action58(
+    __action57(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17374,6 +18304,7 @@ fn __action379<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17384,12 +18315,14 @@ fn __action379<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action59(
+    __action58(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17403,6 +18336,7 @@ fn __action380<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17413,12 +18347,14 @@ fn __action380<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action60(
+    __action59(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17432,6 +18368,7 @@ fn __action381<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17442,12 +18379,14 @@ fn __action381<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action61(
+    __action60(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17461,6 +18400,7 @@ fn __action382<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17471,12 +18411,14 @@ fn __action382<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action62(
+    __action61(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17490,6 +18432,7 @@ fn __action383<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17500,12 +18443,14 @@ fn __action383<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action63(
+    __action62(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17519,25 +18464,30 @@ fn __action384<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, usize, usize),
+    __3: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action97(
+    __action63(
         input,
-        __temp0,
+        file_no,
         __0,
+        __temp0,
         __1,
         __2,
+        __3,
     )
 }
 
@@ -17546,6 +18496,7 @@ fn __action385<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -17555,12 +18506,14 @@ fn __action385<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action98(
+    __action97(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17573,6 +18526,7 @@ fn __action386<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -17582,12 +18536,14 @@ fn __action386<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action99(
+    __action98(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17600,21 +18556,24 @@ fn __action387<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
-    __2: (usize, usize, usize),
+    __1: (usize, usize, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action100(
+    __action99(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17627,21 +18586,24 @@ fn __action388<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-    __2: (usize, Expression, usize),
+    __1: (usize, Expression, usize),
+    __2: (usize, usize, usize),
 ) -> Expression
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action101(
+    __action100(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17654,6 +18616,7 @@ fn __action389<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -17663,12 +18626,14 @@ fn __action389<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action102(
+    __action101(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17681,6 +18646,7 @@ fn __action390<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -17690,12 +18656,14 @@ fn __action390<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action103(
+    __action102(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17708,6 +18676,7 @@ fn __action391<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
@@ -17717,12 +18686,14 @@ fn __action391<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action104(
+    __action103(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -17735,27 +18706,28 @@ fn __action392<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, usize, usize),
-    __3: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action95(
+    __action104(
         input,
-        __0,
+        file_no,
         __temp0,
+        __0,
         __1,
         __2,
-        __3,
     )
 }
 
@@ -17764,6 +18736,7 @@ fn __action393<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17774,12 +18747,14 @@ fn __action393<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action91(
+    __action95(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17793,6 +18768,7 @@ fn __action394<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17803,12 +18779,14 @@ fn __action394<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action92(
+    __action91(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17822,6 +18800,7 @@ fn __action395<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17832,12 +18811,14 @@ fn __action395<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action93(
+    __action92(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17851,6 +18832,7 @@ fn __action396<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17861,12 +18843,14 @@ fn __action396<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action88(
+    __action93(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17880,6 +18864,7 @@ fn __action397<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17890,12 +18875,14 @@ fn __action397<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action89(
+    __action88(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17909,6 +18896,7 @@ fn __action398<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17919,12 +18907,14 @@ fn __action398<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action85(
+    __action89(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17938,6 +18928,7 @@ fn __action399<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17948,12 +18939,14 @@ fn __action399<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action86(
+    __action85(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17967,6 +18960,7 @@ fn __action400<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -17977,12 +18971,14 @@ fn __action400<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action83(
+    __action86(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -17996,6 +18992,7 @@ fn __action401<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -18006,12 +19003,14 @@ fn __action401<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action81(
+    __action83(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -18025,6 +19024,7 @@ fn __action402<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, usize, usize),
@@ -18035,12 +19035,14 @@ fn __action402<
     let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action79(
+    __action81(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -18054,24 +19056,27 @@ fn __action403<
     'input,
 >(
     input: &'input str,
-    __0: (usize, VariableDeclaration, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
-    __3: (usize, usize, usize),
-) -> Statement
+    __2: (usize, usize, usize),
+    __3: (usize, Expression, usize),
+) -> Expression
 {
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action307(
+    __action79(
         input,
-        __temp0,
+        file_no,
         __0,
+        __temp0,
         __1,
         __2,
         __3,
@@ -18083,23 +19088,30 @@ fn __action404<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, VariableDeclaration, usize),
-    __1: (usize, usize, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+    __3: (usize, usize, usize),
 ) -> Statement
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action308(
+    __action307(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
+        __2,
+        __3,
     )
 }
 
@@ -18108,7 +19120,8 @@ fn __action405<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, VariableDeclaration, usize),
     __1: (usize, usize, usize),
 ) -> Statement
 {
@@ -18116,12 +19129,14 @@ fn __action405<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action169(
+    __action308(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18133,20 +19148,23 @@ fn __action406<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
     __1: (usize, usize, usize),
-) -> StateMutability
+) -> Statement
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action144(
+    __action169(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18158,6 +19176,7 @@ fn __action407<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> StateMutability
@@ -18166,12 +19185,14 @@ fn __action407<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action145(
+    __action144(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18183,6 +19204,7 @@ fn __action408<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> StateMutability
@@ -18191,12 +19213,14 @@ fn __action408<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action146(
+    __action145(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18208,20 +19232,23 @@ fn __action409<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
-) -> StorageLocation
+) -> StateMutability
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action27(
+    __action146(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18233,6 +19260,7 @@ fn __action410<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> StorageLocation
@@ -18241,12 +19269,14 @@ fn __action410<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action28(
+    __action27(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18258,6 +19288,7 @@ fn __action411<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> StorageLocation
@@ -18266,12 +19297,14 @@ fn __action411<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action29(
+    __action28(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18283,20 +19316,23 @@ fn __action412<
     'input,
 >(
     input: &'input str,
-    __0: (usize, &'input str, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
-) -> StringLiteral
+) -> StorageLocation
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action137(
+    __action29(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18308,6 +19344,109 @@ fn __action413<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, &'input str, usize),
+    __1: (usize, usize, usize),
+) -> StringLiteral
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action137(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action414<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, usize, usize),
+) -> Box<StructDefinition>
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action316(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __5,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action415<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, usize, usize),
+) -> Box<StructDefinition>
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action317(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action416<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -18321,12 +19460,14 @@ fn __action413<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action24(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18339,10 +19480,11 @@ fn __action413<
 }
 
 #[allow(unused_variables)]
-fn __action414<
+fn __action417<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Unit
@@ -18351,87 +19493,14 @@ fn __action414<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action128(
         input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action415<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> Unit
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action129(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action416<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> Unit
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action130(
-        input,
-        __temp0,
-        __0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action417<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> Unit
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.0.clone();
-    let __temp0 = __action233(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action131(
-        input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18443,6 +19512,7 @@ fn __action418<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Unit
@@ -18451,12 +19521,14 @@ fn __action418<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action132(
+    __action129(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18468,6 +19540,7 @@ fn __action419<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Unit
@@ -18476,12 +19549,14 @@ fn __action419<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action133(
+    __action130(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18493,6 +19568,7 @@ fn __action420<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Unit
@@ -18501,12 +19577,14 @@ fn __action420<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action134(
+    __action131(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18518,6 +19596,7 @@ fn __action421<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Unit
@@ -18526,12 +19605,14 @@ fn __action421<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action135(
+    __action132(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18543,6 +19624,7 @@ fn __action422<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Unit
@@ -18551,12 +19633,14 @@ fn __action422<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action136(
+    __action133(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18568,20 +19652,23 @@ fn __action423<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
-) -> VariableAttribute
+) -> Unit
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action51(
+    __action134(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18593,27 +19680,26 @@ fn __action424<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
-    __2: (usize, Identifier, usize),
-    __3: (usize, usize, usize),
-) -> VariableDeclaration
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+) -> Unit
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action31(
+    __action135(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
-        __2,
-        __3,
     )
 }
 
@@ -18622,20 +19708,23 @@ fn __action425<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
-) -> Visibility
+) -> Unit
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action46(
+    __action136(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18647,20 +19736,23 @@ fn __action426<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
-) -> Visibility
+) -> VariableAttribute
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action47(
+    __action51(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18672,23 +19764,30 @@ fn __action427<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, usize, usize),
-) -> Visibility
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, usize, usize),
+) -> VariableDeclaration
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action48(
+    __action31(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
+        __2,
+        __3,
     )
 }
 
@@ -18697,6 +19796,7 @@ fn __action428<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, usize, usize),
 ) -> Visibility
@@ -18705,12 +19805,14 @@ fn __action428<
     let __end0 = __0.0.clone();
     let __temp0 = __action233(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action49(
+    __action46(
         input,
+        file_no,
         __temp0,
         __0,
         __1,
@@ -18722,6 +19824,91 @@ fn __action429<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+) -> Visibility
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action47(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action430<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+) -> Visibility
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action48(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action431<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, usize, usize),
+) -> Visibility
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.0.clone();
+    let __temp0 = __action233(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action49(
+        input,
+        file_no,
+        __temp0,
+        __0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action432<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, ::std::vec::Vec<Statement>, usize),
     __2: (usize, Token<'input>, usize),
@@ -18731,12 +19918,14 @@ fn __action429<
     let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action318(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18745,10 +19934,11 @@ fn __action429<
 }
 
 #[allow(unused_variables)]
-fn __action430<
+fn __action433<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<NamedArgument>, usize),
     __2: (usize, Token<'input>, usize),
@@ -18758,12 +19948,14 @@ fn __action430<
     let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action319(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18772,10 +19964,11 @@ fn __action430<
 }
 
 #[allow(unused_variables)]
-fn __action431<
+fn __action434<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
 ) -> Statement
 {
@@ -18783,22 +19976,25 @@ fn __action431<
     let __end0 = __0.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action320(
         input,
+        file_no,
         __temp0,
         __0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action432<
+fn __action435<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -18812,12 +20008,14 @@ fn __action432<
     let __end0 = __6.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action321(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18830,10 +20028,11 @@ fn __action432<
 }
 
 #[allow(unused_variables)]
-fn __action433<
+fn __action436<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -18845,12 +20044,14 @@ fn __action433<
     let __end0 = __4.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action322(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18861,10 +20062,11 @@ fn __action433<
 }
 
 #[allow(unused_variables)]
-fn __action434<
+fn __action437<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Statement>, usize),
@@ -18880,12 +20082,14 @@ fn __action434<
     let __end0 = __8.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action323(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18900,10 +20104,11 @@ fn __action434<
 }
 
 #[allow(unused_variables)]
-fn __action435<
+fn __action438<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Statement>, usize),
@@ -18919,12 +20124,14 @@ fn __action435<
     let __end0 = __8.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action324(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18939,10 +20146,11 @@ fn __action435<
 }
 
 #[allow(unused_variables)]
-fn __action436<
+fn __action439<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, ContractType, usize),
     __2: (usize, Identifier, usize),
@@ -18955,12 +20163,14 @@ fn __action436<
     let __end0 = __5.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action325(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -18972,10 +20182,11 @@ fn __action436<
 }
 
 #[allow(unused_variables)]
-fn __action437<
+fn __action440<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -18989,12 +20200,14 @@ fn __action437<
     let __end0 = __6.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action326(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19007,10 +20220,11 @@ fn __action437<
 }
 
 #[allow(unused_variables)]
-fn __action438<
+fn __action441<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -19022,12 +20236,14 @@ fn __action438<
     let __end0 = __4.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action327(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19038,10 +20254,47 @@ fn __action438<
 }
 
 #[allow(unused_variables)]
-fn __action439<
+fn __action442<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Vec<Identifier>, usize),
+    __5: (usize, Token<'input>, usize),
+) -> Box<EnumDefinition>
+{
+    let __start0 = __5.2.clone();
+    let __end0 = __5.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action328(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __5,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action443<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Vec<Expression>, usize),
@@ -19052,12 +20305,14 @@ fn __action439<
     let __end0 = __3.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action328(
+    __action329(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19067,10 +20322,11 @@ fn __action439<
 }
 
 #[allow(unused_variables)]
-fn __action440<
+fn __action444<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Statement, usize),
 ) -> Expression
@@ -19079,12 +20335,14 @@ fn __action440<
     let __end0 = __1.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action329(
+    __action330(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -19092,10 +20350,11 @@ fn __action440<
 }
 
 #[allow(unused_variables)]
-fn __action441<
+fn __action445<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -19108,12 +20367,14 @@ fn __action441<
     let __end0 = __5.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action330(
+    __action331(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19125,10 +20386,11 @@ fn __action441<
 }
 
 #[allow(unused_variables)]
-fn __action442<
+fn __action446<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -19145,18 +20407,21 @@ fn __action442<
     let __end1 = __7.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action232(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action331(
+    __action332(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19171,10 +20436,11 @@ fn __action442<
 }
 
 #[allow(unused_variables)]
-fn __action443<
+fn __action447<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -19189,18 +20455,21 @@ fn __action443<
     let __end1 = __5.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action232(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action332(
+    __action333(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19213,10 +20482,11 @@ fn __action443<
 }
 
 #[allow(unused_variables)]
-fn __action444<
+fn __action448<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, &'input str, usize),
 ) -> HexLiteral
 {
@@ -19224,22 +20494,25 @@ fn __action444<
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action333(
+    __action334(
         input,
+        file_no,
         __0,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action445<
+fn __action449<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, &'input str, usize),
 ) -> Identifier
 {
@@ -19247,22 +20520,25 @@ fn __action445<
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action334(
+    __action335(
         input,
+        file_no,
         __0,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action446<
+fn __action450<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Identifier, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -19272,12 +20548,14 @@ fn __action446<
     let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action335(
+    __action336(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19286,10 +20564,11 @@ fn __action446<
 }
 
 #[allow(unused_variables)]
-fn __action447<
+fn __action451<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
 ) -> Statement
@@ -19298,12 +20577,14 @@ fn __action447<
     let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action336(
+    __action337(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -19311,10 +20592,11 @@ fn __action447<
 }
 
 #[allow(unused_variables)]
-fn __action448<
+fn __action452<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Statement, usize),
     __2: (usize, Token<'input>, usize),
@@ -19328,12 +20610,14 @@ fn __action448<
     let __end0 = __6.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action337(
+    __action338(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19346,10 +20630,11 @@ fn __action448<
 }
 
 #[allow(unused_variables)]
-fn __action449<
+fn __action453<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
 ) -> Statement
@@ -19358,37 +20643,14 @@ fn __action449<
     let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action338(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action450<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action232(
-        input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action339(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -19396,10 +20658,11 @@ fn __action450<
 }
 
 #[allow(unused_variables)]
-fn __action451<
+fn __action454<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
 ) -> Statement
@@ -19408,12 +20671,14 @@ fn __action451<
     let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action340(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -19421,10 +20686,39 @@ fn __action451<
 }
 
 #[allow(unused_variables)]
-fn __action452<
+fn __action455<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action341(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action456<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, Token<'input>, usize),
@@ -19434,12 +20728,14 @@ fn __action452<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action341(
+    __action342(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -19448,10 +20744,11 @@ fn __action452<
 }
 
 #[allow(unused_variables)]
-fn __action453<
+fn __action457<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
@@ -19467,12 +20764,14 @@ fn __action453<
     let __end0 = __8.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action342(
+    __action343(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19487,10 +20786,11 @@ fn __action453<
 }
 
 #[allow(unused_variables)]
-fn __action454<
+fn __action458<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Identifier, usize),
     __2: (usize, Token<'input>, usize),
@@ -19503,12 +20803,14 @@ fn __action454<
     let __end0 = __5.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action343(
+    __action344(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19520,10 +20822,11 @@ fn __action454<
 }
 
 #[allow(unused_variables)]
-fn __action455<
+fn __action459<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -19535,12 +20838,14 @@ fn __action455<
     let __end0 = __4.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action344(
+    __action345(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19551,10 +20856,11 @@ fn __action455<
 }
 
 #[allow(unused_variables)]
-fn __action456<
+fn __action460<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -19568,12 +20874,14 @@ fn __action456<
     let __end0 = __6.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action345(
+    __action346(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19586,10 +20894,11 @@ fn __action456<
 }
 
 #[allow(unused_variables)]
-fn __action457<
+fn __action461<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -19601,12 +20910,14 @@ fn __action457<
     let __end0 = __4.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action346(
+    __action347(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19617,10 +20928,11 @@ fn __action457<
 }
 
 #[allow(unused_variables)]
-fn __action458<
+fn __action462<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, ::std::option::Option<Parameter>, usize),
 ) -> (Loc, Option<Parameter>)
 {
@@ -19628,117 +20940,15 @@ fn __action458<
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action347(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action459<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
-) -> Parameter
-{
-    let __start0 = __2.2.clone();
-    let __end0 = __2.2.clone();
-    let __temp0 = __action232(
-        input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action348(
         input,
+        file_no,
         __0,
-        __1,
-        __2,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action460<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Parameter, usize),
-    __2: (usize, Token<'input>, usize),
-) -> Vec<(Loc, Option<Parameter>)>
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action349(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action461<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __1.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action350(
-        input,
-        __0,
-        __1,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action462<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __1.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action351(
-        input,
-        __0,
-        __1,
         __temp0,
     )
 }
@@ -19748,6 +20958,123 @@ fn __action463<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __2: (usize, ::std::option::Option<Identifier>, usize),
+) -> Parameter
+{
+    let __start0 = __2.2.clone();
+    let __end0 = __2.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action349(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action464<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Parameter, usize),
+    __2: (usize, Token<'input>, usize),
+) -> Vec<(Loc, Option<Parameter>)>
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action350(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action465<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __1.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action351(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action466<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __1.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action352(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action467<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, ::std::option::Option<Expression>, usize),
@@ -19758,12 +21085,14 @@ fn __action463<
     let __end0 = __3.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action352(
+    __action353(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19773,10 +21102,11 @@ fn __action463<
 }
 
 #[allow(unused_variables)]
-fn __action464<
+fn __action468<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
@@ -19786,111 +21116,17 @@ fn __action464<
     let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action353(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action465<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __2.2.clone();
-    let __end0 = __2.2.clone();
-    let __temp0 = __action232(
-        input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action354(
         input,
+        file_no,
         __0,
         __1,
         __2,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action466<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action355(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action467<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action356(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action468<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Type, usize),
-) -> Expression
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action357(
-        input,
-        __0,
         __temp0,
     )
 }
@@ -19900,8 +21136,9 @@ fn __action469<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Vec<Expression>, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
 ) -> Expression
 {
@@ -19909,12 +21146,14 @@ fn __action469<
     let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action358(
+    __action355(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -19927,22 +21166,23 @@ fn __action470<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Unit, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __1.2.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action359(
+    __action356(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
     )
 }
@@ -19952,19 +21192,22 @@ fn __action471<
     'input,
 >(
     input: &'input str,
-    __0: (usize, &'input str, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
 ) -> Expression
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action360(
+    __action357(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -19975,19 +21218,22 @@ fn __action472<
     'input,
 >(
     input: &'input str,
-    __0: (usize, &'input str, usize),
+    file_no: usize,
+    __0: (usize, Type, usize),
 ) -> Expression
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action361(
+    __action358(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -19998,20 +21244,27 @@ fn __action473<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Vec<(Loc, Option<Parameter>)>, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Vec<Expression>, usize),
+    __2: (usize, Token<'input>, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
+    let __start0 = __2.2.clone();
+    let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action362(
+    __action359(
         input,
+        file_no,
         __0,
+        __1,
+        __2,
         __temp0,
     )
 }
@@ -20021,20 +21274,25 @@ fn __action474<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Unit, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
+    let __start0 = __1.2.clone();
+    let __end0 = __1.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action363(
+    __action360(
         input,
+        file_no,
         __0,
+        __1,
         __temp0,
     )
 }
@@ -20044,25 +21302,24 @@ fn __action475<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, &'input str, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action364(
+    __action361(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
     )
 }
 
@@ -20071,25 +21328,24 @@ fn __action476<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, &'input str, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action365(
+    __action362(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
     )
 }
 
@@ -20098,25 +21354,24 @@ fn __action477<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Vec<(Loc, Option<Parameter>)>, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action366(
+    __action363(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
     )
 }
 
@@ -20125,25 +21380,24 @@ fn __action478<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action367(
+    __action364(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
     )
 }
 
@@ -20152,6 +21406,7 @@ fn __action479<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20161,12 +21416,14 @@ fn __action479<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action368(
+    __action365(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20179,6 +21436,7 @@ fn __action480<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20188,12 +21446,14 @@ fn __action480<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action369(
+    __action366(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20206,6 +21466,7 @@ fn __action481<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20215,12 +21476,14 @@ fn __action481<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action370(
+    __action367(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20233,6 +21496,7 @@ fn __action482<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20242,12 +21506,14 @@ fn __action482<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action371(
+    __action368(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20260,37 +21526,7 @@ fn __action483<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
-) -> Expression
-{
-    let __start0 = __3.2.clone();
-    let __end0 = __4.0.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action372(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action484<
-    'input,
->(
-    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20300,12 +21536,44 @@ fn __action484<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action373(
+    __action369(
         input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action484<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action370(
+        input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20318,6 +21586,7 @@ fn __action485<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20327,12 +21596,14 @@ fn __action485<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action374(
+    __action371(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20345,6 +21616,7 @@ fn __action486<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20354,12 +21626,14 @@ fn __action486<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action375(
+    __action372(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20372,25 +21646,32 @@ fn __action487<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action376(
+    __action373(
         input,
+        file_no,
         __0,
         __1,
-        __temp0,
         __2,
+        __3,
+        __temp0,
+        __4,
     )
 }
 
@@ -20399,6 +21680,7 @@ fn __action488<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20408,12 +21690,14 @@ fn __action488<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action377(
+    __action374(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20426,6 +21710,7 @@ fn __action489<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20435,12 +21720,14 @@ fn __action489<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action378(
+    __action375(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20453,6 +21740,7 @@ fn __action490<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20462,12 +21750,14 @@ fn __action490<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action379(
+    __action376(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20480,6 +21770,7 @@ fn __action491<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20489,12 +21780,14 @@ fn __action491<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action380(
+    __action377(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20507,6 +21800,7 @@ fn __action492<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20516,12 +21810,14 @@ fn __action492<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action381(
+    __action378(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20534,6 +21830,7 @@ fn __action493<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20543,12 +21840,14 @@ fn __action493<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action382(
+    __action379(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20561,6 +21860,7 @@ fn __action494<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20570,12 +21870,14 @@ fn __action494<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action383(
+    __action380(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20588,23 +21890,28 @@ fn __action495<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action384(
+    __action381(
         input,
+        file_no,
         __0,
-        __temp0,
         __1,
+        __temp0,
+        __2,
     )
 }
 
@@ -20613,23 +21920,28 @@ fn __action496<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action385(
+    __action382(
         input,
+        file_no,
         __0,
-        __temp0,
         __1,
+        __temp0,
+        __2,
     )
 }
 
@@ -20638,23 +21950,28 @@ fn __action497<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action386(
+    __action383(
         input,
+        file_no,
         __0,
-        __temp0,
         __1,
+        __temp0,
+        __2,
     )
 }
 
@@ -20663,23 +21980,28 @@ fn __action498<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
 ) -> Expression
 {
     let __start0 = __1.2.clone();
-    let __end0 = __1.2.clone();
+    let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action387(
+    __action384(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
+        __2,
     )
 }
 
@@ -20688,6 +22010,7 @@ fn __action499<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
 ) -> Expression
@@ -20696,12 +22019,14 @@ fn __action499<
     let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action388(
+    __action385(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -20713,6 +22038,7 @@ fn __action500<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
 ) -> Expression
@@ -20721,12 +22047,14 @@ fn __action500<
     let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action389(
+    __action386(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -20738,6 +22066,7 @@ fn __action501<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
 ) -> Expression
@@ -20746,12 +22075,14 @@ fn __action501<
     let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action390(
+    __action387(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -20763,23 +22094,26 @@ fn __action502<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
+    let __start0 = __1.2.clone();
+    let __end0 = __1.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action391(
+    __action388(
         input,
+        file_no,
         __0,
-        __temp0,
         __1,
+        __temp0,
     )
 }
 
@@ -20788,25 +22122,26 @@ fn __action503<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action392(
+    __action389(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
+        __1,
     )
 }
 
@@ -20815,25 +22150,26 @@ fn __action504<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action393(
+    __action390(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
+        __1,
     )
 }
 
@@ -20842,25 +22178,26 @@ fn __action505<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action394(
+    __action391(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
+        __1,
     )
 }
 
@@ -20869,25 +22206,26 @@ fn __action506<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Expression, usize),
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Expression, usize),
 ) -> Expression
 {
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action395(
+    __action392(
         input,
+        file_no,
         __0,
-        __1,
         __temp0,
-        __2,
+        __1,
     )
 }
 
@@ -20896,6 +22234,7 @@ fn __action507<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20905,12 +22244,14 @@ fn __action507<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action396(
+    __action393(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20923,6 +22264,7 @@ fn __action508<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20932,12 +22274,14 @@ fn __action508<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action397(
+    __action394(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20950,6 +22294,7 @@ fn __action509<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20959,12 +22304,14 @@ fn __action509<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action398(
+    __action395(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -20977,6 +22324,7 @@ fn __action510<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -20986,12 +22334,14 @@ fn __action510<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action399(
+    __action396(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -21004,6 +22354,7 @@ fn __action511<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -21013,12 +22364,14 @@ fn __action511<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action400(
+    __action397(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -21031,6 +22384,7 @@ fn __action512<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -21040,12 +22394,14 @@ fn __action512<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action401(
+    __action398(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -21058,6 +22414,7 @@ fn __action513<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -21067,12 +22424,14 @@ fn __action513<
     let __end0 = __2.0.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action402(
+    __action399(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -21085,6 +22444,127 @@ fn __action514<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action400(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action515<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action401(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action516<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action402(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action517<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Expression, usize),
+) -> Expression
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action403(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action518<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, VariableDeclaration, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -21094,107 +22574,17 @@ fn __action514<
     let __end0 = __2.2.clone();
     let __temp0 = __action232(
         input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action403(
-        input,
-        __0,
-        __1,
-        __2,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action515<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, VariableDeclaration, usize),
-) -> Statement
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action404(
         input,
+        file_no,
         __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action516<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-) -> Statement
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action405(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action517<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> StateMutability
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action406(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action518<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> StateMutability
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action407(
-        input,
-        __0,
+        __1,
+        __2,
         __temp0,
     )
 }
@@ -21204,19 +22594,22 @@ fn __action519<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> StateMutability
+    file_no: usize,
+    __0: (usize, VariableDeclaration, usize),
+) -> Statement
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action408(
+    __action405(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21227,19 +22620,22 @@ fn __action520<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> StorageLocation
+    file_no: usize,
+    __0: (usize, Expression, usize),
+) -> Statement
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action409(
+    __action406(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21250,19 +22646,22 @@ fn __action521<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> StorageLocation
+) -> StateMutability
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action410(
+    __action407(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21273,19 +22672,22 @@ fn __action522<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> StorageLocation
+) -> StateMutability
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action411(
+    __action408(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21296,19 +22698,22 @@ fn __action523<
     'input,
 >(
     input: &'input str,
-    __0: (usize, &'input str, usize),
-) -> StringLiteral
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> StateMutability
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action412(
+    __action409(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21319,6 +22724,181 @@ fn __action524<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> StorageLocation
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action410(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action525<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> StorageLocation
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action411(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action526<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> StorageLocation
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action412(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action527<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, &'input str, usize),
+) -> StringLiteral
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action413(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action528<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+) -> Box<StructDefinition>
+{
+    let __start0 = __4.2.clone();
+    let __end0 = __4.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action414(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action529<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Vec<String>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Identifier, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __5: (usize, Token<'input>, usize),
+) -> Box<StructDefinition>
+{
+    let __start0 = __5.2.clone();
+    let __end0 = __5.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action415(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __4,
+        __5,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action530<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -21331,12 +22911,14 @@ fn __action524<
     let __end0 = __5.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action413(
+    __action416(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -21348,10 +22930,11 @@ fn __action524<
 }
 
 #[allow(unused_variables)]
-fn __action525<
+fn __action531<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
 ) -> Unit
 {
@@ -21359,150 +22942,14 @@ fn __action525<
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action414(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action526<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Unit
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action415(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action527<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Unit
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action416(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action528<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Unit
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action417(
         input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action529<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Unit
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action418(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action530<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Unit
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action419(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action531<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-) -> Unit
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action232(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action420(
-        input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21513,6 +22960,7 @@ fn __action532<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
 ) -> Unit
 {
@@ -21520,12 +22968,14 @@ fn __action532<
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action421(
+    __action418(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21536,6 +22986,7 @@ fn __action533<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
 ) -> Unit
 {
@@ -21543,12 +22994,14 @@ fn __action533<
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action422(
+    __action419(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21559,19 +23012,22 @@ fn __action534<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> VariableAttribute
+) -> Unit
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action423(
+    __action420(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21582,24 +23038,23 @@ fn __action535<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
-    __2: (usize, Identifier, usize),
-) -> VariableDeclaration
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> Unit
 {
-    let __start0 = __2.2.clone();
-    let __end0 = __2.2.clone();
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action424(
+    __action421(
         input,
+        file_no,
         __0,
-        __1,
-        __2,
         __temp0,
     )
 }
@@ -21609,19 +23064,22 @@ fn __action536<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> Visibility
+) -> Unit
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action425(
+    __action422(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21632,19 +23090,22 @@ fn __action537<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> Visibility
+) -> Unit
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action426(
+    __action423(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21655,19 +23116,22 @@ fn __action538<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> Visibility
+) -> Unit
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action427(
+    __action424(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21678,19 +23142,22 @@ fn __action539<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
-) -> Visibility
+) -> Unit
 {
     let __start0 = __0.2.clone();
     let __end0 = __0.2.clone();
     let __temp0 = __action232(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action428(
+    __action425(
         input,
+        file_no,
         __0,
         __temp0,
     )
@@ -21701,6 +23168,167 @@ fn __action540<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> VariableAttribute
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action426(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action541<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __2: (usize, Identifier, usize),
+) -> VariableDeclaration
+{
+    let __start0 = __2.2.clone();
+    let __end0 = __2.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action427(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action542<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> Visibility
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action428(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action543<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> Visibility
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action429(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action544<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> Visibility
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action430(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action545<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+) -> Visibility
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action232(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action431(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action546<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
@@ -21716,11 +23344,13 @@ fn __action540<
     let __end0 = __3.2.clone();
     let __temp0 = __action182(
         input,
+        file_no,
         __3,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action453(
+    __action457(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -21734,10 +23364,11 @@ fn __action540<
 }
 
 #[allow(unused_variables)]
-fn __action541<
+fn __action547<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
@@ -21752,209 +23383,19 @@ fn __action541<
     let __end0 = __3.0.clone();
     let __temp0 = __action183(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action453(
+    __action457(
         input,
+        file_no,
         __0,
         __1,
         __2,
         __temp0,
         __3,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action542<
-    'input,
->(
-    input: &'input str,
-    __lookbehind: &usize,
-    __lookahead: &usize,
-) -> Vec<String>
-{
-    let __start0 = __lookbehind.clone();
-    let __end0 = __lookahead.clone();
-    let __temp0 = __action234(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action14(
-        input,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action543<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
-) -> Vec<String>
-{
-    let __start0 = __0.0.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action235(
-        input,
-        __0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action14(
-        input,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action544<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
-    __7: (usize, Token<'input>, usize),
-    __8: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __4.0.clone();
-    let __end0 = __4.2.clone();
-    let __temp0 = __action204(
-        input,
-        __4,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action434(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __5,
-        __6,
-        __7,
-        __8,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action545<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::option::Option<Statement>, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __3.2.clone();
-    let __end0 = __4.0.clone();
-    let __temp0 = __action205(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action434(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __4,
-        __5,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action546<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
-    __7: (usize, Token<'input>, usize),
-    __8: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __4.0.clone();
-    let __end0 = __4.2.clone();
-    let __temp0 = __action204(
-        input,
-        __4,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action435(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
-        __5,
-        __6,
-        __7,
-        __8,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action547<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::option::Option<Statement>, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __3.2.clone();
-    let __end0 = __4.0.clone();
-    let __temp0 = __action205(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action435(
-        input,
-        __0,
-        __1,
-        __2,
-        __3,
-        __temp0,
         __4,
         __5,
         __6,
@@ -21967,6 +23408,217 @@ fn __action548<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __lookbehind: &usize,
+    __lookahead: &usize,
+) -> Vec<String>
+{
+    let __start0 = __lookbehind.clone();
+    let __end0 = __lookahead.clone();
+    let __temp0 = __action234(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action14(
+        input,
+        file_no,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action549<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, ::std::vec::Vec<(CommentType, &'input str)>, usize),
+) -> Vec<String>
+{
+    let __start0 = __0.0.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action235(
+        input,
+        file_no,
+        __0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action14(
+        input,
+        file_no,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action550<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Statement>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, ::std::option::Option<Statement>, usize),
+    __7: (usize, Token<'input>, usize),
+    __8: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __4.0.clone();
+    let __end0 = __4.2.clone();
+    let __temp0 = __action204(
+        input,
+        file_no,
+        __4,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action437(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+        __5,
+        __6,
+        __7,
+        __8,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action551<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Statement>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
+    let __temp0 = __action205(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action437(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+        __4,
+        __5,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action552<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Statement>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, ::std::option::Option<Statement>, usize),
+    __7: (usize, Token<'input>, usize),
+    __8: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __4.0.clone();
+    let __end0 = __4.2.clone();
+    let __temp0 = __action204(
+        input,
+        file_no,
+        __4,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action438(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+        __5,
+        __6,
+        __7,
+        __8,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action553<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, ::std::option::Option<Statement>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __3.2.clone();
+    let __end0 = __4.0.clone();
+    let __temp0 = __action205(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action438(
+        input,
+        file_no,
+        __0,
+        __1,
+        __2,
+        __3,
+        __temp0,
+        __4,
+        __5,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action554<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
@@ -21977,11 +23629,13 @@ fn __action548<
     let __end0 = __2.2.clone();
     let __temp0 = __action204(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action463(
+    __action467(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -21990,10 +23644,11 @@ fn __action548<
 }
 
 #[allow(unused_variables)]
-fn __action549<
+fn __action555<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -22003,12 +23658,14 @@ fn __action549<
     let __end0 = __2.0.clone();
     let __temp0 = __action205(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action463(
+    __action467(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22017,10 +23674,11 @@ fn __action549<
 }
 
 #[allow(unused_variables)]
-fn __action550<
+fn __action556<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -22034,12 +23692,14 @@ fn __action550<
     let __end0 = __4.0.clone();
     let __temp0 = __action194(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action442(
+    __action446(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -22052,10 +23712,11 @@ fn __action550<
 }
 
 #[allow(unused_variables)]
-fn __action551<
+fn __action557<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -22070,11 +23731,13 @@ fn __action551<
     let __end0 = __4.2.clone();
     let __temp0 = __action195(
         input,
+        file_no,
         __4,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action442(
+    __action446(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -22087,10 +23750,11 @@ fn __action551<
 }
 
 #[allow(unused_variables)]
-fn __action552<
+fn __action558<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -22102,12 +23766,14 @@ fn __action552<
     let __end0 = __4.0.clone();
     let __temp0 = __action194(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action443(
+    __action447(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -22118,10 +23784,11 @@ fn __action552<
 }
 
 #[allow(unused_variables)]
-fn __action553<
+fn __action559<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, ::std::option::Option<Identifier>, usize),
@@ -22134,11 +23801,13 @@ fn __action553<
     let __end0 = __4.2.clone();
     let __temp0 = __action195(
         input,
+        file_no,
         __4,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action443(
+    __action447(
         input,
+        file_no,
         __0,
         __1,
         __2,
@@ -22149,10 +23818,11 @@ fn __action553<
 }
 
 #[allow(unused_variables)]
-fn __action554<
+fn __action560<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
@@ -22162,11 +23832,13 @@ fn __action554<
     let __end0 = __2.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action280(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22174,10 +23846,11 @@ fn __action554<
 }
 
 #[allow(unused_variables)]
-fn __action555<
+fn __action561<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
 ) -> EventParameter
@@ -22186,12 +23859,14 @@ fn __action555<
     let __end0 = __1.2.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action280(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22199,10 +23874,11 @@ fn __action555<
 }
 
 #[allow(unused_variables)]
-fn __action556<
+fn __action562<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Identifier, usize),
 ) -> EventParameter
@@ -22211,21 +23887,24 @@ fn __action556<
     let __end0 = __1.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action281(
         input,
+        file_no,
         __0,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action557<
+fn __action563<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
 ) -> EventParameter
 {
@@ -22233,22 +23912,25 @@ fn __action557<
     let __end0 = __0.2.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     __action281(
         input,
+        file_no,
         __0,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action558<
+fn __action564<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Identifier, usize),
@@ -22262,11 +23944,13 @@ fn __action558<
     let __end0 = __2.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action550(
+    __action556(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22278,10 +23962,11 @@ fn __action558<
 }
 
 #[allow(unused_variables)]
-fn __action559<
+fn __action565<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Vec<(Loc, Option<Parameter>)>, usize),
@@ -22294,12 +23979,14 @@ fn __action559<
     let __end0 = __2.0.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action550(
+    __action556(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22311,10 +23998,11 @@ fn __action559<
 }
 
 #[allow(unused_variables)]
-fn __action560<
+fn __action566<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Identifier, usize),
@@ -22329,11 +24017,13 @@ fn __action560<
     let __end0 = __2.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action551(
+    __action557(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22346,10 +24036,11 @@ fn __action560<
 }
 
 #[allow(unused_variables)]
-fn __action561<
+fn __action567<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Vec<(Loc, Option<Parameter>)>, usize),
@@ -22363,12 +24054,14 @@ fn __action561<
     let __end0 = __2.0.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action551(
+    __action557(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22381,10 +24074,11 @@ fn __action561<
 }
 
 #[allow(unused_variables)]
-fn __action562<
+fn __action568<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Identifier, usize),
@@ -22396,11 +24090,13 @@ fn __action562<
     let __end0 = __2.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action552(
+    __action558(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22410,10 +24106,11 @@ fn __action562<
 }
 
 #[allow(unused_variables)]
-fn __action563<
+fn __action569<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Vec<(Loc, Option<Parameter>)>, usize),
@@ -22424,12 +24121,14 @@ fn __action563<
     let __end0 = __2.0.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action552(
+    __action558(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22439,10 +24138,11 @@ fn __action563<
 }
 
 #[allow(unused_variables)]
-fn __action564<
+fn __action570<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Identifier, usize),
@@ -22455,11 +24155,13 @@ fn __action564<
     let __end0 = __2.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action553(
+    __action559(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22470,10 +24172,11 @@ fn __action564<
 }
 
 #[allow(unused_variables)]
-fn __action565<
+fn __action571<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Vec<(Loc, Option<Parameter>)>, usize),
@@ -22485,12 +24188,14 @@ fn __action565<
     let __end0 = __2.0.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action553(
+    __action559(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22501,10 +24206,11 @@ fn __action565<
 }
 
 #[allow(unused_variables)]
-fn __action566<
+fn __action572<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, ::std::option::Option<StorageLocation>, usize),
     __2: (usize, Identifier, usize),
@@ -22514,11 +24220,13 @@ fn __action566<
     let __end0 = __2.2.clone();
     let __temp0 = __action220(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action459(
+    __action463(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22526,10 +24234,11 @@ fn __action566<
 }
 
 #[allow(unused_variables)]
-fn __action567<
+fn __action573<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, ::std::option::Option<StorageLocation>, usize),
 ) -> Parameter
@@ -22538,12 +24247,14 @@ fn __action567<
     let __end0 = __1.2.clone();
     let __temp0 = __action221(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action459(
+    __action463(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22551,10 +24262,11 @@ fn __action567<
 }
 
 #[allow(unused_variables)]
-fn __action568<
+fn __action574<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Parameter, usize),
 ) -> (Loc, Option<Parameter>)
 {
@@ -22562,20 +24274,23 @@ fn __action568<
     let __end0 = __0.2.clone();
     let __temp0 = __action197(
         input,
+        file_no,
         __0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action458(
+    __action462(
         input,
+        file_no,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action569<
+fn __action575<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
 ) -> (Loc, Option<Parameter>)
@@ -22584,21 +24299,24 @@ fn __action569<
     let __end0 = __lookahead.clone();
     let __temp0 = __action198(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action458(
+    __action462(
         input,
+        file_no,
         __temp0,
     )
 }
 
 #[allow(unused_variables)]
-fn __action570<
+fn __action576<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Statement, usize),
@@ -22616,16 +24334,19 @@ fn __action570<
     let __end1 = __6.2.clone();
     let __temp0 = __action186(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action186(
         input,
+        file_no,
         __6,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action544(
+    __action550(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -22635,264 +24356,6 @@ fn __action570<
         __temp1,
         __7,
         __8,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action571<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __5.2.clone();
-    let __end1 = __6.0.clone();
-    let __temp0 = __action186(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action187(
-        input,
-        &__start1,
-        &__end1,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action544(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __temp1,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action572<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, Expression, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Statement, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __start1 = __5.0.clone();
-    let __end1 = __5.2.clone();
-    let __temp0 = __action187(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action186(
-        input,
-        __5,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action544(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action573<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, Expression, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __start1 = __4.2.clone();
-    let __end1 = __5.0.clone();
-    let __temp0 = __action187(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action187(
-        input,
-        &__start1,
-        &__end1,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action544(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action574<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Statement, usize),
-    __6: (usize, Token<'input>, usize),
-    __7: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __5.0.clone();
-    let __end1 = __5.2.clone();
-    let __temp0 = __action186(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action186(
-        input,
-        __5,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action545(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __6,
-        __7,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action575<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __4.2.clone();
-    let __end1 = __5.0.clone();
-    let __temp0 = __action186(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action187(
-        input,
-        &__start1,
-        &__end1,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action545(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __temp1,
-        __5,
-        __6,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action576<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Statement, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __start1 = __4.0.clone();
-    let __end1 = __4.2.clone();
-    let __temp0 = __action187(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action186(
-        input,
-        __4,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action545(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __temp1,
-        __5,
-        __6,
     )
 }
 
@@ -22901,92 +24364,7 @@ fn __action577<
     'input,
 >(
     input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Token<'input>, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Token<'input>, usize),
-    __5: (usize, Statement, usize),
-) -> Statement
-{
-    let __start0 = __1.2.clone();
-    let __end0 = __2.0.clone();
-    let __start1 = __3.2.clone();
-    let __end1 = __4.0.clone();
-    let __temp0 = __action187(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action187(
-        input,
-        &__start1,
-        &__end1,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action545(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __2,
-        __3,
-        __temp1,
-        __4,
-        __5,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action578<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Token<'input>, usize),
-    __1: (usize, Token<'input>, usize),
-    __2: (usize, Statement, usize),
-    __3: (usize, Token<'input>, usize),
-    __4: (usize, Expression, usize),
-    __5: (usize, Token<'input>, usize),
-    __6: (usize, Statement, usize),
-    __7: (usize, Token<'input>, usize),
-    __8: (usize, Token<'input>, usize),
-) -> Statement
-{
-    let __start0 = __2.0.clone();
-    let __end0 = __2.2.clone();
-    let __start1 = __6.0.clone();
-    let __end1 = __6.2.clone();
-    let __temp0 = __action186(
-        input,
-        __2,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    let __temp1 = __action186(
-        input,
-        __6,
-    );
-    let __temp1 = (__start1, __temp1, __end1);
-    __action546(
-        input,
-        __0,
-        __1,
-        __temp0,
-        __3,
-        __4,
-        __5,
-        __temp1,
-        __7,
-        __8,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action579<
-    'input,
->(
-    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Statement, usize),
@@ -22994,7 +24372,7 @@ fn __action579<
     __4: (usize, Expression, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Token<'input>, usize),
-    __7: (usize, Token<'input>, usize),
+    __7: (usize, Statement, usize),
 ) -> Statement
 {
     let __start0 = __2.0.clone();
@@ -23003,17 +24381,20 @@ fn __action579<
     let __end1 = __6.0.clone();
     let __temp0 = __action186(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action187(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action546(
+    __action550(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23027,10 +24408,11 @@ fn __action579<
 }
 
 #[allow(unused_variables)]
-fn __action580<
+fn __action578<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -23038,7 +24420,7 @@ fn __action580<
     __4: (usize, Token<'input>, usize),
     __5: (usize, Statement, usize),
     __6: (usize, Token<'input>, usize),
-    __7: (usize, Token<'input>, usize),
+    __7: (usize, Statement, usize),
 ) -> Statement
 {
     let __start0 = __1.2.clone();
@@ -23047,21 +24429,118 @@ fn __action580<
     let __end1 = __5.2.clone();
     let __temp0 = __action187(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action186(
         input,
+        file_no,
         __5,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action546(
+    __action550(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
         __2,
+        __3,
+        __4,
+        __temp1,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action579<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Expression, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
+    let __temp0 = __action187(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action187(
+        input,
+        file_no,
+        &__start1,
+        &__end1,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action550(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+        __3,
+        __4,
+        __temp1,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action580<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Statement, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
+    let __start1 = __5.0.clone();
+    let __end1 = __5.2.clone();
+    let __temp0 = __action186(
+        input,
+        file_no,
+        __2,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action186(
+        input,
+        file_no,
+        __5,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action551(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
         __3,
         __4,
         __temp1,
@@ -23075,6 +24554,289 @@ fn __action581<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
+    let __start1 = __4.2.clone();
+    let __end1 = __5.0.clone();
+    let __temp0 = __action186(
+        input,
+        file_no,
+        __2,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action187(
+        input,
+        file_no,
+        &__start1,
+        &__end1,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action551(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __3,
+        __4,
+        __temp1,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action582<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Statement, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __start1 = __4.0.clone();
+    let __end1 = __4.2.clone();
+    let __temp0 = __action187(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action186(
+        input,
+        file_no,
+        __4,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action551(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+        __3,
+        __temp1,
+        __5,
+        __6,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action583<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Statement, usize),
+) -> Statement
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __start1 = __3.2.clone();
+    let __end1 = __4.0.clone();
+    let __temp0 = __action187(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action187(
+        input,
+        file_no,
+        &__start1,
+        &__end1,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action551(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+        __3,
+        __temp1,
+        __4,
+        __5,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action584<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Statement, usize),
+    __7: (usize, Token<'input>, usize),
+    __8: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
+    let __start1 = __6.0.clone();
+    let __end1 = __6.2.clone();
+    let __temp0 = __action186(
+        input,
+        file_no,
+        __2,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action186(
+        input,
+        file_no,
+        __6,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action552(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __3,
+        __4,
+        __5,
+        __temp1,
+        __7,
+        __8,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action585<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Statement, usize),
+    __3: (usize, Token<'input>, usize),
+    __4: (usize, Expression, usize),
+    __5: (usize, Token<'input>, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __2.0.clone();
+    let __end0 = __2.2.clone();
+    let __start1 = __5.2.clone();
+    let __end1 = __6.0.clone();
+    let __temp0 = __action186(
+        input,
+        file_no,
+        __2,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action187(
+        input,
+        file_no,
+        &__start1,
+        &__end1,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action552(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __3,
+        __4,
+        __5,
+        __temp1,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action586<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Token<'input>, usize),
+    __1: (usize, Token<'input>, usize),
+    __2: (usize, Token<'input>, usize),
+    __3: (usize, Expression, usize),
+    __4: (usize, Token<'input>, usize),
+    __5: (usize, Statement, usize),
+    __6: (usize, Token<'input>, usize),
+    __7: (usize, Token<'input>, usize),
+) -> Statement
+{
+    let __start0 = __1.2.clone();
+    let __end0 = __2.0.clone();
+    let __start1 = __5.0.clone();
+    let __end1 = __5.2.clone();
+    let __temp0 = __action187(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    let __temp1 = __action186(
+        input,
+        file_no,
+        __5,
+    );
+    let __temp1 = (__start1, __temp1, __end1);
+    __action552(
+        input,
+        file_no,
+        __0,
+        __1,
+        __temp0,
+        __2,
+        __3,
+        __4,
+        __temp1,
+        __6,
+        __7,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action587<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -23090,18 +24852,21 @@ fn __action581<
     let __end1 = __5.0.clone();
     let __temp0 = __action187(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action187(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action546(
+    __action552(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23115,10 +24880,11 @@ fn __action581<
 }
 
 #[allow(unused_variables)]
-fn __action582<
+fn __action588<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Statement, usize),
@@ -23135,16 +24901,19 @@ fn __action582<
     let __end1 = __5.2.clone();
     let __temp0 = __action186(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action186(
         input,
+        file_no,
         __5,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action547(
+    __action553(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23157,10 +24926,11 @@ fn __action582<
 }
 
 #[allow(unused_variables)]
-fn __action583<
+fn __action589<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Statement, usize),
@@ -23176,17 +24946,20 @@ fn __action583<
     let __end1 = __5.0.clone();
     let __temp0 = __action186(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action187(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action547(
+    __action553(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23199,10 +24972,11 @@ fn __action583<
 }
 
 #[allow(unused_variables)]
-fn __action584<
+fn __action590<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -23218,17 +24992,20 @@ fn __action584<
     let __end1 = __4.2.clone();
     let __temp0 = __action187(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action186(
         input,
+        file_no,
         __4,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action547(
+    __action553(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23241,10 +25018,11 @@ fn __action584<
 }
 
 #[allow(unused_variables)]
-fn __action585<
+fn __action591<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Token<'input>, usize),
@@ -23259,18 +25037,21 @@ fn __action585<
     let __end1 = __4.0.clone();
     let __temp0 = __action187(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
     let __temp1 = __action187(
         input,
+        file_no,
         &__start1,
         &__end1,
     );
     let __temp1 = (__start1, __temp1, __end1);
-    __action547(
+    __action553(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23283,10 +25064,11 @@ fn __action585<
 }
 
 #[allow(unused_variables)]
-fn __action586<
+fn __action592<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
 ) -> Statement
@@ -23295,12 +25077,14 @@ fn __action586<
     let __end0 = __1.0.clone();
     let __temp0 = __action189(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action429(
+    __action432(
         input,
+        file_no,
         __0,
         __temp0,
         __1,
@@ -23308,10 +25092,11 @@ fn __action586<
 }
 
 #[allow(unused_variables)]
-fn __action587<
+fn __action593<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, ::std::vec::Vec<Statement>, usize),
     __2: (usize, Token<'input>, usize),
@@ -23321,160 +25106,16 @@ fn __action587<
     let __end0 = __1.2.clone();
     let __temp0 = __action190(
         input,
+        file_no,
         __1,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action429(
+    __action432(
         input,
+        file_no,
         __0,
         __temp0,
         __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action588<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, StorageLocation, usize),
-    __2: (usize, Identifier, usize),
-) -> Parameter
-{
-    let __start0 = __1.0.clone();
-    let __end0 = __1.2.clone();
-    let __temp0 = __action230(
-        input,
-        __1,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action566(
-        input,
-        __0,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action589<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Identifier, usize),
-) -> Parameter
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action231(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action566(
-        input,
-        __0,
-        __temp0,
-        __1,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action590<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, StorageLocation, usize),
-) -> Parameter
-{
-    let __start0 = __1.0.clone();
-    let __end0 = __1.2.clone();
-    let __temp0 = __action230(
-        input,
-        __1,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action567(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action591<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-) -> Parameter
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __0.2.clone();
-    let __temp0 = __action231(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action567(
-        input,
-        __0,
-        __temp0,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action592<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, StorageLocation, usize),
-    __2: (usize, Identifier, usize),
-) -> VariableDeclaration
-{
-    let __start0 = __1.0.clone();
-    let __end0 = __1.2.clone();
-    let __temp0 = __action230(
-        input,
-        __1,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action535(
-        input,
-        __0,
-        __temp0,
-        __2,
-    )
-}
-
-#[allow(unused_variables)]
-fn __action593<
-    'input,
->(
-    input: &'input str,
-    __0: (usize, Expression, usize),
-    __1: (usize, Identifier, usize),
-) -> VariableDeclaration
-{
-    let __start0 = __0.2.clone();
-    let __end0 = __1.0.clone();
-    let __temp0 = __action231(
-        input,
-        &__start0,
-        &__end0,
-    );
-    let __temp0 = (__start0, __temp0, __end0);
-    __action535(
-        input,
-        __0,
-        __temp0,
-        __1,
     )
 }
 
@@ -23483,6 +25124,171 @@ fn __action594<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, StorageLocation, usize),
+    __2: (usize, Identifier, usize),
+) -> Parameter
+{
+    let __start0 = __1.0.clone();
+    let __end0 = __1.2.clone();
+    let __temp0 = __action230(
+        input,
+        file_no,
+        __1,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action572(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action595<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Identifier, usize),
+) -> Parameter
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action231(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action572(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action596<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, StorageLocation, usize),
+) -> Parameter
+{
+    let __start0 = __1.0.clone();
+    let __end0 = __1.2.clone();
+    let __temp0 = __action230(
+        input,
+        file_no,
+        __1,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action573(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action597<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+) -> Parameter
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __0.2.clone();
+    let __temp0 = __action231(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action573(
+        input,
+        file_no,
+        __0,
+        __temp0,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action598<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, StorageLocation, usize),
+    __2: (usize, Identifier, usize),
+) -> VariableDeclaration
+{
+    let __start0 = __1.0.clone();
+    let __end0 = __1.2.clone();
+    let __temp0 = __action230(
+        input,
+        file_no,
+        __1,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action541(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __2,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action599<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
+    __0: (usize, Expression, usize),
+    __1: (usize, Identifier, usize),
+) -> VariableDeclaration
+{
+    let __start0 = __0.2.clone();
+    let __end0 = __1.0.clone();
+    let __temp0 = __action231(
+        input,
+        file_no,
+        &__start0,
+        &__end0,
+    );
+    let __temp0 = (__start0, __temp0, __end0);
+    __action541(
+        input,
+        file_no,
+        __0,
+        __temp0,
+        __1,
+    )
+}
+
+#[allow(unused_variables)]
+fn __action600<
+    'input,
+>(
+    input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, (Vec<(Loc, Option<Parameter>)>, Box<Statement>), usize),
@@ -23498,11 +25304,13 @@ fn __action594<
     let __end0 = __2.2.clone();
     let __temp0 = __action184(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action540(
+    __action546(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23516,10 +25324,11 @@ fn __action594<
 }
 
 #[allow(unused_variables)]
-fn __action595<
+fn __action601<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, (Identifier, Parameter, Statement), usize),
@@ -23534,12 +25343,14 @@ fn __action595<
     let __end0 = __2.0.clone();
     let __temp0 = __action185(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action540(
+    __action546(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23553,10 +25364,11 @@ fn __action595<
 }
 
 #[allow(unused_variables)]
-fn __action596<
+fn __action602<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, (Vec<(Loc, Option<Parameter>)>, Box<Statement>), usize),
@@ -23571,11 +25383,13 @@ fn __action596<
     let __end0 = __2.2.clone();
     let __temp0 = __action184(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action541(
+    __action547(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23588,10 +25402,11 @@ fn __action596<
 }
 
 #[allow(unused_variables)]
-fn __action597<
+fn __action603<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, Token<'input>, usize),
@@ -23605,12 +25420,14 @@ fn __action597<
     let __end0 = __2.0.clone();
     let __temp0 = __action185(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action541(
+    __action547(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23623,10 +25440,11 @@ fn __action597<
 }
 
 #[allow(unused_variables)]
-fn __action598<
+fn __action604<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, Identifier, usize),
@@ -23639,12 +25457,14 @@ fn __action598<
     let __end0 = __2.0.clone();
     let __temp0 = __action213(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action437(
+    __action440(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23656,10 +25476,11 @@ fn __action598<
 }
 
 #[allow(unused_variables)]
-fn __action599<
+fn __action605<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -23673,11 +25494,13 @@ fn __action599<
     let __end0 = __2.2.clone();
     let __temp0 = __action214(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action437(
+    __action440(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23689,10 +25512,11 @@ fn __action599<
 }
 
 #[allow(unused_variables)]
-fn __action600<
+fn __action606<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, Identifier, usize),
@@ -23703,12 +25527,14 @@ fn __action600<
     let __end0 = __2.0.clone();
     let __temp0 = __action213(
         input,
+        file_no,
         &__start0,
         &__end0,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action438(
+    __action441(
         input,
+        file_no,
         __0,
         __1,
         __temp0,
@@ -23718,10 +25544,11 @@ fn __action600<
 }
 
 #[allow(unused_variables)]
-fn __action601<
+fn __action607<
     'input,
 >(
     input: &'input str,
+    file_no: usize,
     __0: (usize, Vec<String>, usize),
     __1: (usize, Expression, usize),
     __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
@@ -23733,11 +25560,13 @@ fn __action601<
     let __end0 = __2.2.clone();
     let __temp0 = __action214(
         input,
+        file_no,
         __2,
     );
     let __temp0 = (__start0, __temp0, __end0);
-    __action438(
+    __action441(
         input,
+        file_no,
         __0,
         __1,
         __temp0,

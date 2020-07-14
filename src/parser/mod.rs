@@ -8,37 +8,40 @@ pub mod solidity;
 use lalrpop_util::ParseError;
 use output::Output;
 
-pub fn parse(src: &str) -> Result<pt::SourceUnit, Vec<Output>> {
+pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Output>> {
     // parse phase
     let lex = lexer::Lexer::new(src);
 
-    let s = solidity::SourceUnitParser::new().parse(src, lex);
+    let s = solidity::SourceUnitParser::new().parse(src, file_no, lex);
 
     let mut errors = Vec::new();
 
     if let Err(e) = s {
         errors.push(match e {
-            ParseError::InvalidToken { location } => {
-                Output::parser_error(pt::Loc(location, location), "invalid token".to_string())
-            }
+            ParseError::InvalidToken { location } => Output::parser_error(
+                pt::Loc(file_no, location, location),
+                "invalid token".to_string(),
+            ),
             ParseError::UnrecognizedToken {
                 token: (l, token, r),
                 expected,
             } => Output::parser_error(
-                pt::Loc(l, r),
+                pt::Loc(file_no, l, r),
                 format!(
                     "unrecognised token `{}', expected {}",
                     token,
                     expected.join(", ")
                 ),
             ),
-            ParseError::User { error } => Output::parser_error(error.loc(), error.to_string()),
+            ParseError::User { error } => {
+                Output::parser_error(error.loc(file_no), error.to_string())
+            }
             ParseError::ExtraToken { token } => Output::parser_error(
-                pt::Loc(token.0, token.2),
+                pt::Loc(file_no, token.0, token.2),
                 format!("extra token `{}' encountered", token.0),
             ),
             ParseError::UnrecognizedEOF { location, expected } => Output::parser_error(
-                pt::Loc(location, location),
+                pt::Loc(file_no, location, location),
                 format!("unexpected end of file, expecting {}", expected.join(", ")),
             ),
         });
@@ -77,58 +80,61 @@ mod test {
 
         let lex = lexer::Lexer::new(&src);
 
-        let e = solidity::SourceUnitParser::new().parse(&src, lex).unwrap();
+        let e = solidity::SourceUnitParser::new()
+            .parse(&src, 0, lex)
+            .unwrap();
 
         let a = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
             ContractDefinition {
                 doc: vec![],
-                loc: Loc(0, 325),
+                loc: Loc(0, 0, 325),
                 ty: ContractType::Contract,
                 name: Identifier {
-                    loc: Loc(9, 12),
+                    loc: Loc(0, 9, 12),
                     name: "foo".to_string(),
                 },
                 parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition {
                         doc: vec![],
                         name: Identifier {
-                            loc: Loc(42, 54),
+                            loc: Loc(0, 42, 54),
                             name: "Jurisdiction".to_string(),
                         },
+                        loc: Loc(0, 35, 232),
                         fields: vec![
                             VariableDeclaration {
-                                loc: Loc(81, 92),
-                                ty: Expression::Type(Loc(81, 85), Type::Bool),
+                                loc: Loc(0, 81, 92),
+                                ty: Expression::Type(Loc(0, 81, 85), Type::Bool),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(86, 92),
+                                    loc: Loc(0, 86, 92),
                                     name: "exists".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(118, 129),
-                                ty: Expression::Type(Loc(118, 122), Type::Uint(256)),
+                                loc: Loc(0, 118, 129),
+                                ty: Expression::Type(Loc(0, 118, 122), Type::Uint(256)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(123, 129),
+                                    loc: Loc(0, 123, 129),
                                     name: "keyIdx".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(155, 169),
-                                ty: Expression::Type(Loc(155, 161), Type::Bytes(2)),
+                                loc: Loc(0, 155, 169),
+                                ty: Expression::Type(Loc(0, 155, 161), Type::Bytes(2)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(162, 169),
+                                    loc: Loc(0, 162, 169),
                                     name: "country".to_string(),
                                 },
                             },
                             VariableDeclaration {
-                                loc: Loc(195, 209),
-                                ty: Expression::Type(Loc(195, 202), Type::Bytes(32)),
+                                loc: Loc(0, 195, 209),
+                                ty: Expression::Type(Loc(0, 195, 202), Type::Bytes(32)),
                                 storage: None,
                                 name: Identifier {
-                                    loc: Loc(203, 209),
+                                    loc: Loc(0, 203, 209),
                                     name: "region".to_string(),
                                 },
                             },
@@ -137,26 +143,26 @@ mod test {
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
                             doc: vec![],
-                            ty: Expression::Type(Loc(253, 259), Type::String),
+                            ty: Expression::Type(Loc(0, 253, 259), Type::String),
                             attrs: vec![],
                             name: Identifier {
-                                loc: Loc(260, 268),
+                                loc: Loc(0, 260, 268),
                                 name: "__abba_$".to_string(),
                             },
-                            loc: Loc(253, 268),
+                            loc: Loc(0, 253, 268),
                             initializer: None,
                         },
                     )),
                     ContractPart::ContractVariableDefinition(Box::new(
                         ContractVariableDefinition {
                             doc: vec![],
-                            ty: Expression::Type(Loc(290, 295), Type::Int(64)),
+                            ty: Expression::Type(Loc(0, 290, 295), Type::Int(64)),
                             attrs: vec![],
                             name: Identifier {
-                                loc: Loc(296, 306),
+                                loc: Loc(0, 296, 306),
                                 name: "$thing_102".to_string(),
                             },
-                            loc: Loc(290, 306),
+                            loc: Loc(0, 290, 306),
                             initializer: None,
                         },
                     )),
