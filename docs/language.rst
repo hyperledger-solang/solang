@@ -2134,6 +2134,10 @@ list of types. If multiple values are decoded, then a destructure statement must
 
     (uint64 foo1, bool foo2) = abi.decode(bar, (uint64, bool));
 
+If the arguments cannot be decoded, contract execution will abort. This can happen if the encoded
+length is too short, for example.
+
+
 abi.encode(...)
 +++++++++++++++
 
