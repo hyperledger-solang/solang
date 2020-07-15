@@ -944,14 +944,14 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
 
     cache.set_file_contents("test.sol".to_string(), src.to_string());
 
-    let (res, errors) = compile(
+    let (res, ns) = compile(
         "test.sol",
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Substrate,
     );
 
-    output::print_messages("test.sol", src, &errors, false);
+    output::print_messages(&mut cache, &ns, false);
 
     assert!(!res.is_empty());
 

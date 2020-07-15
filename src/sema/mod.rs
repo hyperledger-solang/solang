@@ -51,12 +51,20 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
                 pt::Import::Rename(f, _) => f,
             };
 
-            // recurse; FIXME check for infinite recursion
-            sema(&filename.string, cache, target, ns);
+            // We may already have resolved it
+            if !ns.files.contains(&filename.string) {
+                if let Err(message) = cache.populate_cache(&filename.string) {
+                    ns.diagnostics.push(Output::error(filename.loc, message));
 
-            // give up if we failed
-            if any_errors(&ns.diagnostics) {
-                return;
+                    return;
+                }
+
+                sema(&filename.string, cache, target, ns);
+
+                // give up if we failed
+                if any_errors(&ns.diagnostics) {
+                    return;
+                }
             }
         }
     }

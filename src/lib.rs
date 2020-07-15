@@ -61,25 +61,13 @@ pub fn compile(
     cache: &mut ParsedCache,
     opt: OptimizationLevel,
     target: Target,
-) -> (Vec<(Vec<u8>, String)>, Vec<output::Output>) {
+) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
     let ctx = inkwell::context::Context::create();
 
-    let mut ns = ast::Namespace::new(
-        target,
-        filename,
-        match target {
-            Target::Ewasm => 20,
-            Target::Substrate => 32,
-            Target::Sabre => 0, // Sabre has no address type
-        },
-        16,
-    );
-
-    // resolve
-    sema::sema(&filename, cache, target, &mut ns);
+    let mut ns = parse_and_resolve(filename, cache, target);
 
     if output::any_errors(&ns.diagnostics) {
-        return (Vec::new(), ns.diagnostics);
+        return (Vec::new(), ns);
     }
 
     // codegen all the contracts
@@ -100,7 +88,7 @@ pub fn compile(
         })
         .collect();
 
-    (results, ns.diagnostics)
+    (results, ns)
 }
 
 /// Parse and resolve the Solidity source code provided in src, for the target chain as specified in target.
@@ -112,7 +100,7 @@ pub fn parse_and_resolve(
     filename: &str,
     cache: &mut ParsedCache,
     target: Target,
-) -> sema::ast::Namespace {
+) -> ast::Namespace {
     let mut ns = ast::Namespace::new(
         target,
         match target {
@@ -123,8 +111,18 @@ pub fn parse_and_resolve(
         16,
     );
 
-    // resolve
-    sema::sema(filename, cache, target, &mut ns);
+    if let Err(message) = cache.populate_cache(filename) {
+        ns.diagnostics.push(output::Output {
+            ty: output::ErrorType::ParserError,
+            level: output::Level::Error,
+            message,
+            pos: None,
+            notes: Vec::new(),
+        });
+    } else {
+        // resolve
+        sema::sema(filename, cache, target, &mut ns);
+    }
 
     ns
 }

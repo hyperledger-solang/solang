@@ -169,15 +169,11 @@ fn process_filename(
     // resolve phase
     let mut ns = solang::parse_and_resolve(filename, cache, target);
 
-    output::print_messages(filename, "", &ns.diagnostics, verbose);
-
-    let contents = cache.get_file_contents(filename);
-
     if matches.is_present("STD-JSON") {
-        let mut out = output::message_as_json(filename, &contents, &ns.diagnostics);
+        let mut out = output::message_as_json(cache, &ns);
         json.errors.append(&mut out);
     } else {
-        output::print_messages(filename, &contents, &ns.diagnostics, verbose);
+        output::print_messages(cache, &ns, verbose);
     }
 
     if ns.contracts.is_empty() || output::any_errors(&ns.diagnostics) {
