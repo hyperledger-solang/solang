@@ -1,4 +1,6 @@
+use parsedcache::ParsedCache;
 use parser::pt::Loc;
+use sema::ast::Namespace;
 use serde::Serialize;
 
 #[derive(Debug, PartialEq)]
@@ -28,7 +30,7 @@ pub struct Note {
 pub struct Output {
     pub level: Level,
     pub ty: ErrorType,
-    pub pos: Loc,
+    pub pos: Option<Loc>,
     pub message: String,
     pub notes: Vec<Note>,
 }
@@ -48,7 +50,7 @@ impl Output {
         Output {
             level: Level::Info,
             ty: ErrorType::None,
-            pos,
+            pos: Some(pos),
             message,
             notes: Vec::new(),
         }
@@ -58,7 +60,7 @@ impl Output {
         Output {
             level: Level::Error,
             ty: ErrorType::ParserError,
-            pos,
+            pos: Some(pos),
             message,
             notes: Vec::new(),
         }
@@ -68,7 +70,7 @@ impl Output {
         Output {
             level: Level::Error,
             ty: ErrorType::SyntaxError,
-            pos,
+            pos: Some(pos),
             message,
             notes: Vec::new(),
         }
@@ -78,7 +80,7 @@ impl Output {
         Output {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
-            pos,
+            pos: Some(pos),
             message,
             notes: Vec::new(),
         }
@@ -88,7 +90,7 @@ impl Output {
         Output {
             level: Level::Error,
             ty: ErrorType::TypeError,
-            pos,
+            pos: Some(pos),
             message,
             notes: Vec::new(),
         }
@@ -98,7 +100,7 @@ impl Output {
         Output {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos,
+            pos: Some(pos),
             message,
             notes: Vec::new(),
         }
@@ -108,7 +110,7 @@ impl Output {
         Output {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos,
+            pos: Some(pos),
             message,
             notes: vec![Note {
                 pos: note_pos,
@@ -121,7 +123,7 @@ impl Output {
         Output {
             level: Level::Warning,
             ty: ErrorType::Warning,
-            pos,
+            pos: Some(pos),
             message,
             notes,
         }
@@ -131,7 +133,7 @@ impl Output {
         Output {
             level: Level::Error,
             ty: ErrorType::None,
-            pos,
+            pos: Some(pos),
             message,
             notes: vec![Note {
                 pos: note_pos,
@@ -144,25 +146,29 @@ impl Output {
         Output {
             level: Level::Error,
             ty: ErrorType::None,
-            pos,
+            pos: Some(pos),
             message,
             notes,
         }
     }
 
-    fn formated_message(&self, filename: &str, pos: &FilePostitions) -> String {
-        let loc = pos.to_string(self.pos);
+    fn formated_message(&self, filename: &str, positions: &FilePostitions) -> String {
+        let mut s = if let Some(pos) = self.pos {
+            let loc = positions.to_string(pos);
 
-        let mut s = format!(
-            "{}:{}: {}: {}",
-            filename,
-            loc,
-            self.level.to_string(),
-            self.message
-        );
+            format!(
+                "{}:{}: {}: {}",
+                filename,
+                loc,
+                self.level.to_string(),
+                self.message
+            )
+        } else {
+            format!("solang: {}: {}", self.level.to_string(), self.message)
+        };
 
         for note in &self.notes {
-            let loc = pos.to_string(note.pos);
+            let loc = positions.to_string(note.pos);
 
             s.push_str(&format!(
                 "\n\t{}:{}: {}: {}",
@@ -174,15 +180,26 @@ impl Output {
     }
 }
 
-pub fn print_messages(filename: &str, src: &str, messages: &[Output], verbose: bool) {
-    let pos = FilePostitions::new(src);
+pub fn print_messages(cache: &mut ParsedCache, ns: &Namespace, verbose: bool) {
+    let mut current_file_no = None;
+    let mut positions = FilePostitions(Vec::new());
+    let mut filename = "";
 
-    for msg in messages {
+    for msg in &ns.diagnostics {
         if !verbose && msg.level == Level::Info {
             continue;
         }
 
-        eprintln!("{}", msg.formated_message(filename, &pos));
+        let file_no = msg.pos.map(|pos| pos.0);
+
+        if file_no != current_file_no {
+            filename = &ns.files[file_no.unwrap()];
+
+            positions = FilePostitions::new(&*cache.get_file_contents(filename));
+            current_file_no = file_no;
+        }
+
+        eprintln!("{}", msg.formated_message(filename, &positions));
     }
 }
 
@@ -201,7 +218,7 @@ pub struct LocJson {
 #[derive(Serialize)]
 #[allow(non_snake_case)]
 pub struct OutputJson {
-    pub sourceLocation: LocJson,
+    pub sourceLocation: Option<LocJson>,
     #[serde(rename = "type")]
     pub ty: String,
     pub component: String,
@@ -210,27 +227,44 @@ pub struct OutputJson {
     pub formattedMessage: String,
 }
 
-pub fn message_as_json(filename: &str, src: &str, messages: &[Output]) -> Vec<OutputJson> {
+pub fn message_as_json(cache: &mut ParsedCache, ns: &Namespace) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
-    let pos = FilePostitions::new(src);
+    let mut current_file_no = None;
+    let mut positions = FilePostitions(Vec::new());
+    let mut filename = "";
 
-    for msg in messages {
+    for msg in &ns.diagnostics {
         if msg.level == Level::Info {
             continue;
         }
 
-        json.push(OutputJson {
-            sourceLocation: LocJson {
+        let file_no = msg.pos.map(|pos| pos.0);
+
+        if file_no != current_file_no {
+            filename = &ns.files[file_no.unwrap()];
+
+            positions = FilePostitions::new(&*cache.get_file_contents(filename));
+            current_file_no = file_no;
+        }
+
+        let loc_json = if let Some(pos) = msg.pos {
+            Some(LocJson {
                 file: filename.to_string(),
-                start: msg.pos.0,
-                end: msg.pos.1,
-            },
+                start: pos.1,
+                end: pos.2,
+            })
+        } else {
+            None
+        };
+
+        json.push(OutputJson {
+            sourceLocation: loc_json,
             ty: format!("{:?}", msg.ty),
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(filename, &pos),
+            formattedMessage: msg.formated_message(filename, &positions),
         });
     }
 
@@ -253,8 +287,8 @@ impl FilePostitions {
     }
 
     fn to_string(&self, loc: Loc) -> String {
-        let (from_line, from_column) = self.convert(loc.0);
-        let (to_line, to_column) = self.convert(loc.1);
+        let (from_line, from_column) = self.convert(loc.1);
+        let (to_line, to_column) = self.convert(loc.2);
 
         if from_line == to_line && from_column == to_column {
             format!("{}:{}", from_line, from_column)
