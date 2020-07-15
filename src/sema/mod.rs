@@ -89,6 +89,14 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
 
                             let new_symbol = if let Some(to) = rename_to { to } else { from };
 
+                            if let Some(existing) =
+                                ns.symbols.get(&(file_no, None, new_symbol.name.clone()))
+                            {
+                                if existing == &import {
+                                    continue;
+                                }
+                            }
+
                             ns.check_shadowing(file_no, None, new_symbol);
 
                             ns.add_symbol(file_no, None, new_symbol, import);
@@ -96,7 +104,7 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
                             ns.diagnostics.push(Output::error(
                                 from.loc,
                                 format!(
-                                    "import ‘{}’ does not export ‘{}'",
+                                    "import ‘{}’ does not export ‘{}’",
                                     filename.string,
                                     from.name.to_string()
                                 ),
@@ -120,9 +128,15 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
 
                     for (name, symbol) in exports {
                         let new_symbol = pt::Identifier {
-                            name,
+                            name: name.clone(),
                             loc: filename.loc,
                         };
+
+                        if let Some(existing) = ns.symbols.get(&(file_no, None, name.clone())) {
+                            if existing == &symbol {
+                                continue;
+                            }
+                        }
 
                         ns.check_shadowing(file_no, None, &new_symbol);
 
