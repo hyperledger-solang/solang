@@ -29,7 +29,7 @@ pub fn resolve_function_body(
                     .clone(),
                 ns,
             ) {
-                ns.check_shadowing(file_no, contract_no, name);
+                ns.check_shadowing(file_no, Some(contract_no), name);
 
                 symtable.arguments.push(Some(pos));
             }
@@ -51,7 +51,7 @@ pub fn resolve_function_body(
             return_required = false;
 
             if let Some(pos) = symtable.add(name, ret.ty.clone(), ns) {
-                ns.check_shadowing(file_no, contract_no, name);
+                ns.check_shadowing(file_no, Some(contract_no), name);
 
                 symtable.returns.push(pos);
             }
@@ -137,7 +137,7 @@ fn statement(
             };
 
             if let Some(pos) = symtable.add(&decl.name, var_ty.clone(), ns) {
-                ns.check_shadowing(file_no, contract_no, &decl.name);
+                ns.check_shadowing(file_no, Some(contract_no), &decl.name);
 
                 res.push(Statement::VariableDecl(
                     *loc,
@@ -701,7 +701,7 @@ fn destructure(
                 )?;
 
                 if let Some(pos) = symtable.add(&name, ty.clone(), ns) {
-                    ns.check_shadowing(file_no, contract_no, &name);
+                    ns.check_shadowing(file_no, Some(contract_no), &name);
 
                     fields.push(DestructureField::VariableDecl(
                         pos,
@@ -1063,7 +1063,7 @@ fn try_catch(
 
                 if let Some(name) = name {
                     if let Some(pos) = symtable.add(&name, ret_ty.clone(), ns) {
-                        ns.check_shadowing(file_no, contract_no, &name);
+                        ns.check_shadowing(file_no, Some(contract_no), &name);
                         params.push((
                             Some(pos),
                             Parameter {
@@ -1153,7 +1153,7 @@ fn try_catch(
 
         if let Some(name) = &error_stmt.1.name {
             if let Some(pos) = symtable.add(&name, Type::String, ns) {
-                ns.check_shadowing(file_no, contract_no, &name);
+                ns.check_shadowing(file_no, Some(contract_no), &name);
 
                 error_pos = Some(pos);
                 error_param.name = name.name.to_string();
@@ -1211,7 +1211,7 @@ fn try_catch(
 
     if let Some(name) = &catch_stmt.0.name {
         if let Some(pos) = symtable.add(&name, catch_ty, ns) {
-            ns.check_shadowing(file_no, contract_no, &name);
+            ns.check_shadowing(file_no, Some(contract_no), &name);
             catch_param_pos = Some(pos);
             catch_param.name = name.name.to_string();
         }

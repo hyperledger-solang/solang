@@ -609,6 +609,7 @@ impl ContractVariable {
     }
 }
 
+#[derive(Clone)]
 pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),

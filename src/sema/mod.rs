@@ -42,6 +42,11 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
         }
     };
 
+    let first_contract = ns.contracts.len();
+
+    // first resolve all the types we can find
+    let structs_to_resolve = types::resolve_typenames(&pt, file_no, ns);
+
     // resolve imports
     for part in &(*pt).0 {
         if let pt::SourceUnitPart::ImportDirective(import) = part {
@@ -66,13 +71,70 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
                     return;
                 }
             }
+
+            let import_file_no = ns
+                .files
+                .iter()
+                .position(|f| f == &filename.string)
+                .expect("import should be loaded by now");
+
+            match import {
+                pt::Import::Rename(_, renames) => {
+                    for (from, rename_to) in renames {
+                        if let Some(import) =
+                            ns.symbols
+                                .get(&(import_file_no, None, from.name.to_owned()))
+                        {
+                            let import = import.clone();
+
+                            let new_symbol = if let Some(to) = rename_to { to } else { from };
+
+                            ns.check_shadowing(file_no, None, new_symbol);
+
+                            ns.add_symbol(file_no, None, new_symbol, import);
+                        } else {
+                            ns.diagnostics.push(Output::error(
+                                from.loc,
+                                format!(
+                                    "import ‘{}’ does not export ‘{}'",
+                                    filename.string,
+                                    from.name.to_string()
+                                ),
+                            ));
+                        }
+                    }
+                }
+                pt::Import::Plain(_) => {
+                    // find all the exports for the file
+                    let exports = ns
+                        .symbols
+                        .iter()
+                        .filter_map(|((file_no, contract_no, id), symbol)| {
+                            if *file_no == import_file_no && contract_no.is_none() {
+                                Some((id.clone(), symbol.clone()))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<(String, ast::Symbol)>>();
+
+                    for (name, symbol) in exports {
+                        let new_symbol = pt::Identifier {
+                            name,
+                            loc: filename.loc,
+                        };
+
+                        ns.check_shadowing(file_no, None, &new_symbol);
+
+                        ns.add_symbol(file_no, None, &new_symbol, symbol);
+                    }
+                }
+                pt::Import::GlobalSymbol(_, _) => unimplemented!(),
+            }
         }
     }
 
-    let first_contract = ns.contracts.len();
-
-    // first resolve all the types we can find
-    types::resolve(&pt, file_no, ns);
+    types::resolve_structs(structs_to_resolve, file_no, ns);
 
     // give up if we failed
     if any_errors(&ns.diagnostics) {
@@ -442,7 +504,12 @@ impl ast::Namespace {
         }
     }
 
-    pub fn check_shadowing(&mut self, file_no: usize, contract_no: usize, id: &pt::Identifier) {
+    pub fn check_shadowing(
+        &mut self,
+        file_no: usize,
+        contract_no: Option<usize>,
+        id: &pt::Identifier,
+    ) {
         if builtin::is_reserved(&id.name) {
             self.diagnostics.push(Output::warning(
                 id.loc,
@@ -453,7 +520,7 @@ impl ast::Namespace {
 
         let mut s = self
             .symbols
-            .get(&(file_no, Some(contract_no), id.name.to_owned()));
+            .get(&(file_no, contract_no, id.name.to_owned()));
 
         if s.is_none() {
             s = self.symbols.get(&(file_no, None, id.name.to_owned()));

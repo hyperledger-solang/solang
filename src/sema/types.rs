@@ -7,7 +7,11 @@ use Target;
 
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
 /// structs as fields, including ones that have not been declared yet.
-pub fn resolve(s: &pt::SourceUnit, file_no: usize, ns: &mut Namespace) {
+pub fn resolve_typenames<'a>(
+    s: &'a pt::SourceUnit,
+    file_no: usize,
+    ns: &mut Namespace,
+) -> Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)> {
     let mut structs = Vec::new();
 
     // Find all the types: contracts, enums, and structs. Either in a contract or not
@@ -63,6 +67,14 @@ pub fn resolve(s: &pt::SourceUnit, file_no: usize, ns: &mut Namespace) {
         }
     }
 
+    structs
+}
+
+pub fn resolve_structs(
+    structs: Vec<(StructDecl, &pt::StructDefinition, Option<usize>)>,
+    file_no: usize,
+    ns: &mut Namespace,
+) {
     // now we can resolve the fields for the structs
     for (mut decl, def, contract) in structs {
         if let Some(fields) = struct_decl(def, file_no, contract, ns) {
