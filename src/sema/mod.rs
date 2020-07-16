@@ -205,6 +205,7 @@ fn resolve_contract_declarations(
     ));
 
     let mut broken = false;
+    let mut any_virtual = false;
 
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {

@@ -472,6 +472,15 @@ pub enum Statement {
 }
 
 impl Statement {
+    /// The Empty statement means no body for function
+    pub fn is_empty(&self) -> bool {
+        if let Statement::Empty(_) = &self {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn loc(&self) -> Loc {
         match self {
             Statement::Block(loc, _)
