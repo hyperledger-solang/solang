@@ -3,8 +3,12 @@ use output::Output;
 use parser::pt;
 
 /// check state mutablity
-pub fn mutablity(ns: &mut Namespace) {
+pub fn mutablity(file_no: usize, ns: &mut Namespace) {
     for contract_no in 0..ns.contracts.len() {
+        if ns.contracts[contract_no].loc.0 != file_no {
+            continue;
+        }
+
         for function_no in 0..ns.contracts[contract_no].functions.len() {
             let diagnostics = check_mutability(contract_no, function_no, ns);
 
