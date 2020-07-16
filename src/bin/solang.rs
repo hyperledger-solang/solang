@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use solang::abi;
 use solang::codegen::codegen;
+use solang::file_cache::FileCache;
 use solang::output;
-use solang::parsedcache::ParsedCache;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -109,7 +109,7 @@ fn main() {
         eprintln!("info: Solang version {}", env!("GIT_HASH"));
     }
 
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     match PathBuf::from(".").canonicalize() {
         Ok(p) => cache.add_import_path(p),
@@ -146,7 +146,7 @@ fn main() {
 
 fn process_filename(
     filename: &str,
-    cache: &mut ParsedCache,
+    cache: &mut FileCache,
     target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,

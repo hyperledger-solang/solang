@@ -25,8 +25,8 @@ use wasmi::memory_units::Pages;
 use wasmi::*;
 
 use solang::abi;
+use solang::file_cache::FileCache;
 use solang::output;
-use solang::parsedcache::ParsedCache;
 use solang::sema::ast::Namespace;
 use solang::{compile, Target};
 
@@ -933,7 +933,7 @@ impl TestRuntime {
 }
 
 pub fn parse_and_resolve(src: &'static str, target: Target) -> Namespace {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol".to_string(), src.to_string());
 
@@ -941,7 +941,7 @@ pub fn parse_and_resolve(src: &'static str, target: Target) -> Namespace {
 }
 
 pub fn build_solidity(src: &'static str) -> TestRuntime {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol".to_string(), src.to_string());
 

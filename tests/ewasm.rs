@@ -15,8 +15,8 @@ use std::fmt;
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
+use solang::file_cache::FileCache;
 use solang::output;
-use solang::parsedcache::ParsedCache;
 use solang::{compile, Target};
 
 type Address = [u8; 20];
@@ -661,7 +661,7 @@ impl TestRuntime {
 }
 
 fn build_solidity(src: &'static str) -> TestRuntime {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol".to_string(), src.to_string());
 
