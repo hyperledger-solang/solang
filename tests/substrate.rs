@@ -42,6 +42,7 @@ mod substrate_contracts;
 mod substrate_first;
 mod substrate_functions;
 mod substrate_imports;
+mod substrate_inheritance;
 mod substrate_loops;
 mod substrate_mappings;
 mod substrate_primitives;

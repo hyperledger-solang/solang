@@ -76,6 +76,7 @@ pub fn function_decl(
 
     let mut mutability: Option<pt::StateMutability> = None;
     let mut visibility: Option<pt::Visibility> = None;
+    let mut is_virtual: Option<pt::Loc> = None;
 
     for a in &f.attributes {
         match &a {
@@ -106,6 +107,20 @@ pub fn function_decl(
                 }
 
                 visibility = Some(v.clone());
+            }
+            pt::FunctionAttribute::Virtual(loc) => {
+                if let Some(prev_loc) = &is_virtual {
+                    ns.diagnostics.push(Output::error_with_note(
+                        *loc,
+                        "function redeclared ‘virtual’".to_string(),
+                        *prev_loc,
+                        "location of previous declaration of ‘virtual’".to_string(),
+                    ));
+                    success = false;
+                    continue;
+                }
+
+                is_virtual = Some(*loc);
             }
             _ => unimplemented!(),
         }
@@ -142,6 +157,22 @@ pub fn function_decl(
 
     let (returns, returns_success) = resolve_returns(f, storage_allowed, file_no, contract_no, ns);
 
+    if let Some(loc) = is_virtual {
+        if !f.body.is_empty() {
+            ns.diagnostics.push(Output::error(
+                loc,
+                "function marked ‘virtual’ cannot have a body".to_string(),
+            ));
+            success = false;
+        }
+    } else if f.body.is_empty() {
+        ns.diagnostics.push(Output::error(
+            f.loc,
+            "function with no body must be marked ‘virtual’".to_string(),
+        ));
+        success = false;
+    }
+
     if !success || !returns_success || !params_success {
         return false;
     }
@@ -151,7 +182,7 @@ pub fn function_decl(
         None => "".to_owned(),
     };
 
-    let fdecl = Function::new(
+    let mut fdecl = Function::new(
         f.loc,
         name,
         f.doc.clone(),
@@ -163,6 +194,8 @@ pub fn function_decl(
         returns,
         ns,
     );
+
+    fdecl.is_virtual = is_virtual.is_some();
 
     if f.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
