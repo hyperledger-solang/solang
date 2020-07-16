@@ -31,7 +31,7 @@ impl FileCache {
         }
     }
 
-    /// Add import path. This should be the canonicalized path
+    /// Add import path. This must be the canonicalized path
     pub fn add_import_path(&mut self, path: PathBuf) {
         self.import_path.push(path);
     }
@@ -114,7 +114,6 @@ impl FileCache {
         for i in &self.import_path {
             // we want to prevent walking up the tree with .. or /
             if let Ok(p) = i.join(path.clone()).canonicalize() {
-                // we want to prevent walking up the tree with .. or /
                 if p.starts_with(i) {
                     return Some(p);
                 }
