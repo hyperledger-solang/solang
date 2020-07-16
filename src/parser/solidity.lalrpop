@@ -84,10 +84,11 @@ StructDefinition: Box<StructDefinition> = {
     }
 }
 
-ContractType: ContractType = {
-    "contract" => ContractType::Contract,
-    "interface" => ContractType::Interface,
-    "library" => ContractType::Library,
+ContractTy: ContractTy = {
+    <l:@L> "abstract" "contract" <r:@R> => ContractTy::Abstract(Loc(file_no, l, r)),
+    <l:@L> "contract" <r:@R> => ContractTy::Contract(Loc(file_no, l, r)),
+    <l:@L> "interface" <r:@R> => ContractTy::Interface(Loc(file_no, l, r)),
+    <l:@L> "library" <r:@R> => ContractTy::Library(Loc(file_no, l, r)),
 }
 
 ContractPart: ContractPart = {
@@ -98,9 +99,15 @@ ContractPart: ContractPart = {
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
 }
 
+Implements: Vec<Identifier> = {
+    => Vec::new(),
+    "is" <CommaOne<Identifier>> => <>,
+}
+
 ContractDefinition: Box<ContractDefinition> = {
-    <doc:DocComments> <l:@L> <ty:ContractType> <name:Identifier> "{" <parts:(<ContractPart>)+> "}" <r:@R> => {
-        Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, parts})
+    <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <implements:Implements>
+    "{" <parts:(<ContractPart>)+> "}" <r:@R> => {
+        Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, implements, parts})
     }
 }
 
@@ -360,6 +367,9 @@ StateMutability: StateMutability = {
 FunctionAttribute: FunctionAttribute = {
     StateMutability => FunctionAttribute::StateMutability(<>),
     Visibility => FunctionAttribute::Visibility(<>),
+    <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc(file_no, <>)),
+    <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc(file_no, <>), Vec::new()),
+    <l:@L> "override" "(" <list:CommaOne<Identifier>> ")" <r:@R> => FunctionAttribute::Override(Loc(file_no, l, r), list),
 }
 
 FunctionTy: FunctionTy = {
@@ -623,6 +633,10 @@ extern {
         "this" => Token::This,
         "as" => Token::As,
         "from" => Token::From,
+        "is" => Token::Is,
+        "abstract" => Token::Abstract,
+        "virtual" => Token::Virtual,
+        "override" => Token::Override,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

@@ -114,18 +114,31 @@ pub enum ContractPart {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ContractType {
-    Contract,
-    Interface,
-    Library,
+pub enum ContractTy {
+    Abstract(Loc),
+    Contract(Loc),
+    Interface(Loc),
+    Library(Loc),
+}
+
+impl fmt::Display for ContractTy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ContractTy::Abstract(_) => write!(f, "abstract contract"),
+            ContractTy::Contract(_) => write!(f, "contract"),
+            ContractTy::Interface(_) => write!(f, "interface"),
+            ContractTy::Library(_) => write!(f, "library"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ContractDefinition {
     pub doc: Vec<String>,
     pub loc: Loc,
-    pub ty: ContractType,
+    pub ty: ContractTy,
     pub name: Identifier,
+    pub implements: Vec<Identifier>,
     pub parts: Vec<ContractPart>,
 }
 
@@ -390,6 +403,8 @@ impl Visibility {
 pub enum FunctionAttribute {
     StateMutability(StateMutability),
     Visibility(Visibility),
+    Virtual(Loc),
+    Override(Loc, Vec<Identifier>),
 }
 
 #[derive(Debug, PartialEq, Clone)]

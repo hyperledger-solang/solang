@@ -88,11 +88,12 @@ mod test {
             ContractDefinition {
                 doc: vec![],
                 loc: Loc(0, 0, 325),
-                ty: ContractType::Contract,
+                ty: ContractTy::Contract(Loc(0, 0, 8)),
                 name: Identifier {
                     loc: Loc(0, 9, 12),
                     name: "foo".to_string(),
                 },
+                implements: Vec::new(),
                 parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition {
                         doc: vec![],

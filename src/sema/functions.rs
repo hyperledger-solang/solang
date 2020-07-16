@@ -107,6 +107,7 @@ pub fn function_decl(
 
                 visibility = Some(v.clone());
             }
+            _ => unimplemented!(),
         }
     }
 
