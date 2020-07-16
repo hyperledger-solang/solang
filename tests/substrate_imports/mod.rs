@@ -556,40 +556,40 @@ fn enum_import_chain() {
     cache.set_file_contents(
         "a.sol".to_string(),
         r#"
-            import "b.sol" as foo;
-    
-            contract a {
-                function go(foo.c_import.d_import.d.enum_d x) public returns (bool) {
-                    return foo.c_import.d_import.d.enum_d.d4 == x;
-                }
+        import "b.sol" as foo;
+
+        contract a {
+            function go(foo.c_import.d_import.d.enum_d x) public returns (bool) {
+                return foo.c_import.d_import.d.enum_d.d4 == x;
             }
-            "#
+        }
+        "#
         .to_string(),
     );
 
     cache.set_file_contents(
         "b.sol".to_string(),
         r#"
-            import "c.sol" as c_import;
-            "#
+        import "c.sol" as c_import;
+        "#
         .to_string(),
     );
 
     cache.set_file_contents(
         "c.sol".to_string(),
         r#"
-            import "d.sol" as d_import;
-            "#
+        import "d.sol" as d_import;
+        "#
         .to_string(),
     );
 
     cache.set_file_contents(
         "d.sol".to_string(),
         r#"
-            contract d {
-                enum enum_d { d1, d2, d3 }
-            }
-            "#
+        contract d {
+            enum enum_d { d1, d2, d3 }
+        }
+        "#
         .to_string(),
     );
 
