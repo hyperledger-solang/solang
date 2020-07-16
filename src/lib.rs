@@ -17,14 +17,14 @@ extern crate unicode_xid;
 pub mod abi;
 pub mod codegen;
 mod emit;
+pub mod file_cache;
 pub mod link;
 pub mod output;
-pub mod parsedcache;
 mod parser;
 pub mod sema;
 
+use file_cache::FileCache;
 use inkwell::OptimizationLevel;
-use parsedcache::ParsedCache;
 use sema::ast;
 use std::fmt;
 
@@ -58,7 +58,7 @@ impl fmt::Display for Target {
 /// The ctx is the inkwell llvm context.
 pub fn compile(
     filename: &str,
-    cache: &mut ParsedCache,
+    cache: &mut FileCache,
     opt: OptimizationLevel,
     target: Target,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
@@ -96,11 +96,7 @@ pub fn compile(
 /// informational messages like `found contact N`.
 ///
 /// Note that multiple contracts can be specified in on solidity source file.
-pub fn parse_and_resolve(
-    filename: &str,
-    cache: &mut ParsedCache,
-    target: Target,
-) -> ast::Namespace {
+pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) -> ast::Namespace {
     let mut ns = ast::Namespace::new(
         target,
         match target {

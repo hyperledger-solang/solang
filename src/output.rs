@@ -1,4 +1,4 @@
-use parsedcache::ParsedCache;
+use file_cache::FileCache;
 use parser::pt::Loc;
 use sema::ast::Namespace;
 use serde::Serialize;
@@ -180,7 +180,7 @@ impl Output {
     }
 }
 
-pub fn print_messages(cache: &mut ParsedCache, ns: &Namespace, verbose: bool) {
+pub fn print_messages(cache: &mut FileCache, ns: &Namespace, verbose: bool) {
     let mut current_file_no = None;
     let mut positions = FilePostitions(Vec::new());
     let mut filename = "";
@@ -227,7 +227,7 @@ pub struct OutputJson {
     pub formattedMessage: String,
 }
 
-pub fn message_as_json(cache: &mut ParsedCache, ns: &Namespace) -> Vec<OutputJson> {
+pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson> {
     let mut json = Vec::new();
 
     let mut current_file_no = None;

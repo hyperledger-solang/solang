@@ -3,7 +3,7 @@ use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
 use output::{any_errors, Note, Output};
-use parser::pt;
+use parser::{parse, pt};
 use std::collections::HashMap;
 use Target;
 
@@ -21,19 +21,21 @@ mod variables;
 
 use codegen::cfg::ControlFlowGraph;
 use emit;
-use parsedcache::ParsedCache;
+use file_cache::FileCache;
 use sema::eval::eval_const_number;
 use sema::expression::expression;
 use sema::symtable::Symtable;
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
-pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut ast::Namespace) {
+pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
     ns.files.push(filename.to_string());
 
-    let pt = match cache.parse(file_no, filename) {
+    let source_code = cache.get_file_contents(filename);
+
+    let pt = match parse(&source_code, file_no) {
         Ok(s) => s,
         Err(errors) => {
             ns.diagnostics.extend(errors);
@@ -48,7 +50,7 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
     let structs_to_resolve = types::resolve_typenames(&pt, file_no, ns);
 
     // resolve imports
-    for part in &(*pt).0 {
+    for part in &pt.0 {
         if let pt::SourceUnitPart::ImportDirective(import) = part {
             let filename = match import {
                 pt::Import::Plain(f) => f,
@@ -167,7 +169,7 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut contract_no = first_contract;
-    for part in &(*pt).0 {
+    for part in &pt.0 {
         if let pt::SourceUnitPart::ContractDefinition(def) = part {
             resolve_contract_declarations(def, file_no, contract_no, target, ns);
 
@@ -177,7 +179,7 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
 
     // Now we can resolve the bodies
     let mut contract_no = first_contract;
-    for part in &(*pt).0 {
+    for part in &pt.0 {
         if let pt::SourceUnitPart::ContractDefinition(def) = part {
             resolve_contract_bodies(def, file_no, contract_no, ns);
 

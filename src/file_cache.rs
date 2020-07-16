@@ -1,42 +1,29 @@
-use output::Output;
-use parser::parse;
-use parser::pt::SourceUnit;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-//
-// When compiling multiple solidity files, the same file might be import
-// multiple times. We should cache the text of the file and the parse tree,
-// if the file parsed correctly.
-//
-pub struct ParsedFile {
-    pub source_code: Rc<String>,
-    pub parse_tree: Option<Rc<SourceUnit>>,
-}
-
-pub struct ParsedCache {
+pub struct FileCache {
     import_path: Vec<PathBuf>,
     // Find file by how they are identified in code
     by_name: HashMap<String, usize>,
     // Find file by operating system path
     by_path: HashMap<PathBuf, usize>,
     // The actual file cache
-    files: Vec<ParsedFile>,
+    files: Vec<Rc<String>>,
 }
 
-impl Default for ParsedCache {
+impl Default for FileCache {
     fn default() -> Self {
-        ParsedCache::new()
+        FileCache::new()
     }
 }
 
-impl ParsedCache {
+impl FileCache {
     /// Create a new file cache object
     pub fn new() -> Self {
-        ParsedCache {
+        FileCache {
             import_path: Vec::new(),
             by_name: HashMap::new(),
             by_path: HashMap::new(),
@@ -53,10 +40,7 @@ impl ParsedCache {
     pub fn set_file_contents(&mut self, filename: String, contents: String) {
         let pos = self.files.len();
 
-        self.files.push(ParsedFile {
-            source_code: Rc::new(contents),
-            parse_tree: None,
-        });
+        self.files.push(Rc::new(contents));
 
         self.by_name.insert(filename, pos);
     }
@@ -69,7 +53,7 @@ impl ParsedCache {
             .get(filename)
             .expect("file should exist in cache already");
 
-        self.files[*pos].source_code.clone()
+        self.files[*pos].clone()
     }
 
     /// Load the given file into the cache
@@ -110,10 +94,7 @@ impl ParsedCache {
 
             let pos = self.files.len();
 
-            self.files.push(ParsedFile {
-                source_code: Rc::new(contents),
-                parse_tree: None,
-            });
+            self.files.push(Rc::new(contents));
 
             self.by_name.insert(filename.to_string(), pos);
             self.by_path.insert(path, pos);
@@ -122,25 +103,6 @@ impl ParsedCache {
         } else {
             Err(format!("file not found ‘{}’", filename))
         }
-    }
-
-    /// Parse the given file. Return cached parse tree if available; else read file
-    /// and parse.
-    pub fn parse(&mut self, file_no: usize, filename: &str) -> Result<Rc<SourceUnit>, Vec<Output>> {
-        let file = self
-            .by_name
-            .get(filename)
-            .expect("file should be populated in the cache");
-
-        if let Some(pt) = &self.files[*file].parse_tree {
-            return Ok(pt.clone());
-        }
-
-        let pt = Rc::new(parse(&self.files[*file].source_code, file_no)?);
-
-        self.files[*file].parse_tree = Some(pt.clone());
-
-        Ok(pt)
     }
 
     /// Walk the import path to search for a file. If no import path is set up,

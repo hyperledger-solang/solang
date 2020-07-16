@@ -1,12 +1,12 @@
 extern crate solang;
 
 use super::{first_error, no_errors};
-use solang::parsedcache::ParsedCache;
+use solang::file_cache::FileCache;
 use solang::Target;
 
 #[test]
 fn enum_import() {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -32,7 +32,7 @@ fn enum_import() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -58,7 +58,7 @@ fn enum_import() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -84,7 +84,7 @@ fn enum_import() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -112,7 +112,7 @@ fn enum_import() {
 
 #[test]
 fn struct_import() {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -138,7 +138,7 @@ fn struct_import() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -167,7 +167,7 @@ fn struct_import() {
 
 #[test]
 fn contract_import() {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -202,7 +202,7 @@ fn contract_import() {
     no_errors(ns.diagnostics);
 
     // lets try a importing an import
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -245,7 +245,7 @@ fn contract_import() {
     no_errors(ns.diagnostics);
 
     // now let's rename an import in a chain
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -290,7 +290,7 @@ fn contract_import() {
 
 #[test]
 fn circular_import() {
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "self.sol".to_string(),
@@ -310,7 +310,7 @@ fn circular_import() {
 
     no_errors(ns.diagnostics);
 
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -355,7 +355,7 @@ fn circular_import() {
 #[test]
 fn import_symbol() {
     // import struct via import symbol
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -386,7 +386,7 @@ fn import_symbol() {
     no_errors(ns.diagnostics);
 
     // import contract via import symbol
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -421,7 +421,7 @@ fn import_symbol() {
     no_errors(ns.diagnostics);
 
     // import enum in contract via import symbol
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
@@ -456,7 +456,7 @@ fn import_symbol() {
     no_errors(ns.diagnostics);
 
     // import struct in contract via import symbol chain
-    let mut cache = ParsedCache::new();
+    let mut cache = FileCache::new();
 
     cache.set_file_contents(
         "a.sol".to_string(),
