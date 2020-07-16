@@ -2790,6 +2790,8 @@ fn enum_value(
 
     let mut expr = expr;
 
+    // the first element of the path is the deepest in the parse tree,
+    // so walk down and add to a list
     while let pt::Expression::MemberAccess(_, member, name) = expr {
         namespace.push(name);
 
@@ -2805,11 +2807,9 @@ fn enum_value(
     // The leading part of the namespace can be import variables
     let mut file_no = file_no;
 
-    while !namespace.is_empty() {
-        if let Some(Symbol::Import(_, import_file_no)) =
-            ns.symbols
-                .get(&(file_no, None, namespace.last().unwrap().name.clone()))
-        {
+    // last element in our namespace vector is first element
+    while let Some(name) = namespace.last().map(|f| f.name.clone()) {
+        if let Some(Symbol::Import(_, import_file_no)) = ns.symbols.get(&(file_no, None, name)) {
             file_no = *import_file_no;
             namespace.pop();
         } else {
@@ -2823,11 +2823,9 @@ fn enum_value(
 
     let mut contract_no = contract_no;
 
-    if !namespace.is_empty() {
-        if let Some(no) = ns.resolve_contract(file_no, namespace.last().unwrap()) {
-            contract_no = Some(no);
-            namespace.pop();
-        }
+    if let Some(no) = ns.resolve_contract(file_no, namespace.last().unwrap()) {
+        contract_no = Some(no);
+        namespace.pop();
     }
 
     if namespace.len() != 1 {
