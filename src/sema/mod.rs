@@ -188,7 +188,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
     }
 
     // now check state mutability for all contracts
-    mutability::mutablity(ns);
+    mutability::mutablity(file_no, ns);
 }
 
 /// Resolve functions declarations, constructor declarations, and contract variables
