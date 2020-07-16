@@ -2791,13 +2791,13 @@ fn enum_value(
     let mut expr = expr;
 
     while let pt::Expression::MemberAccess(_, member, name) = expr {
-        namespace.insert(0, name);
+        namespace.push(name);
 
         expr = member.as_ref();
     }
 
     if let pt::Expression::Variable(name) = expr {
-        namespace.insert(0, name);
+        namespace.push(name);
     } else {
         return Ok(None);
     }
@@ -2807,10 +2807,11 @@ fn enum_value(
 
     while !namespace.is_empty() {
         if let Some(Symbol::Import(_, import_file_no)) =
-            ns.symbols.get(&(file_no, None, namespace[0].name.clone()))
+            ns.symbols
+                .get(&(file_no, None, namespace.last().unwrap().name.clone()))
         {
             file_no = *import_file_no;
-            namespace.remove(0);
+            namespace.pop();
         } else {
             break;
         }
@@ -2823,9 +2824,9 @@ fn enum_value(
     let mut contract_no = contract_no;
 
     if !namespace.is_empty() {
-        if let Some(no) = ns.resolve_contract(file_no, namespace[0]) {
+        if let Some(no) = ns.resolve_contract(file_no, namespace.last().unwrap()) {
             contract_no = Some(no);
-            namespace.remove(0);
+            namespace.pop();
         }
     }
 
