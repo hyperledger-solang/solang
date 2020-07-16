@@ -351,3 +351,152 @@ fn circular_import() {
 
     no_errors(ns.diagnostics);
 }
+
+#[test]
+fn import_symbol() {
+    // import struct via import symbol
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+        import "b.sol" as foo;
+
+        contract a {
+            function go(foo.b_struct x) public returns (uint32) {
+                return x.f1;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "b.sol".to_string(),
+        r#"
+        struct b_struct {
+            uint32 f1;
+        }
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    no_errors(ns.diagnostics);
+
+    // import contract via import symbol
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+        import "b.sol" as foo;
+
+        contract a {
+            function go() public returns (uint32) {
+                foo.b x = new foo.b();
+
+                return x.test();
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "b.sol".to_string(),
+        r#"
+        contract b {
+            function test() public returns (uint32) {
+                return 102;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    no_errors(ns.diagnostics);
+
+    // import enum in contract via import symbol
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+        import "b.sol" as foo;
+
+        contract a {
+            function go(foo.b.c x) public {
+                assert(x == foo.b.c.c2);
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "b.sol".to_string(),
+        r#"
+        contract b {
+            enum c { c1, c2 }
+
+            function test() public returns (uint32) {
+                return 102;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    no_errors(ns.diagnostics);
+
+    // import struct in contract via import symbol chain
+    let mut cache = ParsedCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+        import "b.sol" as foo;
+
+        contract a {
+            function go(foo.bar.c.k x) public returns (int32) {
+                return x.f1;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "b.sol".to_string(),
+        r#"
+        import "c.sol" as bar;
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "c.sol".to_string(),
+        r#"
+        contract c {
+            struct k {
+                int32 f1;
+            }
+
+            function test() public returns (uint32) {
+                return 102;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    no_errors(ns.diagnostics);
+}
