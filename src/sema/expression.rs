@@ -18,7 +18,8 @@ use output::Output;
 use parser::pt;
 use sema::address::to_hexstr_eip55;
 use sema::ast::{
-    Builtin, CallTy, ContractVariableType, Expression, Function, Namespace, StringLocation, Type,
+    Builtin, CallTy, ContractVariableType, Expression, Function, Namespace, StringLocation, Symbol,
+    Type,
 };
 use sema::builtin;
 use sema::eval::eval_const_number;
@@ -2775,6 +2776,87 @@ fn incr_decr(
     }
 }
 
+/// Try to resolve expression as an enum value. An enum can be prefixed
+/// with import symbols, contract namespace before the enum type
+fn enum_value(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    id: &pt::Identifier,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+) -> Result<Option<Expression>, ()> {
+    let mut namespace = Vec::new();
+
+    let mut expr = expr;
+
+    while let pt::Expression::MemberAccess(_, member, name) = expr {
+        namespace.insert(0, name);
+
+        expr = member.as_ref();
+    }
+
+    if let pt::Expression::Variable(name) = expr {
+        namespace.insert(0, name);
+    } else {
+        return Ok(None);
+    }
+
+    // The leading part of the namespace can be import variables
+    let mut file_no = file_no;
+
+    while !namespace.is_empty() {
+        if let Some(Symbol::Import(_, import_file_no)) =
+            ns.symbols.get(&(file_no, None, namespace[0].name.clone()))
+        {
+            file_no = *import_file_no;
+            namespace.remove(0);
+        } else {
+            break;
+        }
+    }
+
+    if namespace.is_empty() {
+        return Ok(None);
+    }
+
+    let mut contract_no = contract_no;
+
+    if !namespace.is_empty() {
+        if let Some(no) = ns.resolve_contract(file_no, namespace[0]) {
+            contract_no = Some(no);
+            namespace.remove(0);
+        }
+    }
+
+    if namespace.len() != 1 {
+        return Ok(None);
+    }
+
+    if let Some(e) = ns.resolve_enum(file_no, contract_no, namespace[0]) {
+        match ns.enums[e].values.get(&id.name) {
+            Some((_, val)) => Ok(Some(Expression::NumberLiteral(
+                *loc,
+                Type::Enum(e),
+                BigInt::from_usize(*val).unwrap(),
+            ))),
+            None => {
+                ns.diagnostics.push(Output::error(
+                    id.loc,
+                    format!(
+                        "enum {} does not have value {}",
+                        ns.enums[e].print_to_string(),
+                        id.name
+                    ),
+                ));
+                Err(())
+            }
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 /// Resolve an array subscript expression
 fn member_access(
     loc: &pt::Loc,
@@ -2786,60 +2868,16 @@ fn member_access(
     symtable: &Symtable,
     is_constant: bool,
 ) -> Result<Expression, ()> {
-    // is of the form "contract_name.enum_name.enum_value"
-    if let pt::Expression::MemberAccess(_, e, enum_name) = e {
-        if let pt::Expression::Variable(contract_name) = e.as_ref() {
-            if let Some(contract_no) = ns.resolve_contract(file_no, contract_name) {
-                if let Some(e) = ns.resolve_enum(file_no, Some(contract_no), enum_name) {
-                    return match ns.enums[e].values.get(&id.name) {
-                        Some((_, val)) => Ok(Expression::NumberLiteral(
-                            *loc,
-                            Type::Enum(e),
-                            BigInt::from_usize(*val).unwrap(),
-                        )),
-                        None => {
-                            ns.diagnostics.push(Output::error(
-                                id.loc,
-                                format!(
-                                    "enum {} does not have value {}",
-                                    ns.enums[e].print_to_string(),
-                                    id.name
-                                ),
-                            ));
-                            Err(())
-                        }
-                    };
-                }
-            }
-        }
-    }
-
-    // is of the form "enum_name.enum_value"
+    // is it a builtin special variable like "block.timestamp"
     if let pt::Expression::Variable(namespace) = e {
         if let Some((builtin, ty)) = builtin::builtin_var(Some(&namespace.name), &id.name, ns) {
             return Ok(Expression::Builtin(*loc, vec![ty], builtin, vec![]));
         }
+    }
 
-        if let Some(e) = ns.resolve_enum(file_no, contract_no, namespace) {
-            return match ns.enums[e].values.get(&id.name) {
-                Some((_, val)) => Ok(Expression::NumberLiteral(
-                    *loc,
-                    Type::Enum(e),
-                    BigInt::from_usize(*val).unwrap(),
-                )),
-                None => {
-                    ns.diagnostics.push(Output::error(
-                        id.loc,
-                        format!(
-                            "enum {} does not have value {}",
-                            ns.enums[e].print_to_string(),
-                            id.name
-                        ),
-                    ));
-                    Err(())
-                }
-            };
-        }
+    // is an enum value
+    if let Some(expr) = enum_value(loc, e, id, file_no, contract_no, ns)? {
+        return Ok(expr);
     }
 
     // is of the form "type(x).field", like type(c).min

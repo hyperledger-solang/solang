@@ -68,7 +68,7 @@ fn contract_name() {
 
     assert_eq!(
         first_warning(ns.diagnostics),
-        "declaration of `test\' shadows contract name"
+        "declaration of ‘test’ shadows contract name"
     );
 
     let ns = parse_and_resolve(
@@ -81,7 +81,7 @@ fn contract_name() {
 
     assert_eq!(
         first_warning(ns.diagnostics),
-        "declaration of `test\' shadows contract name"
+        "declaration of ‘test’ shadows contract name"
     );
 
     let ns = parse_and_resolve(
@@ -95,7 +95,7 @@ fn contract_name() {
 
     assert_eq!(
         first_warning(ns.diagnostics),
-        "declaration of `test\' shadows contract name"
+        "declaration of ‘test’ shadows contract name"
     );
 
     let ns = parse_and_resolve(

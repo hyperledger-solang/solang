@@ -616,6 +616,7 @@ pub enum Symbol {
     Variable(pt::Loc, usize),
     Struct(pt::Loc, usize),
     Contract(pt::Loc, usize),
+    Import(pt::Loc, usize),
 }
 
 /// When resolving a Solidity file, this holds all the resolved items

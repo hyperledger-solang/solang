@@ -311,7 +311,7 @@ fn shadowing() {
 
     assert_eq!(
         first_warning(ns.diagnostics),
-        "declaration of `result\' shadows state variable"
+        "declaration of ‘result’ shadows state variable"
     );
 
     // parse

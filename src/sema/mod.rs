@@ -143,7 +143,16 @@ pub fn sema(filename: &str, cache: &mut ParsedCache, target: Target, ns: &mut as
                         ns.add_symbol(file_no, None, &new_symbol, symbol);
                     }
                 }
-                pt::Import::GlobalSymbol(_, _) => unimplemented!(),
+                pt::Import::GlobalSymbol(_, symbol) => {
+                    ns.check_shadowing(file_no, None, &symbol);
+
+                    ns.add_symbol(
+                        file_no,
+                        None,
+                        &symbol,
+                        ast::Symbol::Import(symbol.loc, import_file_no),
+                    );
+                }
             }
         }
     }
@@ -343,6 +352,14 @@ impl ast::Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
+                ast::Symbol::Import(loc, _) => {
+                    self.diagnostics.push(Output::error_with_note(
+                        id.loc,
+                        format!("{} is already defined as an import", id.name.to_string()),
+                        *loc,
+                        "location of previous definition".to_string(),
+                    ));
+                }
             }
 
             return false;
@@ -395,6 +412,14 @@ impl ast::Namespace {
                             id.loc,
                             format!("{} is already defined as a function", id.name.to_string()),
                             v[0].0,
+                            "location of previous definition".to_string(),
+                        ));
+                    }
+                    ast::Symbol::Import(loc, _) => {
+                        self.diagnostics.push(Output::warning_with_note(
+                            id.loc,
+                            format!("{} is already defined as an import", id.name.to_string()),
+                            *loc,
                             "location of previous definition".to_string(),
                         ));
                     }
@@ -514,6 +539,13 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
+            Some(ast::Symbol::Import(_, _)) => {
+                self.diagnostics.push(Output::decl_error(
+                    id.loc,
+                    format!("`{}' is an import", id.name),
+                ));
+                Err(())
+            }
             Some(ast::Symbol::Variable(_, n)) => Ok(*n),
         }
     }
@@ -567,14 +599,14 @@ impl ast::Namespace {
                     .collect();
                 self.diagnostics.push(Output::warning_with_notes(
                     id.loc,
-                    format!("declaration of `{}' shadows function", id.name),
+                    format!("declaration of ‘{}’ shadows function", id.name),
                     notes,
                 ));
             }
             Some(ast::Symbol::Variable(loc, _)) => {
                 self.diagnostics.push(Output::warning_with_note(
                     id.loc,
-                    format!("declaration of `{}' shadows state variable", id.name),
+                    format!("declaration of ‘{}’ shadows state variable", id.name),
                     *loc,
                     "previous declaration of state variable".to_string(),
                 ));
@@ -582,9 +614,17 @@ impl ast::Namespace {
             Some(ast::Symbol::Contract(loc, _)) => {
                 self.diagnostics.push(Output::warning_with_note(
                     id.loc,
-                    format!("declaration of `{}' shadows contract name", id.name),
+                    format!("declaration of ‘{}’ shadows contract name", id.name),
                     *loc,
                     "previous declaration of contract name".to_string(),
+                ));
+            }
+            Some(ast::Symbol::Import(loc, _)) => {
+                self.diagnostics.push(Output::warning_with_note(
+                    id.loc,
+                    format!("declaration of ‘{}’ shadows import", id.name),
+                    *loc,
+                    "previous declaration of import".to_string(),
                 ));
             }
             None => {}
@@ -631,10 +671,10 @@ impl ast::Namespace {
             Ok(dimensions)
         }
 
-        let (contract_name, id, dimensions) = self.expr_to_type(file_no, contract_no, &id)?;
+        let (mut namespace, id, dimensions) = self.expr_to_type(file_no, contract_no, &id)?;
 
         if let pt::Expression::Type(_, ty) = &id {
-            assert_eq!(contract_name, None);
+            assert!(namespace.is_empty());
 
             let ty = match ty {
                 pt::Type::Mapping(_, k, v) => {
@@ -696,56 +736,88 @@ impl ast::Namespace {
             _ => unreachable!(),
         };
 
-        let contract_no = if let Some(contract_name) = contract_name {
-            match self.symbols.get(&(file_no, None, contract_name.name)) {
-                None => {
-                    self.diagnostics.push(Output::decl_error(
-                        id.loc,
-                        format!("contract type ‘{}’ not found", id.name),
-                    ));
-                    return Err(());
-                }
-                Some(ast::Symbol::Contract(_, n)) => Some(*n),
-                Some(ast::Symbol::Function(_)) => {
-                    self.diagnostics.push(Output::decl_error(
-                        id.loc,
-                        format!("‘{}’ is a function", id.name),
-                    ));
-                    return Err(());
-                }
-                Some(ast::Symbol::Variable(_, _)) => {
-                    self.diagnostics.push(Output::decl_error(
-                        id.loc,
-                        format!("‘{}’ is a contract variable", id.name),
-                    ));
-                    return Err(());
-                }
-                Some(ast::Symbol::Struct(_, _)) => {
-                    self.diagnostics.push(Output::decl_error(
-                        id.loc,
-                        format!("‘{}’ is a struct", id.name),
-                    ));
-                    return Err(());
-                }
-                Some(ast::Symbol::Enum(_, _)) => {
-                    self.diagnostics.push(Output::decl_error(
-                        id.loc,
-                        format!("‘{}’ is an enum variable", id.name),
-                    ));
-                    return Err(());
-                }
+        // The leading part of the namespace can be import variables
+        let mut import_file_no = file_no;
+
+        while !namespace.is_empty() {
+            if let Some(ast::Symbol::Import(_, file_no)) =
+                self.symbols
+                    .get(&(import_file_no, None, namespace[0].name.clone()))
+            {
+                import_file_no = *file_no;
+                namespace.remove(0);
+            } else {
+                break;
             }
+        }
+
+        let contract_no = if let Some(contract_name) = namespace.get(0) {
+            let contract_no =
+                match self
+                    .symbols
+                    .get(&(import_file_no, None, contract_name.name.clone()))
+                {
+                    None => {
+                        self.diagnostics.push(Output::decl_error(
+                            id.loc,
+                            format!("contract type ‘{}’ not found", id.name),
+                        ));
+                        return Err(());
+                    }
+                    Some(ast::Symbol::Contract(_, n)) => Some(*n),
+                    Some(ast::Symbol::Function(_)) => {
+                        self.diagnostics.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is a function", id.name),
+                        ));
+                        return Err(());
+                    }
+                    Some(ast::Symbol::Variable(_, _)) => {
+                        self.diagnostics.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is a contract variable", id.name),
+                        ));
+                        return Err(());
+                    }
+                    Some(ast::Symbol::Struct(_, _)) => {
+                        self.diagnostics.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is a struct", id.name),
+                        ));
+                        return Err(());
+                    }
+                    Some(ast::Symbol::Enum(_, _)) => {
+                        self.diagnostics.push(Output::decl_error(
+                            id.loc,
+                            format!("‘{}’ is an enum variable", id.name),
+                        ));
+                        return Err(());
+                    }
+                    Some(ast::Symbol::Import(_, _)) => unreachable!(),
+                };
+
+            if namespace.len() > 1 {
+                self.diagnostics.push(Output::decl_error(
+                    id.loc,
+                    format!("‘{}’ not found", namespace[1].name),
+                ));
+                return Err(());
+            };
+
+            contract_no
         } else {
             contract_no
         };
 
         let mut s = self
             .symbols
-            .get(&(file_no, contract_no, id.name.to_owned()));
+            .get(&(import_file_no, contract_no, id.name.to_owned()));
 
         // try global scope
         if s.is_none() && contract_no.is_some() {
-            s = self.symbols.get(&(file_no, None, id.name.to_owned()));
+            s = self
+                .symbols
+                .get(&(import_file_no, None, id.name.to_owned()));
         }
 
         match s {
@@ -787,18 +859,25 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
+            Some(ast::Symbol::Import(_, _)) => {
+                self.diagnostics.push(Output::decl_error(
+                    id.loc,
+                    format!("‘{}’ is an import variable", id.name),
+                ));
+                Err(())
+            }
         }
     }
 
-    // An array type can look like foo[2], if foo is an enum type. The lalrpop parses
+    // An array type can look like foo[2] foo.baz.bar, if foo is an enum type. The lalrpop parses
     // this as an expression, so we need to convert it to Type and check there are
     // no unexpected expressions types.
-    pub fn expr_to_type(
+    pub fn expr_to_type<'a>(
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
-        expr: &pt::Expression,
-    ) -> Result<(Option<pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
+        expr: &'a pt::Expression,
+    ) -> Result<(Vec<&'a pt::Identifier>, pt::Expression, Vec<ArrayDimension>), ()> {
         let mut expr = expr;
         let mut dimensions = Vec::new();
 
@@ -815,19 +894,27 @@ impl ast::Namespace {
                     r.as_ref()
                 }
                 pt::Expression::Variable(_) | pt::Expression::Type(_, _) => {
-                    return Ok((None, expr.clone(), dimensions))
+                    return Ok((Vec::new(), expr.clone(), dimensions))
                 }
                 pt::Expression::MemberAccess(_, namespace, id) => {
-                    if let pt::Expression::Variable(namespace) = namespace.as_ref() {
-                        return Ok((
-                            Some(namespace.clone()),
-                            pt::Expression::Variable(id.clone()),
-                            dimensions,
-                        ));
+                    let mut names = Vec::new();
+
+                    let mut expr = namespace.as_ref();
+
+                    while let pt::Expression::MemberAccess(_, member, name) = expr {
+                        names.insert(0, name);
+
+                        expr = member.as_ref();
+                    }
+
+                    if let pt::Expression::Variable(namespace) = expr {
+                        names.insert(0, namespace);
+
+                        return Ok((names, pt::Expression::Variable(id.clone()), dimensions));
                     } else {
                         self.diagnostics.push(Output::decl_error(
                             namespace.loc(),
-                            "expression found where contract type expected".to_string(),
+                            "expression found where type expected".to_string(),
                         ));
                         return Err(());
                     }
