@@ -549,4 +549,54 @@ fn enum_import_chain() {
     let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
 
     no_errors(ns.diagnostics);
+
+    // now with error
+    let mut cache = FileCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+            import "b.sol" as foo;
+    
+            contract a {
+                function go(foo.c_import.d_import.d.enum_d x) public returns (bool) {
+                    return foo.c_import.d_import.d.enum_d.d4 == x;
+                }
+            }
+            "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "b.sol".to_string(),
+        r#"
+            import "c.sol" as c_import;
+            "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "c.sol".to_string(),
+        r#"
+            import "d.sol" as d_import;
+            "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "d.sol".to_string(),
+        r#"
+            contract d {
+                enum enum_d { d1, d2, d3 }
+            }
+            "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "enum d.enum_d does not have value d4"
+    );
 }
