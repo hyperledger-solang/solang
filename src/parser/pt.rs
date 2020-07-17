@@ -113,7 +113,7 @@ pub enum ContractPart {
     FunctionDefinition(Box<FunctionDefinition>),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ContractTy {
     Abstract(Loc),
     Contract(Loc),

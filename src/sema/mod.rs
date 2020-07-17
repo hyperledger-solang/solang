@@ -999,10 +999,11 @@ impl ast::Namespace {
 }
 
 impl ast::Contract {
-    pub fn new(name: &str, loc: pt::Loc) -> Self {
+    pub fn new(name: &str, ty: pt::ContractTy, loc: pt::Loc) -> Self {
         ast::Contract {
             name: name.to_owned(),
             loc,
+            ty,
             doc: Vec::new(),
             functions: Vec::new(),
             variables: Vec::new(),

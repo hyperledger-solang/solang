@@ -1831,6 +1831,18 @@ fn constructor(
         }
     };
 
+    if !ns.contracts[no].is_concrete() {
+        ns.diagnostics.push(Output::error(
+            *loc,
+            format!(
+                "cannot construct ‘{}’ of type ‘{}’",
+                ns.contracts[no].name, ns.contracts[no].ty
+            ),
+        ));
+
+        return Err(());
+    }
+
     // check for circular references
     if circular_reference(no, contract_no, ns) {
         ns.diagnostics.push(Output::error(
@@ -2002,6 +2014,18 @@ pub fn constructor_named_args(
             return Err(());
         }
     };
+
+    if !ns.contracts[no].is_concrete() {
+        ns.diagnostics.push(Output::error(
+            *loc,
+            format!(
+                "cannot construct ‘{}’ of type ‘{}’",
+                ns.contracts[no].name, ns.contracts[no].ty
+            ),
+        ));
+
+        return Err(());
+    }
 
     // check for circular references
     if circular_reference(no, contract_no, ns) {
