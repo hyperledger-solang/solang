@@ -68,6 +68,10 @@ pub fn resolve_function_body(
         }
     }
 
+    if ast_f.body.is_empty() {
+        return Ok(());
+    }
+
     let reachable = statement(
         &ast_f.body,
         &mut res,

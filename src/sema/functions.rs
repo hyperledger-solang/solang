@@ -9,7 +9,7 @@ pub fn function_decl(
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
-) -> bool {
+) -> Option<usize> {
     let mut success = true;
 
     // The parser allows constructors to have return values. This is so that we can give a
@@ -23,14 +23,14 @@ pub fn function_decl(
                         f.loc,
                         "function cannot have same name as the contract".to_string(),
                     ));
-                    return false;
+                    return None;
                 }
             } else {
                 ns.diagnostics.push(Output::error(
                     f.name_loc,
                     "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?".to_string(),
                 ));
-                return false;
+                return None;
             }
         }
         pt::FunctionTy::Constructor => {
@@ -39,14 +39,14 @@ pub fn function_decl(
                     f.loc,
                     "constructor cannot have return values".to_string(),
                 ));
-                return false;
+                return None;
             }
             if f.name.is_some() {
                 ns.diagnostics.push(Output::warning(
                     f.loc,
                     "constructor cannot have a name".to_string(),
                 ));
-                return false;
+                return None;
             }
         }
         pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
@@ -69,7 +69,7 @@ pub fn function_decl(
                     f.loc,
                     format!("{} function cannot have a name", f.ty),
                 ));
-                return false;
+                return None;
             }
         }
     }
@@ -174,7 +174,7 @@ pub fn function_decl(
     }
 
     if !success || !returns_success || !params_success {
-        return false;
+        return None;
     }
 
     let name = match &f.name {
@@ -211,7 +211,7 @@ pub fn function_decl(
                     prev.loc,
                     "location of previous definition".to_string(),
                 ));
-                return false;
+                return None;
             }
         } else {
             let payable = fdecl.is_payable();
@@ -227,7 +227,7 @@ pub fn function_decl(
                     prev.loc,
                     "location of previous definition".to_string(),
                 ));
-                return false;
+                return None;
             }
         }
 
@@ -239,7 +239,7 @@ pub fn function_decl(
                     f.loc,
                     "constructor function must be declared public".to_owned(),
                 ));
-                return false;
+                return None;
             }
         }
 
@@ -249,14 +249,14 @@ pub fn function_decl(
                     loc,
                     "constructor cannot be declared pure".to_string(),
                 ));
-                return false;
+                return None;
             }
             Some(pt::StateMutability::View(loc)) => {
                 ns.diagnostics.push(Output::error(
                     loc,
                     "constructor cannot be declared view".to_string(),
                 ));
-                return false;
+                return None;
             }
             _ => (),
         }
@@ -274,13 +274,15 @@ pub fn function_decl(
                     "location of previous definition".to_string(),
                 ));
 
-                return false;
+                return None;
             }
         }
 
+        let pos = ns.contracts[contract_no].functions.len();
+
         ns.contracts[contract_no].functions.push(fdecl);
 
-        true
+        Some(pos)
     } else if f.ty == pt::FunctionTy::Receive || f.ty == pt::FunctionTy::Fallback {
         if let Some(prev) = ns.contracts[contract_no]
             .functions
@@ -293,7 +295,7 @@ pub fn function_decl(
                 prev.loc,
                 "location of previous definition".to_string(),
             ));
-            return false;
+            return None;
         }
 
         if let pt::Visibility::External(_) = fdecl.visibility {
@@ -303,7 +305,7 @@ pub fn function_decl(
                 f.loc,
                 format!("{} function must be declared external", f.ty),
             ));
-            return false;
+            return None;
         }
 
         if let Some(pt::StateMutability::Payable(_)) = fdecl.mutability {
@@ -312,19 +314,21 @@ pub fn function_decl(
                     f.loc,
                     format!("{} function must not be declare payable, use ‘receive() external payable’ instead", f.ty),
                 ));
-                return false;
+                return None;
             }
         } else if f.ty == pt::FunctionTy::Receive {
             ns.diagnostics.push(Output::error(
                 f.loc,
                 format!("{} function must be declared payable", f.ty),
             ));
-            return false;
+            return None;
         }
+
+        let pos = ns.contracts[contract_no].functions.len();
 
         ns.contracts[contract_no].functions.push(fdecl);
 
-        true
+        Some(pos)
     } else {
         let id = f.name.as_ref().unwrap();
 
@@ -341,7 +345,7 @@ pub fn function_decl(
                         o.0,
                         "location of previous definition".to_string(),
                     ));
-                    return false;
+                    return None;
                 }
             }
 
@@ -350,7 +354,8 @@ pub fn function_decl(
             ns.contracts[contract_no].functions.push(fdecl);
 
             v.push((f.loc, pos));
-            return true;
+
+            return Some(pos);
         }
 
         let pos = ns.contracts[contract_no].functions.len();
@@ -364,7 +369,7 @@ pub fn function_decl(
             Symbol::Function(vec![(id.loc, pos)]),
         );
 
-        true
+        Some(pos)
     }
 }
 

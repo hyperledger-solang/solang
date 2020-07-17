@@ -62,6 +62,10 @@ impl<'a> StateCheck<'a> {
 fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> Vec<Output> {
     let func = &ns.contracts[contract_no].functions[function_no];
 
+    if func.is_virtual {
+        return Vec::new();
+    }
+
     let mut state = StateCheck {
         diagnostics: Vec::new(),
         does_read_state: false,
