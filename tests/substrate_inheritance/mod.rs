@@ -130,3 +130,63 @@ fn test_abstract() {
 
     assert_eq!(contracts.len(), 1);
 }
+
+#[test]
+fn test_interface() {
+    let ns = parse_and_resolve(
+        r#"
+        interface foo {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "constructor not allowed in an interface"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface foo {
+            function bar() external {}
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "functions can not have bodies in an interface"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface foo {
+            function bar() virtual private;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "functions must be declared ‘external’ in an interface"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface bar {
+            function foo() virtual internal;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "functions must be declared ‘external’ in an interface"
+    );
+}
