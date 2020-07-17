@@ -223,30 +223,66 @@ fn resolve_contract_declarations(
         }
     }
 
-    if let pt::ContractTy::Contract(loc) = &def.ty {
-        if !virtual_functions.is_empty() {
-            let notes = virtual_functions
-                .into_iter()
-                .map(|function_no| Note {
-                    pos: ns.contracts[contract_no].functions[function_no].loc,
-                    message: format!(
-                        "location of ‘virtual’ function ‘{}’",
-                        ns.contracts[contract_no].functions[function_no].name
+    match &def.ty {
+        pt::ContractTy::Contract(loc) => {
+            if !virtual_functions.is_empty() {
+                let notes = virtual_functions
+                    .into_iter()
+                    .map(|function_no| Note {
+                        pos: ns.contracts[contract_no].functions[function_no].loc,
+                        message: format!(
+                            "location of ‘virtual’ function ‘{}’",
+                            ns.contracts[contract_no].functions[function_no].name
+                        ),
+                    })
+                    .collect::<Vec<Note>>();
+
+                ns.diagnostics.push(Output::error_with_notes(
+                    *loc,
+                    format!(
+                        "contract should be marked ‘abstract contract’ since it has {} virtual functions",
+                        notes.len()
                     ),
-                })
-                .collect::<Vec<Note>>();
+                    notes,
+                ));
 
-            ns.diagnostics.push(Output::error_with_notes(
-                *loc,
-                format!(
-                    "contract should be marked ‘abstract contract’ since it has {} virtual functions",
-                    notes.len()
-                ),
-                notes,
-            ));
-
-            broken = true;
+                broken = true;
+            }
         }
+        pt::ContractTy::Interface(_) => {
+            // no constructor allowed, every function should be declared external and no bodies allowed
+            for func in &ns.contracts[contract_no].functions {
+                if func.is_constructor() {
+                    ns.diagnostics.push(Output::error(
+                        func.loc,
+                        "constructor not allowed in an interface".to_string(),
+                    ));
+                    broken = true;
+                    continue;
+                }
+
+                if !func.is_virtual {
+                    ns.diagnostics.push(Output::error(
+                        func.loc,
+                        "functions can not have bodies in an interface".to_string(),
+                    ));
+
+                    broken = true;
+                    continue;
+                }
+
+                if !func.is_public() {
+                    ns.diagnostics.push(Output::error(
+                        func.loc,
+                        "functions must be declared ‘external’ in an interface".to_string(),
+                    ));
+
+                    broken = true;
+                    continue;
+                }
+            }
+        }
+        _ => (),
     }
 
     // resolve state variables
