@@ -201,18 +201,51 @@ fn resolve_contract_declarations(
 ) -> bool {
     ns.diagnostics.push(Output::info(
         def.loc,
-        format!("found contract {}", def.name.name),
+        format!("found {} ‘{}’", def.ty, def.name.name),
     ));
 
     let mut broken = false;
-    let mut any_virtual = false;
+    let mut virtual_functions = Vec::new();
 
     // resolve function signatures
     for (i, parts) in def.parts.iter().enumerate() {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            if !functions::function_decl(f, i, file_no, contract_no, ns) {
-                broken = true;
+            match functions::function_decl(f, i, file_no, contract_no, ns) {
+                Some(function_no) => {
+                    if ns.contracts[contract_no].functions[function_no].is_virtual {
+                        virtual_functions.push(function_no);
+                    }
+                }
+                None => {
+                    broken = true;
+                }
             }
+        }
+    }
+
+    if let pt::ContractTy::Contract(loc) = &def.ty {
+        if !virtual_functions.is_empty() {
+            let notes = virtual_functions
+                .into_iter()
+                .map(|function_no| Note {
+                    pos: ns.contracts[contract_no].functions[function_no].loc,
+                    message: format!(
+                        "location of ‘virtual’ function ‘{}’",
+                        ns.contracts[contract_no].functions[function_no].name
+                    ),
+                })
+                .collect::<Vec<Note>>();
+
+            ns.diagnostics.push(Output::error_with_notes(
+                *loc,
+                format!(
+                    "contract should be marked ‘abstract contract’ since it has {} virtual functions",
+                    notes.len()
+                ),
+                notes,
+            ));
+
+            broken = true;
         }
     }
 
