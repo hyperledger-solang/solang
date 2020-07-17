@@ -638,6 +638,7 @@ pub struct Namespace {
 pub struct Contract {
     pub doc: Vec<String>,
     pub loc: pt::Loc,
+    pub ty: pt::ContractTy,
     pub name: String,
     // events
     pub functions: Vec<Function>,
@@ -645,6 +646,17 @@ pub struct Contract {
     pub top_of_contract_storage: BigInt,
     pub creates: Vec<usize>,
     pub initializer: ControlFlowGraph,
+}
+
+impl Contract {
+    // Is this a concrete contract, which can be instantiated
+    pub fn is_concrete(&self) -> bool {
+        if let pt::ContractTy::Contract(_) = self.ty {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Debug)]

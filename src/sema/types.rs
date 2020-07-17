@@ -125,7 +125,8 @@ fn resolve_contract<'a>(
     ns: &mut Namespace,
 ) -> bool {
     let contract_no = ns.contracts.len();
-    ns.contracts.push(Contract::new(&def.name.name, def.loc));
+    ns.contracts
+        .push(Contract::new(&def.name.name, def.ty.clone(), def.loc));
 
     let mut broken = !ns.add_symbol(
         file_no,

@@ -10,13 +10,15 @@ use sema::ast::Namespace;
 /// The contracts are fully resolved but they do not have any a CFG which is needed for the llvm code emitter
 /// not all contracts need a cfg; only those for which we need the
 pub fn codegen(contract_no: usize, ns: &mut Namespace) {
-    for function_no in 0..ns.contracts[contract_no].functions.len() {
-        let c = cfg::generate_cfg(contract_no, function_no, ns);
-        ns.contracts[contract_no].functions[function_no].cfg = Some(c);
-    }
+    if ns.contracts[contract_no].is_concrete() {
+        for function_no in 0..ns.contracts[contract_no].functions.len() {
+            let c = cfg::generate_cfg(contract_no, function_no, ns);
+            ns.contracts[contract_no].functions[function_no].cfg = Some(c);
+        }
 
-    // Generate cfg for storage initializers
-    ns.contracts[contract_no].initializer = storage_initializer(contract_no, ns);
+        // Generate cfg for storage initializers
+        ns.contracts[contract_no].initializer = storage_initializer(contract_no, ns);
+    }
 }
 
 /// This function will set all contract storage initializers and should be called from the constructor

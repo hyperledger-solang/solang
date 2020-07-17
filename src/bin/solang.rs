@@ -190,6 +190,10 @@ fn process_filename(
     for contract_no in 0..ns.contracts.len() {
         let resolved_contract = &ns.contracts[contract_no];
 
+        if !resolved_contract.is_concrete() {
+            continue;
+        }
+
         if let Some("cfg") = matches.value_of("EMIT") {
             println!("{}", resolved_contract.print_to_string(&ns));
             continue;
