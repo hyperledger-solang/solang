@@ -26,6 +26,8 @@ use sema::symtable::Symtable;
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
+/// Load a file file from the cache, parse and resolve it. The file must be present in
+/// the cache. This function is recursive for imports.
 pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
@@ -42,7 +44,19 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
         }
     };
 
-    let first_contract = ns.contracts.len();
+    // We need to iterate over the contracts a few times, so create a temporary vector
+    let contracts_to_resolve =
+        pt.0.iter()
+            .filter_map(|part| {
+                if let pt::SourceUnitPart::ContractDefinition(def) = part {
+                    Some(def)
+                } else {
+                    None
+                }
+            })
+            .enumerate()
+            .map(|(no, def)| (no + ns.contracts.len(), def.as_ref()))
+            .collect::<Vec<(usize, &pt::ContractDefinition)>>();
 
     // first resolve all the types we can find
     let structs_to_resolve = types::resolve_typenames(&pt, file_no, ns);
@@ -89,6 +103,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
 
                             let new_symbol = if let Some(to) = rename_to { to } else { from };
 
+                            // Only add symbol if it does not already exist with same definition
                             if let Some(existing) =
                                 ns.symbols.get(&(file_no, None, new_symbol.name.clone()))
                             {
@@ -132,6 +147,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
                             loc: filename.loc,
                         };
 
+                        // Only add symbol if it does not already exist with same definition
                         if let Some(existing) = ns.symbols.get(&(file_no, None, name.clone())) {
                             if existing == &symbol {
                                 continue;
@@ -164,25 +180,19 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
         return;
     }
 
+    // functions can have variables, arguments or return values which are inherited types. So,
+    // we need to resolve imports first
+    contracts::resolve_inheritance(&contracts_to_resolve, file_no, ns);
+
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
-    let mut contract_no = first_contract;
-    for part in &pt.0 {
-        if let pt::SourceUnitPart::ContractDefinition(def) = part {
-            contracts::resolve_declarations(def, file_no, contract_no, target, ns);
-
-            contract_no += 1;
-        }
+    for (contract_no, def) in &contracts_to_resolve {
+        contracts::resolve_declarations(def, file_no, *contract_no, target, ns);
     }
 
     // Now we can resolve the bodies
-    let mut contract_no = first_contract;
-    for part in &pt.0 {
-        if let pt::SourceUnitPart::ContractDefinition(def) = part {
-            contracts::resolve_bodies(def, file_no, contract_no, ns);
-
-            contract_no += 1;
-        }
+    for (contract_no, def) in &contracts_to_resolve {
+        contracts::resolve_bodies(def, file_no, *contract_no, ns);
     }
 
     // now check state mutability for all contracts

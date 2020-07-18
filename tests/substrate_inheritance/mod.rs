@@ -190,3 +190,108 @@ fn test_interface() {
         "functions must be declared ‘external’ in an interface"
     );
 }
+
+#[test]
+fn inherit() {
+    let ns = parse_and_resolve(
+        r#"
+        contract a is a {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘a’ cannot inherit itself"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is foo {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "contract ‘foo’ not found");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract b is a {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘a’ inheritance is cyclic"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract b is c {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract c is a {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘a’ inheritance is cyclic"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract b is c {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract d {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract c is d, a {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘a’ inheritance is cyclic"
+    );
+}

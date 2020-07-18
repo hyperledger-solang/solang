@@ -138,7 +138,7 @@ pub struct ContractDefinition {
     pub loc: Loc,
     pub ty: ContractTy,
     pub name: Identifier,
-    pub implements: Vec<Identifier>,
+    pub inherits: Vec<Identifier>,
     pub parts: Vec<ContractPart>,
 }
 

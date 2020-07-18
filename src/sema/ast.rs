@@ -640,6 +640,7 @@ pub struct Contract {
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
     pub name: String,
+    pub inherit: Vec<usize>,
     // events
     pub functions: Vec<Function>,
     pub variables: Vec<ContractVariable>,
