@@ -1,4 +1,3 @@
-use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
@@ -10,6 +9,7 @@ use Target;
 mod address;
 pub mod ast;
 mod builtin;
+mod contracts;
 pub mod eval;
 pub mod expression;
 mod functions;
@@ -19,8 +19,6 @@ pub mod symtable;
 mod types;
 mod variables;
 
-use codegen::cfg::ControlFlowGraph;
-use emit;
 use file_cache::FileCache;
 use sema::eval::eval_const_number;
 use sema::expression::expression;
@@ -171,7 +169,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
     let mut contract_no = first_contract;
     for part in &pt.0 {
         if let pt::SourceUnitPart::ContractDefinition(def) = part {
-            resolve_contract_declarations(def, file_no, contract_no, target, ns);
+            contracts::resolve_declarations(def, file_no, contract_no, target, ns);
 
             contract_no += 1;
         }
@@ -181,7 +179,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
     let mut contract_no = first_contract;
     for part in &pt.0 {
         if let pt::SourceUnitPart::ContractDefinition(def) = part {
-            resolve_contract_bodies(def, file_no, contract_no, ns);
+            contracts::resolve_bodies(def, file_no, contract_no, ns);
 
             contract_no += 1;
         }
@@ -189,156 +187,6 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
 
     // now check state mutability for all contracts
     mutability::mutablity(file_no, ns);
-}
-
-/// Resolve functions declarations, constructor declarations, and contract variables
-fn resolve_contract_declarations(
-    def: &pt::ContractDefinition,
-    file_no: usize,
-    contract_no: usize,
-    target: Target,
-    ns: &mut ast::Namespace,
-) -> bool {
-    ns.diagnostics.push(Output::info(
-        def.loc,
-        format!("found {} ‘{}’", def.ty, def.name.name),
-    ));
-
-    let mut broken = false;
-    let mut virtual_functions = Vec::new();
-
-    // resolve function signatures
-    for (i, parts) in def.parts.iter().enumerate() {
-        if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            match functions::function_decl(f, i, file_no, contract_no, ns) {
-                Some(function_no) => {
-                    if ns.contracts[contract_no].functions[function_no].is_virtual {
-                        virtual_functions.push(function_no);
-                    }
-                }
-                None => {
-                    broken = true;
-                }
-            }
-        }
-    }
-
-    match &def.ty {
-        pt::ContractTy::Contract(loc) => {
-            if !virtual_functions.is_empty() {
-                let notes = virtual_functions
-                    .into_iter()
-                    .map(|function_no| Note {
-                        pos: ns.contracts[contract_no].functions[function_no].loc,
-                        message: format!(
-                            "location of ‘virtual’ function ‘{}’",
-                            ns.contracts[contract_no].functions[function_no].name
-                        ),
-                    })
-                    .collect::<Vec<Note>>();
-
-                ns.diagnostics.push(Output::error_with_notes(
-                    *loc,
-                    format!(
-                        "contract should be marked ‘abstract contract’ since it has {} virtual functions",
-                        notes.len()
-                    ),
-                    notes,
-                ));
-
-                broken = true;
-            }
-        }
-        pt::ContractTy::Interface(_) => {
-            // no constructor allowed, every function should be declared external and no bodies allowed
-            for func in &ns.contracts[contract_no].functions {
-                if func.is_constructor() {
-                    ns.diagnostics.push(Output::error(
-                        func.loc,
-                        "constructor not allowed in an interface".to_string(),
-                    ));
-                    broken = true;
-                    continue;
-                }
-
-                if !func.is_virtual {
-                    ns.diagnostics.push(Output::error(
-                        func.loc,
-                        "functions can not have bodies in an interface".to_string(),
-                    ));
-
-                    broken = true;
-                    continue;
-                }
-
-                if !func.is_public() {
-                    ns.diagnostics.push(Output::error(
-                        func.loc,
-                        "functions must be declared ‘external’ in an interface".to_string(),
-                    ));
-
-                    broken = true;
-                    continue;
-                }
-            }
-        }
-        _ => (),
-    }
-
-    // resolve state variables
-    if variables::contract_variables(&def, file_no, contract_no, ns) {
-        broken = true;
-    }
-
-    // Substrate requires one constructor. Ideally we do not create implict things
-    // in the ast, but this is required for abi generation which is done of the ast
-    if !ns.contracts[contract_no]
-        .functions
-        .iter()
-        .any(|f| f.is_constructor())
-        && target == Target::Substrate
-    {
-        let mut fdecl = ast::Function::new(
-            pt::Loc(0, 0, 0),
-            "".to_owned(),
-            vec![],
-            pt::FunctionTy::Constructor,
-            None,
-            None,
-            pt::Visibility::Public(pt::Loc(0, 0, 0)),
-            Vec::new(),
-            Vec::new(),
-            ns,
-        );
-
-        fdecl.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), Vec::new())];
-
-        ns.contracts[contract_no].functions.push(fdecl);
-    }
-
-    broken
-}
-
-fn resolve_contract_bodies(
-    def: &pt::ContractDefinition,
-    file_no: usize,
-    contract_no: usize,
-    ns: &mut ast::Namespace,
-) -> bool {
-    let mut broken = false;
-
-    // resolve function bodies
-    for f in 0..ns.contracts[contract_no].functions.len() {
-        if let Some(ast_index) = ns.contracts[contract_no].functions[f].ast_index {
-            if let pt::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                if statements::resolve_function_body(ast_f, file_no, contract_no, f, ns).is_err() {
-                    broken = true;
-                }
-            }
-        }
-    }
-
-    broken
 }
 
 impl ast::Namespace {
@@ -1031,69 +879,5 @@ impl ast::Namespace {
                 Err(())
             }
         }
-    }
-}
-
-impl ast::Contract {
-    pub fn new(name: &str, ty: pt::ContractTy, loc: pt::Loc) -> Self {
-        ast::Contract {
-            name: name.to_owned(),
-            loc,
-            ty,
-            doc: Vec::new(),
-            functions: Vec::new(),
-            variables: Vec::new(),
-            top_of_contract_storage: BigInt::zero(),
-            creates: Vec::new(),
-            initializer: ControlFlowGraph::new(),
-        }
-    }
-
-    /// Return the index of the fallback function, if any
-    pub fn fallback_function(&self) -> Option<usize> {
-        for (i, f) in self.functions.iter().enumerate() {
-            if f.ty == pt::FunctionTy::Fallback {
-                return Some(i);
-            }
-        }
-        None
-    }
-
-    /// Return the index of the receive function, if any
-    pub fn receive_function(&self) -> Option<usize> {
-        for (i, f) in self.functions.iter().enumerate() {
-            if f.ty == pt::FunctionTy::Receive {
-                return Some(i);
-            }
-        }
-        None
-    }
-
-    pub fn emit<'a>(
-        &'a self,
-        ns: &'a ast::Namespace,
-        context: &'a inkwell::context::Context,
-        filename: &'a str,
-        opt: OptimizationLevel,
-    ) -> emit::Contract {
-        emit::Contract::build(context, self, ns, filename, opt)
-    }
-
-    /// Print the entire contract; storage initializers, constructors and functions and their CFGs
-    pub fn print_to_string(&self, ns: &ast::Namespace) -> String {
-        let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
-
-        out += "# storage initializer\n";
-        out += &self.initializer.to_string(self, ns);
-
-        for func in self.functions.iter() {
-            out += &format!("\n# {} {}\n", func.ty, func.signature);
-
-            if let Some(ref cfg) = func.cfg {
-                out += &cfg.to_string(self, ns);
-            }
-        }
-
-        out
     }
 }
