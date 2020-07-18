@@ -18,6 +18,7 @@ impl ast::Contract {
             name: name.to_owned(),
             loc,
             ty,
+            inherit: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
             variables: Vec::new(),
@@ -73,6 +74,56 @@ impl ast::Contract {
         }
 
         out
+    }
+}
+
+/// Resolve the inheritance list and check for cycles
+pub fn resolve_inheritance(
+    contracts: &[(usize, &pt::ContractDefinition)],
+    file_no: usize,
+    ns: &mut ast::Namespace,
+) {
+    for (contract_no, def) in contracts {
+        for name in &def.inherits {
+            match ns.resolve_contract(file_no, name) {
+                Some(no) => {
+                    if no == *contract_no {
+                        ns.diagnostics.push(Output::error(
+                            name.loc,
+                            format!("contract ‘{}’ cannot inherit itself", name.name),
+                        ));
+                    } else {
+                        ns.contracts[*contract_no].inherit.push(no);
+                    }
+                }
+                None => {
+                    ns.diagnostics.push(Output::error(
+                        name.loc,
+                        format!("contract ‘{}’ not found", name.name),
+                    ));
+                }
+            }
+        }
+    }
+
+    // Check the inheritance of a contract
+    fn cyclic(no: &usize, set: &[usize], ns: &ast::Namespace) -> bool {
+        if set.contains(no) {
+            return true;
+        }
+
+        set.iter()
+            .any(|c| cyclic(no, &ns.contracts[*c].inherit, ns))
+    }
+
+    for (contract_no, _) in contracts {
+        if cyclic(contract_no, &ns.contracts[*contract_no].inherit, ns) {
+            let c = &ns.contracts[*contract_no];
+            ns.diagnostics.push(Output::error(
+                c.loc,
+                format!("contract ‘{}’ inheritance is cyclic", c.name),
+            ));
+        }
     }
 }
 

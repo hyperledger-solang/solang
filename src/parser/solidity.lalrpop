@@ -99,15 +99,15 @@ ContractPart: ContractPart = {
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
 }
 
-Implements: Vec<Identifier> = {
+Inherits: Vec<Identifier> = {
     => Vec::new(),
     "is" <CommaOne<Identifier>> => <>,
 }
 
 ContractDefinition: Box<ContractDefinition> = {
-    <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <implements:Implements>
+    <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <inherits:Inherits>
     "{" <parts:(<ContractPart>)+> "}" <r:@R> => {
-        Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, implements, parts})
+        Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, inherits, parts})
     }
 }
 
