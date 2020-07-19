@@ -44,7 +44,8 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
         }
     };
 
-    // We need to iterate over the contracts a few times, so create a temporary vector
+    // We need to iterate over the parsed contracts a few times, so create a temporary vector
+    // This should be done before the contract types are created so the contract type numbers line up
     let contracts_to_resolve =
         pt.0.iter()
             .filter_map(|part| {
@@ -173,6 +174,8 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
         }
     }
 
+    // once all the types are resolved, we can resolve the structs. This is because struct
+    // fields can have types defined elsewhere.
     types::resolve_structs(structs_to_resolve, file_no, ns);
 
     // give up if we failed
@@ -180,20 +183,8 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
         return;
     }
 
-    // functions can have variables, arguments or return values which are inherited types. So,
-    // we need to resolve imports first
-    contracts::resolve_inheritance(&contracts_to_resolve, file_no, ns);
-
-    // we need to resolve declarations first, so we call functions/constructors of
-    // contracts before they are declared
-    for (contract_no, def) in &contracts_to_resolve {
-        contracts::resolve_declarations(def, file_no, *contract_no, target, ns);
-    }
-
-    // Now we can resolve the bodies
-    for (contract_no, def) in &contracts_to_resolve {
-        contracts::resolve_bodies(def, file_no, *contract_no, ns);
-    }
+    // now resolve the contracts
+    contracts::resolve(&contracts_to_resolve, file_no, target, ns);
 
     // now check state mutability for all contracts
     mutability::mutablity(file_no, ns);

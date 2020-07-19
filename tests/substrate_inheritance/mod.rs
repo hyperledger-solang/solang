@@ -295,3 +295,134 @@ fn inherit() {
         "contract ‘a’ inheritance is cyclic"
     );
 }
+
+#[test]
+fn inherit_types() {
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b {
+            function test() public returns (enum_x) {
+                return enum_x.x2;
+            }
+        }
+
+        contract b {
+            enum enum_x { x1, x2 }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b {
+            function test() public returns (enum_x) {
+                return enum_x.x2;
+            }
+
+            function test2() public returns (enum_y) {
+                return enum_y.y2;
+            }
+        }
+
+        contract b is c {
+            enum enum_y { y1, y2 }
+        }
+
+        contract c {
+            enum enum_x { x1, x2 }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b, c {
+            function test() public returns (enum_x) {
+                return enum_x.x2;
+            }
+
+            function test2() public returns (enum_y) {
+                return enum_y.y2;
+            }
+        }
+
+        contract b is c {
+            enum enum_y { y1, y2 }
+        }
+
+        contract c {
+            enum enum_x { x1, x2 }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            function test() public returns (enum_x) {
+                return enum_x.x2;
+            }
+        }
+
+        contract b {
+            enum enum_x { x1, x2 }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "type ‘enum_x’ not found");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a is b {
+            foo public var1;
+        }
+
+        contract b {
+            struct foo {
+                uint32 f1;
+                uint32 f2;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract b {
+            struct foo {
+                uint32 f1;
+                uint32 f2;
+            }
+        }
+
+        contract c {
+            enum foo { f1, f2 }
+        }
+
+        contract a is b, c {
+            function test(foo x) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘a’ cannot inherit type ‘foo’ from contract ‘c’"
+    );
+}
