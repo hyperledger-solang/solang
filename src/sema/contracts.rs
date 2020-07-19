@@ -77,12 +77,38 @@ impl ast::Contract {
     }
 }
 
-/// Resolve the inheritance list and check for cycles
-pub fn resolve_inheritance(
+/// Resolve the following contract
+pub fn resolve(
+    contracts: &[(usize, &pt::ContractDefinition)],
+    file_no: usize,
+    target: Target,
+    ns: &mut ast::Namespace,
+) {
+    if resolve_inheritance(contracts, file_no, ns) {
+        inherit_types(contracts, file_no, ns);
+    }
+
+    // we need to resolve declarations first, so we call functions/constructors of
+    // contracts before they are declared
+    for (contract_no, def) in contracts {
+        resolve_declarations(def, file_no, *contract_no, target, ns);
+    }
+
+    // Now we can resolve the bodies
+    for (contract_no, def) in contracts {
+        resolve_bodies(def, file_no, *contract_no, ns);
+    }
+}
+
+/// Resolve the inheritance list and check for cycles. Returns true if no
+/// issues where found.
+fn resolve_inheritance(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
-) {
+) -> bool {
+    let mut valid = true;
+
     for (contract_no, def) in contracts {
         for name in &def.inherits {
             match ns.resolve_contract(file_no, name) {
@@ -92,6 +118,8 @@ pub fn resolve_inheritance(
                             name.loc,
                             format!("contract ‘{}’ cannot inherit itself", name.name),
                         ));
+
+                        valid = false;
                     } else {
                         ns.contracts[*contract_no].inherit.push(no);
                     }
@@ -101,6 +129,8 @@ pub fn resolve_inheritance(
                         name.loc,
                         format!("contract ‘{}’ not found", name.name),
                     ));
+
+                    valid = false;
                 }
             }
         }
@@ -123,12 +153,81 @@ pub fn resolve_inheritance(
                 c.loc,
                 format!("contract ‘{}’ inheritance is cyclic", c.name),
             ));
+
+            valid = false;
+        }
+    }
+
+    valid
+}
+
+/// Any types declared in the inherited contracts are available
+fn inherit_types(
+    contracts: &[(usize, &pt::ContractDefinition)],
+    file_no: usize,
+    ns: &mut ast::Namespace,
+) {
+    fn inherit(file_no: usize, contract_no: usize, parent: usize, ns: &mut ast::Namespace) {
+        let mut errors = Vec::new();
+        // find all the types in the parent contract which are not already present in
+        // the current contract. We need to collect these before inserting as we're iterating
+        // over the symbol table to find
+        let types: Vec<(String, ast::Symbol)> = ns
+            .symbols
+            .iter()
+            .filter_map(|((_, symbol_contract_no, symbol_name), symbol)| {
+                if *symbol_contract_no != Some(parent) {
+                    None
+                } else {
+                    match symbol {
+                        ast::Symbol::Enum(_, _) | ast::Symbol::Struct(_, _) => {
+                            if let Some(sym) =
+                                ns.symbols
+                                    .get(&(file_no, Some(contract_no), symbol_name.clone()))
+                            {
+                                if sym != symbol {
+                                    errors.push(Output::error_with_note(
+                                        *symbol.loc(),
+                                        format!("contract ‘{}’ cannot inherit type ‘{}’ from contract ‘{}’", ns.contracts[contract_no].name, symbol_name,  ns.contracts[parent].name),
+                                        *sym.loc(),
+                                        format!("previous definition of ‘{}’", symbol_name),
+                                    ));
+
+                                    None
+                                } else {
+                                    Some((symbol_name.clone(), symbol.clone()))
+                                }
+                            } else {
+                                Some((symbol_name.clone(), symbol.clone()))
+                            }
+                        }
+                        _ => None,
+                    }
+                }
+            })
+            .collect();
+
+        ns.diagnostics.extend(errors);
+
+        for (name, symbol) in types.into_iter() {
+            ns.symbols
+                .insert((file_no, Some(contract_no), name), symbol);
+        }
+
+        for parent in ns.contracts[parent].inherit.clone() {
+            inherit(file_no, contract_no, parent, ns);
+        }
+    }
+
+    for (contract_no, _) in contracts {
+        for parent in ns.contracts[*contract_no].inherit.clone() {
+            inherit(file_no, *contract_no, parent, ns);
         }
     }
 }
 
 /// Resolve functions declarations, constructor declarations, and contract variables
-pub fn resolve_declarations(
+fn resolve_declarations(
     def: &pt::ContractDefinition,
     file_no: usize,
     contract_no: usize,
@@ -256,7 +355,7 @@ pub fn resolve_declarations(
 }
 
 /// Resolve contract functions bodies
-pub fn resolve_bodies(
+fn resolve_bodies(
     def: &pt::ContractDefinition,
     file_no: usize,
     contract_no: usize,

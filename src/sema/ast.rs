@@ -621,6 +621,19 @@ pub enum Symbol {
     Import(pt::Loc, usize),
 }
 
+impl Symbol {
+    pub fn loc(&self) -> &pt::Loc {
+        match self {
+            Symbol::Enum(loc, _) => loc,
+            Symbol::Function(funcs) => &funcs[0].0,
+            Symbol::Variable(loc, _) => loc,
+            Symbol::Struct(loc, _) => loc,
+            Symbol::Contract(loc, _) => loc,
+            Symbol::Import(loc, _) => loc,
+        }
+    }
+}
+
 /// When resolving a Solidity file, this holds all the resolved items
 pub struct Namespace {
     pub target: Target,
