@@ -402,7 +402,7 @@ impl ast::Namespace {
             _ => {
                 self.diagnostics.push(Output::error(
                     id.loc,
-                    "unknown function or type".to_string(),
+                    format!("unknown function or type ‘{}’", id.name),
                 ));
 
                 Err(())
