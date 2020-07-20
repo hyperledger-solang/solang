@@ -8,7 +8,7 @@ use output::Output;
 use parser::pt;
 
 pub fn resolve_function_body(
-    ast_f: &pt::FunctionDefinition,
+    def: &pt::FunctionDefinition,
     file_no: usize,
     contract_no: usize,
     function_no: usize,
@@ -19,7 +19,7 @@ pub fn resolve_function_body(
     let mut res = Vec::new();
 
     // first add function parameters
-    for (i, p) in ast_f.params.iter().enumerate() {
+    for (i, p) in def.params.iter().enumerate() {
         let p = p.1.as_ref().unwrap();
         if let Some(ref name) = p.name {
             if let Some(pos) = symtable.add(
@@ -39,12 +39,12 @@ pub fn resolve_function_body(
     }
 
     // a function with no return values does not need a return statement
-    let mut return_required = !ast_f.returns.is_empty();
+    let mut return_required = !def.returns.is_empty();
 
     // If any of the return values are named, then the return statement can be omitted at
     // the end of the function, and return values may be omitted too. Create variables to
     // store the return values
-    for (i, p) in ast_f.returns.iter().enumerate() {
+    for (i, p) in def.returns.iter().enumerate() {
         let ret = &ns.contracts[contract_no].functions[function_no].returns[i];
 
         if let Some(ref name) = p.1.as_ref().unwrap().name {
@@ -68,12 +68,12 @@ pub fn resolve_function_body(
         }
     }
 
-    if ast_f.body.is_empty() {
+    if def.body.is_empty() {
         return Ok(());
     }
 
     let reachable = statement(
-        &ast_f.body,
+        &def.body,
         &mut res,
         file_no,
         contract_no,
@@ -89,7 +89,7 @@ pub fn resolve_function_body(
             // ok
         } else if return_required {
             ns.diagnostics.push(Output::error(
-                ast_f.body.loc(),
+                def.body.loc(),
                 "missing return statement".to_string(),
             ));
             return Err(());

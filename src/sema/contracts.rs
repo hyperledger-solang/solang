@@ -90,14 +90,14 @@ pub fn resolve(
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
+    let mut function_bodies = Vec::new();
+
     for (contract_no, def) in contracts {
-        resolve_declarations(def, file_no, *contract_no, target, ns);
+        function_bodies.extend(resolve_declarations(def, file_no, *contract_no, target, ns));
     }
 
     // Now we can resolve the bodies
-    for (contract_no, def) in contracts {
-        resolve_bodies(def, file_no, *contract_no, ns);
-    }
+    resolve_bodies(function_bodies, file_no, ns);
 }
 
 /// Resolve the inheritance list and check for cycles. Returns true if no
@@ -227,32 +227,32 @@ fn inherit_types(
 }
 
 /// Resolve functions declarations, constructor declarations, and contract variables
-fn resolve_declarations(
-    def: &pt::ContractDefinition,
+/// This returns a list of function bodies to resolve
+fn resolve_declarations<'a>(
+    def: &'a pt::ContractDefinition,
     file_no: usize,
     contract_no: usize,
     target: Target,
     ns: &mut ast::Namespace,
-) -> bool {
+) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
     ns.diagnostics.push(Output::info(
         def.loc,
         format!("found {} ‘{}’", def.ty, def.name.name),
     ));
 
-    let mut broken = false;
     let mut virtual_functions = Vec::new();
+    let mut resolve_bodies = Vec::new();
 
     // resolve function signatures
-    for (i, parts) in def.parts.iter().enumerate() {
+    for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            match functions::function_decl(f, i, file_no, contract_no, ns) {
-                Some(function_no) => {
-                    if ns.contracts[contract_no].functions[function_no].is_virtual {
-                        virtual_functions.push(function_no);
-                    }
+            if let Some(function_no) = functions::function_decl(f, file_no, contract_no, ns) {
+                if ns.contracts[contract_no].functions[function_no].is_virtual {
+                    virtual_functions.push(function_no);
                 }
-                None => {
-                    broken = true;
+
+                if !f.body.is_empty() {
+                    resolve_bodies.push((contract_no, function_no, f.as_ref()));
                 }
             }
         }
@@ -280,8 +280,6 @@ fn resolve_declarations(
                     ),
                     notes,
                 ));
-
-                broken = true;
             }
         }
         pt::ContractTy::Interface(_) => {
@@ -292,7 +290,6 @@ fn resolve_declarations(
                         func.loc,
                         "constructor not allowed in an interface".to_string(),
                     ));
-                    broken = true;
                     continue;
                 }
 
@@ -301,8 +298,6 @@ fn resolve_declarations(
                         func.loc,
                         "functions can not have bodies in an interface".to_string(),
                     ));
-
-                    broken = true;
                     continue;
                 }
 
@@ -311,8 +306,6 @@ fn resolve_declarations(
                         func.loc,
                         "functions must be declared ‘external’ in an interface".to_string(),
                     ));
-
-                    broken = true;
                     continue;
                 }
             }
@@ -321,9 +314,7 @@ fn resolve_declarations(
     }
 
     // resolve state variables
-    if variables::contract_variables(&def, file_no, contract_no, ns) {
-        broken = true;
-    }
+    variables::contract_variables(&def, file_no, contract_no, ns);
 
     // Substrate requires one constructor. Ideally we do not create implict things
     // in the ast, but this is required for abi generation which is done of the ast
@@ -339,7 +330,6 @@ fn resolve_declarations(
             vec![],
             pt::FunctionTy::Constructor,
             None,
-            None,
             pt::Visibility::Public(pt::Loc(0, 0, 0)),
             Vec::new(),
             Vec::new(),
@@ -351,26 +341,20 @@ fn resolve_declarations(
         ns.contracts[contract_no].functions.push(fdecl);
     }
 
-    broken
+    resolve_bodies
 }
 
 /// Resolve contract functions bodies
 fn resolve_bodies(
-    def: &pt::ContractDefinition,
+    bodies: Vec<(usize, usize, &pt::FunctionDefinition)>,
     file_no: usize,
-    contract_no: usize,
     ns: &mut ast::Namespace,
 ) -> bool {
     let mut broken = false;
 
-    // resolve function bodies
-    for f in 0..ns.contracts[contract_no].functions.len() {
-        if let Some(ast_index) = ns.contracts[contract_no].functions[f].ast_index {
-            if let pt::ContractPart::FunctionDefinition(ref ast_f) = def.parts[ast_index] {
-                if statements::resolve_function_body(ast_f, file_no, contract_no, f, ns).is_err() {
-                    broken = true;
-                }
-            }
+    for (contract_no, function_no, def) in bodies {
+        if statements::resolve_function_body(def, file_no, contract_no, function_no, ns).is_err() {
+            broken = true;
         }
     }
 
