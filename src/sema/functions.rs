@@ -1,6 +1,6 @@
 use super::ast::{Function, Namespace, Parameter, Symbol, Type};
-use output::Diagnostic;
 use parser::pt;
+use sema::ast::Diagnostic;
 use Target;
 
 /// Resolve function declaration

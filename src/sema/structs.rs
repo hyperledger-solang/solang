@@ -1,6 +1,6 @@
 use super::{Namespace, StructDecl, StructField, Symbol};
-use output::Diagnostic;
 use parser::ast;
+use sema::ast::Diagnostic;
 
 /// Resolve a parsed struct definition. The return value will be true if the entire
 /// definition is valid; however, whatever could be parsed will be added to the resolved

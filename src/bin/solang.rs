@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use solang::abi;
 use solang::codegen::codegen;
 use solang::file_cache::FileCache;
-use solang::output;
+use solang::sema::diagnostics;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -27,7 +27,7 @@ pub struct JsonContract {
 
 #[derive(Serialize)]
 pub struct JsonResult {
-    pub errors: Vec<output::OutputJson>,
+    pub errors: Vec<diagnostics::OutputJson>,
     pub contracts: HashMap<String, HashMap<String, JsonContract>>,
 }
 
@@ -170,13 +170,13 @@ fn process_filename(
     let mut ns = solang::parse_and_resolve(filename, cache, target);
 
     if matches.is_present("STD-JSON") {
-        let mut out = output::message_as_json(cache, &ns);
+        let mut out = diagnostics::message_as_json(cache, &ns);
         json.errors.append(&mut out);
     } else {
-        output::print_messages(cache, &ns, verbose);
+        diagnostics::print_messages(cache, &ns, verbose);
     }
 
-    if ns.contracts.is_empty() || output::any_errors(&ns.diagnostics) {
+    if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
         eprintln!("{}: error: no contracts found", filename);
         std::process::exit(1);
     }

@@ -1,8 +1,8 @@
 use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
-use output::{Note, Diagnostic};
 use parser::pt;
+use sema::ast::{Diagnostic, Note};
 use Target;
 
 use super::ast;

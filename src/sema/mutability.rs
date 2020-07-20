@@ -1,6 +1,6 @@
 use super::ast::{Builtin, DestructureField, Expression, Function, Namespace, Statement};
-use output::Diagnostic;
 use parser::pt;
+use sema::ast::Diagnostic;
 
 /// check state mutablity
 pub fn mutablity(file_no: usize, ns: &mut Namespace) {

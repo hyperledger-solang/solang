@@ -26,8 +26,8 @@ use wasmi::*;
 
 use solang::abi;
 use solang::file_cache::FileCache;
-use solang::output;
-use solang::sema::ast::Namespace;
+use solang::sema::ast;
+use solang::sema::diagnostics;
 use solang::{compile, Target};
 
 mod substrate_enums;
@@ -933,7 +933,7 @@ impl TestRuntime {
     }
 }
 
-pub fn parse_and_resolve(src: &'static str, target: Target) -> Namespace {
+pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
     let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol".to_string(), src.to_string());
@@ -953,7 +953,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         Target::Substrate,
     );
 
-    output::print_messages(&mut cache, &ns, false);
+    diagnostics::print_messages(&mut cache, &ns, false);
 
     assert!(!res.is_empty());
 
@@ -975,35 +975,35 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
     t
 }
 
-pub fn first_error(errors: Vec<output::Diagnostic>) -> String {
-    match errors.iter().find(|m| m.level == output::Level::Error) {
+pub fn first_error(errors: Vec<ast::Diagnostic>) -> String {
+    match errors.iter().find(|m| m.level == ast::Level::Error) {
         Some(m) => m.message.to_owned(),
         None => panic!("no errors found"),
     }
 }
 
-pub fn first_warning(errors: Vec<output::Diagnostic>) -> String {
-    match errors.iter().find(|m| m.level == output::Level::Warning) {
+pub fn first_warning(errors: Vec<ast::Diagnostic>) -> String {
+    match errors.iter().find(|m| m.level == ast::Level::Warning) {
         Some(m) => m.message.to_owned(),
         None => panic!("no warnings found"),
     }
 }
 
-pub fn no_errors(errors: Vec<output::Diagnostic>) {
+pub fn no_errors(errors: Vec<ast::Diagnostic>) {
     assert!(
         errors
             .iter()
-            .filter(|m| m.level == output::Level::Error)
+            .filter(|m| m.level == ast::Level::Error)
             .count()
             == 0
     );
 }
 
-pub fn no_warnings_errors(errors: Vec<output::Diagnostic>) {
+pub fn no_warnings_errors(errors: Vec<ast::Diagnostic>) {
     assert!(
         errors
             .iter()
-            .filter(|m| m.level == output::Level::Error || m.level == output::Level::Warning)
+            .filter(|m| m.level == ast::Level::Error || m.level == ast::Level::Warning)
             .count()
             == 0
     );

@@ -1,7 +1,6 @@
 use codegen::cfg::ControlFlowGraph;
 use num_bigint::BigInt;
 use num_traits::One;
-use output;
 use parser::pt;
 use sema::symtable::Symtable;
 use std::collections::HashMap;
@@ -636,7 +635,7 @@ pub struct Namespace {
     pub contracts: Vec<Contract>,
     pub address_length: usize,
     pub value_length: usize,
-    pub diagnostics: Vec<output::Diagnostic>,
+    pub diagnostics: Vec<Diagnostic>,
     /// Symbol key is file_no, contract, identifier
     pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
 }
@@ -1055,4 +1054,36 @@ impl Statement {
             Statement::For { reachable, .. } | Statement::TryCatch { reachable, .. } => *reachable,
         }
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Level {
+    Info,
+    Warning,
+    Error,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ErrorType {
+    None,
+    ParserError,
+    SyntaxError,
+    DeclarationError,
+    TypeError,
+    Warning,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Note {
+    pub pos: pt::Loc,
+    pub message: String,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Diagnostic {
+    pub level: Level,
+    pub ty: ErrorType,
+    pub pos: Option<pt::Loc>,
+    pub message: String,
+    pub notes: Vec<Note>,
 }

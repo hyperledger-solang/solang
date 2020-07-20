@@ -16,7 +16,7 @@ use wasmi::memory_units::Pages;
 use wasmi::*;
 
 use solang::file_cache::FileCache;
-use solang::output;
+use solang::sema::diagnostics;
 use solang::{compile, Target};
 
 type Address = [u8; 20];
@@ -672,7 +672,7 @@ fn build_solidity(src: &'static str) -> TestRuntime {
         Target::Ewasm,
     );
 
-    output::print_messages(&mut cache, &ns, false);
+    diagnostics::print_messages(&mut cache, &ns, false);
 
     for v in &res {
         println!("contract size:{}", v.0.len());
