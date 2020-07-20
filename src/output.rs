@@ -27,7 +27,7 @@ pub struct Note {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Output {
+pub struct Diagnostic {
     pub level: Level,
     pub ty: ErrorType,
     pub pos: Option<Loc>,
@@ -45,9 +45,9 @@ impl Level {
     }
 }
 
-impl Output {
+impl Diagnostic {
     pub fn info(pos: Loc, message: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Info,
             ty: ErrorType::None,
             pos: Some(pos),
@@ -57,7 +57,7 @@ impl Output {
     }
 
     pub fn parser_error(pos: Loc, message: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Error,
             ty: ErrorType::ParserError,
             pos: Some(pos),
@@ -67,7 +67,7 @@ impl Output {
     }
 
     pub fn error(pos: Loc, message: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Error,
             ty: ErrorType::SyntaxError,
             pos: Some(pos),
@@ -77,7 +77,7 @@ impl Output {
     }
 
     pub fn decl_error(pos: Loc, message: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Error,
             ty: ErrorType::DeclarationError,
             pos: Some(pos),
@@ -87,7 +87,7 @@ impl Output {
     }
 
     pub fn type_error(pos: Loc, message: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Error,
             ty: ErrorType::TypeError,
             pos: Some(pos),
@@ -97,7 +97,7 @@ impl Output {
     }
 
     pub fn warning(pos: Loc, message: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
             pos: Some(pos),
@@ -107,7 +107,7 @@ impl Output {
     }
 
     pub fn warning_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
             pos: Some(pos),
@@ -120,7 +120,7 @@ impl Output {
     }
 
     pub fn warning_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Warning,
             ty: ErrorType::Warning,
             pos: Some(pos),
@@ -130,7 +130,7 @@ impl Output {
     }
 
     pub fn error_with_note(pos: Loc, message: String, note_pos: Loc, note: String) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Error,
             ty: ErrorType::None,
             pos: Some(pos),
@@ -143,7 +143,7 @@ impl Output {
     }
 
     pub fn error_with_notes(pos: Loc, message: String, notes: Vec<Note>) -> Self {
-        Output {
+        Diagnostic {
             level: Level::Error,
             ty: ErrorType::None,
             pos: Some(pos),
@@ -204,8 +204,8 @@ pub fn print_messages(cache: &mut FileCache, ns: &Namespace, verbose: bool) {
 }
 
 /// Do we have any errors
-pub fn any_errors(output: &[Output]) -> bool {
-    output.iter().any(|m| m.level == Level::Error)
+pub fn any_errors(diagnotic: &[Diagnostic]) -> bool {
+    diagnotic.iter().any(|m| m.level == Level::Error)
 }
 
 #[derive(Serialize)]

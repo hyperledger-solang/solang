@@ -1,5 +1,5 @@
 use super::ast::{Builtin, DestructureField, Expression, Function, Namespace, Statement};
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 
 /// check state mutablity
@@ -19,7 +19,7 @@ pub fn mutablity(file_no: usize, ns: &mut Namespace) {
 
 /// While we recurse through the AST, maintain some state
 struct StateCheck<'a> {
-    diagnostics: Vec<Output>,
+    diagnostics: Vec<Diagnostic>,
     does_read_state: bool,
     does_write_state: bool,
     can_read_state: bool,
@@ -32,7 +32,7 @@ struct StateCheck<'a> {
 impl<'a> StateCheck<'a> {
     fn write(&mut self, loc: &pt::Loc) {
         if !self.can_write_state {
-            self.diagnostics.push(Output::error(
+            self.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "function declared ‘{}’ but this expression writes to state",
@@ -46,7 +46,7 @@ impl<'a> StateCheck<'a> {
 
     fn read(&mut self, loc: &pt::Loc) {
         if !self.can_read_state {
-            self.diagnostics.push(Output::error(
+            self.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "function declared ‘{}’ but this expression reads from state",
@@ -59,7 +59,7 @@ impl<'a> StateCheck<'a> {
     }
 }
 
-fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> Vec<Output> {
+fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> Vec<Diagnostic> {
     let func = &ns.contracts[contract_no].functions[function_no];
 
     if func.is_virtual {
@@ -95,7 +95,7 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
             match func.mutability {
                 Some(pt::StateMutability::Payable(_)) | Some(pt::StateMutability::Pure(_)) => (),
                 _ => {
-                    state.diagnostics.push(Output::warning(
+                    state.diagnostics.push(Diagnostic::warning(
                         func.loc,
                         format!(
                             "function declared ‘{}’ can be declared ‘pure’",
@@ -107,7 +107,7 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
         }
 
         if !state.does_write_state && state.does_read_state && func.mutability.is_none() {
-            state.diagnostics.push(Output::warning(
+            state.diagnostics.push(Diagnostic::warning(
                 func.loc,
                 "function declared can be declared ‘view’".to_string(),
             ));

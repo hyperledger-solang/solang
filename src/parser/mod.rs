@@ -6,9 +6,9 @@ pub mod pt;
 pub mod solidity;
 
 use lalrpop_util::ParseError;
-use output::Output;
+use output::Diagnostic;
 
-pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Output>> {
+pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic>> {
     // parse phase
     let lex = lexer::Lexer::new(src);
 
@@ -18,14 +18,14 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Output>> {
 
     if let Err(e) = s {
         errors.push(match e {
-            ParseError::InvalidToken { location } => Output::parser_error(
+            ParseError::InvalidToken { location } => Diagnostic::parser_error(
                 pt::Loc(file_no, location, location),
                 "invalid token".to_string(),
             ),
             ParseError::UnrecognizedToken {
                 token: (l, token, r),
                 expected,
-            } => Output::parser_error(
+            } => Diagnostic::parser_error(
                 pt::Loc(file_no, l, r),
                 format!(
                     "unrecognised token `{}', expected {}",
@@ -34,13 +34,13 @@ pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Output>> {
                 ),
             ),
             ParseError::User { error } => {
-                Output::parser_error(error.loc(file_no), error.to_string())
+                Diagnostic::parser_error(error.loc(file_no), error.to_string())
             }
-            ParseError::ExtraToken { token } => Output::parser_error(
+            ParseError::ExtraToken { token } => Diagnostic::parser_error(
                 pt::Loc(file_no, token.0, token.2),
                 format!("extra token `{}' encountered", token.0),
             ),
-            ParseError::UnrecognizedEOF { location, expected } => Output::parser_error(
+            ParseError::UnrecognizedEOF { location, expected } => Diagnostic::parser_error(
                 pt::Loc(file_no, location, location),
                 format!("unexpected end of file, expecting {}", expected.join(", ")),
             ),

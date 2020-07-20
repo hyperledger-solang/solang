@@ -1,5 +1,5 @@
 use crate::Target;
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 use sema::ast::{Builtin, Expression, Namespace, Type};
 use sema::expression::{cast, expression};
@@ -369,7 +369,7 @@ pub fn resolve_call(
     let marker = ns.diagnostics.len();
     for func in &matches {
         if func.args.len() != args.len() {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "builtin function ‘{}’ expects {} arguments, {} provided",
@@ -408,7 +408,7 @@ pub fn resolve_call(
 
     if matches.len() != 1 {
         ns.diagnostics.truncate(marker);
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             *loc,
             "cannot find overloaded function which matches signature".to_string(),
         ));
@@ -444,7 +444,7 @@ pub fn resolve_method_call(
 
     if builtin == Builtin::AbiDecode {
         if args.len() != 2 {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!("function expects {} arguments, {} provided", 2, args.len()),
             ));
@@ -471,7 +471,7 @@ pub fn resolve_method_call(
                         let ty = ns.resolve_type(file_no, contract_no, false, &param.ty)?;
 
                         if let Some(storage) = &param.storage {
-                            ns.diagnostics.push(Output::error(
+                            ns.diagnostics.push(Diagnostic::error(
                                 *storage.loc(),
                                 format!("storage modifier ‘{}’ not allowed", storage),
                             ));
@@ -479,7 +479,7 @@ pub fn resolve_method_call(
                         }
 
                         if let Some(name) = &param.name {
-                            ns.diagnostics.push(Output::error(
+                            ns.diagnostics.push(Diagnostic::error(
                                 name.loc,
                                 format!("unexpected identifier ‘{}’ in type", name.name),
                             ));
@@ -487,7 +487,7 @@ pub fn resolve_method_call(
                         }
 
                         if ty.is_mapping() {
-                            ns.diagnostics.push(Output::error(
+                            ns.diagnostics.push(Diagnostic::error(
                                 *loc,
                                 "mapping cannot be abi decoded or encoded".to_string(),
                             ));
@@ -497,7 +497,7 @@ pub fn resolve_method_call(
                         tys.push(ty);
                     } else {
                         ns.diagnostics
-                            .push(Output::error(*loc, "missing type".to_string()));
+                            .push(Diagnostic::error(*loc, "missing type".to_string()));
 
                         broken = true;
                     }
@@ -507,7 +507,7 @@ pub fn resolve_method_call(
                 let ty = ns.resolve_type(file_no, contract_no, false, &args[1])?;
 
                 if ty.is_mapping() {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         "mapping cannot be abi decoded or encoded".to_string(),
                     ));
@@ -544,7 +544,7 @@ pub fn resolve_method_call(
                     cast(&selector.loc(), selector, &Type::Bytes(4), true, ns)?,
                 );
             } else {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     *loc,
                     "function requires one ‘bytes4’ selector argument".to_string(),
                 ));
@@ -562,7 +562,7 @@ pub fn resolve_method_call(
                     cast(&signature.loc(), signature, &Type::String, true, ns)?,
                 );
             } else {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     *loc,
                     "function requires one ‘string’ signature argument".to_string(),
                 ));
@@ -578,7 +578,7 @@ pub fn resolve_method_call(
         let ty = expr.ty();
 
         if ty.is_mapping() {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 arg.loc(),
                 "mapping type not permitted".to_string(),
             ));

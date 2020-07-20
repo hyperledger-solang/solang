@@ -636,7 +636,7 @@ pub struct Namespace {
     pub contracts: Vec<Contract>,
     pub address_length: usize,
     pub value_length: usize,
-    pub diagnostics: Vec<output::Output>,
+    pub diagnostics: Vec<output::Diagnostic>,
     /// Symbol key is file_no, contract, identifier
     pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
 }

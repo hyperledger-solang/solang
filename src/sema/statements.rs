@@ -4,7 +4,7 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use num_bigint::BigInt;
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 
 pub fn resolve_function_body(
@@ -88,7 +88,7 @@ pub fn resolve_function_body(
         if let Some(Statement::Return(_, _)) = res.last() {
             // ok
         } else if return_required {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 def.body.loc(),
                 "missing return statement".to_string(),
             ));
@@ -163,7 +163,7 @@ fn statement(
 
             for stmt in stmts {
                 if !reachable {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         stmt.loc(),
                         "unreachable statement".to_string(),
                     ));
@@ -190,7 +190,7 @@ fn statement(
                 res.push(Statement::Break(*loc));
                 Ok(false)
             } else {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     stmt.loc(),
                     "break statement not in loop".to_string(),
                 ));
@@ -202,7 +202,7 @@ fn statement(
                 res.push(Statement::Continue(*loc));
                 Ok(false)
             } else {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     stmt.loc(),
                     "continue statement not in loop".to_string(),
                 ));
@@ -301,7 +301,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::Args(loc, _) => {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 "expected code block, not list of named arguments".to_string(),
             ));
@@ -453,7 +453,7 @@ fn statement(
                 .len();
 
             if symtable.returns.len() != no_returns {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     *loc,
                     format!(
                         "missing return value, {} return values expected",
@@ -498,7 +498,7 @@ fn statement(
 
                 return if let Type::StorageRef(ty) = expr.ty() {
                     if expr.ty().is_mapping() {
-                        ns.diagnostics.push(Output::error(
+                        ns.diagnostics.push(Diagnostic::error(
                             *loc,
                             "‘delete’ cannot be applied to mapping type".to_string(),
                         ));
@@ -509,7 +509,7 @@ fn statement(
 
                     Ok(true)
                 } else {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         "argument to ‘delete’ should be storage reference".to_string(),
                     ));
@@ -592,7 +592,7 @@ fn destructure(
 
                 match e.ty() {
                     Type::Void | Type::Unreachable => {
-                        ns.diagnostics.push(Output::error(
+                        ns.diagnostics.push(Diagnostic::error(
                             e.loc(),
                             "function does not return a value".to_string(),
                         ));
@@ -616,7 +616,7 @@ fn destructure(
     }
 
     if vars.len() != tys.len() {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "destructuring assignment has {} elements on the left and {} on the right",
@@ -642,7 +642,7 @@ fn destructure(
                 name: None,
             }) => {
                 if let Some(storage) = storage {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         *storage.loc(),
                         format!("storage modifier ‘{}’ not permitted on assignment", storage),
                     ));
@@ -654,7 +654,7 @@ fn destructure(
 
                 match &e {
                     Expression::ConstantVariable(_, _, n) => {
-                        ns.diagnostics.push(Output::error(
+                        ns.diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
                                 "cannot assign to constant ‘{}’",
@@ -667,7 +667,7 @@ fn destructure(
                     _ => match e.ty() {
                         Type::Ref(_) | Type::StorageRef(_) => (),
                         _ => {
-                            ns.diagnostics.push(Output::error(
+                            ns.diagnostics.push(Diagnostic::error(
                                 *loc,
                                 "expression is not assignable".to_string(),
                             ));
@@ -735,7 +735,7 @@ fn resolve_var_decl_ty(
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 *storage.loc(),
                 format!(
                     "data location ‘{}’ only allowed for array, struct or mapping type",
@@ -754,7 +754,7 @@ fn resolve_var_decl_ty(
     }
 
     if var_ty.contains_mapping(ns) && !var_ty.is_contract_storage() {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             ty.loc(),
             "mapping only allowed in storage".to_string(),
         ));
@@ -762,7 +762,7 @@ fn resolve_var_decl_ty(
     }
 
     if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             ty.loc(),
             "type to large to fit into memory".to_string(),
         ));
@@ -789,7 +789,7 @@ fn return_with_values(
         .len();
 
     if no_returns > 0 && returns.is_empty() {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "missing return value, {} return values expected",
@@ -800,7 +800,7 @@ fn return_with_values(
     }
 
     if no_returns == 0 && !returns.is_empty() {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             *loc,
             "function has no return values".to_string(),
         ));
@@ -808,7 +808,7 @@ fn return_with_values(
     }
 
     if no_returns != returns.len() {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             *loc,
             format!(
                 "incorrect number of return values, expected {} but got {}",
@@ -852,21 +852,21 @@ pub fn parameter_list_to_expr_list<'a>(
             match &e.1 {
                 None => {
                     ns.diagnostics
-                        .push(Output::error(e.0, "stray comma".to_string()));
+                        .push(Diagnostic::error(e.0, "stray comma".to_string()));
                     broken = true;
                 }
                 Some(pt::Parameter {
                     name: Some(name), ..
                 }) => {
                     ns.diagnostics
-                        .push(Output::error(name.loc, "single value expected".to_string()));
+                        .push(Diagnostic::error(name.loc, "single value expected".to_string()));
                     broken = true;
                 }
                 Some(pt::Parameter {
                     storage: Some(storage),
                     ..
                 }) => {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         *storage.loc(),
                         "storage specified not permitted here".to_string(),
                     ));
@@ -908,7 +908,7 @@ fn try_catch(
 
     while let pt::Expression::FunctionCallBlock(_, e, block) = expr {
         if ok.is_some() {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 block.loc(),
                 "unexpected code block".to_string(),
             ));
@@ -932,7 +932,7 @@ fn try_catch(
 
             while let pt::Expression::FunctionCallBlock(_, expr, block) = call {
                 if ok.is_some() {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         block.loc(),
                         "unexpected code block".to_string(),
                     ));
@@ -955,7 +955,7 @@ fn try_catch(
             }
         }
         _ => {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 expr.loc(),
                 "try only supports external calls or constructor calls".to_string(),
             ));
@@ -967,7 +967,7 @@ fn try_catch(
 
     if let Some((rets, block)) = returns_and_ok {
         if ok.is_some() {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 block.loc(),
                 "unexpected code block".to_string(),
             ));
@@ -985,7 +985,7 @@ fn try_catch(
             // position after the expression
             let pos = expr.loc().1;
 
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 pt::Loc(file_no, pos, pos),
                 "code block missing for no catch".to_string(),
             ));
@@ -1004,7 +1004,7 @@ fn try_catch(
             let ftype = &ns.contracts[*contract_no].functions[*function_no];
 
             if returns.len() != ftype.returns.len() {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!(
                         "try returns list has {} entries while function returns {} values",
@@ -1021,7 +1021,7 @@ fn try_catch(
             0 => Vec::new(),
             1 => vec![Type::Contract(*contract_no)],
             _ => {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!(
                         "constructor returns single contract, not {} values",
@@ -1032,7 +1032,7 @@ fn try_catch(
             }
         },
         _ => {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 expr.loc(),
                 "try only supports external calls or constructor calls".to_string(),
             ));
@@ -1054,7 +1054,7 @@ fn try_catch(
                 let ret_ty = resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
 
                 if arg_ty != ret_ty {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         ty.loc(),
                         format!(
                             "type ‘{}’ does not match return value of function ‘{}’",
@@ -1090,7 +1090,7 @@ fn try_catch(
             }
             None => {
                 ns.diagnostics
-                    .push(Output::error(param.0, "missing return type".to_string()));
+                    .push(Diagnostic::error(param.0, "missing return type".to_string()));
                 broken = true;
             }
         }
@@ -1117,7 +1117,7 @@ fn try_catch(
 
     let error_resolved = if let Some(error_stmt) = error_stmt {
         if error_stmt.0.name != "Error" {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 error_stmt.0.loc,
                 format!(
                     "only catch ‘Error’ is supported, not ‘{}’",
@@ -1136,7 +1136,7 @@ fn try_catch(
         )?;
 
         if error_ty != Type::String {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 error_stmt.1.ty.loc(),
                 format!(
                     "catch Error(...) can only take ‘string memory’, not ‘{}’",
@@ -1193,7 +1193,7 @@ fn try_catch(
     )?;
 
     if catch_ty != Type::DynamicBytes {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             catch_stmt.0.ty.loc(),
             format!(
                 "catch can only take ‘bytes memory’, not ‘{}’",

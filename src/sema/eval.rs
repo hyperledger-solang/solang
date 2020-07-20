@@ -5,7 +5,7 @@ use num_traits::ToPrimitive;
 use num_traits::Zero;
 
 use super::ast::{Expression, Namespace};
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 
 /// Resolve an expression where a compile-time constant is expected
@@ -13,7 +13,7 @@ pub fn eval_const_number(
     expr: &Expression,
     contract_no: Option<usize>,
     ns: &Namespace,
-) -> Result<(pt::Loc, BigInt), Output> {
+) -> Result<(pt::Loc, BigInt), Diagnostic> {
     match expr {
         Expression::Add(loc, _, l, r) => Ok((
             *loc,
@@ -31,7 +31,7 @@ pub fn eval_const_number(
             let divisor = eval_const_number(r, contract_no, ns)?.1;
 
             if divisor.is_zero() {
-                Err(Output::error(*loc, "divide by zero".to_string()))
+                Err(Diagnostic::error(*loc, "divide by zero".to_string()))
             } else {
                 Ok((*loc, eval_const_number(l, contract_no, ns)?.1 / divisor))
             }
@@ -40,7 +40,7 @@ pub fn eval_const_number(
             let divisor = eval_const_number(r, contract_no, ns)?.1;
 
             if divisor.is_zero() {
-                Err(Output::error(*loc, "divide by zero".to_string()))
+                Err(Diagnostic::error(*loc, "divide by zero".to_string()))
             } else {
                 Ok((*loc, eval_const_number(l, contract_no, ns)?.1 % divisor))
             }
@@ -62,7 +62,7 @@ pub fn eval_const_number(
             let mut e = eval_const_number(exp, contract_no, ns)?.1;
 
             if e.sign() == Sign::Minus {
-                Err(Output::error(
+                Err(Diagnostic::error(
                     expr.loc(),
                     "power cannot take negative number as exponent".to_string(),
                 ))
@@ -84,7 +84,7 @@ pub fn eval_const_number(
             let r = match r.to_usize() {
                 Some(r) => r,
                 None => {
-                    return Err(Output::error(
+                    return Err(Diagnostic::error(
                         expr.loc(),
                         format!("cannot left shift by {}", r),
                     ));
@@ -98,7 +98,7 @@ pub fn eval_const_number(
             let r = match r.to_usize() {
                 Some(r) => r,
                 None => {
-                    return Err(Output::error(
+                    return Err(Diagnostic::error(
                         expr.loc(),
                         format!("cannot right shift by {}", r),
                     ));
@@ -120,7 +120,7 @@ pub fn eval_const_number(
 
             eval_const_number(&expr, contract_no, ns)
         }
-        _ => Err(Output::error(
+        _ => Err(Diagnostic::error(
             expr.loc(),
             "expression not allowed in constant number expression".to_string(),
         )),

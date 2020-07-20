@@ -1,7 +1,7 @@
 use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
-use output::{Note, Output};
+use output::{Note, Diagnostic};
 use parser::pt;
 use Target;
 
@@ -114,7 +114,7 @@ fn resolve_inheritance(
             match ns.resolve_contract(file_no, name) {
                 Some(no) => {
                     if no == *contract_no {
-                        ns.diagnostics.push(Output::error(
+                        ns.diagnostics.push(Diagnostic::error(
                             name.loc,
                             format!("contract ‘{}’ cannot inherit itself", name.name),
                         ));
@@ -125,7 +125,7 @@ fn resolve_inheritance(
                     }
                 }
                 None => {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         name.loc,
                         format!("contract ‘{}’ not found", name.name),
                     ));
@@ -149,7 +149,7 @@ fn resolve_inheritance(
     for (contract_no, _) in contracts {
         if cyclic(contract_no, &ns.contracts[*contract_no].inherit, ns) {
             let c = &ns.contracts[*contract_no];
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 c.loc,
                 format!("contract ‘{}’ inheritance is cyclic", c.name),
             ));
@@ -186,7 +186,7 @@ fn inherit_types(
                                     .get(&(file_no, Some(contract_no), symbol_name.clone()))
                             {
                                 if sym != symbol {
-                                    errors.push(Output::error_with_note(
+                                    errors.push(Diagnostic::error_with_note(
                                         *symbol.loc(),
                                         format!("contract ‘{}’ cannot inherit type ‘{}’ from contract ‘{}’", ns.contracts[contract_no].name, symbol_name,  ns.contracts[parent].name),
                                         *sym.loc(),
@@ -235,7 +235,7 @@ fn resolve_declarations<'a>(
     target: Target,
     ns: &mut ast::Namespace,
 ) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
-    ns.diagnostics.push(Output::info(
+    ns.diagnostics.push(Diagnostic::info(
         def.loc,
         format!("found {} ‘{}’", def.ty, def.name.name),
     ));
@@ -272,7 +272,7 @@ fn resolve_declarations<'a>(
                     })
                     .collect::<Vec<Note>>();
 
-                ns.diagnostics.push(Output::error_with_notes(
+                ns.diagnostics.push(Diagnostic::error_with_notes(
                     *loc,
                     format!(
                         "contract should be marked ‘abstract contract’ since it has {} virtual functions",
@@ -286,7 +286,7 @@ fn resolve_declarations<'a>(
             // no constructor allowed, every function should be declared external and no bodies allowed
             for func in &ns.contracts[contract_no].functions {
                 if func.is_constructor() {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         func.loc,
                         "constructor not allowed in an interface".to_string(),
                     ));
@@ -294,7 +294,7 @@ fn resolve_declarations<'a>(
                 }
 
                 if !func.is_virtual {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         func.loc,
                         "functions can not have bodies in an interface".to_string(),
                     ));
@@ -302,7 +302,7 @@ fn resolve_declarations<'a>(
                 }
 
                 if !func.is_public() {
-                    ns.diagnostics.push(Output::error(
+                    ns.diagnostics.push(Diagnostic::error(
                         func.loc,
                         "functions must be declared ‘external’ in an interface".to_string(),
                     ));

@@ -1,5 +1,5 @@
 use super::ast::{ContractVariable, ContractVariableType, Namespace, Symbol};
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 use sema::expression::{cast, expression};
 use sema::symtable::Symtable;
@@ -21,7 +21,7 @@ pub fn contract_variables(
     for parts in &def.parts {
         if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {
             if is_interface {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     s.loc,
                     format!(
                         "interface ‘{}’ is not allowed to have variable ‘{}’",
@@ -60,7 +60,7 @@ fn var_decl(
         match &attr {
             pt::VariableAttribute::Constant(loc) => {
                 if is_constant {
-                    ns.diagnostics.push(Output::warning(
+                    ns.diagnostics.push(Diagnostic::warning(
                         *loc,
                         "duplicate constant attribute".to_string(),
                     ));
@@ -68,7 +68,7 @@ fn var_decl(
                 is_constant = true;
             }
             pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
-                ns.diagnostics.push(Output::error(
+                ns.diagnostics.push(Diagnostic::error(
                     *loc,
                     "variable cannot be declared external".to_string(),
                 ));
@@ -76,7 +76,7 @@ fn var_decl(
             }
             pt::VariableAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {
-                    ns.diagnostics.push(Output::error_with_note(
+                    ns.diagnostics.push(Diagnostic::error_with_note(
                         v.loc(),
                         format!("variable visibility redeclared `{}'", v.to_string()),
                         e.loc(),
@@ -126,7 +126,7 @@ fn var_decl(
         Some(res)
     } else {
         if is_constant {
-            ns.diagnostics.push(Output::decl_error(
+            ns.diagnostics.push(Diagnostic::decl_error(
                 s.loc,
                 "missing initializer for constant".to_string(),
             ));
