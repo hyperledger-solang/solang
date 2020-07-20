@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::collections::LinkedList;
 use std::str;
 
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 use sema::ast::{Namespace, Type};
 
@@ -48,7 +48,7 @@ impl Symtable {
         // the variable has no name, like unnamed return or parameters values
         if !id.name.is_empty() {
             if let Some(ref prev) = self.find(&id.name) {
-                ns.diagnostics.push(Output::error_with_note(
+                ns.diagnostics.push(Diagnostic::error_with_note(
                     id.loc,
                     format!("{} is already declared", id.name.to_string()),
                     prev.id.loc,

@@ -1,5 +1,5 @@
 use super::ast::{Contract, EnumDecl, Namespace, StructDecl, StructField, Symbol, Type};
-use output::Output;
+use output::Diagnostic;
 use parser::pt;
 use std::collections::HashMap;
 #[cfg(test)]
@@ -21,17 +21,17 @@ pub fn resolve_typenames<'a>(
         match part {
             pt::SourceUnitPart::PragmaDirective(name, value) => {
                 if name.name == "solidity" {
-                    ns.diagnostics.push(Output::info(
+                    ns.diagnostics.push(Diagnostic::info(
                         pt::Loc(name.loc.0, name.loc.1, value.loc.2),
                         "pragma ‘solidity’ is ignored".to_string(),
                     ));
                 } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
-                    ns.diagnostics.push(Output::info(
+                    ns.diagnostics.push(Diagnostic::info(
                         pt::Loc(name.loc.0, name.loc.1, value.loc.2),
                         "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
                     ));
                 } else {
-                    ns.diagnostics.push(Output::warning(
+                    ns.diagnostics.push(Diagnostic::warning(
                         pt::Loc(name.loc.0, name.loc.1, value.loc.2),
                         format!(
                             "unknown pragma ‘{}’ with value ‘{}’ ignored",
@@ -99,7 +99,7 @@ pub fn resolve_structs(
                     types_seen.push(n);
 
                     if struct_fields.contains(&n) {
-                        ns.diagnostics.push(Output::error_with_note(
+                        ns.diagnostics.push(Diagnostic::error_with_note(
                             def.loc,
                             format!("struct ‘{}’ has infinite size", def.name),
                             field.loc,
@@ -191,7 +191,7 @@ pub fn struct_decl(
         };
 
         if let Some(other) = fields.iter().find(|f| f.name == field.name.name) {
-            ns.diagnostics.push(Output::error_with_note(
+            ns.diagnostics.push(Diagnostic::error_with_note(
                 field.name.loc,
                 format!(
                     "struct ‘{}’ has duplicate struct field ‘{}’",
@@ -209,7 +209,7 @@ pub fn struct_decl(
         // in structs, but this is perfectly possible. The struct would not be
         // allowed as parameter/return types of public functions though.
         if let Some(storage) = &field.storage {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 *storage.loc(),
                 format!(
                     "storage location ‘{}’ not allowed for struct field",
@@ -228,7 +228,7 @@ pub fn struct_decl(
 
     if fields.is_empty() {
         if valid {
-            ns.diagnostics.push(Output::error(
+            ns.diagnostics.push(Diagnostic::error(
                 def.name.loc,
                 format!("struct definition for ‘{}’ has no fields", def.name.name),
             ));
@@ -255,7 +255,7 @@ fn enum_decl(
     let mut valid = true;
 
     let mut bits = if enum_.values.is_empty() {
-        ns.diagnostics.push(Output::error(
+        ns.diagnostics.push(Diagnostic::error(
             enum_.name.loc,
             format!("enum ‘{}’ is missing fields", enum_.name.name),
         ));
@@ -280,7 +280,7 @@ fn enum_decl(
 
     for (i, e) in enum_.values.iter().enumerate() {
         if let Some(prev) = entries.get(&e.name.to_string()) {
-            ns.diagnostics.push(Output::error_with_note(
+            ns.diagnostics.push(Diagnostic::error_with_note(
                 e.loc,
                 format!("duplicate enum value {}", e.name),
                 prev.0,

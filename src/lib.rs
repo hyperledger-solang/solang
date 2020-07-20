@@ -109,7 +109,7 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
     );
 
     if let Err(message) = cache.populate_cache(filename) {
-        ns.diagnostics.push(output::Output {
+        ns.diagnostics.push(output::Diagnostic {
             ty: output::ErrorType::ParserError,
             level: output::Level::Error,
             message,

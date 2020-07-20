@@ -1,5 +1,5 @@
 use super::{Namespace, StructDecl, StructField, Symbol};
-use output::Output;
+use output::Diagnostic;
 use parser::ast;
 
 /// Resolve a parsed struct definition. The return value will be true if the entire

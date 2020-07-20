@@ -975,21 +975,21 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
     t
 }
 
-pub fn first_error(errors: Vec<output::Output>) -> String {
+pub fn first_error(errors: Vec<output::Diagnostic>) -> String {
     match errors.iter().find(|m| m.level == output::Level::Error) {
         Some(m) => m.message.to_owned(),
         None => panic!("no errors found"),
     }
 }
 
-pub fn first_warning(errors: Vec<output::Output>) -> String {
+pub fn first_warning(errors: Vec<output::Diagnostic>) -> String {
     match errors.iter().find(|m| m.level == output::Level::Warning) {
         Some(m) => m.message.to_owned(),
         None => panic!("no warnings found"),
     }
 }
 
-pub fn no_errors(errors: Vec<output::Output>) {
+pub fn no_errors(errors: Vec<output::Diagnostic>) {
     assert!(
         errors
             .iter()
@@ -999,7 +999,7 @@ pub fn no_errors(errors: Vec<output::Output>) {
     );
 }
 
-pub fn no_warnings_errors(errors: Vec<output::Output>) {
+pub fn no_warnings_errors(errors: Vec<output::Diagnostic>) {
     assert!(
         errors
             .iter()
