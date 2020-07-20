@@ -4,8 +4,8 @@ use super::expression::{
 };
 use super::symtable::{LoopScopes, Symtable};
 use num_bigint::BigInt;
-use output::Diagnostic;
 use parser::pt;
+use sema::ast::Diagnostic;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
@@ -858,8 +858,10 @@ pub fn parameter_list_to_expr_list<'a>(
                 Some(pt::Parameter {
                     name: Some(name), ..
                 }) => {
-                    ns.diagnostics
-                        .push(Diagnostic::error(name.loc, "single value expected".to_string()));
+                    ns.diagnostics.push(Diagnostic::error(
+                        name.loc,
+                        "single value expected".to_string(),
+                    ));
                     broken = true;
                 }
                 Some(pt::Parameter {
@@ -1089,8 +1091,10 @@ fn try_catch(
                 }
             }
             None => {
-                ns.diagnostics
-                    .push(Diagnostic::error(param.0, "missing return type".to_string()));
+                ns.diagnostics.push(Diagnostic::error(
+                    param.0,
+                    "missing return type".to_string(),
+                ));
                 broken = true;
             }
         }

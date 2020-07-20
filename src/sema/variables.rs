@@ -1,6 +1,6 @@
 use super::ast::{ContractVariable, ContractVariableType, Namespace, Symbol};
-use output::Diagnostic;
 use parser::pt;
+use sema::ast::Diagnostic;
 use sema::expression::{cast, expression};
 use sema::symtable::Symtable;
 

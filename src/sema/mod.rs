@@ -1,7 +1,6 @@
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
-use output::{any_errors, Note, Diagnostic};
 use parser::{parse, pt};
 use std::collections::HashMap;
 use Target;
@@ -10,6 +9,7 @@ mod address;
 pub mod ast;
 mod builtin;
 mod contracts;
+pub mod diagnostics;
 pub mod eval;
 pub mod expression;
 mod functions;
@@ -74,7 +74,8 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
             // We may already have resolved it
             if !ns.files.contains(&filename.string) {
                 if let Err(message) = cache.populate_cache(&filename.string) {
-                    ns.diagnostics.push(Diagnostic::error(filename.loc, message));
+                    ns.diagnostics
+                        .push(ast::Diagnostic::error(filename.loc, message));
 
                     return;
                 }
@@ -82,7 +83,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
                 sema(&filename.string, cache, target, ns);
 
                 // give up if we failed
-                if any_errors(&ns.diagnostics) {
+                if diagnostics::any_errors(&ns.diagnostics) {
                     return;
                 }
             }
@@ -117,7 +118,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
 
                             ns.add_symbol(file_no, None, new_symbol, import);
                         } else {
-                            ns.diagnostics.push(Diagnostic::error(
+                            ns.diagnostics.push(ast::Diagnostic::error(
                                 from.loc,
                                 format!(
                                     "import ‘{}’ does not export ‘{}’",
@@ -179,7 +180,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
     types::resolve_structs(structs_to_resolve, file_no, ns);
 
     // give up if we failed
-    if any_errors(&ns.diagnostics) {
+    if diagnostics::any_errors(&ns.diagnostics) {
         return;
     }
 
@@ -214,7 +215,7 @@ impl ast::Namespace {
         symbol: ast::Symbol,
     ) -> bool {
         if builtin::is_reserved(&id.name) {
-            self.diagnostics.push(Diagnostic::error(
+            self.diagnostics.push(ast::Diagnostic::error(
                 id.loc,
                 format!("‘{}’ shadows name of a builtin", id.name.to_string()),
             ));
@@ -228,7 +229,7 @@ impl ast::Namespace {
         {
             match sym {
                 ast::Symbol::Contract(c, _) => {
-                    self.diagnostics.push(Diagnostic::error_with_note(
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!(
                             "{} is already defined as a contract name",
@@ -239,7 +240,7 @@ impl ast::Namespace {
                     ));
                 }
                 ast::Symbol::Enum(c, _) => {
-                    self.diagnostics.push(Diagnostic::error_with_note(
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!("{} is already defined as an enum", id.name.to_string()),
                         *c,
@@ -247,7 +248,7 @@ impl ast::Namespace {
                     ));
                 }
                 ast::Symbol::Struct(c, _) => {
-                    self.diagnostics.push(Diagnostic::error_with_note(
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!("{} is already defined as a struct", id.name.to_string()),
                         *c,
@@ -255,7 +256,7 @@ impl ast::Namespace {
                     ));
                 }
                 ast::Symbol::Variable(c, _) => {
-                    self.diagnostics.push(Diagnostic::error_with_note(
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!(
                             "{} is already defined as a contract variable",
@@ -266,7 +267,7 @@ impl ast::Namespace {
                     ));
                 }
                 ast::Symbol::Function(v) => {
-                    self.diagnostics.push(Diagnostic::error_with_note(
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!("{} is already defined as a function", id.name.to_string()),
                         v[0].0,
@@ -274,7 +275,7 @@ impl ast::Namespace {
                     ));
                 }
                 ast::Symbol::Import(loc, _) => {
-                    self.diagnostics.push(Diagnostic::error_with_note(
+                    self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!("{} is already defined as an import", id.name.to_string()),
                         *loc,
@@ -291,7 +292,7 @@ impl ast::Namespace {
             if let Some(sym) = self.symbols.get(&(file_no, None, id.name.to_owned())) {
                 match sym {
                     ast::Symbol::Contract(c, _) => {
-                        self.diagnostics.push(Diagnostic::warning_with_note(
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!(
                                 "{} is already defined as a contract name",
@@ -302,7 +303,7 @@ impl ast::Namespace {
                         ));
                     }
                     ast::Symbol::Enum(c, _) => {
-                        self.diagnostics.push(Diagnostic::warning_with_note(
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as an enum", id.name.to_string()),
                             *c,
@@ -310,7 +311,7 @@ impl ast::Namespace {
                         ));
                     }
                     ast::Symbol::Struct(c, _) => {
-                        self.diagnostics.push(Diagnostic::warning_with_note(
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as a struct", id.name.to_string()),
                             *c,
@@ -318,7 +319,7 @@ impl ast::Namespace {
                         ));
                     }
                     ast::Symbol::Variable(c, _) => {
-                        self.diagnostics.push(Diagnostic::warning_with_note(
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!(
                                 "{} is already defined as a contract variable",
@@ -329,7 +330,7 @@ impl ast::Namespace {
                         ));
                     }
                     ast::Symbol::Function(v) => {
-                        self.diagnostics.push(Diagnostic::warning_with_note(
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as a function", id.name.to_string()),
                             v[0].0,
@@ -337,7 +338,7 @@ impl ast::Namespace {
                         ));
                     }
                     ast::Symbol::Import(loc, _) => {
-                        self.diagnostics.push(Diagnostic::warning_with_note(
+                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as an import", id.name.to_string()),
                             *loc,
@@ -400,7 +401,7 @@ impl ast::Namespace {
         {
             Some(ast::Symbol::Function(v)) => Ok(v.clone()),
             _ => {
-                self.diagnostics.push(Diagnostic::error(
+                self.diagnostics.push(ast::Diagnostic::error(
                     id.loc,
                     format!("unknown function or type ‘{}’", id.name),
                 ));
@@ -426,42 +427,42 @@ impl ast::Namespace {
 
         match s {
             None => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("`{}' is not declared", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Enum(_, _)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("`{}' is an enum", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Struct(_, _)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("`{}' is a struct", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Function(_)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("`{}' is a function", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Contract(_, _)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("`{}' is a contract", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Import(_, _)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("`{}' is an import", id.name),
                 ));
@@ -478,7 +479,7 @@ impl ast::Namespace {
         id: &pt::Identifier,
     ) {
         if builtin::is_reserved(&id.name) {
-            self.diagnostics.push(Diagnostic::warning(
+            self.diagnostics.push(ast::Diagnostic::warning(
                 id.loc,
                 format!("‘{}’ shadows name of a builtin", id.name.to_string()),
             ));
@@ -495,7 +496,7 @@ impl ast::Namespace {
 
         match s {
             Some(ast::Symbol::Enum(loc, _)) => {
-                self.diagnostics.push(Diagnostic::warning_with_note(
+                self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
                     format!("declaration of `{}' shadows enum definition", id.name),
                     *loc,
@@ -503,7 +504,7 @@ impl ast::Namespace {
                 ));
             }
             Some(ast::Symbol::Struct(loc, _)) => {
-                self.diagnostics.push(Diagnostic::warning_with_note(
+                self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
                     format!("declaration of `{}' shadows struct definition", id.name),
                     *loc,
@@ -513,19 +514,19 @@ impl ast::Namespace {
             Some(ast::Symbol::Function(v)) => {
                 let notes = v
                     .iter()
-                    .map(|(pos, _)| Note {
+                    .map(|(pos, _)| ast::Note {
                         pos: *pos,
                         message: "previous declaration of function".to_owned(),
                     })
                     .collect();
-                self.diagnostics.push(Diagnostic::warning_with_notes(
+                self.diagnostics.push(ast::Diagnostic::warning_with_notes(
                     id.loc,
                     format!("declaration of ‘{}’ shadows function", id.name),
                     notes,
                 ));
             }
             Some(ast::Symbol::Variable(loc, _)) => {
-                self.diagnostics.push(Diagnostic::warning_with_note(
+                self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
                     format!("declaration of ‘{}’ shadows state variable", id.name),
                     *loc,
@@ -533,7 +534,7 @@ impl ast::Namespace {
                 ));
             }
             Some(ast::Symbol::Contract(loc, _)) => {
-                self.diagnostics.push(Diagnostic::warning_with_note(
+                self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
                     format!("declaration of ‘{}’ shadows contract name", id.name),
                     *loc,
@@ -541,7 +542,7 @@ impl ast::Namespace {
                 ));
             }
             Some(ast::Symbol::Import(loc, _)) => {
-                self.diagnostics.push(Diagnostic::warning_with_note(
+                self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
                     format!("declaration of ‘{}’ shadows import", id.name),
                     *loc,
@@ -571,13 +572,13 @@ impl ast::Namespace {
             for d in ast_dimensions.iter().rev() {
                 if let Some((loc, n)) = d {
                     if n.is_zero() {
-                        ns.diagnostics.push(Diagnostic::decl_error(
+                        ns.diagnostics.push(ast::Diagnostic::decl_error(
                             *loc,
                             "zero size array not permitted".to_string(),
                         ));
                         return Err(());
                     } else if n.is_negative() {
-                        ns.diagnostics.push(Diagnostic::decl_error(
+                        ns.diagnostics.push(ast::Diagnostic::decl_error(
                             *loc,
                             "negative size of array declared".to_string(),
                         ));
@@ -604,21 +605,21 @@ impl ast::Namespace {
 
                     match key {
                         ast::Type::Mapping(_, _) => {
-                            self.diagnostics.push(Diagnostic::decl_error(
+                            self.diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be another mapping type".to_string(),
                             ));
                             return Err(());
                         }
                         ast::Type::Struct(_) => {
-                            self.diagnostics.push(Diagnostic::decl_error(
+                            self.diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be struct type".to_string(),
                             ));
                             return Err(());
                         }
                         ast::Type::Array(_, _) => {
-                            self.diagnostics.push(Diagnostic::decl_error(
+                            self.diagnostics.push(ast::Diagnostic::decl_error(
                                 k.loc(),
                                 "key of mapping cannot be array type".to_string(),
                             ));
@@ -629,7 +630,7 @@ impl ast::Namespace {
                 }
                 pt::Type::Payable => {
                     if !casting {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc(),
                             "‘payable’ cannot be used for type declarations, only casting. use ‘address payable’"
                                 .to_string(),
@@ -679,7 +680,7 @@ impl ast::Namespace {
                     .get(&(import_file_no, None, contract_name.name.clone()))
                 {
                     None => {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("contract type ‘{}’ not found", id.name),
                         ));
@@ -687,28 +688,28 @@ impl ast::Namespace {
                     }
                     Some(ast::Symbol::Contract(_, n)) => Some(*n),
                     Some(ast::Symbol::Function(_)) => {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a function", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Variable(_, _)) => {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a contract variable", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Struct(_, _)) => {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a struct", id.name),
                         ));
                         return Err(());
                     }
                     Some(ast::Symbol::Enum(_, _)) => {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is an enum variable", id.name),
                         ));
@@ -718,7 +719,7 @@ impl ast::Namespace {
                 };
 
             if namespace.len() > 1 {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ not found", namespace[1].name),
                 ));
@@ -743,7 +744,7 @@ impl ast::Namespace {
 
         match s {
             None => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("type ‘{}’ not found", id.name),
                 ));
@@ -767,21 +768,21 @@ impl ast::Namespace {
                 resolve_dimensions(&dimensions, self)?,
             )),
             Some(ast::Symbol::Function(_)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is a function", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Variable(_, _)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is a contract variable", id.name),
                 ));
                 Err(())
             }
             Some(ast::Symbol::Import(_, _)) => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is an import variable", id.name),
                 ));
@@ -833,7 +834,7 @@ impl ast::Namespace {
 
                         return Ok((names, pt::Expression::Variable(id.clone()), dimensions));
                     } else {
-                        self.diagnostics.push(Diagnostic::decl_error(
+                        self.diagnostics.push(ast::Diagnostic::decl_error(
                             namespace.loc(),
                             "expression found where type expected".to_string(),
                         ));
@@ -841,7 +842,7 @@ impl ast::Namespace {
                     }
                 }
                 _ => {
-                    self.diagnostics.push(Diagnostic::decl_error(
+                    self.diagnostics.push(ast::Diagnostic::decl_error(
                         expr.loc(),
                         "expression found where type expected".to_string(),
                     ));
@@ -864,7 +865,7 @@ impl ast::Namespace {
         match size_expr.ty() {
             ast::Type::Uint(_) | ast::Type::Int(_) => {}
             _ => {
-                self.diagnostics.push(Diagnostic::decl_error(
+                self.diagnostics.push(ast::Diagnostic::decl_error(
                     expr.loc(),
                     "expression is not a number".to_string(),
                 ));

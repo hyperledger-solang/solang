@@ -1,39 +1,7 @@
 use file_cache::FileCache;
 use parser::pt::Loc;
-use sema::ast::Namespace;
+use sema::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use serde::Serialize;
-
-#[derive(Debug, PartialEq)]
-pub enum Level {
-    Info,
-    Warning,
-    Error,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ErrorType {
-    None,
-    ParserError,
-    SyntaxError,
-    DeclarationError,
-    TypeError,
-    Warning,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Note {
-    pub pos: Loc,
-    pub message: String,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Diagnostic {
-    pub level: Level,
-    pub ty: ErrorType,
-    pub pos: Option<Loc>,
-    pub message: String,
-    pub notes: Vec<Note>,
-}
 
 impl Level {
     pub fn to_string(&self) -> &'static str {

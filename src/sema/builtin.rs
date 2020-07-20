@@ -1,7 +1,6 @@
 use crate::Target;
-use output::Diagnostic;
 use parser::pt;
-use sema::ast::{Builtin, Expression, Namespace, Type};
+use sema::ast::{Builtin, Diagnostic, Expression, Namespace, Type};
 use sema::expression::{cast, expression};
 use sema::symtable::Symtable;
 

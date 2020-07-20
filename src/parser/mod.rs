@@ -6,7 +6,7 @@ pub mod pt;
 pub mod solidity;
 
 use lalrpop_util::ParseError;
-use output::Diagnostic;
+use sema::ast::Diagnostic;
 
 pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic>> {
     // parse phase

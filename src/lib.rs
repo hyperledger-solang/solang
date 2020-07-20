@@ -19,13 +19,13 @@ pub mod codegen;
 mod emit;
 pub mod file_cache;
 pub mod link;
-pub mod output;
 mod parser;
 pub mod sema;
 
 use file_cache::FileCache;
 use inkwell::OptimizationLevel;
 use sema::ast;
+use sema::diagnostics;
 use std::fmt;
 
 /// The target chain you want to compile Solidity for.
@@ -66,7 +66,7 @@ pub fn compile(
 
     let mut ns = parse_and_resolve(filename, cache, target);
 
-    if output::any_errors(&ns.diagnostics) {
+    if diagnostics::any_errors(&ns.diagnostics) {
         return (Vec::new(), ns);
     }
 
@@ -109,9 +109,9 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
     );
 
     if let Err(message) = cache.populate_cache(filename) {
-        ns.diagnostics.push(output::Diagnostic {
-            ty: output::ErrorType::ParserError,
-            level: output::Level::Error,
+        ns.diagnostics.push(ast::Diagnostic {
+            ty: ast::ErrorType::ParserError,
+            level: ast::Level::Error,
             message,
             pos: None,
             notes: Vec::new(),

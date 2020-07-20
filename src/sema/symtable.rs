@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use std::collections::LinkedList;
 use std::str;
 
-use output::Diagnostic;
 use parser::pt;
+use sema::ast::Diagnostic;
 use sema::ast::{Namespace, Type};
 
 #[derive(Clone)]

@@ -14,9 +14,9 @@ use std::ops::Sub;
 
 use crate::Target;
 use hex;
-use output::Diagnostic;
 use parser::pt;
 use sema::address::to_hexstr_eip55;
+use sema::ast::Diagnostic;
 use sema::ast::{
     Builtin, CallTy, ContractVariableType, Expression, Function, Namespace, StringLocation, Symbol,
     Type,
@@ -1615,8 +1615,10 @@ pub fn expression(
                 Ok(to) => {
                     // Cast
                     return if args.is_empty() {
-                        ns.diagnostics
-                            .push(Diagnostic::error(*loc, "missing argument to cast".to_string()));
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            "missing argument to cast".to_string(),
+                        ));
                         Err(())
                     } else if args.len() > 1 {
                         ns.diagnostics.push(Diagnostic::error(
@@ -1729,8 +1731,10 @@ pub fn expression(
             Err(())
         }
         pt::Expression::FunctionCallBlock(loc, _, _) => {
-            ns.diagnostics
-                .push(Diagnostic::error(*loc, "unexpect block encountered".to_owned()));
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                "unexpect block encountered".to_owned(),
+            ));
             Err(())
         }
         pt::Expression::Unit(loc, expr, unit) => {
@@ -4366,8 +4370,10 @@ pub fn function_call_expr(
             function_call_pos_args(loc, &id, args, file_no, contract_no, ns, symtable)
         }
         pt::Expression::ArraySubscript(_, _, _) => {
-            ns.diagnostics
-                .push(Diagnostic::error(ty.loc(), "unexpected array type".to_string()));
+            ns.diagnostics.push(Diagnostic::error(
+                ty.loc(),
+                "unexpected array type".to_string(),
+            ));
             Err(())
         }
         _ => {
@@ -4416,8 +4422,10 @@ pub fn named_function_call_expr(
             function_call_with_named_args(loc, &id, args, file_no, contract_no, ns, symtable)
         }
         pt::Expression::ArraySubscript(_, _, _) => {
-            ns.diagnostics
-                .push(Diagnostic::error(ty.loc(), "unexpected array type".to_string()));
+            ns.diagnostics.push(Diagnostic::error(
+                ty.loc(),
+                "unexpected array type".to_string(),
+            ));
             Err(())
         }
         _ => {
