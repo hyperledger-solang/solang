@@ -4434,8 +4434,6 @@ pub fn named_function_call_expr(
 fn function_returns(ftype: &Function) -> Vec<Type> {
     if !ftype.returns.is_empty() {
         ftype.returns.iter().map(|p| p.ty.clone()).collect()
-    } else if ftype.noreturn {
-        vec![Type::Unreachable]
     } else {
         vec![Type::Void]
     }
