@@ -15,31 +15,10 @@ pub fn resolve_typenames<'a>(
     let mut structs = Vec::new();
 
     // Find all the types: contracts, enums, and structs. Either in a contract or not
-    // We do not resolve the fields yet as we do not know all the possible types until we're
+    // We do not resolve the struct fields yet as we do not know all the possible types until we're
     // done
     for part in &s.0 {
         match part {
-            pt::SourceUnitPart::PragmaDirective(name, value) => {
-                if name.name == "solidity" {
-                    ns.diagnostics.push(Diagnostic::info(
-                        pt::Loc(name.loc.0, name.loc.1, value.loc.2),
-                        "pragma ‘solidity’ is ignored".to_string(),
-                    ));
-                } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
-                    ns.diagnostics.push(Diagnostic::info(
-                        pt::Loc(name.loc.0, name.loc.1, value.loc.2),
-                        "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
-                    ));
-                } else {
-                    ns.diagnostics.push(Diagnostic::warning(
-                        pt::Loc(name.loc.0, name.loc.1, value.loc.2),
-                        format!(
-                            "unknown pragma ‘{}’ with value ‘{}’ ignored",
-                            name.name, value.string
-                        ),
-                    ));
-                }
-            }
             pt::SourceUnitPart::ContractDefinition(def) => {
                 resolve_contract(&def, file_no, &mut structs, ns);
             }

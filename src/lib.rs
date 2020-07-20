@@ -118,7 +118,7 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
         });
     } else {
         // resolve
-        sema::sema(filename, cache, target, &mut ns);
+        sema::sema(filename, cache, &mut ns);
     }
 
     ns

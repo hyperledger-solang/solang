@@ -81,7 +81,6 @@ impl ast::Contract {
 pub fn resolve(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
-    target: Target,
     ns: &mut ast::Namespace,
 ) {
     if resolve_inheritance(contracts, file_no, ns) {
@@ -93,7 +92,7 @@ pub fn resolve(
     let mut function_bodies = Vec::new();
 
     for (contract_no, def) in contracts {
-        function_bodies.extend(resolve_declarations(def, file_no, *contract_no, target, ns));
+        function_bodies.extend(resolve_declarations(def, file_no, *contract_no, ns));
     }
 
     // Now we can resolve the bodies
@@ -232,7 +231,6 @@ fn resolve_declarations<'a>(
     def: &'a pt::ContractDefinition,
     file_no: usize,
     contract_no: usize,
-    target: Target,
     ns: &mut ast::Namespace,
 ) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
     ns.diagnostics.push(Diagnostic::info(
@@ -322,7 +320,7 @@ fn resolve_declarations<'a>(
         .functions
         .iter()
         .any(|f| f.is_constructor())
-        && target == Target::Substrate
+        && ns.target == Target::Substrate
     {
         let mut fdecl = ast::Function::new(
             pt::Loc(0, 0, 0),

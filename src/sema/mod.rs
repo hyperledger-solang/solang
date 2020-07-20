@@ -28,7 +28,7 @@ pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache. This function is recursive for imports.
-pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast::Namespace) {
+pub fn sema(filename: &str, cache: &mut FileCache, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
     ns.files.push(filename.to_string());
@@ -62,116 +62,16 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
     // first resolve all the types we can find
     let structs_to_resolve = types::resolve_typenames(&pt, file_no, ns);
 
-    // resolve imports
+    // resolve pragmas and imports
     for part in &pt.0 {
-        if let pt::SourceUnitPart::ImportDirective(import) = part {
-            let filename = match import {
-                pt::Import::Plain(f) => f,
-                pt::Import::GlobalSymbol(f, _) => f,
-                pt::Import::Rename(f, _) => f,
-            };
-
-            // We may already have resolved it
-            if !ns.files.contains(&filename.string) {
-                if let Err(message) = cache.populate_cache(&filename.string) {
-                    ns.diagnostics
-                        .push(ast::Diagnostic::error(filename.loc, message));
-
-                    return;
-                }
-
-                sema(&filename.string, cache, target, ns);
-
-                // give up if we failed
-                if diagnostics::any_errors(&ns.diagnostics) {
-                    return;
-                }
+        match part {
+            pt::SourceUnitPart::PragmaDirective(name, value) => {
+                resolve_pragma(name, value, ns);
             }
-
-            let import_file_no = ns
-                .files
-                .iter()
-                .position(|f| f == &filename.string)
-                .expect("import should be loaded by now");
-
-            match import {
-                pt::Import::Rename(_, renames) => {
-                    for (from, rename_to) in renames {
-                        if let Some(import) =
-                            ns.symbols
-                                .get(&(import_file_no, None, from.name.to_owned()))
-                        {
-                            let import = import.clone();
-
-                            let new_symbol = if let Some(to) = rename_to { to } else { from };
-
-                            // Only add symbol if it does not already exist with same definition
-                            if let Some(existing) =
-                                ns.symbols.get(&(file_no, None, new_symbol.name.clone()))
-                            {
-                                if existing == &import {
-                                    continue;
-                                }
-                            }
-
-                            ns.check_shadowing(file_no, None, new_symbol);
-
-                            ns.add_symbol(file_no, None, new_symbol, import);
-                        } else {
-                            ns.diagnostics.push(ast::Diagnostic::error(
-                                from.loc,
-                                format!(
-                                    "import ‘{}’ does not export ‘{}’",
-                                    filename.string,
-                                    from.name.to_string()
-                                ),
-                            ));
-                        }
-                    }
-                }
-                pt::Import::Plain(_) => {
-                    // find all the exports for the file
-                    let exports = ns
-                        .symbols
-                        .iter()
-                        .filter_map(|((file_no, contract_no, id), symbol)| {
-                            if *file_no == import_file_no && contract_no.is_none() {
-                                Some((id.clone(), symbol.clone()))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<(String, ast::Symbol)>>();
-
-                    for (name, symbol) in exports {
-                        let new_symbol = pt::Identifier {
-                            name: name.clone(),
-                            loc: filename.loc,
-                        };
-
-                        // Only add symbol if it does not already exist with same definition
-                        if let Some(existing) = ns.symbols.get(&(file_no, None, name.clone())) {
-                            if existing == &symbol {
-                                continue;
-                            }
-                        }
-
-                        ns.check_shadowing(file_no, None, &new_symbol);
-
-                        ns.add_symbol(file_no, None, &new_symbol, symbol);
-                    }
-                }
-                pt::Import::GlobalSymbol(_, symbol) => {
-                    ns.check_shadowing(file_no, None, &symbol);
-
-                    ns.add_symbol(
-                        file_no,
-                        None,
-                        &symbol,
-                        ast::Symbol::Import(symbol.loc, import_file_no),
-                    );
-                }
+            pt::SourceUnitPart::ImportDirective(import) => {
+                resolve_import(import, file_no, cache, ns);
             }
+            _ => (),
         }
     }
 
@@ -185,10 +85,149 @@ pub fn sema(filename: &str, cache: &mut FileCache, target: Target, ns: &mut ast:
     }
 
     // now resolve the contracts
-    contracts::resolve(&contracts_to_resolve, file_no, target, ns);
+    contracts::resolve(&contracts_to_resolve, file_no, ns);
 
     // now check state mutability for all contracts
     mutability::mutablity(file_no, ns);
+}
+
+/// Find import file, resolve it by calling sema and add it to the namespace
+fn resolve_import(
+    import: &pt::Import,
+    file_no: usize,
+    cache: &mut FileCache,
+    ns: &mut ast::Namespace,
+) {
+    let filename = match import {
+        pt::Import::Plain(f) => f,
+        pt::Import::GlobalSymbol(f, _) => f,
+        pt::Import::Rename(f, _) => f,
+    };
+
+    // We may already have resolved it
+    if !ns.files.contains(&filename.string) {
+        if let Err(message) = cache.populate_cache(&filename.string) {
+            ns.diagnostics
+                .push(ast::Diagnostic::error(filename.loc, message));
+
+            return;
+        }
+
+        sema(&filename.string, cache, ns);
+
+        // give up if we failed
+        if diagnostics::any_errors(&ns.diagnostics) {
+            return;
+        }
+    }
+
+    let import_file_no = ns
+        .files
+        .iter()
+        .position(|f| f == &filename.string)
+        .expect("import should be loaded by now");
+
+    match import {
+        pt::Import::Rename(_, renames) => {
+            for (from, rename_to) in renames {
+                if let Some(import) = ns
+                    .symbols
+                    .get(&(import_file_no, None, from.name.to_owned()))
+                {
+                    let import = import.clone();
+
+                    let new_symbol = if let Some(to) = rename_to { to } else { from };
+
+                    // Only add symbol if it does not already exist with same definition
+                    if let Some(existing) =
+                        ns.symbols.get(&(file_no, None, new_symbol.name.clone()))
+                    {
+                        if existing == &import {
+                            continue;
+                        }
+                    }
+
+                    ns.check_shadowing(file_no, None, new_symbol);
+
+                    ns.add_symbol(file_no, None, new_symbol, import);
+                } else {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        from.loc,
+                        format!(
+                            "import ‘{}’ does not export ‘{}’",
+                            filename.string,
+                            from.name.to_string()
+                        ),
+                    ));
+                }
+            }
+        }
+        pt::Import::Plain(_) => {
+            // find all the exports for the file
+            let exports = ns
+                .symbols
+                .iter()
+                .filter_map(|((file_no, contract_no, id), symbol)| {
+                    if *file_no == import_file_no && contract_no.is_none() {
+                        Some((id.clone(), symbol.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<(String, ast::Symbol)>>();
+
+            for (name, symbol) in exports {
+                let new_symbol = pt::Identifier {
+                    name: name.clone(),
+                    loc: filename.loc,
+                };
+
+                // Only add symbol if it does not already exist with same definition
+                if let Some(existing) = ns.symbols.get(&(file_no, None, name.clone())) {
+                    if existing == &symbol {
+                        continue;
+                    }
+                }
+
+                ns.check_shadowing(file_no, None, &new_symbol);
+
+                ns.add_symbol(file_no, None, &new_symbol, symbol);
+            }
+        }
+        pt::Import::GlobalSymbol(_, symbol) => {
+            ns.check_shadowing(file_no, None, &symbol);
+
+            ns.add_symbol(
+                file_no,
+                None,
+                &symbol,
+                ast::Symbol::Import(symbol.loc, import_file_no),
+            );
+        }
+    }
+}
+
+/// Resolve pragma. We don't do anything with pragmas for now
+fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast::Namespace) {
+    if name.name == "solidity" {
+        ns.diagnostics.push(ast::Diagnostic::info(
+            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            "pragma ‘solidity’ is ignored".to_string(),
+        ));
+    } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
+        ns.diagnostics.push(ast::Diagnostic::info(
+            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
+        ));
+    } else {
+        ns.diagnostics.push(ast::Diagnostic::warning(
+            pt::Loc(name.loc.0, name.loc.1, value.loc.2),
+            format!(
+                "unknown pragma ‘{}’ with value ‘{}’ ignored",
+                name.name, value.string
+            ),
+        ));
+    }
 }
 
 impl ast::Namespace {
