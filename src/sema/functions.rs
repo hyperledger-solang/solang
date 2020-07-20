@@ -3,9 +3,9 @@ use output::Output;
 use parser::pt;
 use Target;
 
+/// Resolve function declaration
 pub fn function_decl(
-    f: &pt::FunctionDefinition,
-    i: usize,
+    func: &pt::FunctionDefinition,
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
@@ -14,60 +14,60 @@ pub fn function_decl(
 
     // The parser allows constructors to have return values. This is so that we can give a
     // nicer error message than "returns unexpected"
-    match f.ty {
+    match func.ty {
         pt::FunctionTy::Function => {
             // Function name cannot be the same as the contract name
-            if let Some(n) = &f.name {
+            if let Some(n) = &func.name {
                 if n.name == ns.contracts[contract_no].name {
                     ns.diagnostics.push(Output::error(
-                        f.loc,
+                        func.loc,
                         "function cannot have same name as the contract".to_string(),
                     ));
                     return None;
                 }
             } else {
                 ns.diagnostics.push(Output::error(
-                    f.name_loc,
+                    func.name_loc,
                     "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?".to_string(),
                 ));
                 return None;
             }
         }
         pt::FunctionTy::Constructor => {
-            if !f.returns.is_empty() {
+            if !func.returns.is_empty() {
                 ns.diagnostics.push(Output::warning(
-                    f.loc,
+                    func.loc,
                     "constructor cannot have return values".to_string(),
                 ));
                 return None;
             }
-            if f.name.is_some() {
+            if func.name.is_some() {
                 ns.diagnostics.push(Output::warning(
-                    f.loc,
+                    func.loc,
                     "constructor cannot have a name".to_string(),
                 ));
                 return None;
             }
         }
         pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
-            if !f.returns.is_empty() {
+            if !func.returns.is_empty() {
                 ns.diagnostics.push(Output::warning(
-                    f.loc,
-                    format!("{} function cannot have return values", f.ty),
+                    func.loc,
+                    format!("{} function cannot have return values", func.ty),
                 ));
                 success = false;
             }
-            if !f.params.is_empty() {
+            if !func.params.is_empty() {
                 ns.diagnostics.push(Output::warning(
-                    f.loc,
-                    format!("{} function cannot have parameters", f.ty),
+                    func.loc,
+                    format!("{} function cannot have parameters", func.ty),
                 ));
                 success = false;
             }
-            if f.name.is_some() {
+            if func.name.is_some() {
                 ns.diagnostics.push(Output::warning(
-                    f.loc,
-                    format!("{} function cannot have a name", f.ty),
+                    func.loc,
+                    format!("{} function cannot have a name", func.ty),
                 ));
                 return None;
             }
@@ -78,7 +78,7 @@ pub fn function_decl(
     let mut visibility: Option<pt::Visibility> = None;
     let mut is_virtual: Option<pt::Loc> = None;
 
-    for a in &f.attributes {
+    for a in &func.attributes {
         match &a {
             pt::FunctionAttribute::StateMutability(m) => {
                 if let Some(e) = &mutability {
@@ -129,8 +129,10 @@ pub fn function_decl(
     let visibility = match visibility {
         Some(v) => v,
         None => {
-            ns.diagnostics
-                .push(Output::error(f.loc, "no visibility specified".to_string()));
+            ns.diagnostics.push(Output::error(
+                func.loc,
+                "no visibility specified".to_string(),
+            ));
             success = false;
             // continue processing while assuming it's a public
             pt::Visibility::Public(pt::Loc(0, 0, 0))
@@ -153,21 +155,22 @@ pub fn function_decl(
         pt::Visibility::Public(_) | pt::Visibility::External(_) => false,
     };
 
-    let (params, params_success) = resolve_params(f, storage_allowed, file_no, contract_no, ns);
+    let (params, params_success) = resolve_params(func, storage_allowed, file_no, contract_no, ns);
 
-    let (returns, returns_success) = resolve_returns(f, storage_allowed, file_no, contract_no, ns);
+    let (returns, returns_success) =
+        resolve_returns(func, storage_allowed, file_no, contract_no, ns);
 
     if let Some(loc) = is_virtual {
-        if !f.body.is_empty() {
+        if !func.body.is_empty() {
             ns.diagnostics.push(Output::error(
                 loc,
                 "function marked ‘virtual’ cannot have a body".to_string(),
             ));
             success = false;
         }
-    } else if f.body.is_empty() {
+    } else if func.body.is_empty() {
         ns.diagnostics.push(Output::error(
-            f.loc,
+            func.loc,
             "function with no body must be marked ‘virtual’".to_string(),
         ));
         success = false;
@@ -177,17 +180,16 @@ pub fn function_decl(
         return None;
     }
 
-    let name = match &f.name {
+    let name = match &func.name {
         Some(s) => s.name.to_owned(),
         None => "".to_owned(),
     };
 
     let mut fdecl = Function::new(
-        f.loc,
+        func.loc,
         name,
-        f.doc.clone(),
-        f.ty.clone(),
-        Some(i),
+        func.doc.clone(),
+        func.ty.clone(),
         mutability,
         visibility,
         params,
@@ -197,7 +199,7 @@ pub fn function_decl(
 
     fdecl.is_virtual = is_virtual.is_some();
 
-    if f.ty == pt::FunctionTy::Constructor {
+    if func.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
         if ns.target == Target::Ewasm {
             if let Some(prev) = ns.contracts[contract_no]
@@ -206,7 +208,7 @@ pub fn function_decl(
                 .find(|f| f.is_constructor())
             {
                 ns.diagnostics.push(Output::error_with_note(
-                    f.loc,
+                    func.loc,
                     "constructor already defined".to_string(),
                     prev.loc,
                     "location of previous definition".to_string(),
@@ -222,7 +224,7 @@ pub fn function_decl(
                 .find(|f| f.is_constructor() && f.is_payable() != payable)
             {
                 ns.diagnostics.push(Output::error_with_note(
-                    f.loc,
+                    func.loc,
                     "all constructors should be defined ‘payable’ or not".to_string(),
                     prev.loc,
                     "location of previous definition".to_string(),
@@ -236,7 +238,7 @@ pub fn function_decl(
             pt::Visibility::Public(_) => (),
             _ => {
                 ns.diagnostics.push(Output::error(
-                    f.loc,
+                    func.loc,
                     "constructor function must be declared public".to_owned(),
                 ));
                 return None;
@@ -268,7 +270,7 @@ pub fn function_decl(
         {
             if v.signature == fdecl.signature {
                 ns.diagnostics.push(Output::error_with_note(
-                    f.loc,
+                    func.loc,
                     "constructor with this signature already exists".to_string(),
                     v.loc,
                     "location of previous definition".to_string(),
@@ -283,15 +285,15 @@ pub fn function_decl(
         ns.contracts[contract_no].functions.push(fdecl);
 
         Some(pos)
-    } else if f.ty == pt::FunctionTy::Receive || f.ty == pt::FunctionTy::Fallback {
+    } else if func.ty == pt::FunctionTy::Receive || func.ty == pt::FunctionTy::Fallback {
         if let Some(prev) = ns.contracts[contract_no]
             .functions
             .iter()
-            .find(|o| o.ty == f.ty)
+            .find(|o| o.ty == func.ty)
         {
             ns.diagnostics.push(Output::error_with_note(
-                f.loc,
-                format!("{} function already defined", f.ty),
+                func.loc,
+                format!("{} function already defined", func.ty),
                 prev.loc,
                 "location of previous definition".to_string(),
             ));
@@ -302,24 +304,24 @@ pub fn function_decl(
             // ok
         } else {
             ns.diagnostics.push(Output::error(
-                f.loc,
-                format!("{} function must be declared external", f.ty),
+                func.loc,
+                format!("{} function must be declared external", func.ty),
             ));
             return None;
         }
 
         if let Some(pt::StateMutability::Payable(_)) = fdecl.mutability {
-            if f.ty == pt::FunctionTy::Fallback {
+            if func.ty == pt::FunctionTy::Fallback {
                 ns.diagnostics.push(Output::error(
-                    f.loc,
-                    format!("{} function must not be declare payable, use ‘receive() external payable’ instead", f.ty),
+                    func.loc,
+                    format!("{} function must not be declare payable, use ‘receive() external payable’ instead", func.ty),
                 ));
                 return None;
             }
-        } else if f.ty == pt::FunctionTy::Receive {
+        } else if func.ty == pt::FunctionTy::Receive {
             ns.diagnostics.push(Output::error(
-                f.loc,
-                format!("{} function must be declared payable", f.ty),
+                func.loc,
+                format!("{} function must be declared payable", func.ty),
             ));
             return None;
         }
@@ -330,7 +332,7 @@ pub fn function_decl(
 
         Some(pos)
     } else {
-        let id = f.name.as_ref().unwrap();
+        let id = func.name.as_ref().unwrap();
 
         if let Some(Symbol::Function(ref mut v)) =
             ns.symbols
@@ -340,7 +342,7 @@ pub fn function_decl(
             for o in v.iter() {
                 if ns.contracts[contract_no].functions[o.1].signature == fdecl.signature {
                     ns.diagnostics.push(Output::error_with_note(
-                        f.loc,
+                        func.loc,
                         "overloaded function with this signature already exist".to_string(),
                         o.0,
                         "location of previous definition".to_string(),
@@ -353,7 +355,7 @@ pub fn function_decl(
 
             ns.contracts[contract_no].functions.push(fdecl);
 
-            v.push((f.loc, pos));
+            v.push((func.loc, pos));
 
             return Some(pos);
         }
@@ -548,7 +550,6 @@ fn signatures() {
         "foo".to_owned(),
         vec![],
         pt::FunctionTy::Function,
-        Some(0),
         None,
         pt::Visibility::Public(pt::Loc(0, 0, 0)),
         vec![
