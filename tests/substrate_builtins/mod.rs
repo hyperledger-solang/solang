@@ -800,7 +800,10 @@ fn functions() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "unknown function or type");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "unknown function or type ‘blockhash’"
+    );
 
     let mut runtime = build_solidity(
         r##"
