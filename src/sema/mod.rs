@@ -593,7 +593,7 @@ impl ast::Namespace {
     }
 
     /// Resolve the parsed data type. The type can be a primitive, enum and also an arrays.
-    /// The type for address payable is "address payble" used as a type, and "payable" when
+    /// The type for address payable is "address payable" used as a type, and "payable" when
     /// casting. So, we need to know what we are resolving for.
     pub fn resolve_type(
         &mut self,
