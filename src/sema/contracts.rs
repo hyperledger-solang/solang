@@ -13,6 +13,7 @@ use codegen::cfg::ControlFlowGraph;
 use emit;
 
 impl ast::Contract {
+    /// Create a new contract, abstract contract, interface or library
     pub fn new(name: &str, ty: pt::ContractTy, loc: pt::Loc) -> Self {
         ast::Contract {
             name: name.to_owned(),
@@ -30,24 +31,19 @@ impl ast::Contract {
 
     /// Return the index of the fallback function, if any
     pub fn fallback_function(&self) -> Option<usize> {
-        for (i, f) in self.functions.iter().enumerate() {
-            if f.ty == pt::FunctionTy::Fallback {
-                return Some(i);
-            }
-        }
-        None
+        self.functions
+            .iter()
+            .position(|f| f.ty == pt::FunctionTy::Fallback)
     }
 
     /// Return the index of the receive function, if any
     pub fn receive_function(&self) -> Option<usize> {
-        for (i, f) in self.functions.iter().enumerate() {
-            if f.ty == pt::FunctionTy::Receive {
-                return Some(i);
-            }
-        }
-        None
+        self.functions
+            .iter()
+            .position(|f| f.ty == pt::FunctionTy::Receive)
     }
 
+    /// Generate contract code for this contract
     pub fn emit<'a>(
         &'a self,
         ns: &'a ast::Namespace,
