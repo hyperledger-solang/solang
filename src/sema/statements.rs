@@ -5,7 +5,6 @@ use super::expression::{
 use super::symtable::{LoopScopes, Symtable};
 use num_bigint::BigInt;
 use parser::pt;
-use sema::ast::Diagnostic;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,

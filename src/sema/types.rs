@@ -1,6 +1,7 @@
-use super::ast::{Contract, EnumDecl, Namespace, StructDecl, StructField, Symbol, Type};
+use super::ast::{
+    Contract, Diagnostic, EnumDecl, Namespace, StructDecl, StructField, Symbol, Type,
+};
 use parser::pt;
-use sema::ast::Diagnostic;
 use std::collections::HashMap;
 #[cfg(test)]
 use Target;

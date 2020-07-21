@@ -1,6 +1,6 @@
+use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use file_cache::FileCache;
 use parser::pt::Loc;
-use sema::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use serde::Serialize;
 
 impl Level {

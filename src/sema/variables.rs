@@ -1,8 +1,7 @@
-use super::ast::{ContractVariable, ContractVariableType, Namespace, Symbol};
+use super::ast::{ContractVariable, ContractVariableType, Diagnostic, Namespace, Symbol};
+use super::expression::{cast, expression};
+use super::symtable::Symtable;
 use parser::pt;
-use sema::ast::Diagnostic;
-use sema::expression::{cast, expression};
-use sema::symtable::Symtable;
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,
