@@ -19,10 +19,10 @@ pub mod symtable;
 mod types;
 mod variables;
 
+use self::eval::eval_const_number;
+use self::expression::expression;
+use self::symtable::Symtable;
 use file_cache::FileCache;
-use sema::eval::eval_const_number;
-use sema::expression::expression;
-use sema::symtable::Symtable;
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 

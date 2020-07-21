@@ -1,8 +1,8 @@
+use super::symtable::Symtable;
 use codegen::cfg::ControlFlowGraph;
 use num_bigint::BigInt;
 use num_traits::One;
 use parser::pt;
-use sema::symtable::Symtable;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Mul;

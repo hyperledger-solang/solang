@@ -12,18 +12,17 @@ use std::collections::HashMap;
 use std::ops::Shl;
 use std::ops::Sub;
 
+use super::address::to_hexstr_eip55;
+use super::ast::{
+    Builtin, CallTy, ContractVariableType, Diagnostic, Expression, Function, Namespace,
+    StringLocation, Symbol, Type,
+};
+use super::builtin;
+use super::eval::eval_const_number;
+use super::symtable::Symtable;
 use crate::Target;
 use hex;
 use parser::pt;
-use sema::address::to_hexstr_eip55;
-use sema::ast::Diagnostic;
-use sema::ast::{
-    Builtin, CallTy, ContractVariableType, Expression, Function, Namespace, StringLocation, Symbol,
-    Type,
-};
-use sema::builtin;
-use sema::eval::eval_const_number;
-use sema::symtable::Symtable;
 
 impl Expression {
     /// Return the location for this expression
