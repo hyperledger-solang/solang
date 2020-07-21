@@ -231,6 +231,7 @@ fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast
 }
 
 impl ast::Namespace {
+    /// Create a namespace and populate with the parameters for the target
     pub fn new(target: Target, address_length: usize, value_length: usize) -> Self {
         ast::Namespace {
             target,
@@ -394,6 +395,7 @@ impl ast::Namespace {
         true
     }
 
+    /// Resolve enum by name
     pub fn resolve_enum(
         &self,
         file_no: usize,
@@ -418,6 +420,7 @@ impl ast::Namespace {
         None
     }
 
+    /// Resolve a contract name
     pub fn resolve_contract(&self, file_no: usize, id: &pt::Identifier) -> Option<usize> {
         if let Some(ast::Symbol::Contract(_, n)) =
             self.symbols.get(&(file_no, None, id.name.to_owned()))
@@ -428,6 +431,7 @@ impl ast::Namespace {
         None
     }
 
+    /// Resolve function name
     pub fn resolve_func(
         &mut self,
         file_no: usize,
@@ -450,6 +454,7 @@ impl ast::Namespace {
         }
     }
 
+    /// Resolve contract variable
     pub fn resolve_var(
         &mut self,
         file_no: usize,
@@ -511,6 +516,7 @@ impl ast::Namespace {
         }
     }
 
+    /// Check if an name would shadow an existing symbol
     pub fn check_shadowing(
         &mut self,
         file_no: usize,
@@ -892,7 +898,7 @@ impl ast::Namespace {
     }
 
     /// Resolve an expression which defines the array length, e.g. 2**8 in "bool[2**8]"
-    pub fn resolve_array_dimension(
+    fn resolve_array_dimension(
         &mut self,
         file_no: usize,
         contract_no: Option<usize>,
@@ -901,6 +907,7 @@ impl ast::Namespace {
         let symtable = Symtable::new();
 
         let size_expr = expression(&expr, file_no, contract_no, self, &symtable, true)?;
+
         match size_expr.ty() {
             ast::Type::Uint(_) | ast::Type::Int(_) => {}
             _ => {
