@@ -652,17 +652,17 @@ fn destructure(
                 let e = expression(ty, file_no, Some(contract_no), ns, symtable, false)?;
 
                 match &e {
-                    Expression::ConstantVariable(_, _, n) => {
+                    Expression::ConstantVariable(_, _, contract_no, var_no) => {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
                                 "cannot assign to constant ‘{}’",
-                                ns.contracts[contract_no].variables[*n].name
+                                ns.contracts[*contract_no].variables[*var_no].name
                             ),
                         ));
                         return Err(());
                     }
-                    Expression::StorageVariable(_, _, _) | Expression::Variable(_, _, _) => (),
+                    Expression::StorageVariable(_, _, _, _) | Expression::Variable(_, _, _) => (),
                     _ => match e.ty() {
                         Type::Ref(_) | Type::StorageRef(_) => (),
                         _ => {

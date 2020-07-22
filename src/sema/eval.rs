@@ -110,14 +110,14 @@ pub fn eval_const_number(
         Expression::Not(loc, n) => Ok((*loc, !eval_const_number(n, contract_no, ns)?.1)),
         Expression::Complement(loc, _, n) => Ok((*loc, !eval_const_number(n, contract_no, ns)?.1)),
         Expression::UnaryMinus(loc, _, n) => Ok((*loc, -eval_const_number(n, contract_no, ns)?.1)),
-        Expression::ConstantVariable(_, _, no) => {
-            let expr = ns.contracts[contract_no.unwrap()].variables[*no]
+        Expression::ConstantVariable(_, _, contract_no, var_no) => {
+            let expr = ns.contracts[*contract_no].variables[*var_no]
                 .initializer
                 .as_ref()
                 .unwrap()
                 .clone();
 
-            eval_const_number(&expr, contract_no, ns)
+            eval_const_number(&expr, Some(*contract_no), ns)
         }
         _ => Err(Diagnostic::error(
             expr.loc(),
