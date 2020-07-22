@@ -20,8 +20,9 @@ pub fn expression(
     vartab: &mut Vartable,
 ) -> Expression {
     match expr {
-        Expression::StorageVariable(_, _, var_no) => {
-            ns.contracts[contract_no].variables[*var_no].get_storage_slot()
+        Expression::StorageVariable(_, _, var_contract_no, var_no) => {
+            // inherited storage variables should precede contract variables, not overlap
+            ns.contracts[*var_contract_no].variables[*var_no].get_storage_slot()
         }
         Expression::StorageLoad(loc, ty, expr) => Expression::StorageLoad(
             *loc,
@@ -157,8 +158,8 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::ConstantVariable(_, _, no) => expression(
-            ns.contracts[contract_no].variables[*no]
+        Expression::ConstantVariable(_, _, var_contract_no, var_no) => expression(
+            ns.contracts[*var_contract_no].variables[*var_no]
                 .initializer
                 .as_ref()
                 .unwrap(),

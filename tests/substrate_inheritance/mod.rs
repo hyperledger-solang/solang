@@ -426,3 +426,99 @@ fn inherit_types() {
         "contract ‘a’ cannot inherit type ‘foo’ from contract ‘c’"
     );
 }
+
+#[test]
+fn inherit_variables() {
+    let ns = parse_and_resolve(
+        r#"
+        contract b {
+            int public foo;
+        }
+        
+        contract c is b {
+            function getFoo() public returns (int) {
+                return foo;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract b {
+            int private foo;
+        }
+        
+        contract c is b {
+            function getFoo() public returns (int) {
+                return foo;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "`foo\' is not declared");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            int public foo;
+        }
+
+        contract b is a {
+            int public bar;
+        }
+
+        contract c is b {
+            function getFoo() public returns (int) {
+                return foo;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            int private foo;
+        }
+
+        contract b is a {
+            int public foo;
+        }
+
+        contract c is b {
+            function getFoo() public returns (int) {
+                return foo;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            int public constant foo = 0xbffe;
+        }
+
+        contract c is a {
+            function getFoo() public returns (int) {
+                return foo;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+}

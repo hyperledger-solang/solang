@@ -50,8 +50,8 @@ impl Expression {
             | Expression::ShiftLeft(loc, _, _, _)
             | Expression::ShiftRight(loc, _, _, _, _)
             | Expression::Variable(loc, _, _)
-            | Expression::ConstantVariable(loc, _, _)
-            | Expression::StorageVariable(loc, _, _)
+            | Expression::ConstantVariable(loc, _, _, _)
+            | Expression::StorageVariable(loc, _, _, _)
             | Expression::Load(loc, _, _)
             | Expression::StorageLoad(loc, _, _)
             | Expression::ZeroExt(loc, _, _)
@@ -145,8 +145,8 @@ impl Expression {
             | Expression::ShiftLeft(_, ty, _, _)
             | Expression::ShiftRight(_, ty, _, _, _)
             | Expression::Variable(_, ty, _)
-            | Expression::ConstantVariable(_, ty, _)
-            | Expression::StorageVariable(_, ty, _)
+            | Expression::ConstantVariable(_, ty, _, _)
+            | Expression::StorageVariable(_, ty, _, _)
             | Expression::Load(_, ty, _)
             | Expression::StorageLoad(_, ty, _)
             | Expression::ZeroExt(_, ty, _)
@@ -1111,14 +1111,17 @@ pub fn expression(
                 return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
             }
 
-            let v = ns.resolve_var(file_no, contract_no.unwrap(), id)?;
+            let (var_contract_no, var_no) = ns.resolve_var(file_no, contract_no.unwrap(), id)?;
 
-            let var = &ns.contracts[contract_no.unwrap()].variables[v];
+            let var = &ns.contracts[var_contract_no].variables[var_no];
 
             match var.var {
-                ContractVariableType::Constant => {
-                    Ok(Expression::ConstantVariable(id.loc, var.ty.clone(), v))
-                }
+                ContractVariableType::Constant => Ok(Expression::ConstantVariable(
+                    id.loc,
+                    var.ty.clone(),
+                    var_contract_no,
+                    var_no,
+                )),
                 ContractVariableType::Storage(_) => {
                     if is_constant {
                         ns.diagnostics.push(Diagnostic::error(
@@ -1133,7 +1136,8 @@ pub fn expression(
                         Ok(Expression::StorageVariable(
                             id.loc,
                             Type::StorageRef(Box::new(var.ty.clone())),
-                            v,
+                            var_contract_no,
+                            var_no,
                         ))
                     }
                 }
@@ -2542,17 +2546,17 @@ pub fn assign_single(
     let val = expression(right, file_no, contract_no, ns, symtable, false)?;
 
     match &var {
-        Expression::ConstantVariable(loc, _, n) => {
+        Expression::ConstantVariable(loc, _, contract_no, var_no) => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "cannot assign to constant ‘{}’",
-                    ns.contracts[contract_no.unwrap()].variables[*n].name
+                    ns.contracts[*contract_no].variables[*var_no].name
                 ),
             ));
             Err(())
         }
-        Expression::StorageVariable(loc, ty, _) => Ok(Expression::Assign(
+        Expression::StorageVariable(loc, ty, _, _) => Ok(Expression::Assign(
             *loc,
             ty.clone(),
             Box::new(var.clone()),
@@ -2668,12 +2672,12 @@ fn assign_expr(
     let var_ty = var.ty();
 
     match &var {
-        Expression::ConstantVariable(loc, _, n) => {
+        Expression::ConstantVariable(loc, _, contract_no, var_no) => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "cannot assign to constant ‘{}’",
-                    ns.contracts[contract_no.unwrap()].variables[*n].name
+                    ns.contracts[*contract_no].variables[*var_no].name
                 ),
             ));
             Err(())
@@ -2754,12 +2758,12 @@ fn incr_decr(
     let var_ty = var.ty();
 
     match &var {
-        Expression::ConstantVariable(loc, _, n) => {
+        Expression::ConstantVariable(loc, _, contract_no, var_no) => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "cannot assign to constant ‘{}’",
-                    ns.contracts[contract_no.unwrap()].variables[*n].name
+                    ns.contracts[*contract_no].variables[*var_no].name
                 ),
             ));
             Err(())

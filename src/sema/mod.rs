@@ -454,16 +454,55 @@ impl ast::Namespace {
         }
     }
 
+    /// Does a parent contract have a variable defined with this name (recursive)
+    fn resolve_var_parent_contract(
+        &self,
+        contract_no: usize,
+        id: &pt::Identifier,
+    ) -> Option<(usize, usize)> {
+        for contract_no in self.contracts[contract_no].inherit.iter() {
+            // find file this contract was defined in
+            let file_no = self.contracts[*contract_no].loc.0;
+
+            if let Some(ast::Symbol::Variable(_, var_no)) =
+                self.symbols
+                    .get(&(file_no, Some(*contract_no), id.name.to_owned()))
+            {
+                let var = &self.contracts[*contract_no].variables[*var_no];
+
+                if let pt::Visibility::Private(_) = var.visibility {
+                    // not visible
+                } else {
+                    return Some((*contract_no, *var_no));
+                }
+            } else {
+                let res = self.resolve_var_parent_contract(*contract_no, id);
+
+                if res.is_some() {
+                    return res;
+                }
+            }
+        }
+
+        None
+    }
+
     /// Resolve contract variable
     pub fn resolve_var(
         &mut self,
         file_no: usize,
         contract_no: usize,
         id: &pt::Identifier,
-    ) -> Result<usize, ()> {
+    ) -> Result<(usize, usize), ()> {
         let mut s = self
             .symbols
             .get(&(file_no, Some(contract_no), id.name.to_owned()));
+
+        if s.is_none() {
+            if let Some((contract_no, var_no)) = self.resolve_var_parent_contract(contract_no, id) {
+                return Ok((contract_no, var_no));
+            }
+        }
 
         if s.is_none() {
             s = self.symbols.get(&(file_no, None, id.name.to_owned()));
@@ -512,7 +551,7 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
-            Some(ast::Symbol::Variable(_, n)) => Ok(*n),
+            Some(ast::Symbol::Variable(_, n)) => Ok((contract_no, *n)),
         }
     }
 
