@@ -237,7 +237,27 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract ‘a’ inheritance is cyclic"
+        "inheriting ‘a’ from contract ‘b’ is cyclic"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            constructor(int arg1) public {
+            }
+        }
+
+        contract b is a, a {
+            constructor(int arg1) public {
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘b’ duplicate inherits ‘a’"
     );
 
     let ns = parse_and_resolve(
@@ -262,7 +282,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract ‘a’ inheritance is cyclic"
+        "inheriting ‘a’ from contract ‘c’ is cyclic"
     );
 
     let ns = parse_and_resolve(
@@ -292,7 +312,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract ‘a’ inheritance is cyclic"
+        "inheriting ‘a’ from contract ‘c’ is cyclic"
     );
 }
 
