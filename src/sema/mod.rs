@@ -409,7 +409,13 @@ impl ast::Namespace {
             return Some(*n);
         }
 
-        if contract_no.is_some() {
+        if let Some(contract_no) = contract_no {
+            if let Some((_, ast::Symbol::Enum(_, n))) =
+                self.resolve_inherited_contract(contract_no, id)
+            {
+                return Some(*n);
+            }
+
             if let Some(ast::Symbol::Enum(_, n)) =
                 self.symbols.get(&(file_no, None, id.name.to_owned()))
             {
@@ -455,28 +461,30 @@ impl ast::Namespace {
     }
 
     /// Does a parent contract have a variable defined with this name (recursive)
-    fn resolve_var_parent_contract(
+    fn resolve_inherited_contract(
         &self,
         contract_no: usize,
         id: &pt::Identifier,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<(usize, &ast::Symbol)> {
         for contract_no in self.contracts[contract_no].inherit.iter() {
             // find file this contract was defined in
             let file_no = self.contracts[*contract_no].loc.0;
 
-            if let Some(ast::Symbol::Variable(_, var_no)) =
-                self.symbols
-                    .get(&(file_no, Some(*contract_no), id.name.to_owned()))
+            if let Some(sym) = self
+                .symbols
+                .get(&(file_no, Some(*contract_no), id.name.to_owned()))
             {
-                let var = &self.contracts[*contract_no].variables[*var_no];
+                if let ast::Symbol::Variable(_, var_no) = sym {
+                    let var = &self.contracts[*contract_no].variables[*var_no];
 
-                if let pt::Visibility::Private(_) = var.visibility {
-                    // not visible
-                } else {
-                    return Some((*contract_no, *var_no));
+                    if let pt::Visibility::Private(_) = var.visibility {
+                        return None;
+                    }
                 }
+
+                return Some((*contract_no, sym));
             } else {
-                let res = self.resolve_var_parent_contract(*contract_no, id);
+                let res = self.resolve_inherited_contract(*contract_no, id);
 
                 if res.is_some() {
                     return res;
@@ -491,7 +499,7 @@ impl ast::Namespace {
     pub fn resolve_var(
         &mut self,
         file_no: usize,
-        contract_no: usize,
+        mut contract_no: usize,
         id: &pt::Identifier,
     ) -> Result<(usize, usize), ()> {
         let mut s = self
@@ -499,8 +507,9 @@ impl ast::Namespace {
             .get(&(file_no, Some(contract_no), id.name.to_owned()));
 
         if s.is_none() {
-            if let Some((contract_no, var_no)) = self.resolve_var_parent_contract(contract_no, id) {
-                return Ok((contract_no, var_no));
+            if let Some((no, sym)) = self.resolve_inherited_contract(contract_no, id) {
+                contract_no = no;
+                s = Some(sym);
             }
         }
 
@@ -819,11 +828,20 @@ impl ast::Namespace {
             .symbols
             .get(&(import_file_no, contract_no, id.name.to_owned()));
 
-        // try global scope
-        if s.is_none() && contract_no.is_some() {
-            s = self
-                .symbols
-                .get(&(import_file_no, None, id.name.to_owned()));
+        if let Some(contract_no) = contract_no {
+            // check inherited contracts
+            if s.is_none() {
+                if let Some((_, sym)) = self.resolve_inherited_contract(contract_no, &id) {
+                    s = Some(sym);
+                }
+            }
+
+            // try global scope
+            if s.is_none() {
+                s = self
+                    .symbols
+                    .get(&(import_file_no, None, id.name.to_owned()));
+            }
         }
 
         match s {
