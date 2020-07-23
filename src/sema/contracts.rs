@@ -81,8 +81,6 @@ pub fn resolve(
 ) {
     resolve_inherited_contracts(contracts, file_no, ns);
 
-    inherit_types(contracts, file_no, ns);
-
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
     let mut function_bodies = Vec::new();
