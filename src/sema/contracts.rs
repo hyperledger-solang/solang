@@ -79,9 +79,9 @@ pub fn resolve(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    if resolve_inheritance(contracts, file_no, ns) {
-        inherit_types(contracts, file_no, ns);
-    }
+    resolve_inherited_contracts(contracts, file_no, ns);
+
+    inherit_types(contracts, file_no, ns);
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
@@ -97,12 +97,21 @@ pub fn resolve(
 
 /// Resolve the inheritance list and check for cycles. Returns true if no
 /// issues where found.
-fn resolve_inheritance(
+fn resolve_inherited_contracts(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
-) -> bool {
-    let mut valid = true;
+) {
+    // Check the inheritance of a contract
+    fn cyclic(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
+        let inherits = &ns.contracts[parent].inherit;
+
+        if base == parent || inherits.contains(&base) {
+            return true;
+        }
+
+        inherits.iter().any(|parent| cyclic(base, *parent, ns))
+    }
 
     for (contract_no, def) in contracts {
         for name in &def.inherits {
@@ -113,8 +122,22 @@ fn resolve_inheritance(
                             name.loc,
                             format!("contract ‘{}’ cannot inherit itself", name.name),
                         ));
-
-                        valid = false;
+                    } else if ns.contracts[*contract_no].inherit.contains(&no) {
+                        ns.diagnostics.push(Diagnostic::error(
+                            name.loc,
+                            format!(
+                                "contract ‘{}’ duplicate inherits ‘{}’",
+                                ns.contracts[*contract_no].name, name.name
+                            ),
+                        ));
+                    } else if cyclic(*contract_no, no, ns) {
+                        ns.diagnostics.push(Diagnostic::error(
+                            name.loc,
+                            format!(
+                                "inheriting ‘{}’ from contract ‘{}’ is cyclic",
+                                name.name, ns.contracts[*contract_no].name
+                            ),
+                        ));
                     } else {
                         ns.contracts[*contract_no].inherit.push(no);
                     }
@@ -124,36 +147,10 @@ fn resolve_inheritance(
                         name.loc,
                         format!("contract ‘{}’ not found", name.name),
                     ));
-
-                    valid = false;
                 }
             }
         }
     }
-
-    // Check the inheritance of a contract
-    fn cyclic(no: &usize, set: &[usize], ns: &ast::Namespace) -> bool {
-        if set.contains(no) {
-            return true;
-        }
-
-        set.iter()
-            .any(|c| cyclic(no, &ns.contracts[*c].inherit, ns))
-    }
-
-    for (contract_no, _) in contracts {
-        if cyclic(contract_no, &ns.contracts[*contract_no].inherit, ns) {
-            let c = &ns.contracts[*contract_no];
-            ns.diagnostics.push(Diagnostic::error(
-                c.loc,
-                format!("contract ‘{}’ inheritance is cyclic", c.name),
-            ));
-
-            valid = false;
-        }
-    }
-
-    valid
 }
 
 /// Any types declared in the inherited contracts are available
