@@ -1122,7 +1122,7 @@ pub fn expression(
                     var_contract_no,
                     var_no,
                 )),
-                ContractVariableType::Storage(_) => {
+                ContractVariableType::Storage => {
                     if is_constant {
                         ns.diagnostics.push(Diagnostic::error(
                             id.loc,

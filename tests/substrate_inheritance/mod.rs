@@ -1,6 +1,6 @@
 extern crate solang;
 
-use super::{first_error, no_errors, parse_and_resolve};
+use super::{build_solidity, first_error, no_errors, parse_and_resolve};
 use solang::file_cache::FileCache;
 use solang::Target;
 
@@ -538,4 +538,64 @@ fn inherit_variables() {
     );
 
     no_errors(ns.diagnostics);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            uint16 public foo = 65535;
+        }
+
+        contract a {
+            uint16 private foo = 102;
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    let mut slot = [0u8; 32];
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(102, 0)
+    );
+
+    slot[0] = 1;
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(0xff, 0xff)
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            uint16 public var_b;
+
+            function test() public {
+                var_a = 102;
+                var_b = 65535;
+            }
+        }
+
+        contract a {
+            uint16 public var_a;
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", Vec::new());
+
+    let mut slot = [0u8; 32];
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(102, 0)
+    );
+
+    slot[0] = 1;
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(0xff, 0xff)
+    );
 }

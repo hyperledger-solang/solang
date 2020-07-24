@@ -571,7 +571,7 @@ impl From<&pt::Type> for Type {
 }
 
 pub enum ContractVariableType {
-    Storage(BigInt),
+    Storage,
     Constant,
 }
 
@@ -587,18 +587,10 @@ pub struct ContractVariable {
 
 impl ContractVariable {
     pub fn is_storage(&self) -> bool {
-        if let ContractVariableType::Storage(_) = self.var {
+        if let ContractVariableType::Storage = self.var {
             true
         } else {
             false
-        }
-    }
-
-    pub fn get_storage_slot(&self) -> Expression {
-        if let ContractVariableType::Storage(n) = &self.var {
-            Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Uint(256), n.clone())
-        } else {
-            panic!("get_storage_slot called on non-storage variable");
         }
     }
 }
@@ -640,16 +632,22 @@ pub struct Namespace {
     pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
 }
 
+pub struct Layout {
+    pub slot: BigInt,
+    pub contract_no: usize,
+    pub var_no: usize,
+}
+
 pub struct Contract {
     pub doc: Vec<String>,
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
     pub name: String,
     pub inherit: Vec<usize>,
+    pub layout: Vec<Layout>,
     // events
     pub functions: Vec<Function>,
     pub variables: Vec<ContractVariable>,
-    pub top_of_contract_storage: BigInt,
     pub creates: Vec<usize>,
     pub initializer: ControlFlowGraph,
 }
@@ -661,6 +659,19 @@ impl Contract {
             true
         } else {
             false
+        }
+    }
+
+    /// Get the storage slot for a variable, possibly inherited
+    pub fn get_storage_slot(&self, var_contract_no: usize, var_no: usize) -> Expression {
+        if let Some(layout) = self
+            .layout
+            .iter()
+            .find(|l| l.contract_no == var_contract_no && l.var_no == var_no)
+        {
+            Expression::NumberLiteral(pt::Loc(0, 0, 0), Type::Uint(256), layout.slot.clone())
+        } else {
+            panic!("get_storage_slot called on non-storage variable");
         }
     }
 }

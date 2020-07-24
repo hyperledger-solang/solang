@@ -370,22 +370,20 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
     let storagety = registry.struct_type("storage", fields);
 
     let fields = ns.contracts[contract_no]
-        .variables
+        .layout
         .iter()
-        .filter_map(|v| {
-            if let ast::ContractVariableType::Storage(storage) = &v.var {
-                if !v.ty.is_mapping() {
-                    Some(StorageLayout {
-                        name: registry.string(&v.name),
-                        layout: StorageFieldLayout::Field(LayoutField {
-                            offset: format!("0x{:064X}", storage),
-                            len: v.ty.storage_slots(ns).to_string(),
-                            ty: ty_to_abi(&v.ty, ns, &mut registry).ty,
-                        }),
-                    })
-                } else {
-                    None
-                }
+        .filter_map(|layout| {
+            let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
+
+            if !var.ty.is_mapping() {
+                Some(StorageLayout {
+                    name: registry.string(&var.name),
+                    layout: StorageFieldLayout::Field(LayoutField {
+                        offset: format!("0x{:064X}", layout.slot),
+                        len: var.ty.storage_slots(ns).to_string(),
+                        ty: ty_to_abi(&var.ty, ns, &mut registry).ty,
+                    }),
+                })
             } else {
                 None
             }

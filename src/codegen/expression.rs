@@ -22,7 +22,7 @@ pub fn expression(
     match expr {
         Expression::StorageVariable(_, _, var_contract_no, var_no) => {
             // inherited storage variables should precede contract variables, not overlap
-            ns.contracts[*var_contract_no].variables[*var_no].get_storage_slot()
+            ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no)
         }
         Expression::StorageLoad(loc, ty, expr) => Expression::StorageLoad(
             *loc,

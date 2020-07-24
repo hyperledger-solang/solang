@@ -1,4 +1,3 @@
-use super::ast::{Diagnostic, Note};
 use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
@@ -21,10 +20,10 @@ impl ast::Contract {
             loc,
             ty,
             inherit: Vec::new(),
+            layout: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
             variables: Vec::new(),
-            top_of_contract_storage: BigInt::zero(),
             creates: Vec::new(),
             initializer: ControlFlowGraph::new(),
         }
@@ -122,12 +121,12 @@ fn resolve_inherited_contracts(
             match ns.resolve_contract(file_no, name) {
                 Some(no) => {
                     if no == *contract_no {
-                        ns.diagnostics.push(Diagnostic::error(
+                        ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
                             format!("contract ‘{}’ cannot inherit itself", name.name),
                         ));
                     } else if ns.contracts[*contract_no].inherit.contains(&no) {
-                        ns.diagnostics.push(Diagnostic::error(
+                        ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
                             format!(
                                 "contract ‘{}’ duplicate inherits ‘{}’",
@@ -135,7 +134,7 @@ fn resolve_inherited_contracts(
                             ),
                         ));
                     } else if cyclic(*contract_no, no, ns) {
-                        ns.diagnostics.push(Diagnostic::error(
+                        ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
                             format!(
                                 "inheriting ‘{}’ from contract ‘{}’ is cyclic",
@@ -147,7 +146,7 @@ fn resolve_inherited_contracts(
                     }
                 }
                 None => {
-                    ns.diagnostics.push(Diagnostic::error(
+                    ns.diagnostics.push(ast::Diagnostic::error(
                         name.loc,
                         format!("contract ‘{}’ not found", name.name),
                     ));
@@ -176,15 +175,17 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
     base(contract_no, &mut order, ns);
 
-    for contract_no in order {
+    let mut slot = BigInt::zero();
+
+    for base_contract_no in order {
         // find all syms for this contract
         for ((_, iter_contract_no, name), sym) in &ns.symbols {
-            if *iter_contract_no != Some(contract_no) {
+            if *iter_contract_no != Some(base_contract_no) {
                 continue;
             }
 
             if let Some(prev) = syms.get(name) {
-                ns.diagnostics.push(Diagnostic::error_with_note(
+                ns.diagnostics.push(ast::Diagnostic::error_with_note(
                     *sym.loc(),
                     format!("already defined ‘{}’", name,),
                     *prev.loc(),
@@ -192,8 +193,22 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 ));
             }
 
-            if !sym.is_private(contract_no, ns) {
+            if !sym.is_private(base_contract_no, ns) {
                 syms.insert(name.to_owned(), sym);
+            }
+        }
+
+        for var_no in 0..ns.contracts[base_contract_no].variables.len() {
+            if ns.contracts[base_contract_no].variables[var_no].is_storage() {
+                ns.contracts[contract_no].layout.push(ast::Layout {
+                    slot: slot.clone(),
+                    contract_no: base_contract_no,
+                    var_no,
+                });
+
+                slot += ns.contracts[base_contract_no].variables[var_no]
+                    .ty
+                    .storage_slots(ns);
             }
         }
     }
@@ -207,7 +222,7 @@ fn resolve_declarations<'a>(
     contract_no: usize,
     ns: &mut ast::Namespace,
 ) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
-    ns.diagnostics.push(Diagnostic::info(
+    ns.diagnostics.push(ast::Diagnostic::info(
         def.loc,
         format!("found {} ‘{}’", def.ty, def.name.name),
     ));
@@ -235,16 +250,16 @@ fn resolve_declarations<'a>(
             if !virtual_functions.is_empty() {
                 let notes = virtual_functions
                     .into_iter()
-                    .map(|function_no| Note {
+                    .map(|function_no| ast::Note {
                         pos: ns.contracts[contract_no].functions[function_no].loc,
                         message: format!(
                             "location of ‘virtual’ function ‘{}’",
                             ns.contracts[contract_no].functions[function_no].name
                         ),
                     })
-                    .collect::<Vec<Note>>();
+                    .collect::<Vec<ast::Note>>();
 
-                ns.diagnostics.push(Diagnostic::error_with_notes(
+                ns.diagnostics.push(ast::Diagnostic::error_with_notes(
                     *loc,
                     format!(
                         "contract should be marked ‘abstract contract’ since it has {} virtual functions",
@@ -258,7 +273,7 @@ fn resolve_declarations<'a>(
             // no constructor allowed, every function should be declared external and no bodies allowed
             for func in &ns.contracts[contract_no].functions {
                 if func.is_constructor() {
-                    ns.diagnostics.push(Diagnostic::error(
+                    ns.diagnostics.push(ast::Diagnostic::error(
                         func.loc,
                         "constructor not allowed in an interface".to_string(),
                     ));
@@ -266,7 +281,7 @@ fn resolve_declarations<'a>(
                 }
 
                 if !func.is_virtual {
-                    ns.diagnostics.push(Diagnostic::error(
+                    ns.diagnostics.push(ast::Diagnostic::error(
                         func.loc,
                         "functions can not have bodies in an interface".to_string(),
                     ));
@@ -274,7 +289,7 @@ fn resolve_declarations<'a>(
                 }
 
                 if !func.is_public() {
-                    ns.diagnostics.push(Diagnostic::error(
+                    ns.diagnostics.push(ast::Diagnostic::error(
                         func.loc,
                         "functions must be declared ‘external’ in an interface".to_string(),
                     ));

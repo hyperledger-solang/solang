@@ -26,21 +26,24 @@ fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new();
     let mut vartab = Vartable::new();
 
-    for var in &ns.contracts[contract_no].variables {
-        if var.is_storage() {
-            if let Some(init) = &var.initializer {
-                let pos = vartab.temp_name(&var.name, &var.ty);
-                let expr = expression(&init, &mut cfg, contract_no, ns, &mut vartab);
-                cfg.add(&mut vartab, Instr::Set { res: pos, expr });
-                cfg.add(
-                    &mut vartab,
-                    Instr::SetStorage {
-                        local: pos,
-                        ty: var.ty.clone(),
-                        storage: var.get_storage_slot(),
-                    },
-                );
-            }
+    for layout in &ns.contracts[contract_no].layout {
+        let var = &ns.contracts[layout.contract_no].variables[layout.var_no];
+
+        if let Some(init) = &var.initializer {
+            let storage =
+                ns.contracts[contract_no].get_storage_slot(layout.contract_no, layout.var_no);
+
+            let pos = vartab.temp_name(&var.name, &var.ty);
+            let expr = expression(&init, &mut cfg, contract_no, ns, &mut vartab);
+            cfg.add(&mut vartab, Instr::Set { res: pos, expr });
+            cfg.add(
+                &mut vartab,
+                Instr::SetStorage {
+                    local: pos,
+                    ty: var.ty.clone(),
+                    storage,
+                },
+            );
         }
     }
 
