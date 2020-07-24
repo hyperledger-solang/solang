@@ -3,6 +3,7 @@ use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use parser::pt;
+use std::collections::HashMap;
 use Target;
 
 use super::ast;
@@ -89,6 +90,11 @@ pub fn resolve(
         function_bodies.extend(resolve_declarations(def, file_no, *contract_no, ns));
     }
 
+    // Now we have all the declarations, we can create the layout of storage and handle inheritance
+    for (contract_no, _) in contracts {
+        layout_contract(*contract_no, ns);
+    }
+
     // Now we can resolve the bodies
     resolve_bodies(function_bodies, file_no, ns);
 }
@@ -151,67 +157,44 @@ fn resolve_inherited_contracts(
     }
 }
 
-/// Any types declared in the inherited contracts are available
-fn inherit_types(
-    contracts: &[(usize, &pt::ContractDefinition)],
-    file_no: usize,
-    ns: &mut ast::Namespace,
-) {
-    fn inherit(file_no: usize, contract_no: usize, parent: usize, ns: &mut ast::Namespace) {
-        let mut errors = Vec::new();
-        // find all the types in the parent contract which are not already present in
-        // the current contract. We need to collect these before inserting as we're iterating
-        // over the symbol table to find
-        let types: Vec<(String, ast::Symbol)> = ns
-            .symbols
-            .iter()
-            .filter_map(|((_, symbol_contract_no, symbol_name), symbol)| {
-                if *symbol_contract_no != Some(parent) {
-                    None
-                } else {
-                    match symbol {
-                        ast::Symbol::Enum(_, _) | ast::Symbol::Struct(_, _) => {
-                            if let Some(sym) =
-                                ns.symbols
-                                    .get(&(file_no, Some(contract_no), symbol_name.clone()))
-                            {
-                                if sym != symbol {
-                                    errors.push(Diagnostic::error_with_note(
-                                        *symbol.loc(),
-                                        format!("contract ‘{}’ cannot inherit type ‘{}’ from contract ‘{}’", ns.contracts[contract_no].name, symbol_name,  ns.contracts[parent].name),
-                                        *sym.loc(),
-                                        format!("previous definition of ‘{}’", symbol_name),
-                                    ));
+/// Layout the contract. We determine the layout of variables
+fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
+    let mut syms: HashMap<String, &ast::Symbol> = HashMap::new();
 
-                                    None
-                                } else {
-                                    Some((symbol_name.clone(), symbol.clone()))
-                                }
-                            } else {
-                                Some((symbol_name.clone(), symbol.clone()))
-                            }
-                        }
-                        _ => None,
-                    }
-                }
-            })
-            .collect();
+    // visit base contracts depth-first in post-order
+    let mut order = Vec::new();
 
-        ns.diagnostics.extend(errors);
-
-        for (name, symbol) in types.into_iter() {
-            ns.symbols
-                .insert((file_no, Some(contract_no), name), symbol);
+    fn base<'a>(contract_no: usize, order: &mut Vec<usize>, ns: &'a ast::Namespace) {
+        for no in ns.contracts[contract_no].inherit.iter().rev() {
+            base(*no, order, ns);
         }
 
-        for parent in ns.contracts[parent].inherit.clone() {
-            inherit(file_no, contract_no, parent, ns);
+        if !order.contains(&contract_no) {
+            order.push(contract_no);
         }
     }
 
-    for (contract_no, _) in contracts {
-        for parent in ns.contracts[*contract_no].inherit.clone() {
-            inherit(file_no, *contract_no, parent, ns);
+    base(contract_no, &mut order, ns);
+
+    for contract_no in order {
+        // find all syms for this contract
+        for ((_, iter_contract_no, name), sym) in &ns.symbols {
+            if *iter_contract_no != Some(contract_no) {
+                continue;
+            }
+
+            if let Some(prev) = syms.get(name) {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    *sym.loc(),
+                    format!("already defined ‘{}’", name,),
+                    *prev.loc(),
+                    format!("previous definition of ‘{}’", name),
+                ));
+            }
+
+            if !sym.is_private(contract_no, ns) {
+                syms.insert(name.to_owned(), sym);
+            }
         }
     }
 }

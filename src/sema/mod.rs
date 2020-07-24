@@ -986,3 +986,35 @@ impl ast::Namespace {
         }
     }
 }
+
+impl ast::Symbol {
+    /// Is this a private symbol
+    pub fn is_private(&self, contract_no: usize, ns: &ast::Namespace) -> bool {
+        match self {
+            ast::Symbol::Variable(_, var_no) => {
+                let visibility = &ns.contracts[contract_no].variables[*var_no].visibility;
+
+                if let pt::Visibility::Private(_) = visibility {
+                    true
+                } else {
+                    false
+                }
+            }
+            ast::Symbol::Function(functions) => {
+                // if all functions are private, return private
+                for (_, function_no) in functions {
+                    let visibility = &ns.contracts[contract_no].functions[*function_no].visibility;
+
+                    if let pt::Visibility::Private(_) = visibility {
+                        // ok
+                    } else {
+                        return false;
+                    }
+                }
+
+                true
+            }
+            _ => false,
+        }
+    }
+}

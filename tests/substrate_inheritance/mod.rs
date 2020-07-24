@@ -441,10 +441,7 @@ fn inherit_types() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "contract ‘a’ cannot inherit type ‘foo’ from contract ‘c’"
-    );
+    assert_eq!(first_error(ns.diagnostics), "already defined ‘foo’");
 }
 
 #[test]
