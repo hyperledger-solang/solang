@@ -150,6 +150,6 @@ fn var_decl(
         file_no,
         Some(contract_no),
         &s.name,
-        Symbol::Variable(s.loc, pos),
+        Symbol::Variable(s.loc, contract_no, pos),
     )
 }

@@ -295,7 +295,7 @@ impl ast::Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
-                ast::Symbol::Variable(c, _) => {
+                ast::Symbol::Variable(c, _, _) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!(
@@ -358,7 +358,7 @@ impl ast::Namespace {
                             "location of previous definition".to_string(),
                         ));
                     }
-                    ast::Symbol::Variable(c, _) => {
+                    ast::Symbol::Variable(c, _, _) => {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!(
@@ -410,8 +410,7 @@ impl ast::Namespace {
         }
 
         if let Some(contract_no) = contract_no {
-            if let Some((_, ast::Symbol::Enum(_, n))) =
-                self.resolve_inherited_contract(contract_no, id)
+            if let Some(ast::Symbol::Enum(_, n)) = self.resolve_inherited_contract(contract_no, id)
             {
                 return Some(*n);
             }
@@ -465,7 +464,7 @@ impl ast::Namespace {
         &self,
         contract_no: usize,
         id: &pt::Identifier,
-    ) -> Option<(usize, &ast::Symbol)> {
+    ) -> Option<&ast::Symbol> {
         for contract_no in self.contracts[contract_no].inherit.iter() {
             // find file this contract was defined in
             let file_no = self.contracts[*contract_no].loc.0;
@@ -474,7 +473,11 @@ impl ast::Namespace {
                 .symbols
                 .get(&(file_no, Some(*contract_no), id.name.to_owned()))
             {
-                if let ast::Symbol::Variable(_, var_no) = sym {
+                if let ast::Symbol::Variable(_, var_contract_no, var_no) = sym {
+                    if var_contract_no != contract_no {
+                        return None;
+                    }
+
                     let var = &self.contracts[*contract_no].variables[*var_no];
 
                     if let pt::Visibility::Private(_) = var.visibility {
@@ -482,7 +485,7 @@ impl ast::Namespace {
                     }
                 }
 
-                return Some((*contract_no, sym));
+                return Some(sym);
             } else {
                 let res = self.resolve_inherited_contract(*contract_no, id);
 
@@ -499,7 +502,7 @@ impl ast::Namespace {
     pub fn resolve_var(
         &mut self,
         file_no: usize,
-        mut contract_no: usize,
+        contract_no: usize,
         id: &pt::Identifier,
     ) -> Result<(usize, usize), ()> {
         let mut s = self
@@ -507,8 +510,7 @@ impl ast::Namespace {
             .get(&(file_no, Some(contract_no), id.name.to_owned()));
 
         if s.is_none() {
-            if let Some((no, sym)) = self.resolve_inherited_contract(contract_no, id) {
-                contract_no = no;
+            if let Some(sym) = self.resolve_inherited_contract(contract_no, id) {
                 s = Some(sym);
             }
         }
@@ -560,7 +562,7 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
-            Some(ast::Symbol::Variable(_, n)) => Ok((contract_no, *n)),
+            Some(ast::Symbol::Variable(_, contract_no, var_no)) => Ok((*contract_no, *var_no)),
         }
     }
 
@@ -618,7 +620,7 @@ impl ast::Namespace {
                     notes,
                 ));
             }
-            Some(ast::Symbol::Variable(loc, _)) => {
+            Some(ast::Symbol::Variable(loc, _, _)) => {
                 self.diagnostics.push(ast::Diagnostic::warning_with_note(
                     id.loc,
                     format!("declaration of ‘{}’ shadows state variable", id.name),
@@ -787,7 +789,7 @@ impl ast::Namespace {
                         ));
                         return Err(());
                     }
-                    Some(ast::Symbol::Variable(_, _)) => {
+                    Some(ast::Symbol::Variable(_, _, _)) => {
                         self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is a contract variable", id.name),
@@ -831,7 +833,7 @@ impl ast::Namespace {
         if let Some(contract_no) = contract_no {
             // check inherited contracts
             if s.is_none() {
-                if let Some((_, sym)) = self.resolve_inherited_contract(contract_no, &id) {
+                if let Some(sym) = self.resolve_inherited_contract(contract_no, &id) {
                     s = Some(sym);
                 }
             }
@@ -876,7 +878,7 @@ impl ast::Namespace {
                 ));
                 Err(())
             }
-            Some(ast::Symbol::Variable(_, _)) => {
+            Some(ast::Symbol::Variable(_, _, _)) => {
                 self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is a contract variable", id.name),
@@ -991,8 +993,8 @@ impl ast::Symbol {
     /// Is this a private symbol
     pub fn is_private(&self, contract_no: usize, ns: &ast::Namespace) -> bool {
         match self {
-            ast::Symbol::Variable(_, var_no) => {
-                let visibility = &ns.contracts[contract_no].variables[*var_no].visibility;
+            ast::Symbol::Variable(_, contract_no, var_no) => {
+                let visibility = &ns.contracts[*contract_no].variables[*var_no].visibility;
 
                 if let pt::Visibility::Private(_) = visibility {
                     true

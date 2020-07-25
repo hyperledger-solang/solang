@@ -599,7 +599,7 @@ impl ContractVariable {
 pub enum Symbol {
     Enum(pt::Loc, usize),
     Function(Vec<(pt::Loc, usize)>),
-    Variable(pt::Loc, usize),
+    Variable(pt::Loc, usize, usize),
     Struct(pt::Loc, usize),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),
@@ -610,7 +610,7 @@ impl Symbol {
         match self {
             Symbol::Enum(loc, _) => loc,
             Symbol::Function(funcs) => &funcs[0].0,
-            Symbol::Variable(loc, _) => loc,
+            Symbol::Variable(loc, _, _) => loc,
             Symbol::Struct(loc, _) => loc,
             Symbol::Contract(loc, _) => loc,
             Symbol::Import(loc, _) => loc,
