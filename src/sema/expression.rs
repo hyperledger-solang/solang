@@ -3235,19 +3235,25 @@ fn function_call_pos_args(
         };
     }
 
+    let mut name_matches = 0;
+    let mut errors = Vec::new();
+
     // Try to resolve as a function call
-    let funcs = ns.resolve_func(file_no, contract_no.unwrap(), &id)?;
+    for (signature, (base_contract_no, function_no)) in
+        &ns.contracts[contract_no.unwrap()].function_table
+    {
+        let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
-    let marker = ns.diagnostics.len();
+        if func.name != id.name {
+            continue;
+        }
 
-    // function call
-    for (loc, function_no) in &funcs {
-        let params_len = ns.contracts[contract_no.unwrap()].functions[*function_no]
-            .params
-            .len();
+        name_matches += 1;
+
+        let params_len = func.params.len();
 
         if params_len != args.len() {
-            ns.diagnostics.push(Diagnostic::error(
+            errors.push(Diagnostic::error(
                 *loc,
                 format!(
                     "function expects {} arguments, {} provided",
@@ -3263,17 +3269,10 @@ fn function_call_pos_args(
 
         // check if arguments can be implicitly casted
         for (i, arg) in resolved_args.iter().enumerate() {
-            match cast(
-                &arg.loc(),
-                arg.clone(),
-                &ns.contracts[contract_no.unwrap()].functions[*function_no].params[i]
-                    .ty
-                    .clone(),
-                true,
-                ns,
-            ) {
+            match try_cast(&arg.loc(), arg.clone(), &func.params[i].ty, true, ns) {
                 Ok(expr) => cast_args.push(expr),
-                Err(()) => {
+                Err(e) => {
+                    errors.push(e);
                     matches = false;
                     break;
                 }
@@ -3281,9 +3280,7 @@ fn function_call_pos_args(
         }
 
         if matches {
-            ns.diagnostics.truncate(marker);
-            let returns =
-                function_returns(&ns.contracts[contract_no.unwrap()].functions[*function_no]);
+            let returns = function_returns(func);
 
             return Ok(Expression::InternalFunctionCall(
                 *loc,
@@ -3294,12 +3291,20 @@ fn function_call_pos_args(
         }
     }
 
-    if funcs.len() != 1 {
-        ns.diagnostics.truncate(marker);
-        ns.diagnostics.push(Diagnostic::error(
-            *loc,
-            "cannot find overloaded function which matches signature".to_string(),
-        ));
+    match name_matches {
+        0 => {
+            ns.diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!("unknown function or type ‘{}’", id.name),
+            ));
+        }
+        1 => ns.diagnostics.extend(errors),
+        _ => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                "cannot find overloaded function which matches signature".to_string(),
+            ));
+        }
     }
 
     Err(())
@@ -3315,9 +3320,6 @@ fn function_call_with_named_args(
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    // Try to resolve as a function call
-    let funcs = ns.resolve_func(file_no, contract_no.unwrap(), &id)?;
-
     let mut arguments = HashMap::new();
 
     for arg in args {
@@ -3335,16 +3337,26 @@ fn function_call_with_named_args(
         );
     }
 
-    let marker = ns.diagnostics.len();
+    // Try to resolve as a function call
+    let mut name_matches = 0;
+    let mut errors = Vec::new();
 
-    // function call
-    for (loc, function_no) in &funcs {
-        let params_len = ns.contracts[contract_no.unwrap()].functions[*function_no]
-            .params
-            .len();
+    // Try to resolve as a function call
+    for (signature, (base_contract_no, function_no)) in
+        &ns.contracts[contract_no.unwrap()].function_table
+    {
+        let func = &ns.contracts[*base_contract_no].functions[*function_no];
+
+        if func.name != id.name {
+            continue;
+        }
+
+        name_matches += 1;
+
+        let params_len = func.params.len();
 
         if params_len != args.len() {
-            ns.diagnostics.push(Diagnostic::error(
+            errors.push(Diagnostic::error(
                 *loc,
                 format!(
                     "function expects {} arguments, {} provided",
@@ -3360,8 +3372,7 @@ fn function_call_with_named_args(
 
         // check if arguments can be implicitly casted
         for i in 0..params_len {
-            let param =
-                ns.contracts[contract_no.unwrap()].functions[*function_no].params[i].clone();
+            let param = &func.params[i];
 
             let arg = match arguments.get(&param.name) {
                 Some(a) => a,
@@ -3378,9 +3389,10 @@ fn function_call_with_named_args(
                 }
             };
 
-            match cast(&arg.loc(), arg.clone(), &param.ty, true, ns) {
+            match try_cast(&arg.loc(), arg.clone(), &param.ty, true, ns) {
                 Ok(expr) => cast_args.push(expr),
-                Err(()) => {
+                Err(e) => {
+                    errors.push(e);
                     matches = false;
                     break;
                 }
@@ -3388,10 +3400,7 @@ fn function_call_with_named_args(
         }
 
         if matches {
-            ns.diagnostics.truncate(marker);
-
-            let returns =
-                function_returns(&ns.contracts[contract_no.unwrap()].functions[*function_no]);
+            let returns = function_returns(func);
 
             return Ok(Expression::InternalFunctionCall(
                 *loc,
@@ -3402,12 +3411,20 @@ fn function_call_with_named_args(
         }
     }
 
-    if funcs.len() != 1 {
-        ns.diagnostics.truncate(marker);
-        ns.diagnostics.push(Diagnostic::error(
-            *loc,
-            "cannot find overloaded function which matches signature".to_string(),
-        ));
+    match name_matches {
+        0 => {
+            ns.diagnostics.push(Diagnostic::error(
+                id.loc,
+                format!("unknown function or type ‘{}’", id.name),
+            ));
+        }
+        1 => ns.diagnostics.extend(errors),
+        _ => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                "cannot find overloaded function which matches signature".to_string(),
+            ));
+        }
     }
 
     Err(())

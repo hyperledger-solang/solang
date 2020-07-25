@@ -333,44 +333,43 @@ pub fn function_decl(
     } else {
         let id = func.name.as_ref().unwrap();
 
+        if let Some((func_contract_no, func_no)) = ns.contracts[contract_no]
+            .function_table
+            .get(&fdecl.signature)
+        {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                func.loc,
+                "overloaded function with this signature already exist".to_string(),
+                ns.contracts[*func_contract_no].functions[*func_no].loc,
+                "location of previous definition".to_string(),
+            ));
+
+            return None;
+        }
+
+        let func_no = ns.contracts[contract_no].functions.len();
+
+        ns.contracts[contract_no]
+            .function_table
+            .insert(fdecl.signature.to_owned(), (contract_no, func_no));
+
+        ns.contracts[contract_no].functions.push(fdecl);
+
         if let Some(Symbol::Function(ref mut v)) =
             ns.symbols
                 .get_mut(&(file_no, Some(contract_no), id.name.to_owned()))
         {
-            // check if signature already present
-            for o in v.iter() {
-                if ns.contracts[contract_no].functions[o.1].signature == fdecl.signature {
-                    ns.diagnostics.push(Diagnostic::error_with_note(
-                        func.loc,
-                        "overloaded function with this signature already exist".to_string(),
-                        o.0,
-                        "location of previous definition".to_string(),
-                    ));
-                    return None;
-                }
-            }
-
-            let pos = ns.contracts[contract_no].functions.len();
-
-            ns.contracts[contract_no].functions.push(fdecl);
-
-            v.push((func.loc, pos));
-
-            return Some(pos);
+            v.push(func.loc);
+        } else {
+            ns.add_symbol(
+                file_no,
+                Some(contract_no),
+                id,
+                Symbol::Function(vec![id.loc]),
+            );
         }
 
-        let pos = ns.contracts[contract_no].functions.len();
-
-        ns.contracts[contract_no].functions.push(fdecl);
-
-        ns.add_symbol(
-            file_no,
-            Some(contract_no),
-            id,
-            Symbol::Function(vec![(id.loc, pos)]),
-        );
-
-        Some(pos)
+        Some(func_no)
     }
 }
 

@@ -23,6 +23,7 @@ impl ast::Contract {
             layout: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
+            function_table: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),
             initializer: ControlFlowGraph::new(),
@@ -193,7 +194,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 ));
             }
 
-            if !sym.is_private(base_contract_no, ns) {
+            if !sym.is_private_variable(ns) {
                 syms.insert(name.to_owned(), sym);
             }
         }

@@ -435,15 +435,19 @@ impl Function {
         returns: Vec<Parameter>,
         ns: &Namespace,
     ) -> Self {
-        let signature = format!(
-            "{}({})",
-            name,
-            params
-                .iter()
-                .map(|p| p.ty.to_signature_string(ns))
-                .collect::<Vec<String>>()
-                .join(",")
-        );
+        let signature = match ty {
+            pt::FunctionTy::Fallback => "@receive".to_string(),
+            pt::FunctionTy::Receive => "@fallback".to_string(),
+            _ => format!(
+                "{}({})",
+                name,
+                params
+                    .iter()
+                    .map(|p| p.ty.to_signature_string(ns))
+                    .collect::<Vec<String>>()
+                    .join(",")
+            ),
+        };
 
         Function {
             doc,
@@ -598,7 +602,7 @@ impl ContractVariable {
 #[derive(Clone, PartialEq)]
 pub enum Symbol {
     Enum(pt::Loc, usize),
-    Function(Vec<(pt::Loc, usize)>),
+    Function(Vec<pt::Loc>),
     Variable(pt::Loc, usize, usize),
     Struct(pt::Loc, usize),
     Contract(pt::Loc, usize),
@@ -609,7 +613,7 @@ impl Symbol {
     pub fn loc(&self) -> &pt::Loc {
         match self {
             Symbol::Enum(loc, _) => loc,
-            Symbol::Function(funcs) => &funcs[0].0,
+            Symbol::Function(funcs) => &funcs[0],
             Symbol::Variable(loc, _, _) => loc,
             Symbol::Struct(loc, _) => loc,
             Symbol::Contract(loc, _) => loc,
@@ -647,6 +651,7 @@ pub struct Contract {
     pub layout: Vec<Layout>,
     // events
     pub functions: Vec<Function>,
+    pub function_table: HashMap<String, (usize, usize)>,
     pub variables: Vec<ContractVariable>,
     pub creates: Vec<usize>,
     pub initializer: ControlFlowGraph,
