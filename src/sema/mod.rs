@@ -310,7 +310,7 @@ impl ast::Namespace {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!("{} is already defined as a function", id.name.to_string()),
-                        v[0].0,
+                        v[0],
                         "location of previous definition".to_string(),
                     ));
                 }
@@ -373,7 +373,7 @@ impl ast::Namespace {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as a function", id.name.to_string()),
-                            v[0].0,
+                            v[0],
                             "location of previous definition".to_string(),
                         ));
                     }
@@ -434,29 +434,6 @@ impl ast::Namespace {
         }
 
         None
-    }
-
-    /// Resolve function name
-    pub fn resolve_func(
-        &mut self,
-        file_no: usize,
-        contract_no: usize,
-        id: &pt::Identifier,
-    ) -> Result<Vec<(pt::Loc, usize)>, ()> {
-        match self
-            .symbols
-            .get(&(file_no, Some(contract_no), id.name.to_owned()))
-        {
-            Some(ast::Symbol::Function(v)) => Ok(v.clone()),
-            _ => {
-                self.diagnostics.push(ast::Diagnostic::error(
-                    id.loc,
-                    format!("unknown function or type ‘{}’", id.name),
-                ));
-
-                Err(())
-            }
-        }
     }
 
     /// Does a parent contract have a variable defined with this name (recursive)
@@ -609,7 +586,7 @@ impl ast::Namespace {
             Some(ast::Symbol::Function(v)) => {
                 let notes = v
                     .iter()
-                    .map(|(pos, _)| ast::Note {
+                    .map(|pos| ast::Note {
                         pos: *pos,
                         message: "previous declaration of function".to_owned(),
                     })
@@ -991,7 +968,7 @@ impl ast::Namespace {
 
 impl ast::Symbol {
     /// Is this a private symbol
-    pub fn is_private(&self, contract_no: usize, ns: &ast::Namespace) -> bool {
+    pub fn is_private_variable(&self, ns: &ast::Namespace) -> bool {
         match self {
             ast::Symbol::Variable(_, contract_no, var_no) => {
                 let visibility = &ns.contracts[*contract_no].variables[*var_no].visibility;
@@ -1001,20 +978,6 @@ impl ast::Symbol {
                 } else {
                     false
                 }
-            }
-            ast::Symbol::Function(functions) => {
-                // if all functions are private, return private
-                for (_, function_no) in functions {
-                    let visibility = &ns.contracts[contract_no].functions[*function_no].visibility;
-
-                    if let pt::Visibility::Private(_) = visibility {
-                        // ok
-                    } else {
-                        return false;
-                    }
-                }
-
-                true
             }
             _ => false,
         }
