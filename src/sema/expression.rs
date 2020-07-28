@@ -79,6 +79,7 @@ impl Expression {
             | Expression::DynamicArrayLength(loc, _)
             | Expression::DynamicArraySubscript(loc, _, _, _)
             | Expression::DynamicArrayPush(loc, _, _, _)
+            | Expression::DynamicArrayPop(loc, _, _)
             | Expression::StorageBytesSubscript(loc, _, _)
             | Expression::StorageBytesPush(loc, _, _)
             | Expression::StorageBytesPop(loc, _)
@@ -169,11 +170,13 @@ impl Expression {
             | Expression::GetAddress(_, ty)
             | Expression::Keccak256(_, ty, _)
             | Expression::Assign(_, ty, _, _) => ty.clone(),
-            Expression::DynamicArrayPush(_, _, ty, _) => match ty {
-                Type::Array(..) => ty.array_elem(),
-                Type::DynamicBytes => Type::Uint(8),
-                _ => unreachable!(),
-            },
+            Expression::DynamicArrayPush(_, _, ty, _) | Expression::DynamicArrayPop(_, _, ty) => {
+                match ty {
+                    Type::Array(..) => ty.array_elem(),
+                    Type::DynamicBytes => Type::Uint(8),
+                    _ => unreachable!(),
+                }
+            }
             Expression::DynamicArrayLength(_, _) => Type::Uint(32),
             Expression::StorageBytesLength(_, _) => Type::Uint(32),
             Expression::StorageBytesSubscript(_, _, _) => {
@@ -219,11 +222,13 @@ impl Expression {
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
             Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
             Expression::ExternalFunctionCallRaw { .. } => vec![Type::Bool, Type::DynamicBytes],
-            Expression::DynamicArrayPush(_, _, ty, _) => match ty {
-                Type::Array(..) => vec![ty.array_elem()],
-                Type::DynamicBytes => vec![Type::Uint(8)],
-                _ => unreachable!(),
-            },
+            Expression::DynamicArrayPush(_, _, ty, _) | Expression::DynamicArrayPop(_, _, ty) => {
+                match ty {
+                    Type::Array(..) => vec![ty.array_elem()],
+                    Type::DynamicBytes => vec![Type::Uint(8)],
+                    _ => unreachable!(),
+                }
+            }
             _ => unreachable!(),
         }
     }
@@ -3737,6 +3742,21 @@ fn method_call_pos_args(
                 Box::new(var_expr),
                 var_ty.clone(),
                 Box::new(val),
+            ));
+        }
+        if func.name == "pop" {
+            if !args.is_empty() {
+                ns.diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    "method ‘pop()’ does not take any arguments".to_string(),
+                ));
+                return Err(());
+            }
+
+            return Ok(Expression::DynamicArrayPop(
+                *loc,
+                Box::new(var_expr),
+                var_ty,
             ));
         }
     }

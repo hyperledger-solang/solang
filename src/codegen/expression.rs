@@ -417,6 +417,33 @@ pub fn expression(
 
             Expression::Variable(*loc, elem_ty, address_res)
         }
+        Expression::DynamicArrayPop(loc, array, ty) => {
+            let elem_ty = match ty {
+                Type::Array(..) => match ty.array_elem() {
+                    elem @ Type::Struct(..) => Type::Ref(Box::new(elem)),
+                    elem => elem,
+                },
+                Type::DynamicBytes => Type::Uint(8),
+                _ => unreachable!(),
+            };
+            let address_res = vartab.temp_anonymous(&elem_ty);
+
+            let address_arr = match expression(array, cfg, contract_no, ns, vartab) {
+                Expression::Variable(_, _, pos) => pos,
+                _ => unreachable!(),
+            };
+
+            cfg.add(
+                vartab,
+                Instr::PopMemory {
+                    res: address_res,
+                    ty: ty.clone(),
+                    array: address_arr,
+                },
+            );
+
+            Expression::Variable(*loc, elem_ty, address_res)
+        }
         Expression::StorageBytesLength(loc, expr) => Expression::StorageBytesLength(
             *loc,
             Box::new(expression(expr, cfg, contract_no, ns, vartab)),
