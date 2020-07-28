@@ -755,6 +755,7 @@ pub enum Expression {
     DynamicArrayLength(pt::Loc, Box<Expression>),
     DynamicArraySubscript(pt::Loc, Type, Box<Expression>, Box<Expression>),
     DynamicArrayPush(pt::Loc, Box<Expression>, Type, Box<Expression>),
+    DynamicArrayPop(pt::Loc, Box<Expression>, Type),
     StorageBytesSubscript(pt::Loc, Box<Expression>, Box<Expression>),
     StorageBytesPush(pt::Loc, Box<Expression>, Box<Expression>),
     StorageBytesPop(pt::Loc, Box<Expression>),
@@ -879,9 +880,9 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::StorageBytesPop(_, expr) | Expression::StorageBytesLength(_, expr) => {
-                    expr.recurse(cx, f)
-                }
+                Expression::StorageBytesPop(_, expr)
+                | Expression::StorageBytesLength(_, expr)
+                | Expression::DynamicArrayPop(_, expr, _) => expr.recurse(cx, f),
                 Expression::StringCompare(_, left, right)
                 | Expression::StringConcat(_, _, left, right) => {
                     if let StringLocation::RunTime(expr) = left {

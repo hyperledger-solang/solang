@@ -1146,6 +1146,152 @@ fn dynamic_array_push() {
 }
 
 #[test]
+fn dynamic_array_pop() {
+    let ns = parse_and_resolve(
+        r#"
+        contract foo {
+            function test() public {
+                int[] bar = new int[](1);
+                bar.pop(102);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "method ‘pop()’ does not take any arguments"
+    );
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](1);
+
+                bar[0] = 128;
+
+                assert(bar.length == 1);
+                assert(128 == bar.pop());
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                bytes bar = new bytes(1);
+
+                bar[0] = 128;
+
+                assert(bar.length == 1);
+                assert(128 == bar.pop());
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            struct s {
+                int32 f1;
+                bool f2;
+            }
+            function test() public {
+                s[] bar = new s[](1);
+
+                bar[0] = s(128, true);
+
+                assert(bar.length == 1);
+
+                s baz = bar.pop();
+                assert(baz.f1 == 128);
+                assert(baz.f2 == true);
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            enum enum1 { val1, val2, val3 }
+            function test() public {
+                enum1[] bar = new enum1[](1);
+
+                bar[0] = enum1.val2;
+
+                assert(bar.length == 1);
+                assert(enum1.val2 == bar.pop());
+                assert(bar.length == 0);
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn dynamic_array_pop_empty_array() {
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](0);
+                bar.pop();
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn dynamic_array_pop_bounds() {
+    let mut runtime = build_solidity(
+        r#"
+        pragma solidity 0;
+
+        contract foo {
+            function test() public {
+                int[] bar = new int[](1);
+                bar[0] = 12;
+                bar.pop();
+
+                assert(bar[0] == 12);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+}
+
+#[test]
 fn storage_dynamic_array_push() {
     let ns = parse_and_resolve(
         r#"

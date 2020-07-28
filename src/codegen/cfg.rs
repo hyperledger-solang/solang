@@ -31,6 +31,11 @@ pub enum Instr {
         array: usize,
         value: Box<Expression>,
     },
+    PopMemory {
+        res: usize,
+        ty: Type,
+        array: usize,
+    },
     Set {
         res: usize,
         expr: Expression,
@@ -621,6 +626,12 @@ impl ControlFlowGraph {
                 self.vars[*array].id.name,
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),
+            ),
+            Instr::PopMemory { res, ty, array } => format!(
+                "%{}, %{} = pop array ty:{}",
+                self.vars[*res].id.name,
+                self.vars[*array].id.name,
+                ty.to_string(ns),
             ),
             Instr::AssertFailure { expr: None } => "assert-failure".to_string(),
             Instr::AssertFailure { expr: Some(expr) } => {
