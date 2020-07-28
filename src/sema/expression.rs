@@ -3279,16 +3279,29 @@ fn function_call_pos_args(
             }
         }
 
-        if matches {
-            let returns = function_returns(func);
-
-            return Ok(Expression::InternalFunctionCall(
-                *loc,
-                returns,
-                signature.to_owned(),
-                cast_args,
-            ));
+        if !matches {
+            continue;
         }
+
+        if Some(*base_contract_no) != contract_no && func.is_private() {
+            errors.push(Diagnostic::error_with_note(
+                *loc,
+                "cannot call private function".to_string(),
+                func.loc,
+                format!("declaration of function ‘{}’", func.name),
+            ));
+
+            continue;
+        }
+
+        let returns = function_returns(func);
+
+        return Ok(Expression::InternalFunctionCall(
+            *loc,
+            returns,
+            signature.to_owned(),
+            cast_args,
+        ));
     }
 
     match name_matches {
@@ -3399,16 +3412,29 @@ fn function_call_with_named_args(
             }
         }
 
-        if matches {
-            let returns = function_returns(func);
-
-            return Ok(Expression::InternalFunctionCall(
-                *loc,
-                returns,
-                signature.to_owned(),
-                cast_args,
-            ));
+        if !matches {
+            continue;
         }
+
+        if Some(*base_contract_no) != contract_no && func.is_private() {
+            errors.push(Diagnostic::error_with_note(
+                *loc,
+                "cannot call private function".to_string(),
+                func.loc,
+                format!("declaration of function ‘{}’", func.name),
+            ));
+
+            continue;
+        }
+
+        let returns = function_returns(func);
+
+        return Ok(Expression::InternalFunctionCall(
+            *loc,
+            returns,
+            signature.to_owned(),
+            cast_args,
+        ));
     }
 
     match name_matches {
