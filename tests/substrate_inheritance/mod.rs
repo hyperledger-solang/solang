@@ -625,4 +625,121 @@ fn call_inherited_function() {
     runtime.function("bar", Vec::new());
 
     assert_eq!(runtime.vm.scratch, Val(105).encode());
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo() private returns (uint64) {
+                return 102;	
+            }
+        }
+        
+        contract apex is base {
+            function bar() public returns (uint64) {
+                return foo() + 3;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "cannot call private function");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo(uint64 a) private returns (uint64) {
+                return a + 102;	
+            }
+        }
+        
+        contract apex is base {
+            function bar() public returns (uint64) {
+                return foo({a: 3}) + 3;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "cannot call private function");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo(uint64 a) private returns (uint64) {
+                return a + 102;	
+            }
+        }
+        
+        contract apex is base {
+            function foo(uint64 a) public returns (uint64) {
+                return a + 64;	
+            }
+
+            function bar() public returns (uint64) {
+                return foo({a: 3}) + 3;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "already defined ‘foo’");
+
+    let mut runtime = build_solidity(
+        r##"
+        contract apex is base {
+            uint64 private x = 7;
+
+            function bar() public returns (uint64) {
+                return foo() + x + 13;
+            }
+        }
+
+        contract base {
+            uint64 private x = 5;
+
+            function foo() public returns (uint64) {
+                return x + 11;	
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(36).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract apex is base, base2 {
+            uint64 private x = 7;
+
+            function bar() public returns (uint64) {
+                return foo() + foo2() + x + 13;
+            }
+        }
+
+        contract base {
+            uint64 private x = 50000;
+
+            function foo() public returns (uint64) {
+                return x + 110000;	
+            }
+        }
+        
+        contract base2 {
+            uint64 private x = 600;
+
+            function foo2() public returns (uint64) {
+                return x + 1100;	
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(161720).encode());
 }

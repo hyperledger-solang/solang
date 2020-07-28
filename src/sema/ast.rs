@@ -493,6 +493,14 @@ impl Function {
         }
     }
 
+    /// Is this function accessable only from same contract
+    pub fn is_private(&self) -> bool {
+        match self.visibility {
+            pt::Visibility::Private(_) => true,
+            _ => false,
+        }
+    }
+
     /// Return a unique string for this function which is a valid wasm symbol
     pub fn wasm_symbol(&self, ns: &Namespace) -> String {
         let mut sig = self.name.to_owned();
