@@ -30,20 +30,6 @@ impl ast::Contract {
         }
     }
 
-    /// Return the index of the fallback function, if any
-    pub fn fallback_function(&self) -> Option<usize> {
-        self.functions
-            .iter()
-            .position(|f| f.ty == pt::FunctionTy::Fallback)
-    }
-
-    /// Return the index of the receive function, if any
-    pub fn receive_function(&self) -> Option<usize> {
-        self.functions
-            .iter()
-            .position(|f| f.ty == pt::FunctionTy::Receive)
-    }
-
     /// Generate contract code for this contract
     pub fn emit<'a>(
         &'a self,
@@ -62,12 +48,13 @@ impl ast::Contract {
         out += "# storage initializer\n";
         out += &self.initializer.to_string(self, ns);
 
-        for func in self.functions.iter() {
-            out += &format!("\n# {} {}\n", func.ty, func.signature);
+        for (contract_no, function_no, cfg) in self.function_table.values() {
+            let func = &ns.contracts[*contract_no].functions[*function_no];
+            let contract_name = &ns.contracts[*contract_no].name;
 
-            if let Some(ref cfg) = func.cfg {
-                out += &cfg.to_string(self, ns);
-            }
+            out += &format!("\n# {} {}.{}\n", func.ty, contract_name, func.signature);
+
+            out += &cfg.as_ref().unwrap().to_string(self, ns);
         }
 
         out
@@ -211,6 +198,17 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                     .ty
                     .storage_slots(ns);
             }
+        }
+
+        // add functions to our function_table
+        for function_no in 0..ns.contracts[base_contract_no].functions.len() {
+            let signature = ns.contracts[base_contract_no].functions[function_no]
+                .signature
+                .to_owned();
+
+            ns.contracts[contract_no]
+                .function_table
+                .insert(signature, (base_contract_no, function_no, None));
         }
     }
 }

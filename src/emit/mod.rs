@@ -249,7 +249,7 @@ pub struct Contract<'a> {
     triple: TargetTriple,
     contract: &'a ast::Contract,
     ns: &'a ast::Namespace,
-    functions: Vec<FunctionValue<'a>>,
+    functions: HashMap<String, FunctionValue<'a>>,
     wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
     code_size: RefCell<Option<IntValue<'a>>>,
@@ -451,7 +451,7 @@ impl<'a> Contract<'a> {
             context,
             contract,
             ns,
-            functions: Vec::new(),
+            functions: HashMap::new(),
             wasm: RefCell::new(Vec::new()),
             opt,
             code_size: RefCell::new(None),
@@ -732,25 +732,36 @@ impl<'a> Contract<'a> {
     fn emit_functions(&mut self, runtime: &mut dyn TargetRuntime) {
         let mut defines = Vec::new();
 
-        for codegen_func in &self.contract.functions {
+        for (signature, (base_contract_no, function_no, cfg)) in &self.contract.function_table {
+            let contract_name = &self.ns.contracts[*base_contract_no].name;
+            let codegen_func = &self.ns.contracts[*base_contract_no].functions[*function_no];
+
             let name = match codegen_func.ty {
-                pt::FunctionTy::Function => {
-                    format!("sol::function::{}", codegen_func.wasm_symbol(self.ns))
-                }
-                pt::FunctionTy::Constructor => {
-                    format!("sol::constructor{}", codegen_func.wasm_symbol(self.ns))
-                }
-                _ => format!("sol::{}", codegen_func.ty),
+                pt::FunctionTy::Function => format!(
+                    "sol::function::{}::{}",
+                    contract_name,
+                    codegen_func.wasm_symbol(self.ns)
+                ),
+                pt::FunctionTy::Constructor => format!(
+                    "sol::constructor::{}{}",
+                    contract_name,
+                    codegen_func.wasm_symbol(self.ns)
+                ),
+                _ => format!("sol::{}::{}", contract_name, codegen_func.ty),
             };
 
             let func_decl = self.declare_function(&name, codegen_func);
-            self.functions.push(func_decl);
+            self.functions.insert(signature.to_owned(), func_decl);
 
-            defines.push((func_decl, codegen_func));
+            defines.push((
+                func_decl,
+                codegen_func,
+                cfg.as_ref().expect("cfg should have been generated"),
+            ));
         }
 
-        for (func_decl, codegen_func) in defines {
-            self.define_function(codegen_func, func_decl, runtime);
+        for (func_decl, codegen_func, cfg) in defines {
+            self.emit_cfg(cfg, Some(codegen_func), func_decl, runtime);
         }
     }
 
@@ -2731,21 +2742,6 @@ impl<'a> Contract<'a> {
             .add_function(&fname, ftype, Some(Linkage::Internal))
     }
 
-    /// Emit function body
-    fn define_function(
-        &self,
-        codegen_func: &ast::Function,
-        function: FunctionValue<'a>,
-        runtime: &mut dyn TargetRuntime,
-    ) {
-        let cfg = match codegen_func.cfg {
-            Some(ref cfg) => cfg,
-            None => panic!(),
-        };
-
-        self.emit_cfg(cfg, Some(codegen_func), function, runtime);
-    }
-
     #[allow(clippy::cognitive_complexity)]
     fn emit_cfg(
         &self,
@@ -3083,8 +3079,13 @@ impl<'a> Contract<'a> {
                                 .into_int_value(),
                         );
                     }
-                    cfg::Instr::Call { res, func, args } => {
-                        let f = &self.contract.functions[*func];
+                    cfg::Instr::Call {
+                        res,
+                        base,
+                        func,
+                        args,
+                    } => {
+                        let f = &self.ns.contracts[*base].functions[*func];
 
                         let mut parms = args
                             .iter()
@@ -3103,7 +3104,7 @@ impl<'a> Contract<'a> {
 
                         let ret = self
                             .builder
-                            .build_call(self.functions[*func], &parms, "")
+                            .build_call(self.functions[&f.signature], &parms, "")
                             .try_as_basic_value()
                             .left()
                             .unwrap();
@@ -3561,7 +3562,7 @@ impl<'a> Contract<'a> {
         &self,
         codegen_functions: &[ast::Function],
         function_ty: pt::FunctionTy,
-        functions: &[FunctionValue<'a>],
+        functions: &HashMap<String, FunctionValue<'a>>,
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
         function: inkwell::values::FunctionValue<'a>,
@@ -3618,11 +3619,7 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (i, f) in codegen_functions
-            .iter()
-            .enumerate()
-            .filter(|f| f.1.ty == function_ty)
-        {
+        for f in codegen_functions.iter().filter(|f| f.ty == function_ty) {
             if !f.is_public() {
                 continue;
             }
@@ -3662,7 +3659,7 @@ impl<'a> Contract<'a> {
 
             let ret = self
                 .builder
-                .build_call(functions[i], &args, "")
+                .build_call(functions[&f.signature], &args, "")
                 .try_as_basic_value()
                 .left()
                 .unwrap();
@@ -3716,8 +3713,7 @@ impl<'a> Contract<'a> {
         // emit fallback code
         self.builder.position_at_end(no_function_matched);
 
-        if self.contract.fallback_function().is_none() && self.contract.receive_function().is_none()
-        {
+        if self.functions.get("@fallback").is_none() && self.functions.get("@receive").is_none() {
             // no need to check value transferred; we will abort either way
             runtime.return_u32(self, self.context.i32_type().const_int(2, false));
 
@@ -3745,9 +3741,9 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(fallback_block);
 
-        match self.contract.fallback_function() {
+        match self.functions.get("@fallback") {
             Some(f) => {
-                self.builder.build_call(self.functions[f], &[], "");
+                self.builder.build_call(*f, &[], "");
 
                 runtime.return_empty_abi(self);
             }
@@ -3758,9 +3754,9 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(receive_block);
 
-        match self.contract.receive_function() {
+        match self.functions.get("@receive") {
             Some(f) => {
-                self.builder.build_call(self.functions[f], &[], "");
+                self.builder.build_call(*f, &[], "");
 
                 runtime.return_empty_abi(self);
             }

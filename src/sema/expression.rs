@@ -3239,7 +3239,7 @@ fn function_call_pos_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for (signature, (base_contract_no, function_no)) in
+    for (signature, (base_contract_no, function_no, _)) in
         &ns.contracts[contract_no.unwrap()].function_table
     {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
@@ -3285,7 +3285,7 @@ fn function_call_pos_args(
             return Ok(Expression::InternalFunctionCall(
                 *loc,
                 returns,
-                *function_no,
+                signature.to_owned(),
                 cast_args,
             ));
         }
@@ -3342,7 +3342,7 @@ fn function_call_with_named_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for (signature, (base_contract_no, function_no)) in
+    for (signature, (base_contract_no, function_no, _)) in
         &ns.contracts[contract_no.unwrap()].function_table
     {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
@@ -3405,7 +3405,7 @@ fn function_call_with_named_args(
             return Ok(Expression::InternalFunctionCall(
                 *loc,
                 returns,
-                *function_no,
+                signature.to_owned(),
                 cast_args,
             ));
         }

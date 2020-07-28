@@ -589,12 +589,11 @@ impl EwasmTarget {
         contract.builder.build_call(initializer, &[], "");
 
         // ewasm only allows one constructor, hence find()
-        if let Some((i, con)) = contract
+        if let Some(con) = contract
             .contract
             .functions
             .iter()
-            .enumerate()
-            .find(|f| f.1.is_constructor())
+            .find(|f| f.is_constructor())
         {
             let mut args = Vec::new();
 
@@ -604,7 +603,7 @@ impl EwasmTarget {
 
             contract
                 .builder
-                .build_call(contract.functions[i], &args, "");
+                .build_call(contract.functions[&con.signature], &args, "");
         }
 
         // the deploy code should return the runtime wasm code

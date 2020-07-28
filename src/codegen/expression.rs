@@ -922,12 +922,16 @@ pub fn emit_function_call(
     vartab: &mut Vartable,
 ) -> Vec<Expression> {
     match expr {
-        Expression::InternalFunctionCall(_, _, func, args) => {
+        Expression::InternalFunctionCall(_, _, signature, args) => {
             let args = args
                 .iter()
                 .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
                 .collect();
-            let ftype = &ns.contracts[callee_contract_no].functions[*func];
+
+            let (contract_no, function_no, _) =
+                ns.contracts[callee_contract_no].function_table[signature];
+
+            let ftype = &ns.contracts[contract_no].functions[function_no];
 
             if !ftype.returns.is_empty() {
                 let mut res = Vec::new();
@@ -948,7 +952,8 @@ pub fn emit_function_call(
                     vartab,
                     Instr::Call {
                         res,
-                        func: *func,
+                        base: contract_no,
+                        func: function_no,
                         args,
                     },
                 );
@@ -959,7 +964,8 @@ pub fn emit_function_call(
                     vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        func: *func,
+                        base: contract_no,
+                        func: function_no,
                         args,
                     },
                 );

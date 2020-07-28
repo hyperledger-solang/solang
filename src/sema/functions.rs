@@ -281,6 +281,10 @@ pub fn function_decl(
 
         let pos = ns.contracts[contract_no].functions.len();
 
+        ns.contracts[contract_no]
+            .function_table
+            .insert(fdecl.signature.to_owned(), (contract_no, pos, None));
+
         ns.contracts[contract_no].functions.push(fdecl);
 
         Some(pos)
@@ -327,13 +331,17 @@ pub fn function_decl(
 
         let pos = ns.contracts[contract_no].functions.len();
 
+        ns.contracts[contract_no]
+            .function_table
+            .insert(fdecl.signature.to_owned(), (contract_no, pos, None));
+
         ns.contracts[contract_no].functions.push(fdecl);
 
         Some(pos)
     } else {
         let id = func.name.as_ref().unwrap();
 
-        if let Some((func_contract_no, func_no)) = ns.contracts[contract_no]
+        if let Some((func_contract_no, func_no, _)) = ns.contracts[contract_no]
             .function_table
             .get(&fdecl.signature)
         {
@@ -351,7 +359,7 @@ pub fn function_decl(
 
         ns.contracts[contract_no]
             .function_table
-            .insert(fdecl.signature.to_owned(), (contract_no, func_no));
+            .insert(fdecl.signature.to_owned(), (contract_no, func_no, None));
 
         ns.contracts[contract_no].functions.push(fdecl);
 

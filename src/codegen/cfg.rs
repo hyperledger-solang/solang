@@ -38,6 +38,7 @@ pub enum Instr {
     },
     Call {
         res: Vec<usize>,
+        base: usize,
         func: usize,
         args: Vec<Expression>,
     },
@@ -446,9 +447,9 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCall(_, _, f, args) => format!(
+            Expression::InternalFunctionCall(_, _, signature, args) => format!(
                 "(call {} ({})",
-                contract.functions[*f].name,
+                signature,
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
@@ -607,13 +608,19 @@ impl ControlFlowGraph {
             Instr::AssertFailure { expr: Some(expr) } => {
                 format!("assert-failure:{}", self.expr_to_string(contract, ns, expr))
             }
-            Instr::Call { res, func, args } => format!(
-                "{} = call {} {} {}",
+            Instr::Call {
+                res,
+                base,
+                func,
+                args,
+            } => format!(
+                "{} = call {} {}.{} {}",
                 res.iter()
                     .map(|local| format!("%{}", self.vars[*local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
                 *func,
+                ns.contracts[*base].name.to_owned(),
                 contract.functions[*func].name.to_owned(),
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
@@ -793,14 +800,19 @@ impl ControlFlowGraph {
     }
 }
 
-pub fn generate_cfg(contract_no: usize, function_no: usize, ns: &Namespace) -> ControlFlowGraph {
+pub fn generate_cfg(
+    contract_no: usize,
+    base_contract_no: usize,
+    function_no: usize,
+    ns: &Namespace,
+) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new();
 
     let mut vartab =
-        Vartable::new_with_syms(&ns.contracts[contract_no].functions[function_no].symtable);
+        Vartable::new_with_syms(&ns.contracts[base_contract_no].functions[function_no].symtable);
     let mut loops = LoopScopes::new();
 
-    let func = &ns.contracts[contract_no].functions[function_no];
+    let func = &ns.contracts[base_contract_no].functions[function_no];
 
     // populate the argument variables
     for (i, arg) in func.symtable.arguments.iter().enumerate() {

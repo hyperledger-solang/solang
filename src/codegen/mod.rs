@@ -6,14 +6,24 @@ mod storage;
 use self::cfg::{ControlFlowGraph, Instr, Vartable};
 use self::expression::expression;
 use sema::ast::Namespace;
+use std::collections::HashMap;
 
 /// The contracts are fully resolved but they do not have any a CFG which is needed for the llvm code emitter
 /// not all contracts need a cfg; only those for which we need the
 pub fn codegen(contract_no: usize, ns: &mut Namespace) {
     if ns.contracts[contract_no].is_concrete() {
-        for function_no in 0..ns.contracts[contract_no].functions.len() {
-            let c = cfg::generate_cfg(contract_no, function_no, ns);
-            ns.contracts[contract_no].functions[function_no].cfg = Some(c);
+        // we need to iterate over the contracts function table, while generating cfg for each. We can't
+        // iterate mutably over the function table because then we cannot borrow the namespace for generating
+        // the cfg. So first populate a separate hash and then set in another loop
+        let mut generated = HashMap::new();
+
+        for (signature, con) in &ns.contracts[contract_no].function_table {
+            let c = cfg::generate_cfg(contract_no, con.0, con.1, ns);
+            generated.insert(signature.to_owned(), c);
+        }
+
+        for (signature, con) in ns.contracts[contract_no].function_table.iter_mut() {
+            con.2 = generated.remove(signature);
         }
 
         // Generate cfg for storage initializers

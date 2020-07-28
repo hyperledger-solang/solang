@@ -1,6 +1,7 @@
 extern crate solang;
-
 use super::{build_solidity, first_error, no_errors, parse_and_resolve};
+use parity_scale_codec::Encode;
+use parity_scale_codec_derive::{Decode, Encode};
 use solang::file_cache::FileCache;
 use solang::Target;
 
@@ -598,4 +599,30 @@ fn inherit_variables() {
         runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
         &vec!(0xff, 0xff)
     );
+}
+
+#[test]
+fn call_inherited_function() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u64);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract apex is base {
+            function bar() public returns (uint64) {
+                return foo() + 3;
+            }
+        }
+
+        contract base {
+            function foo() public returns (uint64) {
+                return 102;	
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(105).encode());
 }

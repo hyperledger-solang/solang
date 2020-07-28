@@ -229,8 +229,11 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Constructor { loc, .. } => {
             state.write(loc);
         }
-        Expression::InternalFunctionCall(loc, _, function_no, _) => {
-            match &state.ns.contracts[state.contract_no].functions[*function_no].mutability {
+        Expression::InternalFunctionCall(loc, _, signature, _) => {
+            let (base_contract_no, function_no, _) =
+                state.ns.contracts[state.contract_no].function_table[signature];
+
+            match &state.ns.contracts[base_contract_no].functions[function_no].mutability {
                 None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
                 Some(pt::StateMutability::View(_)) => state.read(loc),
                 Some(pt::StateMutability::Pure(_)) => (),
