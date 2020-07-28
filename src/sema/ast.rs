@@ -420,7 +420,6 @@ pub struct Function {
     pub is_virtual: bool,
     pub body: Vec<Statement>,
     pub symtable: Symtable,
-    pub cfg: Option<ControlFlowGraph>,
 }
 
 impl Function {
@@ -436,8 +435,8 @@ impl Function {
         ns: &Namespace,
     ) -> Self {
         let signature = match ty {
-            pt::FunctionTy::Fallback => "@receive".to_string(),
-            pt::FunctionTy::Receive => "@fallback".to_string(),
+            pt::FunctionTy::Fallback => "@fallback".to_string(),
+            pt::FunctionTy::Receive => "@receive".to_string(),
             _ => format!(
                 "{}({})",
                 name,
@@ -461,7 +460,6 @@ impl Function {
             returns,
             is_virtual: false,
             body: Vec::new(),
-            cfg: None,
             symtable: Symtable::new(),
         }
     }
@@ -651,7 +649,7 @@ pub struct Contract {
     pub layout: Vec<Layout>,
     // events
     pub functions: Vec<Function>,
-    pub function_table: HashMap<String, (usize, usize)>,
+    pub function_table: HashMap<String, (usize, usize, Option<ControlFlowGraph>)>,
     pub variables: Vec<ContractVariable>,
     pub creates: Vec<usize>,
     pub initializer: ControlFlowGraph,
@@ -757,7 +755,7 @@ pub enum Expression {
 
     Or(pt::Loc, Box<Expression>, Box<Expression>),
     And(pt::Loc, Box<Expression>, Box<Expression>),
-    InternalFunctionCall(pt::Loc, Vec<Type>, usize, Vec<Expression>),
+    InternalFunctionCall(pt::Loc, Vec<Type>, String, Vec<Expression>),
     ExternalFunctionCall {
         loc: pt::Loc,
         returns: Vec<Type>,
