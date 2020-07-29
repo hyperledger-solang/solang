@@ -90,6 +90,7 @@ pub struct Function {
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
     pub is_virtual: bool,
+    pub is_override: Option<(pt::Loc, Vec<usize>)>,
     pub body: Vec<Statement>,
     pub symtable: Symtable,
 }
@@ -131,6 +132,7 @@ impl Function {
             params,
             returns,
             is_virtual: false,
+            is_override: None,
             body: Vec::new(),
             symtable: Symtable::new(),
         }

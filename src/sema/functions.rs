@@ -76,6 +76,7 @@ pub fn function_decl(
     let mut mutability: Option<pt::StateMutability> = None;
     let mut visibility: Option<pt::Visibility> = None;
     let mut is_virtual: Option<pt::Loc> = None;
+    let mut is_override: Option<(pt::Loc, Vec<usize>)> = None;
 
     for a in &func.attributes {
         match &a {
@@ -121,7 +122,43 @@ pub fn function_decl(
 
                 is_virtual = Some(*loc);
             }
-            _ => unimplemented!(),
+            pt::FunctionAttribute::Override(loc, bases) => {
+                if let Some((prev_loc, _)) = &is_override {
+                    ns.diagnostics.push(Diagnostic::error_with_note(
+                        *loc,
+                        "function redeclared ‘override’".to_string(),
+                        *prev_loc,
+                        "location of previous declaration of ‘override’".to_string(),
+                    ));
+                    success = false;
+                    continue;
+                }
+
+                let mut list = Vec::new();
+
+                for name in bases {
+                    match ns.resolve_contract(file_no, name) {
+                        Some(no) => {
+                            if list.contains(&no) {
+                                ns.diagnostics.push(Diagnostic::error(
+                                    name.loc,
+                                    format!("function duplicate override ‘{}’", name.name),
+                                ));
+                            } else {
+                                list.push(no);
+                            }
+                        }
+                        None => {
+                            ns.diagnostics.push(Diagnostic::error(
+                                name.loc,
+                                format!("contract ‘{}’ in override list not found", name.name),
+                            ));
+                        }
+                    }
+                }
+
+                is_override = Some((*loc, list));
+            }
         }
     }
 
@@ -197,6 +234,7 @@ pub fn function_decl(
     );
 
     fdecl.is_virtual = is_virtual.is_some();
+    fdecl.is_override = is_override;
 
     if func.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
