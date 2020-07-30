@@ -493,9 +493,7 @@ impl SubstrateTarget {
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
         contract.emit_function_dispatch(
-            &contract.contract.functions,
             pt::FunctionTy::Constructor,
-            &contract.functions,
             deploy_args,
             deploy_args_length,
             function,
@@ -526,9 +524,7 @@ impl SubstrateTarget {
         );
 
         contract.emit_function_dispatch(
-            &contract.contract.functions,
             pt::FunctionTy::Function,
-            &contract.functions,
             call_args,
             call_args_length,
             function,

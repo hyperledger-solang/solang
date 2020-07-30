@@ -3840,9 +3840,7 @@ impl<'a> Contract<'a> {
     /// to the fallback function or receive function, if any.
     pub fn emit_function_dispatch<F>(
         &self,
-        codegen_functions: &[ast::Function],
         function_ty: pt::FunctionTy,
-        functions: &HashMap<String, FunctionValue<'a>>,
         argsdata: inkwell::values::PointerValue<'a>,
         argslen: inkwell::values::IntValue<'a>,
         function: inkwell::values::FunctionValue<'a>,
@@ -3899,8 +3897,10 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for f in codegen_functions.iter().filter(|f| f.ty == function_ty) {
-            if !f.is_public() {
+        for (base_contract_no, function_no, _) in self.contract.function_table.values() {
+            let f = &self.ns.contracts[*base_contract_no].functions[*function_no];
+
+            if f.ty != function_ty || !f.is_public() {
                 continue;
             }
 
@@ -3939,7 +3939,7 @@ impl<'a> Contract<'a> {
 
             let ret = self
                 .builder
-                .build_call(functions[&f.signature], &args, "")
+                .build_call(self.functions[&f.signature], &args, "")
                 .try_as_basic_value()
                 .left()
                 .unwrap();

@@ -636,9 +636,7 @@ impl EwasmTarget {
         let (argsdata, argslen) = self.runtime_prelude(contract, function);
 
         contract.emit_function_dispatch(
-            &contract.contract.functions,
             pt::FunctionTy::Function,
-            &contract.functions,
             argsdata,
             argslen,
             function,

@@ -146,7 +146,7 @@ fn resolve_inherited_contracts(
 
 /// Layout the contract. We determine the layout of variables
 fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
-    let mut syms: HashMap<String, &ast::Symbol> = HashMap::new();
+    let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
 
     // visit base contracts depth-first in post-order
     let mut order = Vec::new();
@@ -172,17 +172,28 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 continue;
             }
 
-            if let Some(prev) = syms.get(name) {
-                ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                    *sym.loc(),
-                    format!("already defined ‘{}’", name,),
-                    *prev.loc(),
-                    format!("previous definition of ‘{}’", name),
-                ));
+            let mut done = false;
+
+            if let Some(ast::Symbol::Function(ref mut list)) = syms.get_mut(name) {
+                if let ast::Symbol::Function(funcs) = sym {
+                    list.extend(funcs.to_owned());
+                    done = true;
+                }
+            }
+
+            if !done {
+                if let Some(prev) = syms.get(name) {
+                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        *sym.loc(),
+                        format!("already defined ‘{}’", name,),
+                        *prev.loc(),
+                        format!("previous definition of ‘{}’", name),
+                    ));
+                }
             }
 
             if !sym.is_private_variable(ns) {
-                syms.insert(name.to_owned(), sym);
+                syms.insert(name.to_owned(), sym.clone());
             }
         }
 
@@ -206,9 +217,27 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 .signature
                 .to_owned();
 
-            ns.contracts[contract_no]
-                .function_table
-                .insert(signature, (base_contract_no, function_no, None));
+            if let Some(prev) = ns.contracts[contract_no].function_table.get(&signature) {
+                let cur = &ns.contracts[base_contract_no].functions[function_no];
+
+                if !cur.is_constructor() && (base_contract_no != prev.0 || function_no != prev.1) {
+                    let prev = &ns.contracts[prev.0].functions[prev.1];
+
+                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        cur.loc,
+                        format!(
+                            "function with this signature already defined ‘{}’",
+                            cur.name
+                        ),
+                        prev.loc,
+                        format!("previous definition of ‘{}’", prev.name),
+                    ));
+                }
+            } else {
+                ns.contracts[contract_no]
+                    .function_table
+                    .insert(signature, (base_contract_no, function_no, None));
+            }
         }
     }
 }
@@ -226,19 +255,17 @@ fn resolve_declarations<'a>(
         format!("found {} ‘{}’", def.ty, def.name.name),
     ));
 
-    let mut virtual_functions = Vec::new();
+    let mut function_no_bodies = Vec::new();
     let mut resolve_bodies = Vec::new();
 
     // resolve function signatures
     for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
             if let Some(function_no) = functions::function_decl(f, file_no, contract_no, ns) {
-                if ns.contracts[contract_no].functions[function_no].is_virtual {
-                    virtual_functions.push(function_no);
-                }
-
                 if !f.body.is_empty() {
                     resolve_bodies.push((contract_no, function_no, f.as_ref()));
+                } else {
+                    function_no_bodies.push(function_no);
                 }
             }
         }
@@ -246,13 +273,13 @@ fn resolve_declarations<'a>(
 
     match &def.ty {
         pt::ContractTy::Contract(loc) => {
-            if !virtual_functions.is_empty() {
-                let notes = virtual_functions
+            if !function_no_bodies.is_empty() {
+                let notes = function_no_bodies
                     .into_iter()
                     .map(|function_no| ast::Note {
                         pos: ns.contracts[contract_no].functions[function_no].loc,
                         message: format!(
-                            "location of ‘virtual’ function ‘{}’",
+                            "location of function ‘{}’ with no body",
                             ns.contracts[contract_no].functions[function_no].name
                         ),
                     })
@@ -261,7 +288,7 @@ fn resolve_declarations<'a>(
                 ns.diagnostics.push(ast::Diagnostic::error_with_notes(
                     *loc,
                     format!(
-                        "contract should be marked ‘abstract contract’ since it has {} virtual functions",
+                        "contract should be marked ‘abstract contract’ since it has {} functions with no body",
                         notes.len()
                     ),
                     notes,

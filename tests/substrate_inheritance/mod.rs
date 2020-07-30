@@ -28,10 +28,7 @@ fn test_virtual() {
         Target::Substrate,
     );
 
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "function marked ‘virtual’ cannot have a body"
-    );
+    no_errors(ns.diagnostics);
 
     let ns = parse_and_resolve(
         r#"
@@ -44,7 +41,7 @@ fn test_virtual() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract should be marked ‘abstract contract’ since it has 2 virtual functions"
+        "contract should be marked ‘abstract contract’ since it has 2 functions with no body"
     );
 }
 
@@ -685,7 +682,10 @@ fn call_inherited_function() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "already defined ‘foo’");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function with this signature already defined ‘foo’"
+    );
 
     let mut runtime = build_solidity(
         r##"
@@ -742,4 +742,90 @@ fn call_inherited_function() {
     runtime.function("bar", Vec::new());
 
     assert_eq!(runtime.vm.scratch, Val(161720).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract apex is base, base2 {
+            function foo(int64 x) public returns (uint64) {
+                return 3;
+            }
+        }
+
+        contract base {
+            function foo() public returns (uint64) {
+                return 1;	
+            }
+        }
+        
+        contract base2 {
+            function foo(bool) public returns (uint64) {
+                return 2;	
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
+    assert_eq!(runtime.vm.scratch, Val(1).encode());
+
+    runtime.raw_function([0x45, 0x55, 0x75, 0x78, 1].to_vec());
+    assert_eq!(runtime.vm.scratch, Val(2).encode());
+
+    runtime.raw_function([0x36, 0x8E, 0x4A, 0x7F, 1, 2, 3, 4, 5, 6, 7, 8].to_vec());
+    assert_eq!(runtime.vm.scratch, Val(3).encode());
+}
+
+#[test]
+fn test_override() {
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo(uint64 a) override override private returns (uint64) {
+                return a + 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function redeclared ‘override’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo(uint64 a) override(bar) private returns (uint64) {
+                return a + 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘bar’ in override list not found"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo(uint64 a) override(bar) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function f() private {}
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "override ‘bar’ is not a base contract of ‘base’"
+    );
 }
