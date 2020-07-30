@@ -205,9 +205,7 @@ impl SabreTarget {
         contract.builder.position_at_end(function_block);
 
         contract.emit_function_dispatch(
-            &contract.contract.functions,
             pt::FunctionTy::Function,
-            &contract.functions,
             argsdata,
             argslen,
             function,

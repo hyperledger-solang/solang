@@ -139,10 +139,31 @@ pub fn function_decl(
                 for name in bases {
                     match ns.resolve_contract(file_no, name) {
                         Some(no) => {
+                            // check override is base contract of our contract
+                            fn is_base(no: &usize, contract_no: usize, ns: &Namespace) -> bool {
+                                let inherits = &ns.contracts[contract_no].inherit;
+
+                                if inherits.contains(no) {
+                                    return true;
+                                }
+
+                                inherits
+                                    .iter()
+                                    .any(|contract_no| is_base(no, *contract_no, ns))
+                            }
+
                             if list.contains(&no) {
                                 ns.diagnostics.push(Diagnostic::error(
                                     name.loc,
                                     format!("function duplicate override ‘{}’", name.name),
+                                ));
+                            } else if !is_base(&no, contract_no, ns) {
+                                ns.diagnostics.push(Diagnostic::error(
+                                    name.loc,
+                                    format!(
+                                        "override ‘{}’ is not a base contract of ‘{}’",
+                                        name.name, ns.contracts[contract_no].name
+                                    ),
                                 ));
                             } else {
                                 list.push(no);
@@ -196,15 +217,7 @@ pub fn function_decl(
     let (returns, returns_success) =
         resolve_returns(func, storage_allowed, file_no, contract_no, ns);
 
-    if let Some(loc) = is_virtual {
-        if !func.body.is_empty() {
-            ns.diagnostics.push(Diagnostic::error(
-                loc,
-                "function marked ‘virtual’ cannot have a body".to_string(),
-            ));
-            success = false;
-        }
-    } else if func.body.is_empty() {
+    if is_virtual.is_none() && func.body.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
             "function with no body must be marked ‘virtual’".to_string(),
