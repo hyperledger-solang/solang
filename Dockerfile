@@ -6,7 +6,7 @@
 # Ubuntu 18.04 produces a builder image 1.53 GiB and solang image of 84 MiB
 # Debian Buster produces a builder image 2.04 GiB
 
-FROM rust:1.40-slim-buster as builder
+FROM rust:1.42-slim-buster as builder
 MAINTAINER Sean Young <sean@mess.org>
 RUN echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
 RUN apt-get update

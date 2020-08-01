@@ -8,7 +8,7 @@ name: Build Release Binaries
 jobs:
   linux:
     name: Build Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
