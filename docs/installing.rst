@@ -185,3 +185,19 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
 
+Building LLVM using Windows Containers
+______________________________________
+
+You can build llvm using Windows Containers. This requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_
+and switch to `windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
+Docker on Windows needs Hyper-V. If you are running Windows 10 in a virtual machine, be sure to check
+`this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
+
+The `dockerfile <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_
+is in Solang github repo. Simply run the dockerfile:
+
+.. code-block:: bash
+
+	docker build -f build-llvm-windows.dockerfile .
+
+This will take a few hours. The result will be dockerfile with llvm compressed in ``llvm80.zip`` in the image.
