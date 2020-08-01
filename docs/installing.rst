@@ -55,7 +55,7 @@ this has not been updated in a long time. This is due to
 
 Building Solang from source
 ---------------------------
-In order to build solang from source, you will need rust 1.40.0 or higher,
+In order to build solang from source, you will need rust 1.42.0 or higher,
 and llvm version 8 or higher with the WebAssembly target enabled.
 
 So see if you have the correct version of rust, simply execute:
@@ -200,4 +200,4 @@ is in Solang github repo. Simply run the dockerfile:
 
 	docker build -f build-llvm-windows.dockerfile .
 
-This will take a few hours. The result will be dockerfile with llvm compressed in ``llvm80.zip`` in the image.
+This will take a few hours. The result will be an image with llvm compressed in ``c:\llvm80.zip``.
