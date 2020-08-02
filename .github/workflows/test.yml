@@ -4,6 +4,7 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-20.04
+    container: hyperledgerlabs/solang:ci
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -19,8 +20,6 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
-      - name: Install LLVM
-        run: sudo apt-get -y install llvm-8-dev clang-8 git zlib1g-dev
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
@@ -30,11 +29,10 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-20.04
+    container: hyperledgerlabs/solang:ci
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Install LLVM
-      run: sudo apt-get -y install llvm-8-dev clang-8 git zlib1g-dev
     - name: Install stable toolchain
       uses: actions-rs/toolchain@v1
       with:
