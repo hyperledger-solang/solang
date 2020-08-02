@@ -169,7 +169,8 @@ Now run cmake to create the makefiles. Replace the *installdir* argument to ``CM
 .. code-block:: bash
 
 	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang  \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=installdir -B build llvm
+		-DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_INSTALL_PREFIX=installdir -B build llvm
 	cmake --build build --target install
 
 Once the build has succeeded, the *installdir*/bin has to be added to your path so the
@@ -185,6 +186,19 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
 
+Building LLVM using docker
+__________________________
+
+You can build llvm using docker. A `dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-linux.dockerfile>`_
+is in Solang github repo. Simply run the dockerfile:
+
+.. code-block:: bash
+
+	docker build -f build-llvm-linux.dockerfile .
+
+This will take a few hours. The result will be an image with llvm compressed in ``/llvm80.tar.bz2``.
+
+
 Building LLVM using Windows Containers
 ______________________________________
 
@@ -193,7 +207,7 @@ and switch to `windows containers <https://docs.docker.com/docker-for-windows/#s
 Docker on Windows needs Hyper-V. If you are running Windows 10 in a virtual machine, be sure to check
 `this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
 
-The `dockerfile <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_
+The `dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_
 is in Solang github repo. Simply run the dockerfile:
 
 .. code-block:: bash
