@@ -9,11 +9,10 @@ jobs:
   linux:
     name: Build Linux
     runs-on: ubuntu-20.04
+    container: hyperledgerlabs/solang:ci
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Install LLVM
-      run: sudo apt-get -y install llvm-8-dev clang-8 git zlib1g-dev
     - name: Install stable toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -22,7 +21,7 @@ jobs:
         override: true
     - name: Compile stdlib
       run: clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
-      working-directory:  ./stdlib
+      working-directory: ./stdlib
     - name: Build
       run: cargo build --verbose --release
     - name: Run tests
@@ -32,7 +31,7 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/solang
-        asset_name: solang_ubuntu
+        asset_name: solang_linux
         tag: ${{ github.ref }}
 
   windows:
