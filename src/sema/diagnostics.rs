@@ -120,9 +120,9 @@ impl Diagnostic {
         }
     }
 
-    fn formated_message(&self, filename: &str, positions: &FilePostitions) -> String {
+    fn formated_message(&self, filename: &str, offset_converter: &OffsetToLineColumn) -> String {
         let mut s = if let Some(pos) = self.pos {
-            let loc = positions.to_string(pos);
+            let loc = offset_converter.to_string(pos);
 
             format!(
                 "{}:{}: {}: {}",
@@ -136,7 +136,7 @@ impl Diagnostic {
         };
 
         for note in &self.notes {
-            let loc = positions.to_string(note.pos);
+            let loc = offset_converter.to_string(note.pos);
 
             s.push_str(&format!(
                 "\n\t{}:{}: {}: {}",
@@ -150,7 +150,7 @@ impl Diagnostic {
 
 pub fn print_messages(cache: &mut FileCache, ns: &Namespace, verbose: bool) {
     let mut current_file_no = None;
-    let mut positions = FilePostitions(Vec::new());
+    let mut offset_converter = OffsetToLineColumn(Vec::new());
     let mut filename = "";
 
     for msg in &ns.diagnostics {
@@ -163,11 +163,11 @@ pub fn print_messages(cache: &mut FileCache, ns: &Namespace, verbose: bool) {
         if file_no != current_file_no {
             filename = &ns.files[file_no.unwrap()];
 
-            positions = FilePostitions::new(&*cache.get_file_contents(filename));
+            offset_converter = OffsetToLineColumn::new(&*cache.get_file_contents(filename));
             current_file_no = file_no;
         }
 
-        eprintln!("{}", msg.formated_message(filename, &positions));
+        eprintln!("{}", msg.formated_message(filename, &offset_converter));
     }
 }
 
@@ -199,7 +199,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
     let mut json = Vec::new();
 
     let mut current_file_no = None;
-    let mut positions = FilePostitions(Vec::new());
+    let mut offset_converter = OffsetToLineColumn(Vec::new());
     let mut filename = "";
 
     for msg in &ns.diagnostics {
@@ -212,7 +212,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
         if file_no != current_file_no {
             filename = &ns.files[file_no.unwrap()];
 
-            positions = FilePostitions::new(&*cache.get_file_contents(filename));
+            offset_converter = OffsetToLineColumn::new(&*cache.get_file_contents(filename));
             current_file_no = file_no;
         }
 
@@ -232,17 +232,19 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
             component: "general".to_owned(),
             severity: msg.level.to_string().to_owned(),
             message: msg.message.to_owned(),
-            formattedMessage: msg.formated_message(filename, &positions),
+            formattedMessage: msg.formated_message(filename, &offset_converter),
         });
     }
 
     json
 }
 
-struct FilePostitions(Vec<usize>);
+/// Convert byte offset in file to line and column number
+pub struct OffsetToLineColumn(Vec<usize>);
 
-impl FilePostitions {
-    fn new(src: &str) -> Self {
+impl OffsetToLineColumn {
+    /// Create a new mapping for offset to position.
+    pub fn new(src: &str) -> Self {
         let mut line_starts = Vec::new();
 
         for (ind, c) in src.char_indices() {
@@ -251,10 +253,11 @@ impl FilePostitions {
             }
         }
 
-        FilePostitions(line_starts)
+        OffsetToLineColumn(line_starts)
     }
 
-    fn to_string(&self, loc: Loc) -> String {
+    /// Give a position as a human readable position
+    pub fn to_string(&self, loc: Loc) -> String {
         let (from_line, from_column) = self.convert(loc.1);
         let (to_line, to_column) = self.convert(loc.2);
 
@@ -267,10 +270,12 @@ impl FilePostitions {
         }
     }
 
-    fn convert(&self, loc: usize) -> (usize, usize) {
+    /// Convert an offset to line and column number
+    pub fn convert(&self, loc: usize) -> (usize, usize) {
         let mut line_no = 1;
         let mut col_no = loc + 1;
 
+        // Here we do a linear scan. It should be possible to do binary search
         for l in &self.0 {
             if loc < *l {
                 break;
