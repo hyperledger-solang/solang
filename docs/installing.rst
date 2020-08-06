@@ -104,9 +104,10 @@ If you do not have the llvm libraries installed then you can either install
 your distribution llvm packages, or compile your own. Compiling your own is helpful
 if you want to do Solang development.
 
-Any release from llvm 8.0 onwards, with the WebAssembly target enabled, should work.
+Any build of llvm 8.0, with the WebAssembly target enabled, should work.
 Note that you will also need clang; the Solidity standard library is written in C,
-and is compiled to wasm by clang. The version of clang *must* be the same as the version of llvm.
+and is compiled to wasm by clang. The version of clang *must* be the same as the
+version of llvm.
 
 
 Installing LLVM on Ubuntu
@@ -138,7 +139,19 @@ You will need Fedora 30 or later. Running the following:
 
 .. _llvm-from-source:
 
-Installing LLVM from source
+Installing LLVM on Windows
+__________________________
+
+A pre-built version of llvm, specifically configured for Solang, is available on
+`solang.io <https://solang.io/download/llvm80.zip>`_. This binary is built using
+the dockerfile used in `Building LLVM using Windows Containers`_. After unzipping
+the file, add the bin directory to your path.
+
+.. code-block::
+
+	set PATH=%PATH%;C:\llvm80\bin
+
+Building LLVM from source
 ___________________________
 
 If your distribution does not have the correct llvm library versions, then you have
@@ -185,6 +198,7 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 .. code-block::
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
+
 
 Building LLVM using docker
 __________________________
