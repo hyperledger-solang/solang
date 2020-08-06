@@ -43,7 +43,7 @@ jobs:
     - name: Add LLVM to Path
       run:  echo "::add-path::c:\llvm80\bin"
     - name: Download LLVM
-      run: curl -sS -o c:\llvm.zip https://www.mess.org/llvm.zip
+      run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm80.zip
     - name: Extract LLVM
       # unzip exists but always exits with code 1
       run: powershell Expand-Archive c:\llvm.zip -DestinationPath c:\
