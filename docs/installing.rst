@@ -4,6 +4,17 @@ Installing Solang
 The Solang compiler is a single binary. It can be installed in many different
 ways, so the method that suits your needs.
 
+Download release binaries
+-------------------------
+
+For Ubuntu, there is a binary available in the github releases:
+
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.2/solang_ubuntu>`_
+
+For Windows, there is a pre-built binary available here:
+
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.2/solang.exe>`_
+
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
 
