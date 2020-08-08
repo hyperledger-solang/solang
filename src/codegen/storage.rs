@@ -38,7 +38,7 @@ pub fn array_offset(
                 Box::new(Expression::NumberLiteral(
                     *loc,
                     slot_ty,
-                    BigInt::from_usize(elem_size.bits()).unwrap(),
+                    BigInt::from_u64(elem_size.bits()).unwrap(),
                 )),
             )),
         )
