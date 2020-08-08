@@ -4,7 +4,7 @@ use num_bigint::BigInt;
 use parser::pt;
 use std::collections::HashMap;
 use std::fmt;
-use tiny_keccak::keccak256;
+use tiny_keccak::{Hasher, Keccak};
 use Target;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -140,7 +140,11 @@ impl Function {
 
     /// Generate selector for this function
     pub fn selector(&self) -> u32 {
-        let res = keccak256(self.signature.as_bytes());
+        let mut res = [0u8; 32];
+
+        let mut hasher = Keccak::v256();
+        hasher.update(self.signature.as_bytes());
+        hasher.finalize(&mut res);
 
         u32::from_le_bytes([res[0], res[1], res[2], res[3]])
     }

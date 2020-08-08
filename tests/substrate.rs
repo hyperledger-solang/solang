@@ -20,7 +20,7 @@ use rand::Rng;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
-use tiny_keccak::keccak256;
+use tiny_keccak::{Hasher, Keccak};
 use wasmi::memory_units::Pages;
 use wasmi::*;
 
@@ -260,7 +260,10 @@ impl Externals for TestRuntime {
                     panic!("ext_hash_keccak_256: {}", e);
                 }
 
-                let hash = keccak256(&data);
+                let mut hasher = Keccak::v256();
+                let mut hash = [0u8; 32];
+                hasher.update(&data);
+                hasher.finalize(&mut hash);
 
                 println!(
                     "ext_hash_keccak_256: {} = {}",
