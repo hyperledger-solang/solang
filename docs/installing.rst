@@ -7,11 +7,11 @@ ways, so the method that suits your needs.
 Download release binaries
 -------------------------
 
-For Ubuntu, there is a binary available in the github releases:
+For Ubuntu, there is an x86-64 binary available in the github releases:
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.2/solang_ubuntu>`_
 
-For Windows, there is a pre-built binary available here:
+For Windows x64, there is a pre-built binary available here:
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.2/solang.exe>`_
 
@@ -60,9 +60,7 @@ Alternatively this will work with podman too:
 Building Solang from source from crates.io
 ------------------------------------------
 
-Solang is listed on `crates.io <https://crates.io/crates/solang>`_, however
-this has not been updated in a long time. This is due to
-`this inkwell issue <https://github.com/TheDan64/inkwell/issues/154>`_.
+The latest solang release is  on `crates.io <https://crates.io/crates/solang>`_.
 
 Building Solang from source
 ---------------------------
