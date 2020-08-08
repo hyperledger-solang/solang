@@ -545,7 +545,7 @@ pub fn try_cast(
                         to.to_string(ns)
                     ),
                 ))
-            } else if n.bits() >= to_len as usize {
+            } else if n.bits() >= to_len as u64 {
                 Err(Diagnostic::type_error(
                     *loc,
                     format!(
@@ -563,7 +563,7 @@ pub fn try_cast(
             }
         }
         (&Expression::NumberLiteral(_, _, ref n), p, &Type::Int(to_len)) if p.is_primitive() => {
-            return if n.bits() >= to_len as usize {
+            return if n.bits() >= to_len as u64 {
                 Err(Diagnostic::type_error(
                     *loc,
                     format!(
