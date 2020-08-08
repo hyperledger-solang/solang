@@ -135,7 +135,7 @@ You will need Fedora 30 or later. Running the following:
 
 .. code-block:: bash
 
-	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang libffi-devel
+	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang libffi-devel openssl-devel
 
 .. _llvm-from-source:
 
