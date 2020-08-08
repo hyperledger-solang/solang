@@ -292,9 +292,8 @@ impl Externals for TestRuntime {
 
                 let mut hasher = Sha256::new();
 
-                hasher.input(&data);
-
-                let hash = hasher.result();
+                hasher.update(&data);
+                let hash = hasher.finalize();
 
                 println!(
                     "ext_hash_sha2_256: {} = {}",
