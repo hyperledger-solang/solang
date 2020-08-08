@@ -22,7 +22,7 @@ parity-wasm = "0.41"
 clap = "2.33"
 lazy_static = "1.4"
 hex = "0.4"
-tiny-keccak = "1.5"
+tiny-keccak = "2.0"
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }

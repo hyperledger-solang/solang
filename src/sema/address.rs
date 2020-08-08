@@ -1,4 +1,4 @@
-use tiny_keccak::keccak256;
+use tiny_keccak::{Hasher, Keccak};
 
 /// Returns an address in https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md format
 /// Assumes the src is hex number, starting with 0x, no underscores and 40 hexdigits long,
@@ -13,7 +13,10 @@ pub fn to_hexstr_eip55(src: &str) -> String {
         .map(|c| c.to_ascii_lowercase())
         .collect();
 
-    let hash = keccak256(address.as_bytes());
+    let mut hasher = Keccak::v256();
+    hasher.update(address.as_bytes());
+    let mut hash = [0u8; 32];
+    hasher.finalize(&mut hash);
 
     "0x".chars()
         .chain(address.chars().enumerate().map(|(i, c)| {
