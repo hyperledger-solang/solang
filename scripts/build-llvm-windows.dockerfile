@@ -37,8 +37,10 @@ ADD https://www.python.org/ftp/python/3.5.4/python-3.5.4-embed-amd64.zip C:\TEMP
 RUN Expand-Archive C:\TEMP\python-3.5.4-embed-amd64.zip -DestinationPath c:\Python
 
 # PowerShell community extensions needed for Invoke-BatchFile
+# Update Compress-Archive so that slashes are used: https://github.com/PowerShell/Microsoft.PowerShell.Archive/issues/71
 RUN Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force ; `
-	Install-Module -name Pscx -Scope CurrentUser -Force -AllowClobber
+	Install-Module -name Pscx -Scope CurrentUser -Force -AllowClobber ; `
+	Install-Module -name Microsoft.PowerShell.Archive -MinimumVersion 1.2.3.0 -Repository PSGallery -Force -AllowClobber
 
 # Invoke-BatchFile retains the environment after executing so we can set it up more permanently
 RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
@@ -66,6 +68,6 @@ RUN cmake --build build --target install
 
 WORKDIR \
 
-RUN Compress-Archive -Path C:\llvm80 -DestinationPath C:\llvm
+RUN Compress-Archive -Path C:\llvm80 -DestinationPath C:\llvm80.zip
 
 RUN Remove-Item -Path llvm-project,C:\TEMP -Recurse -Force
