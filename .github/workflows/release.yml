@@ -7,7 +7,7 @@ name: Build Release Binaries
 
 jobs:
   linux:
-    name: Build Linux
+    name: Linux
     runs-on: ubuntu-20.04
     container: hyperledgerlabs/solang:ci
     steps:
@@ -41,7 +41,7 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v2
     - name: Add LLVM to Path
-      run:  echo "::add-path::c:\llvm80\bin"
+      run: echo "::add-path::c:\llvm80\bin"
     - name: Download LLVM
       run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm80.zip
     - name: Extract LLVM
@@ -49,7 +49,7 @@ jobs:
       run: powershell Expand-Archive c:\llvm.zip -DestinationPath c:\
     - name: Compile stdlib
       run: clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
-      working-directory:  ./stdlib
+      working-directory: ./stdlib
     - name: Build
       run: cargo build --release --verbose
     - name: Run tests
