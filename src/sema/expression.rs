@@ -1809,7 +1809,7 @@ pub fn expression(
         pt::Expression::This(loc) => match contract_no {
             Some(contract_no) => Ok(Expression::GetAddress(*loc, Type::Contract(contract_no))),
             None => {
-                ns.diagnostics.push(Diagnostic::warning(
+                ns.diagnostics.push(Diagnostic::error(
                     *loc,
                     "this not allowed outside contract".to_owned(),
                 ));

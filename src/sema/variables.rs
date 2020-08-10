@@ -59,7 +59,7 @@ fn var_decl(
         match &attr {
             pt::VariableAttribute::Constant(loc) => {
                 if is_constant {
-                    ns.diagnostics.push(Diagnostic::warning(
+                    ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         "duplicate constant attribute".to_string(),
                     ));
