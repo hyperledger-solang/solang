@@ -34,14 +34,14 @@ pub fn function_decl(
         }
         pt::FunctionTy::Constructor => {
             if !func.returns.is_empty() {
-                ns.diagnostics.push(Diagnostic::warning(
+                ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     "constructor cannot have return values".to_string(),
                 ));
                 return None;
             }
             if func.name.is_some() {
-                ns.diagnostics.push(Diagnostic::warning(
+                ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     "constructor cannot have a name".to_string(),
                 ));
@@ -50,21 +50,21 @@ pub fn function_decl(
         }
         pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
             if !func.returns.is_empty() {
-                ns.diagnostics.push(Diagnostic::warning(
+                ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     format!("{} function cannot have return values", func.ty),
                 ));
                 success = false;
             }
             if !func.params.is_empty() {
-                ns.diagnostics.push(Diagnostic::warning(
+                ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     format!("{} function cannot have parameters", func.ty),
                 ));
                 success = false;
             }
             if func.name.is_some() {
-                ns.diagnostics.push(Diagnostic::warning(
+                ns.diagnostics.push(Diagnostic::error(
                     func.loc,
                     format!("{} function cannot have a name", func.ty),
                 ));
