@@ -10,15 +10,15 @@ ADD https://aka.ms/vs/16/release/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
 
 # Install Visual Studio Build Tools
 RUN C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
-    --installPath C:\BuildTools `
-    --add Microsoft.VisualStudio.Component.VC.CMake.Project `
-    --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-    --add Microsoft.VisualStudio.Component.VC.ATL `
-    --add Microsoft.VisualStudio.Component.Windows10SDK.16299 `
-    --remove Microsoft.VisualStudio.Component.Windows10SDK.10240 `
-    --remove Microsoft.VisualStudio.Component.Windows10SDK.10586 `
-    --remove Microsoft.VisualStudio.Component.Windows10SDK.14393 `
-    --remove Microsoft.VisualStudio.Component.Windows81SDK
+	--installPath C:\BuildTools `
+	--add Microsoft.VisualStudio.Component.VC.CMake.Project `
+	--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+	--add Microsoft.VisualStudio.Component.VC.ATL `
+	--add Microsoft.VisualStudio.Component.Windows10SDK.16299 `
+	--remove Microsoft.VisualStudio.Component.Windows10SDK.10240 `
+	--remove Microsoft.VisualStudio.Component.Windows10SDK.10586 `
+	--remove Microsoft.VisualStudio.Component.Windows10SDK.14393 `
+	--remove Microsoft.VisualStudio.Component.Windows81SDK
 
 # Rust
 ADD https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe C:\TEMP\rustup-init.exe
@@ -52,7 +52,7 @@ RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
 
 RUN git clone -b release/8.x git://github.com/llvm/llvm-project
 
-WORKDIR llvm-project
+WORKDIR \llvm-project
 
 # Stop cmake from re-generating build system ad infinitum and fix missing include
 RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ; `
@@ -70,4 +70,4 @@ WORKDIR \
 
 RUN Compress-Archive -Path C:\llvm80 -DestinationPath C:\llvm80.zip
 
-RUN Remove-Item -Path llvm-project,C:\TEMP -Recurse -Force
+RUN Remove-Item -Path \llvm-project,C:\TEMP -Recurse -Force
