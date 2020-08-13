@@ -72,7 +72,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("VERBOSE")
-                .help("show verbose messages")
+                .help("show debug messages")
                 .short("v")
                 .long("verbose"),
         )

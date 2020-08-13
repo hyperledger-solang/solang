@@ -6,6 +6,7 @@ use serde::Serialize;
 impl Level {
     pub fn to_string(&self) -> &'static str {
         match self {
+            Level::Debug => "debug",
             Level::Info => "info",
             Level::Warning => "warning",
             Level::Error => "error",
@@ -14,6 +15,16 @@ impl Level {
 }
 
 impl Diagnostic {
+    pub fn debug(pos: Loc, message: String) -> Self {
+        Diagnostic {
+            level: Level::Debug,
+            ty: ErrorType::None,
+            pos: Some(pos),
+            message,
+            notes: Vec::new(),
+        }
+    }
+
     pub fn info(pos: Loc, message: String) -> Self {
         Diagnostic {
             level: Level::Info,
@@ -148,13 +159,13 @@ impl Diagnostic {
     }
 }
 
-pub fn print_messages(cache: &mut FileCache, ns: &Namespace, verbose: bool) {
+pub fn print_messages(cache: &mut FileCache, ns: &Namespace, debug: bool) {
     let mut current_file_no = None;
     let mut offset_converter = OffsetToLineColumn(Vec::new());
     let mut filename = "";
 
     for msg in &ns.diagnostics {
-        if !verbose && msg.level == Level::Info {
+        if !debug && msg.level == Level::Debug {
             continue;
         }
 
