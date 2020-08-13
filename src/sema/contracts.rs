@@ -221,7 +221,7 @@ fn resolve_declarations<'a>(
     contract_no: usize,
     ns: &mut ast::Namespace,
 ) -> Vec<(usize, usize, &'a pt::FunctionDefinition)> {
-    ns.diagnostics.push(ast::Diagnostic::info(
+    ns.diagnostics.push(ast::Diagnostic::debug(
         def.loc,
         format!("found {} ‘{}’", def.ty, def.name.name),
     ));

@@ -210,12 +210,12 @@ fn resolve_import(
 /// Resolve pragma. We don't do anything with pragmas for now
 fn resolve_pragma(name: &pt::Identifier, value: &pt::StringLiteral, ns: &mut ast::Namespace) {
     if name.name == "solidity" {
-        ns.diagnostics.push(ast::Diagnostic::info(
+        ns.diagnostics.push(ast::Diagnostic::debug(
             pt::Loc(name.loc.0, name.loc.1, value.loc.2),
             "pragma ‘solidity’ is ignored".to_string(),
         ));
     } else if name.name == "experimental" && value.string == "ABIEncoderV2" {
-        ns.diagnostics.push(ast::Diagnostic::info(
+        ns.diagnostics.push(ast::Diagnostic::debug(
             pt::Loc(name.loc.0, name.loc.1, value.loc.2),
             "pragma ‘experimental’ with value ‘ABIEncoderV2’ is ignored".to_string(),
         ));

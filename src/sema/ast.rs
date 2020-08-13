@@ -761,6 +761,7 @@ impl Statement {
 
 #[derive(Debug, PartialEq)]
 pub enum Level {
+    Debug,
     Info,
     Warning,
     Error,
