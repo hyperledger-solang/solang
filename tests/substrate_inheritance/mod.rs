@@ -828,4 +828,216 @@ fn test_override() {
         first_error(ns.diagnostics),
         "override ‘bar’ is not a base contract of ‘base’"
     );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            function foo(uint64 a) override private returns (uint64) {
+                return a + 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ does not override anything"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar {
+            function foo(uint64 a) override(bar) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) private returns (uint64) {
+                return a + 102;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ overrides function which is not virtual"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar, bar2 {
+            function foo(uint64 a) override(bar2) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar2 {
+            uint64 public x;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ override list does not contain ‘bar’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            int64 public x = 3;
+            function f() virtual payable external {
+                x = 1;
+            }
+        
+            function f() override payable external {
+                x = 2;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘f’ overrides function in same contract"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract a {
+            function foo() virtual public returns (int32) {
+                return 1;
+            }
+        }
+
+        contract b is a {
+            function foo() virtual override public returns (int32) {
+                return 2;
+            }
+        }
+
+        contract c is b {
+            function foo() override public returns (int32) {
+                return 3;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            receive() override payable external {
+                x = 2;
+            }
+        }
+        
+        contract a {
+            int8 public x = 3;
+            receive() virtual payable external {
+                x = 1;
+            }
+        }
+        
+        contract c is b {
+            function test() public returns (int8) {
+                return x;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    let slot = [0u8; 32];
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(3)
+    );
+
+    runtime.vm.value = 1;
+    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
+
+    let slot = [0u8; 32];
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(2)
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            fallback() override external {
+                x = 2;
+            }
+        }
+        
+        contract a {
+            int8 public x = 3;
+            fallback() virtual external {
+                x = 1;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+
+    let slot = [0u8; 32];
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(3)
+    );
+
+    runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
+
+    let slot = [0u8; 32];
+
+    assert_eq!(
+        runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
+        &vec!(2)
+    );
+
+    /*
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar, bar2 {
+            function foo(uint64 a) override private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar2 {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 103;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ override list does not contain ‘bar’"
+    );
+    */
 }
