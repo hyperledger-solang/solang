@@ -217,27 +217,81 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 .signature
                 .to_owned();
 
+            let cur = &ns.contracts[base_contract_no].functions[function_no];
+
             if let Some(prev) = ns.contracts[contract_no].function_table.get(&signature) {
-                let cur = &ns.contracts[base_contract_no].functions[function_no];
+                if cur.is_constructor() {
+                    continue;
+                }
 
-                if !cur.is_constructor() && (base_contract_no != prev.0 || function_no != prev.1) {
-                    let prev = &ns.contracts[prev.0].functions[prev.1];
+                let func_prev = &ns.contracts[prev.0].functions[prev.1];
 
+                if base_contract_no == prev.0 {
+                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                        cur.loc,
+                        format!(
+                            "function ‘{}’ overrides function in same contract",
+                            cur.name
+                        ),
+                        func_prev.loc,
+                        format!("previous definition of ‘{}’", func_prev.name),
+                    ));
+
+                    continue;
+                }
+
+                if let Some((loc, override_list)) = &cur.is_override {
+                    if !func_prev.is_virtual {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!(
+                                "function ‘{}’ overrides function which is not virtual",
+                                cur.name
+                            ),
+                            func_prev.loc,
+                            format!("previous definition of function ‘{}’", func_prev.name),
+                        ));
+
+                        continue;
+                    }
+
+                    if !override_list.is_empty() && !override_list.contains(&base_contract_no) {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            *loc,
+                            format!(
+                                "function ‘{}’ override list does not contain ‘{}’",
+                                cur.name, ns.contracts[prev.0].name
+                            ),
+                            func_prev.loc,
+                            format!("previous definition of function ‘{}’", func_prev.name),
+                        ));
+                        continue;
+                    }
+                } else {
                     ns.diagnostics.push(ast::Diagnostic::error_with_note(
                         cur.loc,
                         format!(
                             "function with this signature already defined ‘{}’",
                             cur.name
                         ),
-                        prev.loc,
-                        format!("previous definition of ‘{}’", prev.name),
+                        func_prev.loc,
+                        format!("previous definition of ‘{}’", func_prev.name),
                     ));
+
+                    continue;
                 }
-            } else {
-                ns.contracts[contract_no]
-                    .function_table
-                    .insert(signature, (base_contract_no, function_no, None));
+            } else if cur.is_override.is_some() {
+                ns.diagnostics.push(ast::Diagnostic::error(
+                    cur.loc,
+                    format!("function ‘{}’ does not override anything", cur.name),
+                ));
+
+                continue;
             }
+
+            ns.contracts[contract_no]
+                .function_table
+                .insert(signature, (base_contract_no, function_no, None));
         }
     }
 }

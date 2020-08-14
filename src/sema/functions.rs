@@ -332,10 +332,6 @@ pub fn function_decl(
 
         let pos = ns.contracts[contract_no].functions.len();
 
-        ns.contracts[contract_no]
-            .function_table
-            .insert(fdecl.signature.to_owned(), (contract_no, pos, None));
-
         ns.contracts[contract_no].functions.push(fdecl);
 
         Some(pos)
@@ -382,10 +378,6 @@ pub fn function_decl(
 
         let pos = ns.contracts[contract_no].functions.len();
 
-        ns.contracts[contract_no]
-            .function_table
-            .insert(fdecl.signature.to_owned(), (contract_no, pos, None));
-
         ns.contracts[contract_no].functions.push(fdecl);
 
         Some(pos)
@@ -407,10 +399,6 @@ pub fn function_decl(
         }
 
         let func_no = ns.contracts[contract_no].functions.len();
-
-        ns.contracts[contract_no]
-            .function_table
-            .insert(fdecl.signature.to_owned(), (contract_no, func_no, None));
 
         ns.contracts[contract_no].functions.push(fdecl);
 
