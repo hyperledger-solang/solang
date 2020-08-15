@@ -225,6 +225,16 @@ pub fn function_decl(
         success = false;
     }
 
+    if let pt::Visibility::Private(_) = visibility {
+        if is_virtual.is_some() {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                "function marked ‘virtual’ cannot also be ‘private’".to_string(),
+            ));
+            success = false;
+        }
+    }
+
     if !success || !returns_success || !params_success {
         return None;
     }

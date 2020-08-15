@@ -171,7 +171,7 @@ fn test_interface() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "functions must be declared ‘external’ in an interface"
+        "function marked ‘virtual’ cannot also be ‘private’"
     );
 
     let ns = parse_and_resolve(
@@ -870,13 +870,13 @@ fn test_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2 {
-            function foo(uint64 a) override(bar2) private returns (uint64) {
+            function foo(uint64 a) override(bar2) internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 102;
             }
         }
@@ -1017,19 +1017,19 @@ fn multiple_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2 {
-            function foo(uint64 a) override private returns (uint64) {
+            function foo(uint64 a) override internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar2 {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 103;
             }
         }
@@ -1045,19 +1045,19 @@ fn multiple_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2 {
-            function foo(uint64 a) override(bar) private returns (uint64) {
+            function foo(uint64 a) override(bar) internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar2 {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 103;
             }
         }
@@ -1073,19 +1073,19 @@ fn multiple_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2, bar3 {
-            function foo(uint64 a) override(bar,bar2,bar3) private returns (uint64) {
+            function foo(uint64 a) override(bar,bar2,bar3) internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar2 {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 103;
             }
         }
@@ -1107,19 +1107,19 @@ fn multiple_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2 {
-            function foo(uint64 a) override(bar,bar2) private returns (uint64) {
+            function foo(uint64 a) override(bar,bar2) internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar {
-            function foo(uint64 a) private returns (uint64) {
+            function foo(uint64 a) internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar2 {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 103;
             }
         }
@@ -1135,19 +1135,19 @@ fn multiple_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2 {
-            function foo(uint64 a) private returns (uint64) {
+            function foo(uint64 a) internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 102;
             }
         }
 
         contract bar2 {
-            function foo(uint64 a) virtual private returns (uint64) {
+            function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 103;
             }
         }
