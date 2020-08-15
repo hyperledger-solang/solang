@@ -22,10 +22,13 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y libz-dev pkg-config libssl-dev git cargo libffi-dev libstdc++-9-dev curl
+RUN apt-get install -y libz-dev pkg-config libssl-dev git libffi-dev libstdc++-9-dev curl gcc
 RUN apt-get clean
 RUN apt-get autoclean
 
+# Get Rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+
 COPY --from=builder /llvm80 /llvm80/
 
-ENV PATH="/llvm80/bin:${PATH}"
+ENV PATH="/llvm80/bin:/root/.cargo/bin:${PATH}"
