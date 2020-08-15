@@ -25,7 +25,7 @@ jobs:
     - name: Rust stable
       run: rustup default stable
     - name: Compile stdlib
-      run: clang-8 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
+      run: clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
       working-directory:  ./stdlib
     - name: Build
       run: cargo build --verbose
@@ -38,13 +38,12 @@ jobs:
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
-    - name: Add LLVM to Path
-      run: echo "::add-path::c:\llvm80\bin"
     - name: Download LLVM
-      run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm80.zip
+      run: curl -sS -o c:\llvm.zip https://solang.io/download/llvm10.0.zip
     - name: Extract LLVM
-      # unzip exists but always exits with code 1
-      run: powershell Expand-Archive c:\llvm.zip -DestinationPath c:\
+      run: unzip c:\llvm.zip -d c:/
+    - name: Add LLVM to Path
+      run: echo "::add-path::c:\llvm10.0\bin"
     - name: Compile stdlib
       run: clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
       working-directory: ./stdlib

@@ -894,7 +894,7 @@ impl SubstrateTarget {
                         v.into_pointer_value(),
                         contract
                             .module
-                            .get_type("struct.vector")
+                            .get_struct_type("struct.vector")
                             .unwrap()
                             .ptr_type(AddressSpace::Generic),
                         "string",
@@ -2079,7 +2079,7 @@ impl TargetRuntime for SubstrateTarget {
             length,
             contract
                 .module
-                .get_type("struct.vector")
+                .get_struct_type("struct.vector")
                 .unwrap()
                 .size_of()
                 .unwrap()
@@ -2103,7 +2103,7 @@ impl TargetRuntime for SubstrateTarget {
             p,
             contract
                 .module
-                .get_type("struct.vector")
+                .get_struct_type("struct.vector")
                 .unwrap()
                 .ptr_type(AddressSpace::Generic),
             "string",
@@ -2671,7 +2671,7 @@ impl TargetRuntime for SubstrateTarget {
             length,
             contract
                 .module
-                .get_type("struct.vector")
+                .get_struct_type("struct.vector")
                 .unwrap()
                 .size_of()
                 .unwrap()
@@ -2695,7 +2695,7 @@ impl TargetRuntime for SubstrateTarget {
             p,
             contract
                 .module
-                .get_type("struct.vector")
+                .get_struct_type("struct.vector")
                 .unwrap()
                 .ptr_type(AddressSpace::Generic),
             "string",

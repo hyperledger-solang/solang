@@ -8,14 +8,12 @@ RUN git clone git://github.com/llvm/llvm-project
 
 WORKDIR /llvm-project
 
-RUN git checkout -b release_8.x origin/release/8.x
-
-RUN sed -i '7 a #include <string>' llvm/include/llvm/Demangle/MicrosoftDemangleNodes.h
+RUN git checkout -b release_10.x origin/release/10.x
 
 RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang  \
     -DLLVM_ENABLE_TERMINFO=Off -DLLVM_TARGETS_TO_BUILD=WebAssembly \
-    -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=/llvm80 -B build llvm
+    -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=/llvm10.0 -B build llvm
 
 RUN cmake --build build --target install
 
-RUN tar jcf /llvm80.tar.bz2 /llvm80/
+RUN tar jcf /llvm10.0.tar.bz2 /llvm10.0/

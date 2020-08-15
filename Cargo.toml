@@ -26,7 +26,7 @@ tiny-keccak = "2.0"
 serde_json = "1.0"
 serde = "1.0"
 serde_derive = { version = "1.0" }
-inkwell = { version = "0.1.0-llvm8sample", features = ["target-webassembly", "llvm8-0"] }
+inkwell = { version = "0.1.0-llvm10sample", features = ["target-webassembly", "llvm10-0"] }
 blake2-rfc = "0.2.18"
 phf = { version = "0.8", features = ["macros"] }
 unicode-xid = "0.2.0"
