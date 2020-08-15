@@ -3,6 +3,8 @@ use num_bigint::BigInt;
 use num_traits::Zero;
 use parser::pt;
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::iter::FromIterator;
 use Target;
 
 use super::ast;
@@ -147,6 +149,7 @@ fn resolve_inherited_contracts(
 /// Layout the contract. We determine the layout of variables
 fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
+    let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
 
     // visit base contracts depth-first in post-order
     let mut order = Vec::new();
@@ -219,7 +222,106 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
             let cur = &ns.contracts[base_contract_no].functions[function_no];
 
-            if let Some(prev) = ns.contracts[contract_no].function_table.get(&signature) {
+            if let Some(entry) = override_needed.get(&signature) {
+                let non_virtual = entry
+                    .iter()
+                    .filter_map(|(contract_no, function_no)| {
+                        let func = &ns.contracts[*contract_no].functions[*function_no];
+
+                        if func.is_virtual {
+                            None
+                        } else {
+                            Some(ast::Note {
+                                pos: func.loc,
+                                message: format!(
+                                    "function ‘{}’ is not specified ‘virtual’",
+                                    func.name
+                                ),
+                            })
+                        }
+                    })
+                    .collect::<Vec<ast::Note>>();
+
+                if !non_virtual.is_empty() {
+                    ns.diagnostics.push(ast::Diagnostic::error_with_notes(
+                        cur.loc,
+                        format!(
+                            "function ‘{}’ overrides functions which are not ‘virtual’",
+                            cur.name
+                        ),
+                        non_virtual,
+                    ));
+                }
+
+                let source_override = entry
+                    .iter()
+                    .map(|(contract_no, _)| -> &str { &ns.contracts[*contract_no].name })
+                    .collect::<Vec<&str>>()
+                    .join(",");
+
+                if let Some((loc, override_specified)) = &cur.is_override {
+                    if override_specified.is_empty() {
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            *loc,
+                            format!(
+                                "function ‘{}’ should specify override list ‘override({})’",
+                                cur.name, source_override
+                            ),
+                        ));
+                    } else {
+                        let override_specified: HashSet<usize> =
+                            HashSet::from_iter(override_specified.iter().cloned());
+                        let override_needed: HashSet<usize> =
+                            HashSet::from_iter(entry.iter().map(|(contract_no, _)| *contract_no));
+
+                        // List of contract which should have been specified
+                        let missing: Vec<String> = override_needed
+                            .difference(&override_specified)
+                            .map(|contract_no| ns.contracts[*contract_no].name.to_owned())
+                            .collect();
+
+                        if !missing.is_empty() {
+                            ns.diagnostics.push(ast::Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "function ‘{}’ missing overrides ‘{}’, specify ‘override({})’",
+                                    cur.name,
+                                    missing.join(","),
+                                    source_override
+                                ),
+                            ));
+                        }
+
+                        // List of contract which should not have been specified
+                        let extra: Vec<String> = override_specified
+                            .difference(&override_needed)
+                            .map(|contract_no| ns.contracts[*contract_no].name.to_owned())
+                            .collect();
+
+                        if !extra.is_empty() {
+                            ns.diagnostics.push(ast::Diagnostic::error(
+                            *loc,
+                            format!(
+                                "function ‘{}’ includes extraneous overrides ‘{}’, specify ‘override({})’",
+                                cur.name,
+                                extra.join(","),
+                                source_override
+                            ),
+                        ));
+                        }
+                    }
+
+                    override_needed.remove(&signature);
+                } else {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        cur.loc,
+                        format!(
+                            "function ‘{}’ should specify override list ‘override({})’",
+                            cur.name, source_override
+                        ),
+                    ));
+                }
+            } else if let Some(prev) = ns.contracts[contract_no].function_table.get(&signature) {
                 if cur.is_constructor() {
                     continue;
                 }
@@ -268,15 +370,14 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         continue;
                     }
                 } else {
-                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                        cur.loc,
-                        format!(
-                            "function with this signature already defined ‘{}’",
-                            cur.name
-                        ),
-                        func_prev.loc,
-                        format!("previous definition of ‘{}’", func_prev.name),
-                    ));
+                    if let Some(entry) = override_needed.get_mut(&signature) {
+                        entry.push((base_contract_no, function_no));
+                    } else {
+                        override_needed.insert(
+                            signature,
+                            vec![(prev.0, prev.1), (base_contract_no, function_no)],
+                        );
+                    }
 
                     continue;
                 }
@@ -293,6 +394,32 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 .function_table
                 .insert(signature, (base_contract_no, function_no, None));
         }
+    }
+
+    for list in override_needed.values() {
+        let func = &ns.contracts[list[0].0].functions[list[0].1];
+
+        let notes = list
+            .iter()
+            .skip(1)
+            .map(|(contract_no, function_no)| {
+                let func = &ns.contracts[*contract_no].functions[*function_no];
+
+                ast::Note {
+                    pos: func.loc,
+                    message: format!("previous definition of function ‘{}’", func.name),
+                }
+            })
+            .collect();
+
+        ns.diagnostics.push(ast::Diagnostic::error_with_notes(
+            func.loc,
+            format!(
+                "function ‘{}’ with this signature already defined",
+                func.name
+            ),
+            notes,
+        ));
     }
 }
 
