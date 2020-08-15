@@ -684,7 +684,7 @@ fn call_inherited_function() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function with this signature already defined ‘foo’"
+        "function ‘foo’ with this signature already defined"
     );
 
     let mut runtime = build_solidity(
@@ -1010,8 +1010,10 @@ fn test_override() {
         runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
         &vec!(2)
     );
+}
 
-    /*
+#[test]
+fn multiple_override() {
     let ns = parse_and_resolve(
         r#"
         contract base is bar, bar2 {
@@ -1037,7 +1039,124 @@ fn test_override() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function ‘foo’ override list does not contain ‘bar’"
+        "function ‘foo’ should specify override list ‘override(bar2,bar)’"
     );
-    */
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar, bar2 {
+            function foo(uint64 a) override(bar) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar2 {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 103;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ missing overrides ‘bar2’, specify ‘override(bar2,bar)’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar, bar2, bar3 {
+            function foo(uint64 a) override(bar,bar2,bar3) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar2 {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 103;
+            }
+        }
+
+        contract bar3 {
+            function f() public {
+
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ includes extraneous overrides ‘bar3’, specify ‘override(bar2,bar)’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar, bar2 {
+            function foo(uint64 a) override(bar,bar2) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar2 {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 103;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ overrides functions which are not ‘virtual’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base is bar, bar2 {
+            function foo(uint64 a) private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 102;
+            }
+        }
+
+        contract bar2 {
+            function foo(uint64 a) virtual private returns (uint64) {
+                return a + 103;
+            }
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ should specify override list ‘override(bar2,bar)’"
+    );
 }
