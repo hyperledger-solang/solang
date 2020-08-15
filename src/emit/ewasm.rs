@@ -7,7 +7,6 @@ use std::str;
 use inkwell::attributes::{Attribute, AttributeLoc};
 use inkwell::context::Context;
 use inkwell::module::Linkage;
-use inkwell::types::BasicType;
 use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
@@ -1367,7 +1366,7 @@ impl TargetRuntime for EwasmTarget {
             length,
             contract
                 .module
-                .get_type("struct.vector")
+                .get_struct_type("struct.vector")
                 .unwrap()
                 .size_of()
                 .unwrap()
@@ -1391,7 +1390,7 @@ impl TargetRuntime for EwasmTarget {
             p,
             contract
                 .module
-                .get_type("struct.vector")
+                .get_struct_type("struct.vector")
                 .unwrap()
                 .ptr_type(AddressSpace::Generic),
             "string",

@@ -1405,7 +1405,7 @@ impl EthAbiEncoder {
                     v.into_pointer_value(),
                     contract
                         .module
-                        .get_type("struct.vector")
+                        .get_struct_type("struct.vector")
                         .unwrap()
                         .ptr_type(AddressSpace::Generic),
                     "string",

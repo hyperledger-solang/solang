@@ -1,12 +1,14 @@
 # escape=`
 
-# Use the latest Windows Server Core image with .NET Framework 4.8.
+# Use the latest Windows Server Core image
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 SHELL [ "powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'Continue'; $verbosePreference='Continue';"]
 
-# Download the Build Tools bootstrapper.
-ADD https://aka.ms/vs/16/release/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
+# Download Visual Studio Build Tools 16.6. This should match the version on github actions virtual environment.
+# https://docs.microsoft.com/en-us/visualstudio/releases/2019/history
+# https://github.com/actions/virtual-environments/blob/main/images/win/Windows2019-Readme.md
+ADD https://download.visualstudio.microsoft.com/download/pr/067fd8d0-753e-4161-8780-dfa3e577839e/4776935864d08e66183acd5b3647c9616da989c60afbfe100d4afc459f7e5785/vs_BuildTools.exe C:\TEMP\vs_buildtools.exe
 
 # Install Visual Studio Build Tools
 RUN C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
@@ -26,9 +28,9 @@ ADD https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.
 RUN C:\TEMP\rustup-init.exe -y
 
 # Git
-ADD https://github.com/git-for-windows/git/releases/download/v2.12.2.windows.2/MinGit-2.12.2.2-64-bit.zip C:\TEMP\MinGit.zip
+ADD https://github.com/git-for-windows/git/releases/download/v2.28.0.windows.1/MinGit-2.28.0-64-bit.zip C:\TEMP\MinGit-2.28.0-64-bit.zip
 
-RUN Expand-Archive C:\TEMP\MinGit.zip -DestinationPath c:\MinGit
+RUN Expand-Archive C:\TEMP\MinGit-2.28.0-64-bit.zip -DestinationPath c:\MinGit
 
 # LLVM Build requires Python
 # Newer versions than v3.5.4 fail due to https://github.com/microsoft/vcpkg/issues/6988
@@ -44,30 +46,27 @@ RUN Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force ; `
 
 # Invoke-BatchFile retains the environment after executing so we can set it up more permanently
 RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
-	$path = $env:path + ';c:\MinGit\cmd;C:\Users\ContainerAdministrator\.cargo\bin;C:\llvm80\bin;C:\Python' ; `
+	$path = $env:path + ';c:\MinGit\cmd;C:\Users\ContainerAdministrator\.cargo\bin;C:\llvm10.0\bin;C:\Python' ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name Path -Value $path ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIB -Value $env:LIB ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name INCLUDE -Value $env:INCLUDE ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIBPATH -Value $env:LIBPATH ;
 
-RUN git clone -b release/8.x git://github.com/llvm/llvm-project
+RUN git clone -b release/10.x git://github.com/llvm/llvm-project
 
 WORKDIR \llvm-project
 
-# Stop cmake from re-generating build system ad infinitum and fix missing include
-RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ; `
-	$header = Get-Content .\llvm\include\llvm\Demangle\MicrosoftDemangleNodes.h ; `
-	$header[8] = '#include <string>' ; `
-	$header | Set-Content .\llvm\include\llvm\Demangle\MicrosoftDemangleNodes.h
+# Stop cmake from re-generating build system ad infinitum
+RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ;
 
 # All llvm targets should be enabled or inkwell refused to link
 RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang `
-	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm80 `
+	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm10.0 `
 	-B build llvm
 RUN cmake --build build --target install
 
 WORKDIR \
 
-RUN Compress-Archive -Path C:\llvm80 -DestinationPath C:\llvm80.zip
+RUN Compress-Archive -Path C:\llvm10.0 -DestinationPath C:\llvm10.0.zip
 
 RUN Remove-Item -Path \llvm-project,C:\TEMP -Recurse -Force

@@ -886,7 +886,7 @@ impl<'a> Contract<'a> {
                     .build_pointer_cast(
                         v.into_pointer_value(),
                         self.module
-                            .get_type("struct.vector")
+                            .get_struct_type("struct.vector")
                             .unwrap()
                             .ptr_type(AddressSpace::Generic),
                         "vector",
@@ -1683,7 +1683,7 @@ impl<'a> Contract<'a> {
                     .build_pointer_cast(
                         v.into_pointer_value(),
                         self.module
-                            .get_type("struct.vector")
+                            .get_struct_type("struct.vector")
                             .unwrap()
                             .ptr_type(AddressSpace::Generic),
                         "vector",
@@ -1841,7 +1841,7 @@ impl<'a> Contract<'a> {
                     .build_pointer_cast(
                         v.into_pointer_value(),
                         self.module
-                            .get_type("struct.vector")
+                            .get_struct_type("struct.vector")
                             .unwrap()
                             .ptr_type(AddressSpace::Generic),
                         "vector",
@@ -3060,7 +3060,7 @@ impl<'a> Contract<'a> {
                         );
                         let vec_size = self
                             .module
-                            .get_type("struct.vector")
+                            .get_struct_type("struct.vector")
                             .unwrap()
                             .size_of()
                             .unwrap()
@@ -3205,7 +3205,7 @@ impl<'a> Contract<'a> {
                         );
                         let vec_size = self
                             .module
-                            .get_type("struct.vector")
+                            .get_struct_type("struct.vector")
                             .unwrap()
                             .size_of()
                             .unwrap()
@@ -4732,7 +4732,7 @@ impl<'a> Contract<'a> {
             }
             ast::Type::Enum(n) => self.llvm_type(&self.ns.enums[*n].ty),
             ast::Type::String | ast::Type::DynamicBytes => {
-                self.module.get_type("struct.vector").unwrap()
+                self.module.get_struct_type("struct.vector").unwrap().into()
             }
             ast::Type::Array(base_ty, dims) => {
                 let ty = self.llvm_var(base_ty);
@@ -4741,13 +4741,15 @@ impl<'a> Contract<'a> {
 
                 let mut aty = match dims.next().unwrap() {
                     Some(d) => ty.array_type(d.to_u32().unwrap()),
-                    None => return self.module.get_type("struct.vector").unwrap(),
+                    None => return self.module.get_struct_type("struct.vector").unwrap().into(),
                 };
 
                 for dim in dims {
                     match dim {
                         Some(d) => aty = aty.array_type(d.to_u32().unwrap()),
-                        None => return self.module.get_type("struct.vector").unwrap(),
+                        None => {
+                            return self.module.get_struct_type("struct.vector").unwrap().into()
+                        }
                     }
                 }
 

@@ -64,8 +64,9 @@ The latest solang release is  on `crates.io <https://crates.io/crates/solang>`_.
 
 Building Solang from source
 ---------------------------
+
 In order to build solang from source, you will need rust 1.42.0 or higher,
-and llvm version 8 or higher with the WebAssembly target enabled.
+and llvm version 10 with the WebAssembly target enabled.
 
 So see if you have the correct version of rust, simply execute:
 
@@ -92,7 +93,7 @@ To make sure you have the correct version of the llvm libraries installed, first
 
   llvm-config --version
 
-The output should be 8.0 or higher. Then check if the WebAssembly target is enabled by running:
+The output should be 10.0. Then check if the WebAssembly target is enabled by running:
 
 .. code-block:: bash
 
@@ -113,7 +114,7 @@ If you do not have the llvm libraries installed then you can either install
 your distribution llvm packages, or compile your own. Compiling your own is helpful
 if you want to do Solang development.
 
-Any build of llvm 8.0, with the WebAssembly target enabled, should work.
+Any build of llvm 10.0, with the WebAssembly target enabled, should work.
 Note that you will also need clang; the Solidity standard library is written in C,
 and is compiled to wasm by clang. The version of clang *must* be the same as the
 version of llvm.
@@ -122,29 +123,29 @@ version of llvm.
 Installing LLVM on Ubuntu
 _________________________
 
-You will need ubuntu 18.04 with backports or later. Just run:
+You will need ubuntu 20.04 (focal) or later. Just run:
 
 .. code-block:: bash
 
-	sudo apt install curl llvm-8-dev clang-8 git zlib1g-dev cargo
+	sudo apt install curl llvm-10-dev clang-10 git zlib1g-dev cargo
 
 Installing LLVM on Debian
 _________________________
 
-You will need Debian Buster with `buster-backports` enabled, or testing.
+You will need at least Debian Bullseye (testing).
 
 .. code-block:: bash
 
-	sudo apt-get install -y llvm-8-dev clang-8 libz-dev pkg-config libssl-dev git
+	sudo apt-get install llvm-10-dev clang-10 zlib1g-dev pkg-config libssl-dev git cargo
 
 Installing LLVM on Fedora
 _________________________
 
-You will need Fedora 30 or later. Running the following:
+You will need Fedora 32 or later. Running the following:
 
 .. code-block:: bash
 
-	sudo dnf install cargo llvm8.0-static llvm8.0-devel zlib-devel clang libffi-devel openssl-devel
+	sudo dnf install cargo llvm-static llvm-devel zlib-devel clang libffi-devel openssl-devel git
 
 .. _llvm-from-source:
 
@@ -152,13 +153,13 @@ Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available on
-`solang.io <https://solang.io/download/llvm80.zip>`_. This binary is built using
+`solang.io <https://solang.io/download/llvm10.0.zip>`_. This binary is built using
 the dockerfile used in `Building LLVM using Windows Containers`_. After unzipping
 the file, add the bin directory to your path.
 
 .. code-block::
 
-	set PATH=%PATH%;C:\llvm80\bin
+	set PATH=%PATH%;C:\llvm10.0\bin
 
 Building LLVM from source
 ___________________________
@@ -180,18 +181,18 @@ First if all clone the llvm repository:
 	git clone git://github.com/llvm/llvm-project
 	cd llvm-project
 
-Now switch to the 8.0 release branch:
+Now switch to the 10.0 release branch:
 
 .. code-block:: bash
 
-	git checkout -b release_8.x origin/release/8.x
+	git checkout -b release_10.x origin/release/10.x
 
 Now run cmake to create the makefiles. Replace the *installdir* argument to ``CMAKE_INSTALL_PREFIX`` with with a directory where you would like to have llvm installed, and then run the build:
 
 .. code-block:: bash
 
 	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang  \
-		-DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=installdir -B build llvm
 	cmake --build build --target install
 
@@ -219,7 +220,7 @@ is in Solang github repo. Simply run the dockerfile:
 
 	docker build -f build-llvm-linux.dockerfile .
 
-This will take a few hours. The result will be an image with llvm compressed in ``/llvm80.tar.bz2``.
+This will take a few hours. The result will be an image with llvm compressed in ``/llvm10.0.tar.bz2``.
 
 
 Building LLVM using Windows Containers
@@ -237,4 +238,4 @@ is in Solang github repo. Simply run the dockerfile:
 
 	docker build -f build-llvm-windows.dockerfile .
 
-This will take a few hours. The result will be an image with llvm compressed in ``c:\llvm80.zip``.
+This will take a few hours. The result will be an image with llvm compressed in ``c:\llvm10.0.zip``.
