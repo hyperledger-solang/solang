@@ -203,7 +203,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract ‘a’ cannot inherit itself"
+        "contract ‘a’ cannot have itself as a base contract"
     );
 
     let ns = parse_and_resolve(
@@ -235,7 +235,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "inheriting ‘a’ from contract ‘b’ is cyclic"
+        "base ‘a’ from contract ‘b’ is cyclic"
     );
 
     let ns = parse_and_resolve(
@@ -255,7 +255,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract ‘b’ duplicate inherits ‘a’"
+        "contract ‘b’ duplicate base ‘a’"
     );
 
     let ns = parse_and_resolve(
@@ -280,7 +280,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "inheriting ‘a’ from contract ‘c’ is cyclic"
+        "base ‘a’ from contract ‘c’ is cyclic"
     );
 
     let ns = parse_and_resolve(
@@ -310,7 +310,7 @@ fn inherit() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "inheriting ‘a’ from contract ‘c’ is cyclic"
+        "base ‘a’ from contract ‘c’ is cyclic"
     );
 }
 
@@ -1223,4 +1223,71 @@ fn multiple_override() {
         first_error(ns.diagnostics),
         "function ‘foo’ overrides function in same contract"
     );
+}
+
+#[test]
+fn base_contract() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u32);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            constructor(uint64 a) public {}
+        }
+
+        contract apex is base {
+            function foo(uint64 a) virtual internal returns (uint64) {
+                return a + 102;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "missing arguments to contract ‘base’ constructor"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            constructor(uint64 a) public {}
+        }
+
+        contract apex is base(true) {
+            function foo(uint64 a) virtual internal returns (uint64) {
+                return a + 102;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "conversion from bool to uint64 not possible"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a(foo) {
+            int32 constant foo = 102;
+    
+            function f() public returns (int32) {
+                    return bar;
+            }
+        }
+
+        contract a {
+                int32 public bar;
+                constructor(int32 x) public {
+                        bar = x;
+                }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("f", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(102).encode());
 }

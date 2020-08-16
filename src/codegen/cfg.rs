@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::str;
 
+use super::expression::expression;
 use super::statements::{statement, LoopScopes};
 use hex;
 use parser::pt;
@@ -842,6 +843,43 @@ pub fn generate_cfg(
     let mut loops = LoopScopes::new();
 
     let func = &ns.contracts[base_contract_no].functions[function_no];
+
+    if func.ty == pt::FunctionTy::Constructor {
+        for base in ns.contracts[base_contract_no].bases.iter().rev() {
+            if let Some((constructor_no, args)) = &base.constructor {
+                let args = args
+                    .iter()
+                    .map(|a| expression(a, &mut cfg, contract_no, ns, &mut vartab))
+                    .collect();
+
+                // find the correction function number for this constructor_no
+                // TODO: maybe constructor_no should just be function number
+                let mut seen_constructors = 0;
+                let mut func = 0;
+
+                for (i, f) in ns.contracts[base.contract_no].functions.iter().enumerate() {
+                    if f.is_constructor() {
+                        if seen_constructors == *constructor_no {
+                            func = i;
+                            break;
+                        } else {
+                            seen_constructors += 1;
+                        }
+                    }
+                }
+
+                cfg.add(
+                    &mut vartab,
+                    Instr::Call {
+                        res: Vec::new(),
+                        base: base.contract_no,
+                        func,
+                        args,
+                    },
+                );
+            }
+        }
+    }
 
     // populate the argument variables
     for (i, arg) in func.symtable.arguments.iter().enumerate() {
