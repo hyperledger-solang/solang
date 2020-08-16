@@ -133,12 +133,19 @@ impl fmt::Display for ContractTy {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Base {
+    pub loc: Loc,
+    pub name: Identifier,
+    pub args: Option<Vec<Expression>>,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct ContractDefinition {
     pub doc: Vec<String>,
     pub loc: Loc,
     pub ty: ContractTy,
     pub name: Identifier,
-    pub inherits: Vec<Identifier>,
+    pub base: Vec<Base>,
     pub parts: Vec<ContractPart>,
 }
 
@@ -405,6 +412,7 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
     Virtual(Loc),
     Override(Loc, Vec<Identifier>),
+    BaseArguments(Loc, Base),
 }
 
 #[derive(Debug, PartialEq, Clone)]

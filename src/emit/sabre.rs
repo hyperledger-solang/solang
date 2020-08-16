@@ -194,7 +194,7 @@ impl SabreTarget {
 
             contract
                 .builder
-                .build_call(contract.functions[&con.signature], &args, "");
+                .build_call(contract.functions[&con.vsignature], &args, "");
         }
 
         // return 1 for success

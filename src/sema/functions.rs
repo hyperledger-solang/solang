@@ -141,15 +141,13 @@ pub fn function_decl(
                         Some(no) => {
                             // check override is base contract of our contract
                             fn is_base(no: &usize, contract_no: usize, ns: &Namespace) -> bool {
-                                let inherits = &ns.contracts[contract_no].inherit;
+                                let bases = &ns.contracts[contract_no].bases;
 
-                                if inherits.contains(no) {
+                                if bases.iter().any(|e| e.contract_no == *no) {
                                     return true;
                                 }
 
-                                inherits
-                                    .iter()
-                                    .any(|contract_no| is_base(no, *contract_no, ns))
+                                bases.iter().any(|e| is_base(no, e.contract_no, ns))
                             }
 
                             if list.contains(&no) {
@@ -179,6 +177,24 @@ pub fn function_decl(
                 }
 
                 is_override = Some((*loc, list));
+            }
+            pt::FunctionAttribute::BaseArguments(loc, base) => {
+                // We can only fully resolve the base constructors arguments
+                // once we have resolved all the constructors, this is not done here yet
+                // so we fully resolve these along with the constructor body
+                if func.ty != pt::FunctionTy::Constructor {
+                    ns.diagnostics.push(Diagnostic::error(
+                        *loc,
+                        "base contract is only allowed on constructor".to_string(),
+                    ));
+                }
+
+                if base.args.is_none() {
+                    ns.diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!("arguments to base contract ‘{}’ missing", base.name.name),
+                    ));
+                }
             }
         }
     }
@@ -246,6 +262,7 @@ pub fn function_decl(
 
     let mut fdecl = Function::new(
         func.loc,
+        contract_no,
         name,
         func.doc.clone(),
         func.ty.clone(),
@@ -396,7 +413,7 @@ pub fn function_decl(
 
         if let Some((func_contract_no, func_no, _)) = ns.contracts[contract_no]
             .function_table
-            .get(&fdecl.signature)
+            .get(&fdecl.vsignature)
         {
             ns.diagnostics.push(Diagnostic::error_with_note(
                 func.loc,
@@ -598,10 +615,17 @@ fn resolve_returns(
 fn signatures() {
     use super::*;
 
-    let ns = Namespace::new(Target::Ewasm, 20, 16);
+    let mut ns = Namespace::new(Target::Ewasm, 20, 16);
+
+    ns.contracts.push(ast::Contract::new(
+        "bar",
+        pt::ContractTy::Contract(pt::Loc(0, 0, 0)),
+        pt::Loc(0, 0, 0),
+    ));
 
     let fdecl = Function::new(
         pt::Loc(0, 0, 0),
+        0,
         "foo".to_owned(),
         vec![],
         pt::FunctionTy::Function,

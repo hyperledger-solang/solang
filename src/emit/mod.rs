@@ -3384,7 +3384,7 @@ impl<'a> Contract<'a> {
 
                         let ret = self
                             .builder
-                            .build_call(self.functions[&f.signature], &parms, "")
+                            .build_call(self.functions[&f.vsignature], &parms, "")
                             .try_as_basic_value()
                             .left()
                             .unwrap();
@@ -3897,10 +3897,15 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (base_contract_no, function_no, _) in self.contract.function_table.values() {
+        for (signature, (base_contract_no, function_no, _)) in &self.contract.function_table {
             let f = &self.ns.contracts[*base_contract_no].functions[*function_no];
 
             if f.ty != function_ty || !f.is_public() {
+                continue;
+            }
+
+            if f.is_constructor() && !signature.starts_with(&format!("@{}", self.contract.name)) {
+                // base constructor, no dispatch needed
                 continue;
             }
 
@@ -3939,7 +3944,7 @@ impl<'a> Contract<'a> {
 
             let ret = self
                 .builder
-                .build_call(self.functions[&f.signature], &args, "")
+                .build_call(self.functions[&f.vsignature], &args, "")
                 .try_as_basic_value()
                 .left()
                 .unwrap();

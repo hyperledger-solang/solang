@@ -8,8 +8,10 @@ use std::iter::FromIterator;
 use Target;
 
 use super::ast;
+use super::expression::{expression, match_constructor_to_args};
 use super::functions;
 use super::statements;
+use super::symtable::Symtable;
 use super::variables;
 use codegen::cfg::ControlFlowGraph;
 use emit;
@@ -21,7 +23,7 @@ impl ast::Contract {
             name: name.to_owned(),
             loc,
             ty,
-            inherit: Vec::new(),
+            bases: Vec::new(),
             layout: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
@@ -69,7 +71,7 @@ pub fn resolve(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    resolve_inherited_contracts(contracts, file_no, ns);
+    resolve_base_contracts(contracts, file_no, ns);
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
@@ -79,7 +81,10 @@ pub fn resolve(
         function_bodies.extend(resolve_declarations(def, file_no, *contract_no, ns));
     }
 
-    // Now we have all the declarations, we can create the layout of storage and handle inheritance
+    // Resolve base contract constructor arguments on contract definition (not constructor definitions)
+    resolve_base_args(contracts, file_no, ns);
+
+    // Now we have all the declarations, we can create the layout of storage and handle base contracts
     for (contract_no, _) in contracts {
         layout_contract(*contract_no, ns);
     }
@@ -88,38 +93,48 @@ pub fn resolve(
     resolve_bodies(function_bodies, file_no, ns);
 }
 
-/// Resolve the inheritance list and check for cycles. Returns true if no
+/// Resolve the base contracts list and check for cycles. Returns true if no
 /// issues where found.
-fn resolve_inherited_contracts(
+fn resolve_base_contracts(
     contracts: &[(usize, &pt::ContractDefinition)],
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    // Check the inheritance of a contract
+    // Check the bases of a contract
     fn cyclic(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
-        let inherits = &ns.contracts[parent].inherit;
+        let bases = &ns.contracts[parent].bases;
 
-        if base == parent || inherits.contains(&base) {
+        if base == parent || bases.iter().any(|e| e.contract_no == base) {
             return true;
         }
 
-        inherits.iter().any(|parent| cyclic(base, *parent, ns))
+        bases
+            .iter()
+            .any(|parent| cyclic(base, parent.contract_no, ns))
     }
 
     for (contract_no, def) in contracts {
-        for name in &def.inherits {
+        for base in &def.base {
+            let name = &base.name;
             match ns.resolve_contract(file_no, name) {
                 Some(no) => {
                     if no == *contract_no {
                         ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
-                            format!("contract ‘{}’ cannot inherit itself", name.name),
+                            format!(
+                                "contract ‘{}’ cannot have itself as a base contract",
+                                name.name
+                            ),
                         ));
-                    } else if ns.contracts[*contract_no].inherit.contains(&no) {
+                    } else if ns.contracts[*contract_no]
+                        .bases
+                        .iter()
+                        .any(|e| e.contract_no == no)
+                    {
                         ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
                             format!(
-                                "contract ‘{}’ duplicate inherits ‘{}’",
+                                "contract ‘{}’ duplicate base ‘{}’",
                                 ns.contracts[*contract_no].name, name.name
                             ),
                         ));
@@ -127,12 +142,18 @@ fn resolve_inherited_contracts(
                         ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
                             format!(
-                                "inheriting ‘{}’ from contract ‘{}’ is cyclic",
+                                "base ‘{}’ from contract ‘{}’ is cyclic",
                                 name.name, ns.contracts[*contract_no].name
                             ),
                         ));
                     } else {
-                        ns.contracts[*contract_no].inherit.push(no);
+                        // We do not resolve the constructor arguments here, since we have not
+                        // resolved any variables. This means no constants can be used on base
+                        // constructor args, so we delay this until resolve_base_args()
+                        ns.contracts[*contract_no].bases.push(ast::Base {
+                            contract_no: no,
+                            constructor: None,
+                        });
                     }
                 }
                 None => {
@@ -146,17 +167,70 @@ fn resolve_inherited_contracts(
     }
 }
 
-/// Layout the contract. We determine the layout of variables
-fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
-    let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
-    let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
+/// Resolve the base contracts list and check for cycles. Returns true if no
+/// issues where found.
+fn resolve_base_args(
+    contracts: &[(usize, &pt::ContractDefinition)],
+    file_no: usize,
+    ns: &mut ast::Namespace,
+) {
+    // for every contract, if we have a base which resolved successfully, resolve any constructor args
+    for (contract_no, def) in contracts {
+        for base in &def.base {
+            let name = &base.name;
+            if let Some(base_no) = ns.resolve_contract(file_no, name) {
+                if let Some(pos) = ns.contracts[*contract_no]
+                    .bases
+                    .iter()
+                    .position(|e| e.contract_no == base_no)
+                {
+                    if let Some(args) = &base.args {
+                        let mut resolved_args = Vec::new();
+                        let symtable = Symtable::new();
 
-    // visit base contracts depth-first in post-order
+                        for arg in args {
+                            if let Ok(e) =
+                                expression(&arg, file_no, Some(*contract_no), ns, &symtable, true)
+                            {
+                                resolved_args.push(e);
+                            }
+                        }
+
+                        // find constructor which matches this
+                        if let Ok((constructor_no, args)) =
+                            match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
+                        {
+                            ns.contracts[*contract_no].bases[pos].constructor =
+                                Some((constructor_no, args));
+                        }
+                    } else {
+                        // if there is a constructor, do all of them require arguments
+                        if ns.contracts[base_no]
+                            .functions
+                            .iter()
+                            .all(|f| f.is_constructor() && !f.params.is_empty())
+                        {
+                            let name = &ns.contracts[base_no].name;
+
+                            ns.diagnostics.push(ast::Diagnostic::error(
+                                base.loc,
+                                format!("missing arguments to contract ‘{}’ constructor", name),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Visit base contracts in depth-first post-order
+fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
     let mut order = Vec::new();
 
     fn base<'a>(contract_no: usize, order: &mut Vec<usize>, ns: &'a ast::Namespace) {
-        for no in ns.contracts[contract_no].inherit.iter().rev() {
-            base(*no, order, ns);
+        for b in ns.contracts[contract_no].bases.iter().rev() {
+            base(b.contract_no, order, ns);
         }
 
         if !order.contains(&contract_no) {
@@ -166,9 +240,17 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
     base(contract_no, &mut order, ns);
 
+    order
+}
+
+/// Layout the contract. We determine the layout of variables
+fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
+    let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
+    let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
+
     let mut slot = BigInt::zero();
 
-    for base_contract_no in order {
+    for base_contract_no in visit_bases(contract_no, ns) {
         // find all syms for this contract
         for ((_, iter_contract_no, name), sym) in &ns.symbols {
             if *iter_contract_no != Some(base_contract_no) {
@@ -188,7 +270,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 if let Some(prev) = syms.get(name) {
                     ns.diagnostics.push(ast::Diagnostic::error_with_note(
                         *sym.loc(),
-                        format!("already defined ‘{}’", name,),
+                        format!("already defined ‘{}’", name),
                         *prev.loc(),
                         format!("previous definition of ‘{}’", name),
                     ));
@@ -216,13 +298,13 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
         // add functions to our function_table
         for function_no in 0..ns.contracts[base_contract_no].functions.len() {
-            let signature = ns.contracts[base_contract_no].functions[function_no]
-                .signature
+            let vsignature = ns.contracts[base_contract_no].functions[function_no]
+                .vsignature
                 .to_owned();
 
             let cur = &ns.contracts[base_contract_no].functions[function_no];
 
-            if let Some(entry) = override_needed.get(&signature) {
+            if let Some(entry) = override_needed.get(&vsignature) {
                 let non_virtual = entry
                     .iter()
                     .filter_map(|(contract_no, function_no)| {
@@ -311,7 +393,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         }
                     }
 
-                    override_needed.remove(&signature);
+                    override_needed.remove(&vsignature);
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
@@ -321,11 +403,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         ),
                     ));
                 }
-            } else if let Some(prev) = ns.contracts[contract_no].function_table.get(&signature) {
-                if cur.is_constructor() {
-                    continue;
-                }
-
+            } else if let Some(prev) = ns.contracts[contract_no].function_table.get(&vsignature) {
                 let func_prev = &ns.contracts[prev.0].functions[prev.1];
 
                 if base_contract_no == prev.0 {
@@ -370,11 +448,11 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         continue;
                     }
                 } else {
-                    if let Some(entry) = override_needed.get_mut(&signature) {
+                    if let Some(entry) = override_needed.get_mut(&vsignature) {
                         entry.push((base_contract_no, function_no));
                     } else {
                         override_needed.insert(
-                            signature,
+                            vsignature,
                             vec![(prev.0, prev.1), (base_contract_no, function_no)],
                         );
                     }
@@ -392,7 +470,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
             ns.contracts[contract_no]
                 .function_table
-                .insert(signature, (base_contract_no, function_no, None));
+                .insert(vsignature, (base_contract_no, function_no, None));
         }
     }
 
@@ -520,6 +598,7 @@ fn resolve_declarations<'a>(
     {
         let mut fdecl = ast::Function::new(
             pt::Loc(0, 0, 0),
+            contract_no,
             "".to_owned(),
             vec![],
             pt::FunctionTy::Constructor,

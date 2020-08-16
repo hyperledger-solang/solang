@@ -85,6 +85,8 @@ pub struct Function {
     pub name: String,
     pub ty: pt::FunctionTy,
     pub signature: String,
+    // Signature used for function table
+    pub vsignature: String,
     pub mutability: Option<pt::StateMutability>,
     pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
@@ -98,6 +100,7 @@ pub struct Function {
 impl Function {
     pub fn new(
         loc: pt::Loc,
+        contract_no: usize,
         name: String,
         doc: Vec<String>,
         ty: pt::FunctionTy,
@@ -107,18 +110,23 @@ impl Function {
         returns: Vec<Parameter>,
         ns: &Namespace,
     ) -> Self {
-        let signature = match ty {
+        let signature = format!(
+            "{}({})",
+            name,
+            params
+                .iter()
+                .map(|p| p.ty.to_signature_string(ns))
+                .collect::<Vec<String>>()
+                .join(",")
+        );
+
+        let vsignature = match ty {
             pt::FunctionTy::Fallback => "@fallback".to_string(),
             pt::FunctionTy::Receive => "@receive".to_string(),
-            _ => format!(
-                "{}({})",
-                name,
-                params
-                    .iter()
-                    .map(|p| p.ty.to_signature_string(ns))
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
+            pt::FunctionTy::Constructor => {
+                format!("@{}{}", ns.contracts[contract_no].name, signature)
+            }
+            pt::FunctionTy::Function => signature.clone(),
         };
 
         Function {
@@ -127,6 +135,7 @@ impl Function {
             name,
             ty,
             signature,
+            vsignature,
             mutability,
             visibility,
             params,
@@ -326,12 +335,17 @@ pub struct Layout {
     pub var_no: usize,
 }
 
+pub struct Base {
+    pub contract_no: usize,
+    pub constructor: Option<(usize, Vec<Expression>)>,
+}
+
 pub struct Contract {
     pub doc: Vec<String>,
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
     pub name: String,
-    pub inherit: Vec<usize>,
+    pub bases: Vec<Base>,
     pub layout: Vec<Layout>,
     // events
     pub functions: Vec<Function>,
@@ -351,7 +365,7 @@ impl Contract {
         }
     }
 
-    /// Get the storage slot for a variable, possibly inherited
+    /// Get the storage slot for a variable, possibly from base contract
     pub fn get_storage_slot(&self, var_contract_no: usize, var_no: usize) -> Expression {
         if let Some(layout) = self
             .layout

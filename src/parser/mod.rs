@@ -93,7 +93,7 @@ mod test {
                     loc: Loc(0, 9, 12),
                     name: "foo".to_string(),
                 },
-                inherits: Vec::new(),
+                base: Vec::new(),
                 parts: vec![
                     ContractPart::StructDefinition(Box::new(StructDefinition {
                         doc: vec![],

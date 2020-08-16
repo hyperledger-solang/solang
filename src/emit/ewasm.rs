@@ -602,7 +602,7 @@ impl EwasmTarget {
 
             contract
                 .builder
-                .build_call(contract.functions[&con.signature], &args, "");
+                .build_call(contract.functions[&con.vsignature], &args, "");
         }
 
         // the deploy code should return the runtime wasm code

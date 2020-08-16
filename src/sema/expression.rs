@@ -1887,28 +1887,53 @@ fn constructor(
     for arg in args {
         let expr = expression(arg, file_no, Some(contract_no), ns, symtable, false)?;
 
-        resolved_args.push(Box::new(expr));
+        resolved_args.push(expr);
     }
 
+    match match_constructor_to_args(loc, resolved_args, no, ns) {
+        Ok((constructor_no, cast_args)) => Ok(Expression::Constructor {
+            loc: *loc,
+            contract_no: no,
+            constructor_no,
+            args: cast_args,
+            value: call_args.value,
+            gas: call_args.gas,
+            salt: call_args.salt,
+        }),
+        Err(()) => Err(()),
+    }
+}
+
+/// Try and find constructor for resolved arguments
+pub fn match_constructor_to_args(
+    loc: &pt::Loc,
+    resolved_args: Vec<Expression>,
+    contract_no: usize,
+    ns: &mut Namespace,
+) -> Result<(usize, Vec<Expression>), ()> {
     let marker = ns.diagnostics.len();
 
     // constructor call
     let mut constructor_no = 0;
+    let mut constructor_count = 0;
 
-    for function_no in 0..ns.contracts[no].functions.len() {
-        if !ns.contracts[no].functions[function_no].is_constructor() {
+    for function_no in 0..ns.contracts[contract_no].functions.len() {
+        if !ns.contracts[contract_no].functions[function_no].is_constructor() {
             continue;
         }
 
-        let params_len = ns.contracts[no].functions[function_no].params.len();
+        constructor_count += 1;
+        let params_len = ns.contracts[contract_no].functions[function_no]
+            .params
+            .len();
 
-        if params_len != args.len() {
+        if params_len != resolved_args.len() {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "constructor expects {} arguments, {} provided",
                     params_len,
-                    args.len()
+                    resolved_args.len()
                 ),
             ));
             constructor_no += 1;
@@ -1919,13 +1944,13 @@ fn constructor(
         let mut cast_args = Vec::new();
 
         // check if arguments can be implicitly casted
-        for i in 0..params_len {
-            let arg = &resolved_args[i];
-
+        for (i, arg) in resolved_args.iter().enumerate() {
             match cast(
-                &args[i].loc(),
-                *arg.clone(),
-                &ns.contracts[no].functions[function_no].params[i].ty.clone(),
+                &arg.loc(),
+                arg.clone(),
+                &ns.contracts[contract_no].functions[function_no].params[i]
+                    .ty
+                    .clone(),
                 true,
                 ns,
             ) {
@@ -1938,45 +1963,25 @@ fn constructor(
         }
 
         if matches {
-            return Ok(Expression::Constructor {
-                loc: *loc,
-                contract_no: no,
-                constructor_no,
-                args: cast_args,
-                value: call_args.value,
-                gas: call_args.gas,
-                salt: call_args.salt,
-            });
+            return Ok((constructor_no, cast_args));
         }
+
         constructor_no += 1;
     }
 
-    match ns.contracts[no]
-        .functions
-        .iter()
-        .filter(|f| f.is_constructor())
-        .count()
-    {
-        0 => Ok(Expression::Constructor {
-            loc: *loc,
-            contract_no: no,
-            constructor_no: 0,
-            args: Vec::new(),
-            value: call_args.value,
-            gas: call_args.gas,
-            salt: call_args.salt,
-        }),
-        1 => Err(()),
-        _ => {
-            ns.diagnostics.truncate(marker);
-            ns.diagnostics.push(Diagnostic::error(
-                *loc,
-                "cannot find overloaded constructor which matches signature".to_string(),
-            ));
-
-            Err(())
-        }
+    if constructor_count == 0 && resolved_args.is_empty() {
+        return Ok((0, Vec::new()));
     }
+
+    if constructor_count != 1 {
+        ns.diagnostics.truncate(marker);
+        ns.diagnostics.push(Diagnostic::error(
+            *loc,
+            "cannot find overloaded constructor which matches signature".to_string(),
+        ));
+    }
+
+    Err(())
 }
 
 /// check if from creates to, recursively
