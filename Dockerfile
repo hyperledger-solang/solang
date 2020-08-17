@@ -8,10 +8,7 @@
 
 FROM hyperledgerlabs/solang:ci as builder
 
-COPY .git src/.git/
-COPY src src/src/
-COPY stdlib src/stdlib/
-COPY build.rs Cargo.toml src/
+COPY . src
 WORKDIR /src/stdlib/
 RUN clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
 

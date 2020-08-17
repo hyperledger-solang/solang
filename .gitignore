@@ -1,11 +1,8 @@
-
 /docs/build
 Cargo.lock
 /target
 **/*.rs.bk
 
-/llvm
-/llvm-src
-/llvm-build
-
 *.wasm
+*.json
+*.abi
