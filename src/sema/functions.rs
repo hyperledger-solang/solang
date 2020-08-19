@@ -1,4 +1,5 @@
 use super::ast::{Diagnostic, Function, Namespace, Parameter, Symbol, Type};
+use super::contracts::is_base;
 use parser::pt;
 use Target;
 
@@ -139,23 +140,12 @@ pub fn function_decl(
                 for name in bases {
                     match ns.resolve_contract(file_no, name) {
                         Some(no) => {
-                            // check override is base contract of our contract
-                            fn is_base(no: &usize, contract_no: usize, ns: &Namespace) -> bool {
-                                let bases = &ns.contracts[contract_no].bases;
-
-                                if bases.iter().any(|e| e.contract_no == *no) {
-                                    return true;
-                                }
-
-                                bases.iter().any(|e| is_base(no, e.contract_no, ns))
-                            }
-
                             if list.contains(&no) {
                                 ns.diagnostics.push(Diagnostic::error(
                                     name.loc,
                                     format!("function duplicate override ‘{}’", name.name),
                                 ));
-                            } else if !is_base(&no, contract_no, ns) {
+                            } else if !is_base(no, contract_no, ns) {
                                 ns.diagnostics.push(Diagnostic::error(
                                     name.loc,
                                     format!(
@@ -178,7 +168,7 @@ pub fn function_decl(
 
                 is_override = Some((*loc, list));
             }
-            pt::FunctionAttribute::BaseArguments(loc, base) => {
+            pt::FunctionAttribute::BaseArguments(loc, _) => {
                 // We can only fully resolve the base constructors arguments
                 // once we have resolved all the constructors, this is not done here yet
                 // so we fully resolve these along with the constructor body
@@ -186,13 +176,6 @@ pub fn function_decl(
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         "base contract is only allowed on constructor".to_string(),
-                    ));
-                }
-
-                if base.args.is_none() {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!("arguments to base contract ‘{}’ missing", base.name.name),
                     ));
                 }
             }

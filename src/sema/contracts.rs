@@ -84,6 +84,10 @@ pub fn resolve(
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
     resolve_base_args(contracts, file_no, ns);
 
+    for (contract_no, _) in contracts {
+        check_base_args(*contract_no, ns);
+    }
+
     // Now we have all the declarations, we can create the layout of storage and handle base contracts
     for (contract_no, _) in contracts {
         layout_contract(*contract_no, ns);
@@ -100,19 +104,6 @@ fn resolve_base_contracts(
     file_no: usize,
     ns: &mut ast::Namespace,
 ) {
-    // Check the bases of a contract
-    fn cyclic(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
-        let bases = &ns.contracts[parent].bases;
-
-        if base == parent || bases.iter().any(|e| e.contract_no == base) {
-            return true;
-        }
-
-        bases
-            .iter()
-            .any(|parent| cyclic(base, parent.contract_no, ns))
-    }
-
     for (contract_no, def) in contracts {
         for base in &def.base {
             let name = &base.name;
@@ -138,7 +129,7 @@ fn resolve_base_contracts(
                                 ns.contracts[*contract_no].name, name.name
                             ),
                         ));
-                    } else if cyclic(*contract_no, no, ns) {
+                    } else if is_base(*contract_no, no, ns) {
                         ns.diagnostics.push(ast::Diagnostic::error(
                             name.loc,
                             format!(
@@ -203,20 +194,6 @@ fn resolve_base_args(
                             ns.contracts[*contract_no].bases[pos].constructor =
                                 Some((constructor_no, args));
                         }
-                    } else {
-                        // if there is a constructor, do all of them require arguments
-                        if ns.contracts[base_no]
-                            .functions
-                            .iter()
-                            .all(|f| f.is_constructor() && !f.params.is_empty())
-                        {
-                            let name = &ns.contracts[base_no].name;
-
-                            ns.diagnostics.push(ast::Diagnostic::error(
-                                base.loc,
-                                format!("missing arguments to contract ‘{}’ constructor", name),
-                            ));
-                        }
                     }
                 }
             }
@@ -241,6 +218,19 @@ fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
     base(contract_no, &mut order, ns);
 
     order
+}
+
+// Is a contract a base of another contract
+pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
+    let bases = &ns.contracts[parent].bases;
+
+    if base == parent || bases.iter().any(|e| e.contract_no == base) {
+        return true;
+    }
+
+    bases
+        .iter()
+        .any(|parent| is_base(base, parent.contract_no, ns))
 }
 
 /// Layout the contract. We determine the layout of variables
@@ -588,32 +578,6 @@ fn resolve_declarations<'a>(
     // resolve state variables
     variables::contract_variables(&def, file_no, contract_no, ns);
 
-    // Substrate requires one constructor. Ideally we do not create implict things
-    // in the ast, but this is required for abi generation which is done of the ast
-    if !ns.contracts[contract_no]
-        .functions
-        .iter()
-        .any(|f| f.is_constructor())
-        && ns.target == Target::Substrate
-    {
-        let mut fdecl = ast::Function::new(
-            pt::Loc(0, 0, 0),
-            contract_no,
-            "".to_owned(),
-            vec![],
-            pt::FunctionTy::Constructor,
-            None,
-            pt::Visibility::Public(pt::Loc(0, 0, 0)),
-            Vec::new(),
-            Vec::new(),
-            ns,
-        );
-
-        fdecl.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), Vec::new())];
-
-        ns.contracts[contract_no].functions.push(fdecl);
-    }
-
     resolve_bodies
 }
 
@@ -632,4 +596,53 @@ fn resolve_bodies(
     }
 
     broken
+}
+
+/// Check if we have arguments for all the base contracts
+fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
+    let contract = &ns.contracts[contract_no];
+
+    if !contract.is_concrete() || contract.have_constructor() {
+        // nothing to do, already checked in constructor or has no constructor
+        return;
+    }
+
+    for base in &contract.bases {
+        // do we have constructor arguments
+        if base.constructor.is_some() {
+            continue;
+        }
+
+        // does the contract require arguments
+        if ns.contracts[base.contract_no].constructor_needs_arguments() {
+            ns.diagnostics.push(ast::Diagnostic::error(
+                contract.loc,
+                format!(
+                    "missing arguments to contract ‘{}’ constructor2",
+                    ns.contracts[base.contract_no].name
+                ),
+            ));
+        }
+    }
+
+    // Substrate requires one constructor. Ideally we do not create implict things
+    // in the ast, but this is required for abi generation which is done of the ast
+    if ns.target == Target::Substrate {
+        let mut fdecl = ast::Function::new(
+            pt::Loc(0, 0, 0),
+            contract_no,
+            "".to_owned(),
+            vec![],
+            pt::FunctionTy::Constructor,
+            None,
+            pt::Visibility::Public(pt::Loc(0, 0, 0)),
+            Vec::new(),
+            Vec::new(),
+            ns,
+        );
+
+        fdecl.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), Vec::new())];
+
+        ns.contracts[contract_no].functions.push(fdecl);
+    }
 }
