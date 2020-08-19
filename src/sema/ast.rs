@@ -241,10 +241,10 @@ impl Function {
     }
 
     /// State mutability as string
-    pub fn print_mutability(&self) -> &'static str {
+    pub fn print_mutability(&self) -> String {
         match &self.mutability {
-            None => "nonpayable",
-            Some(m) => m.to_string(),
+            None => "nonpayable".to_string(),
+            Some(m) => format!("{}", m),
         }
     }
 }

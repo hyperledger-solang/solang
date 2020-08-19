@@ -2,7 +2,7 @@ contract flipper {
 	bool private value;
 
 	/// Constructor that initializes the `bool` value to the given `init_value`.
-	constructor(bool initvalue) public {
+	constructor(bool initvalue) {
 		value = initvalue;
 	}
 

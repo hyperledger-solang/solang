@@ -6,6 +6,19 @@ use solang::Target;
 
 #[test]
 fn constructors() {
+    let ns = parse_and_resolve(
+        r##"
+        contract test {
+            constructor() internal {}
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(ns.diagnostics),
+        "‘internal’: visibility for constructors is ignored"
+    );
+
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val(u64);
 
