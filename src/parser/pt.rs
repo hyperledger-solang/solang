@@ -360,15 +360,17 @@ pub enum StateMutability {
     Payable(Loc),
 }
 
-impl StateMutability {
-    pub fn to_string(&self) -> &'static str {
+impl fmt::Display for StateMutability {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StateMutability::Pure(_) => "pure",
-            StateMutability::View(_) => "view",
-            StateMutability::Payable(_) => "payable",
+            StateMutability::Pure(_) => write!(f, "pure"),
+            StateMutability::View(_) => write!(f, "view"),
+            StateMutability::Payable(_) => write!(f, "payable"),
         }
     }
+}
 
+impl StateMutability {
     pub fn loc(&self) -> Loc {
         match self {
             StateMutability::Pure(loc)
@@ -386,16 +388,18 @@ pub enum Visibility {
     Private(Loc),
 }
 
-impl Visibility {
-    pub fn to_string(&self) -> &'static str {
+impl fmt::Display for Visibility {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Visibility::Public(_) => "public",
-            Visibility::External(_) => "external",
-            Visibility::Internal(_) => "internal",
-            Visibility::Private(_) => "private",
+            Visibility::Public(_) => write!(f, "public"),
+            Visibility::External(_) => write!(f, "external"),
+            Visibility::Internal(_) => write!(f, "internal"),
+            Visibility::Private(_) => write!(f, "private"),
         }
     }
+}
 
+impl Visibility {
     pub fn loc(&self) -> Loc {
         match self {
             Visibility::Public(loc)

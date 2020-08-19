@@ -200,13 +200,27 @@ pub fn function_decl(
     }
 
     let visibility = match visibility {
-        Some(v) => v,
+        Some(v) => {
+            if func.ty == pt::FunctionTy::Constructor {
+                ns.diagnostics.push(Diagnostic::warning(
+                    v.loc(),
+                    format!("‘{}’: visibility for constructors is ignored", v),
+                ));
+
+                pt::Visibility::Public(v.loc())
+            } else {
+                v
+            }
+        }
         None => {
-            ns.diagnostics.push(Diagnostic::error(
-                func.loc,
-                "no visibility specified".to_string(),
-            ));
-            success = false;
+            if func.ty != pt::FunctionTy::Constructor {
+                ns.diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    "no visibility specified".to_string(),
+                ));
+
+                success = false;
+            }
             // continue processing while assuming it's a public
             pt::Visibility::Public(pt::Loc(0, 0, 0))
         }
@@ -305,18 +319,6 @@ pub fn function_decl(
                     "all constructors should be defined ‘payable’ or not".to_string(),
                     prev.loc,
                     "location of previous definition".to_string(),
-                ));
-                return None;
-            }
-        }
-
-        // FIXME: Internal visibility is allowed on abstract contracts, but we don't support those yet
-        match fdecl.visibility {
-            pt::Visibility::Public(_) => (),
-            _ => {
-                ns.diagnostics.push(Diagnostic::error(
-                    func.loc,
-                    "constructor function must be declared public".to_owned(),
                 ));
                 return None;
             }

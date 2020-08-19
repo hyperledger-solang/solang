@@ -24,7 +24,7 @@ pub struct ABI {
     // outputs should be skipped if ty is constructor
     pub outputs: Vec<ABIParam>,
     #[serde(rename = "stateMutability")]
-    pub mutability: &'static str,
+    pub mutability: String,
 }
 
 impl Type {

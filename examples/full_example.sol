@@ -26,7 +26,7 @@ contract full_example {
 	int32 constant first_pid = 1;
 
 	// Our constructors
-	constructor(int32 _pid) public {
+	constructor(int32 _pid) {
 		// Set contract storage
 		pid = _pid;
 	}

@@ -4,7 +4,7 @@ contract incrementer {
 	uint32 private value;
 
 	/// Constructor that initializes the `int32` value to the given `init_value`.
-	constructor(uint32 initvalue) public {
+	constructor(uint32 initvalue) {
 		value = initvalue;
 	}
 
