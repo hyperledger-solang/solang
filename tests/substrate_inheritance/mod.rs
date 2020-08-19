@@ -1233,10 +1233,11 @@ fn base_contract() {
     let ns = parse_and_resolve(
         r#"
         contract base {
-            constructor(uint64 a) public {}
+            constructor(uint64 a) {}
         }
 
         contract apex is base {
+            constructor() {}
             function foo(uint64 a) virtual internal returns (uint64) {
                 return a + 102;
             }
@@ -1290,4 +1291,147 @@ fn base_contract() {
     runtime.function("f", Vec::new());
 
     assert_eq!(runtime.vm.scratch, Val(102).encode());
+}
+
+#[test]
+fn base_contract_on_constructor() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(i32);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val64(u64);
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            struct s { uint32 f1; }
+        }
+
+        contract b {
+            struct s { uint32 f1; }
+        }
+
+        contract apex is base {
+            constructor() public b {
+
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘b’ is not a base contract of ‘apex’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            struct s { uint32 f1; }
+        }
+
+        contract b {
+            struct s { uint32 f1; }
+        }
+
+        contract apex is base {
+            constructor() public b {
+
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘b’ is not a base contract of ‘apex’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract apex {
+            constructor() public apex {
+
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘apex’ is not a base contract of ‘apex’"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract apex {
+            constructor() oosda public {
+
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "unknown function attribute ‘oosda’"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b is a {
+            int32 constant BAR = 102;
+            int64 public foo;
+    
+            constructor(int64 i) a(BAR) { foo = i; }
+    
+            function get_x() public returns (int32) {
+                    return x;
+            }
+        }
+
+        contract a {
+                int32 public x;
+        
+                constructor(int32 i) { x = i; }
+        }"##,
+    );
+
+    runtime.constructor(0, Val64(0xbffe).encode());
+    runtime.function("get_x", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(102).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c is b(2) {
+            constructor() {
+            }
+        }
+
+        contract a {
+                int32 public x;
+        
+                constructor(int32 i) { x = i; }
+        }
+        
+        contract b is a {
+                int32 constant BAR = 102;
+                int64 public foo;
+        
+                constructor(int64 i) a(BAR + int32(i)) { foo = i; }
+        
+                function get_x() public view returns (int32) {
+                        return x;
+                }
+        
+                function get_foo() public view returns (int64) {
+                        return foo;
+                }
+        }"##,
+    );
+
+    runtime.constructor(0, Val64(0xbffe).encode());
+    runtime.function("get_x", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(104).encode());
 }

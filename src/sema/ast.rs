@@ -91,6 +91,7 @@ pub struct Function {
     pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
+    pub bases: HashMap<usize, (usize, Vec<Expression>)>,
     pub is_virtual: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
     pub body: Vec<Statement>,
@@ -140,6 +141,7 @@ impl Function {
             visibility,
             params,
             returns,
+            bases: HashMap::new(),
             is_virtual: false,
             is_override: None,
             body: Vec::new(),
@@ -376,6 +378,24 @@ impl Contract {
         } else {
             panic!("get_storage_slot called on non-storage variable");
         }
+    }
+
+    /// Does the constructor require arguments. Should be false is there is no constructor
+    pub fn constructor_needs_arguments(&self) -> bool {
+        self.have_constructor() && self.no_args_constructor().is_none()
+    }
+
+    /// Does the contract have a constructor defined
+    pub fn have_constructor(&self) -> bool {
+        self.functions.iter().any(|f| f.is_constructor())
+    }
+
+    /// Return the constructor with no arguments
+    pub fn no_args_constructor(&self) -> Option<usize> {
+        self.functions
+            .iter()
+            .filter(|f| f.is_constructor())
+            .position(|f| f.params.is_empty())
     }
 }
 

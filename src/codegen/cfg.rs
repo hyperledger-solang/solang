@@ -844,43 +844,6 @@ pub fn generate_cfg(
 
     let func = &ns.contracts[base_contract_no].functions[function_no];
 
-    if func.ty == pt::FunctionTy::Constructor {
-        for base in ns.contracts[base_contract_no].bases.iter().rev() {
-            if let Some((constructor_no, args)) = &base.constructor {
-                let args = args
-                    .iter()
-                    .map(|a| expression(a, &mut cfg, contract_no, ns, &mut vartab))
-                    .collect();
-
-                // find the correction function number for this constructor_no
-                // TODO: maybe constructor_no should just be function number
-                let mut seen_constructors = 0;
-                let mut func = 0;
-
-                for (i, f) in ns.contracts[base.contract_no].functions.iter().enumerate() {
-                    if f.is_constructor() {
-                        if seen_constructors == *constructor_no {
-                            func = i;
-                            break;
-                        } else {
-                            seen_constructors += 1;
-                        }
-                    }
-                }
-
-                cfg.add(
-                    &mut vartab,
-                    Instr::Call {
-                        res: Vec::new(),
-                        base: base.contract_no,
-                        func,
-                        args,
-                    },
-                );
-            }
-        }
-    }
-
     // populate the argument variables
     for (i, arg) in func.symtable.arguments.iter().enumerate() {
         if let Some(pos) = arg {
@@ -892,6 +855,44 @@ pub fn generate_cfg(
                     expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
                 },
             );
+        }
+    }
+
+    if func.ty == pt::FunctionTy::Constructor {
+        for base in ns.contracts[base_contract_no].bases.iter().rev() {
+            if let Some((constructor_no, args)) = &base.constructor {
+                base_constructor_call(
+                    *constructor_no,
+                    args,
+                    &mut cfg,
+                    contract_no,
+                    base.contract_no,
+                    &mut vartab,
+                    ns,
+                );
+            } else if let Some((constructor_no, args)) = func.bases.get(&base.contract_no) {
+                base_constructor_call(
+                    *constructor_no,
+                    args,
+                    &mut cfg,
+                    contract_no,
+                    base.contract_no,
+                    &mut vartab,
+                    ns,
+                );
+            } else if let Some(constructor_no) =
+                ns.contracts[base_contract_no].no_args_constructor()
+            {
+                base_constructor_call(
+                    constructor_no,
+                    &[],
+                    &mut cfg,
+                    contract_no,
+                    base.contract_no,
+                    &mut vartab,
+                    ns,
+                );
+            }
         }
     }
 
@@ -924,6 +925,48 @@ pub fn generate_cfg(
 
     // walk cfg to check for use for before initialize
     cfg
+}
+
+/// Generate call for base contract constructor
+fn base_constructor_call(
+    constructor_no: usize,
+    args: &[Expression],
+    cfg: &mut ControlFlowGraph,
+    contract_no: usize,
+    base_contract_no: usize,
+    vartab: &mut Vartable,
+    ns: &Namespace,
+) {
+    let args = args
+        .iter()
+        .map(|a| expression(a, cfg, contract_no, ns, vartab))
+        .collect();
+
+    // find the correction function number for this constructor_no
+    // TODO: maybe constructor_no should just be function number
+    let mut seen_constructors = 0;
+    let mut func = 0;
+
+    for (i, f) in ns.contracts[base_contract_no].functions.iter().enumerate() {
+        if f.is_constructor() {
+            if seen_constructors == constructor_no {
+                func = i;
+                break;
+            } else {
+                seen_constructors += 1;
+            }
+        }
+    }
+
+    cfg.add(
+        vartab,
+        Instr::Call {
+            res: Vec::new(),
+            base: base_contract_no,
+            func,
+            args,
+        },
+    );
 }
 
 #[derive(Clone)]

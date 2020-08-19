@@ -1,10 +1,13 @@
 use super::ast::*;
+use super::contracts::is_base;
 use super::expression::{
-    cast, constructor_named_args, expression, function_call_expr, named_function_call_expr, new,
+    cast, constructor_named_args, expression, function_call_expr, match_constructor_to_args,
+    named_function_call_expr, new,
 };
 use super::symtable::{LoopScopes, Symtable};
 use num_bigint::BigInt;
 use parser::pt;
+use std::collections::HashMap;
 
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
@@ -34,6 +37,115 @@ pub fn resolve_function_body(
             }
         } else {
             symtable.arguments.push(None);
+        }
+    }
+
+    // now that the function arguments have been resolved, we can resolve the bases for
+    // constructors.
+    if def.ty == pt::FunctionTy::Constructor {
+        let mut resolve_bases: HashMap<usize, pt::Loc> = HashMap::new();
+        let mut all_ok = true;
+
+        for attr in &def.attributes {
+            if let pt::FunctionAttribute::BaseArguments(loc, base) = attr {
+                match ns.resolve_contract(file_no, &base.name) {
+                    Some(base_no) => {
+                        if base_no == contract_no || !is_base(base_no, contract_no, ns) {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "contract ‘{}’ is not a base contract of ‘{}’",
+                                    base.name.name, ns.contracts[contract_no].name,
+                                ),
+                            ));
+                            all_ok = false;
+                        } else if let Some(prev) = resolve_bases.get(&base_no) {
+                            ns.diagnostics.push(Diagnostic::error_with_note(
+                                *loc,
+                                format!("duplicate base contract ‘{}’", base.name.name),
+                                *prev,
+                                format!("previous base contract ‘{}’", base.name.name),
+                            ));
+                            all_ok = false;
+                        } else if let Some(args) = &base.args {
+                            let mut resolved_args = Vec::new();
+                            let mut ok = true;
+
+                            for arg in args {
+                                if let Ok(e) = expression(
+                                    &arg,
+                                    file_no,
+                                    Some(contract_no),
+                                    ns,
+                                    &symtable,
+                                    false,
+                                ) {
+                                    resolved_args.push(e);
+                                } else {
+                                    ok = false;
+                                    all_ok = false;
+                                }
+                            }
+
+                            // find constructor which matches this
+                            if ok {
+                                if let Ok((constructor_no, args)) =
+                                    match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
+                                {
+                                    ns.contracts[contract_no].functions[function_no]
+                                        .bases
+                                        .insert(base_no, (constructor_no, args));
+
+                                    resolve_bases.insert(base_no, base.loc);
+                                }
+                            }
+                        } else {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "missing arguments to constructor of contract ‘{}’",
+                                    base.name.name
+                                ),
+                            ));
+                            all_ok = false;
+                        }
+                    }
+                    None => {
+                        if base.args.is_none() {
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!("unknown function attribute ‘{}’", base.name.name),
+                            ));
+                        } else {
+                            ns.diagnostics.push(Diagnostic::error(
+                                base.name.loc,
+                                format!("contract ‘{}’ not found", base.name.name),
+                            ));
+                        }
+                        all_ok = false;
+                    }
+                }
+            }
+        }
+
+        if all_ok && ns.contracts[contract_no].is_concrete() {
+            for base in &ns.contracts[contract_no].bases {
+                // do we have constructor arguments
+                if base.constructor.is_some() || resolve_bases.contains_key(&base.contract_no) {
+                    continue;
+                }
+
+                // does the contract require arguments
+                if ns.contracts[base.contract_no].constructor_needs_arguments() {
+                    ns.diagnostics.push(Diagnostic::error(
+                        def.loc,
+                        format!(
+                            "missing arguments to contract ‘{}’ constructor",
+                            ns.contracts[base.contract_no].name
+                        ),
+                    ));
+                }
+            }
         }
     }
 
