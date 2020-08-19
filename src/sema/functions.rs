@@ -27,7 +27,7 @@ pub fn function_decl(
             } else {
                 ns.diagnostics.push(Diagnostic::error(
                     func.name_loc,
-                    "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?".to_string(),
+                    "function is missing a name. did you mean ‘fallback() external {…}’ or ‘receive() external {…}’?".to_string(),
                 ));
                 return None;
             }

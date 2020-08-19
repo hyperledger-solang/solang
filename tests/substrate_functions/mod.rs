@@ -105,7 +105,7 @@ fn fallback() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function is missing a name. did you mean ‘fallback() extern {…}’ or ‘receive() extern {…}’?"
+        "function is missing a name. did you mean ‘fallback() external {…}’ or ‘receive() external {…}’?"
     );
 
     #[derive(Debug, PartialEq, Encode, Decode)]
