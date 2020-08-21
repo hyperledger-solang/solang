@@ -1376,6 +1376,41 @@ fn base_contract_on_constructor() {
         "unknown function attribute ‘oosda’"
     );
 
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            constructor(bool x) {}
+        }
+        
+        contract apex is base {
+                function foo() pure public {}
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "missing arguments to base contract ‘base’ constructor"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            constructor(bool x) {}
+        }
+        
+        contract apex is base {
+            constructor() base(true) base(false) {}
+            function foo() pure public {}
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "duplicate base contract ‘base’"
+    );
+
     let mut runtime = build_solidity(
         r##"
         contract b is a {

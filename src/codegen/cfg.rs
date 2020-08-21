@@ -881,7 +881,7 @@ pub fn generate_cfg(
                     ns,
                 );
             } else if let Some(constructor_no) =
-                ns.contracts[base_contract_no].no_args_constructor()
+                ns.contracts[base.contract_no].no_args_constructor()
             {
                 base_constructor_call(
                     constructor_no,

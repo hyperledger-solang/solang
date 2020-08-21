@@ -618,7 +618,7 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
             ns.diagnostics.push(ast::Diagnostic::error(
                 contract.loc,
                 format!(
-                    "missing arguments to contract ‘{}’ constructor2",
+                    "missing arguments to base contract ‘{}’ constructor",
                     ns.contracts[base.contract_no].name
                 ),
             ));
