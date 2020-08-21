@@ -12,10 +12,9 @@ COPY . src
 WORKDIR /src/stdlib/
 RUN clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
 
-WORKDIR /src/
-RUN cargo build --release
+RUN cargo install --path /src
 
 FROM ubuntu:20.04
-COPY --from=builder /src/target/release/solang /usr/bin/solang
+COPY --from=builder /root/.cargo/bin/solang /usr/bin/solang
 
 ENTRYPOINT ["/usr/bin/solang"]
