@@ -1469,4 +1469,114 @@ fn base_contract_on_constructor() {
     runtime.function("get_x", Vec::new());
 
     assert_eq!(runtime.vm.scratch, Val(104).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c is b {
+            constructor(int64 x) b(x+3) {}
+        }
+        
+        contract b is a {
+            constructor(int64 y) a(y+2) {}
+        }
+        
+        contract a {
+            int64 foo;
+            function get_foo() public returns (int64) { return foo; }
+            constructor(int64 z) { foo = z; }
+        }"##,
+    );
+
+    runtime.constructor(0, Val64(7).encode());
+    runtime.function("get_foo", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val64(12).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c is b {
+            constructor(int64 x) b(x+3) a(x+5){}
+        }
+        
+        abstract contract b is a {
+            constructor(int64 y) {}
+        }
+        
+        contract a {
+            int64 foo;
+            function get_foo() public returns (int64) { return foo; }
+            constructor(int64 z) { foo = z; }
+        }"##,
+    );
+
+    runtime.constructor(0, Val64(7).encode());
+    runtime.function("get_foo", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val64(12).encode());
+
+    let ns = parse_and_resolve(
+        r##"
+        contract c is b {
+            constructor(int64 x) b(x+3) {}
+        }
+        
+        abstract contract b is a {
+            constructor(int64 y) {}
+        }
+        
+        contract a {
+            int64 foo;
+            function get_foo() public returns (int64) { return foo; }
+            constructor(int64 z) { foo = z; }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "missing arguments to base contract ‘a’ constructor"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        contract c is b {
+            constructor(int64 x) b(x+3) b(0) {}
+        }
+        
+        abstract contract b is a {
+            constructor(int64 y) {}
+        }
+        
+        contract a {
+            int64 foo;
+            function get_foo() public returns (int64) { return foo; }
+            constructor(int64 z) { foo = z; }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "duplicate base contract ‘b’");
+
+    let ns = parse_and_resolve(
+        r##"
+        contract c is b {
+            constructor(int64 x) b(x+3) a(0) {}
+        }
+        
+        abstract contract b is a(2) {
+            constructor(int64 y) {}
+        }
+        
+        contract a {
+            int64 foo;
+            function get_foo() public returns (int64) { return foo; }
+            constructor(int64 z) { foo = z; }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "duplicate argument for base contract ‘a’"
+    );
 }

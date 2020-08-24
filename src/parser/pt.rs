@@ -1,7 +1,7 @@
 use num_bigint::BigInt;
 use std::fmt;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Loc(pub usize, pub usize, pub usize);
 
 #[derive(Debug, PartialEq, Clone)]

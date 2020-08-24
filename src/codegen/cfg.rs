@@ -9,6 +9,7 @@ use super::statements::{statement, LoopScopes};
 use hex;
 use parser::pt;
 use sema::ast::{CallTy, Contract, Expression, Namespace, Parameter, StringLocation, Type};
+use sema::contracts::{collect_base_args, visit_bases};
 use sema::symtable::Symtable;
 
 #[allow(clippy::large_enum_variant)]
@@ -884,39 +885,109 @@ pub fn generate_cfg(
         }
     }
 
-    if func.ty == pt::FunctionTy::Constructor {
-        for base in ns.contracts[base_contract_no].bases.iter().rev() {
-            if let Some((constructor_no, args)) = &base.constructor {
-                base_constructor_call(
-                    *constructor_no,
-                    args,
-                    &mut cfg,
-                    contract_no,
-                    base.contract_no,
+    // Hold your breath, this is the trickest part of the codegen ahead.
+    // For each contract, the top-level constructor calls the base constructors. The base
+    // constructors do not call their base constructors; everything is called from the top
+    // level constructor. This is done because the arguments to base constructor are only
+    // known the top level constructor, since the arguments can be specified elsewhere
+    // on a constructor for a superior class
+    if func.ty == pt::FunctionTy::Constructor && base_contract_no == contract_no {
+        let mut all_base_args = HashMap::new();
+        let mut diagnostics = HashSet::new();
+
+        // Find all the resolved arguments for base contracts. These can be attached
+        // to the contract, or the constructor. Contracts can have multiple constructors
+        // so this needs to follow the correct constructors all the way
+        collect_base_args(
+            contract_no,
+            function_no,
+            &mut all_base_args,
+            &mut diagnostics,
+            ns,
+        );
+
+        // We shouldn't have problems. sema should have checked this
+        assert!(diagnostics.is_empty());
+
+        let order = visit_bases(contract_no, ns);
+        let mut gen_base_args: HashMap<usize, (usize, Vec<Expression>)> = HashMap::new();
+
+        for base_no in order.iter().rev() {
+            if *base_no == contract_no {
+                // we can't evaluate arguments to ourselves.
+                continue;
+            }
+
+            if let Some(base_args) = all_base_args.get(base_no) {
+                // There might be some temporary variables needed from the symbol table where
+                // the constructor arguments were defined
+                if let Some((contract_no, defined_constructor_no)) =
+                    base_args.defined_constructor_no
+                {
+                    let func = &ns.contracts[contract_no].functions[defined_constructor_no];
+                    vartab.add_symbol_table(&func.symtable);
+                }
+
+                // So we are evaluating the base arguments, from superior to inferior. The results
+                // must be stored somewhere, for two reasons:
+                // - The results must be stored by-value, so that variable value don't change
+                //   by later base arguments (e.g. x++)
+                // - The results are also arguments to the next constructor arguments, so they
+                //   might be used again. Therefore we store the result in the vartable entry
+                //   for the argument; this means values are passed automatically to the next
+                //   constructor. We do need the symbol table for the called constructor, therefore
+                //   we have the following two lines which look a bit odd at first
+                let func = &ns.contracts[*base_no].functions[base_args.calling_constructor_no];
+                vartab.add_symbol_table(&func.symtable);
+
+                let args: Vec<Expression> = base_args
+                    .args
+                    .iter()
+                    .enumerate()
+                    .map(|(i, a)| {
+                        let expr = expression(a, &mut cfg, contract_no, ns, &mut vartab);
+
+                        if let Some(id) = &func.symtable.arguments[i] {
+                            let ty = expr.ty();
+                            let loc = expr.loc();
+
+                            cfg.add(&mut vartab, Instr::Set { res: *id, expr });
+                            Expression::Variable(loc, ty, *id)
+                        } else {
+                            Expression::Poison
+                        }
+                    })
+                    .collect();
+
+                gen_base_args.insert(*base_no, (base_args.calling_constructor_no, args));
+            }
+        }
+
+        for base_no in order.iter() {
+            if *base_no == contract_no {
+                // we can't evaluate arguments to ourselves.
+                continue;
+            }
+
+            if let Some((constructor_no, args)) = gen_base_args.remove(base_no) {
+                cfg.add(
                     &mut vartab,
-                    ns,
+                    Instr::Call {
+                        res: Vec::new(),
+                        base: *base_no,
+                        func: constructor_no,
+                        args,
+                    },
                 );
-            } else if let Some((constructor_no, args)) = func.bases.get(&base.contract_no) {
-                base_constructor_call(
-                    *constructor_no,
-                    args,
-                    &mut cfg,
-                    contract_no,
-                    base.contract_no,
+            } else if let Some(constructor_no) = ns.contracts[*base_no].no_args_constructor() {
+                cfg.add(
                     &mut vartab,
-                    ns,
-                );
-            } else if let Some(constructor_no) =
-                ns.contracts[base.contract_no].no_args_constructor()
-            {
-                base_constructor_call(
-                    constructor_no,
-                    &[],
-                    &mut cfg,
-                    contract_no,
-                    base.contract_no,
-                    &mut vartab,
-                    ns,
+                    Instr::Call {
+                        res: Vec::new(),
+                        base: *base_no,
+                        func: constructor_no,
+                        args: Vec::new(),
+                    },
                 );
             }
         }
@@ -951,48 +1022,6 @@ pub fn generate_cfg(
 
     // walk cfg to check for use for before initialize
     cfg
-}
-
-/// Generate call for base contract constructor
-fn base_constructor_call(
-    constructor_no: usize,
-    args: &[Expression],
-    cfg: &mut ControlFlowGraph,
-    contract_no: usize,
-    base_contract_no: usize,
-    vartab: &mut Vartable,
-    ns: &Namespace,
-) {
-    let args = args
-        .iter()
-        .map(|a| expression(a, cfg, contract_no, ns, vartab))
-        .collect();
-
-    // find the correction function number for this constructor_no
-    // TODO: maybe constructor_no should just be function number
-    let mut seen_constructors = 0;
-    let mut func = 0;
-
-    for (i, f) in ns.contracts[base_contract_no].functions.iter().enumerate() {
-        if f.is_constructor() {
-            if seen_constructors == constructor_no {
-                func = i;
-                break;
-            } else {
-                seen_constructors += 1;
-            }
-        }
-    }
-
-    cfg.add(
-        vartab,
-        Instr::Call {
-            res: Vec::new(),
-            base: base_contract_no,
-            func,
-            args,
-        },
-    );
 }
 
 #[derive(Clone)]
@@ -1044,6 +1073,20 @@ impl Vartable {
             vars,
             dirty: Vec::new(),
             next_id,
+        }
+    }
+
+    pub fn add_symbol_table(&mut self, sym: &Symtable) {
+        for (no, v) in &sym.vars {
+            self.vars.insert(
+                *no,
+                Variable {
+                    id: v.id.clone(),
+                    ty: v.ty.clone(),
+                    pos: v.pos,
+                    storage: Storage::Local,
+                },
+            );
         }
     }
 

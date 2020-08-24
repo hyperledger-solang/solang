@@ -91,7 +91,7 @@ pub struct Function {
     pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
-    pub bases: HashMap<usize, (usize, Vec<Expression>)>,
+    pub bases: HashMap<usize, (pt::Loc, usize, Vec<Expression>)>,
     pub is_virtual: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
     pub body: Vec<Statement>,
@@ -340,6 +340,7 @@ pub struct Layout {
 }
 
 pub struct Base {
+    pub loc: pt::Loc,
     pub contract_no: usize,
     pub constructor: Option<(usize, Vec<Expression>)>,
 }
@@ -795,7 +796,7 @@ impl Statement {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum Level {
     Debug,
     Info,
@@ -803,7 +804,7 @@ pub enum Level {
     Error,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum ErrorType {
     None,
     ParserError,
@@ -813,13 +814,13 @@ pub enum ErrorType {
     Warning,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Note {
     pub pos: pt::Loc,
     pub message: String,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Diagnostic {
     pub level: Level,
     pub ty: ErrorType,
