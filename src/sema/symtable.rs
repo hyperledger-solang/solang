@@ -17,7 +17,7 @@ struct VarScope(HashMap<String, usize>, Option<HashSet<usize>>);
 
 #[derive(Default)]
 pub struct Symtable {
-    pub vars: Vec<Variable>,
+    pub vars: HashMap<usize, Variable>,
     names: LinkedList<VarScope>,
     pub arguments: Vec<Option<usize>>,
     pub returns: Vec<usize>,
@@ -28,7 +28,7 @@ impl Symtable {
         let mut list = LinkedList::new();
         list.push_front(VarScope(HashMap::new(), None));
         Symtable {
-            vars: Vec::new(),
+            vars: HashMap::new(),
             names: list,
             arguments: Vec::new(),
             returns: Vec::new(),
@@ -36,13 +36,17 @@ impl Symtable {
     }
 
     pub fn add(&mut self, id: &pt::Identifier, ty: Type, ns: &mut Namespace) -> Option<usize> {
-        let pos = self.vars.len();
+        let pos = ns.next_id;
+        ns.next_id += 1;
 
-        self.vars.push(Variable {
-            id: id.clone(),
-            ty,
+        self.vars.insert(
             pos,
-        });
+            Variable {
+                id: id.clone(),
+                ty,
+                pos,
+            },
+        );
 
         // the variable has no name, like unnamed return or parameters values
         if !id.name.is_empty() {
@@ -69,7 +73,7 @@ impl Symtable {
     pub fn find(&self, name: &str) -> Option<&Variable> {
         for scope in &self.names {
             if let Some(n) = scope.0.get(name) {
-                return Some(&self.vars[*n]);
+                return self.vars.get(n);
             }
         }
 
@@ -85,7 +89,7 @@ impl Symtable {
     }
 
     pub fn get_name(&self, pos: usize) -> &str {
-        &self.vars[pos].id.name
+        &self.vars[&pos].id.name
     }
 }
 

@@ -1,6 +1,7 @@
 use codegen::cfg::HashTy;
 use parser::pt;
 use sema::ast;
+use std::collections::HashMap;
 use std::str;
 
 use inkwell::context::Context;
@@ -791,7 +792,7 @@ impl TargetRuntime for SabreTarget {
         &self,
         _contract: &Contract<'b>,
         _expr: &ast::Expression,
-        _vartab: &[Variable<'b>],
+        _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
         _runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {

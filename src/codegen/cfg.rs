@@ -1,4 +1,5 @@
 use num_bigint::BigInt;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 use std::str;
@@ -155,7 +156,7 @@ impl BasicBlock {
 
 #[derive(Default)]
 pub struct ControlFlowGraph {
-    pub vars: Vec<Variable>,
+    pub vars: HashMap<usize, Variable>,
     pub bb: Vec<BasicBlock>,
     current: usize,
     pub writes_contract_storage: bool,
@@ -164,7 +165,7 @@ pub struct ControlFlowGraph {
 impl ControlFlowGraph {
     pub fn new() -> Self {
         let mut cfg = ControlFlowGraph {
-            vars: Vec::new(),
+            vars: HashMap::new(),
             bb: Vec::new(),
             current: 0,
             writes_contract_storage: false,
@@ -293,7 +294,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::Variable(_, _, res) => format!("%{}", self.vars[*res].id.name),
+            Expression::Variable(_, _, res) => format!("%{}", self.vars[res].id.name),
             Expression::ConstantVariable(_, _, var_contract_no, var_no) | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
                 format!("${}.{}", ns.contracts[*var_contract_no].name,
                 ns.contracts[*var_contract_no].variables[*var_no].name)
@@ -570,14 +571,14 @@ impl ControlFlowGraph {
             ),
             Instr::Set { res, expr } => format!(
                 "ty:{} %{} = {}",
-                self.vars[*res].ty.to_string(ns),
-                self.vars[*res].id.name,
+                self.vars[res].ty.to_string(ns),
+                self.vars[res].id.name,
                 self.expr_to_string(contract, ns, expr)
             ),
             Instr::Eval { expr } => format!("_ = {}", self.expr_to_string(contract, ns, expr)),
             Instr::Constant { res, constant } => format!(
                 "%{} = const {}",
-                self.vars[*res].id.name,
+                self.vars[res].id.name,
                 self.expr_to_string(
                     contract,
                     ns,
@@ -604,7 +605,7 @@ impl ControlFlowGraph {
                 "set storage slot({}) ty:{} = %{}",
                 self.expr_to_string(contract, ns, storage),
                 ty.to_string(ns),
-                self.vars[*local].id.name
+                self.vars[local].id.name
             ),
             Instr::SetStorageBytes {
                 local,
@@ -614,7 +615,7 @@ impl ControlFlowGraph {
                 "set storage slot({}) offset:{} = %{}",
                 self.expr_to_string(contract, ns, storage),
                 self.expr_to_string(contract, ns, offset),
-                self.vars[*local].id.name
+                self.vars[local].id.name
             ),
             Instr::PushMemory {
                 res,
@@ -623,15 +624,15 @@ impl ControlFlowGraph {
                 value,
             } => format!(
                 "%{}, %{} = push array ty:{} value:{}",
-                self.vars[*res].id.name,
-                self.vars[*array].id.name,
+                self.vars[res].id.name,
+                self.vars[array].id.name,
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, value),
             ),
             Instr::PopMemory { res, ty, array } => format!(
                 "%{}, %{} = pop array ty:{}",
-                self.vars[*res].id.name,
-                self.vars[*array].id.name,
+                self.vars[res].id.name,
+                self.vars[array].id.name,
                 ty.to_string(ns),
             ),
             Instr::AssertFailure { expr: None } => "assert-failure".to_string(),
@@ -646,7 +647,7 @@ impl ControlFlowGraph {
             } => format!(
                 "{} = call {} {}.{} {}",
                 res.iter()
-                    .map(|local| format!("%{}", self.vars[*local].id.name))
+                    .map(|local| format!("%{}", self.vars[local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
                 *func,
@@ -669,7 +670,7 @@ impl ControlFlowGraph {
             } => format!(
                 "{} = external call::{} address:{} signature:{} value:{} gas:{} func:{}.{} {}",
                 match success {
-                    Some(i) => format!("%{}", self.vars[*i].id.name),
+                    Some(i) => format!("%{}", self.vars[i].id.name),
                     None => "_".to_string(),
                 },
                 callty,
@@ -693,7 +694,7 @@ impl ControlFlowGraph {
             } => format!(
                 "{} = external call address:{} value:{}",
                 match success {
-                    Some(i) => format!("%{}", self.vars[*i].id.name),
+                    Some(i) => format!("%{}", self.vars[i].id.name),
                     None => "_".to_string(),
                 },
                 self.expr_to_string(contract, ns, address),
@@ -708,7 +709,7 @@ impl ControlFlowGraph {
             } => format!(
                 "{} = (abidecode:(%{}, {} {} ({}))",
                 res.iter()
-                    .map(|local| format!("%{}", self.vars[*local].id.name))
+                    .map(|local| format!("%{}", self.vars[local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
                 self.expr_to_string(contract, ns, data),
@@ -733,7 +734,7 @@ impl ControlFlowGraph {
                 ..
             } => format!(
                 "{} = (abiencode{}:(%{} {})",
-                format!("%{}", self.vars[*res].id.name),
+                format!("%{}", self.vars[res].id.name),
                 if *packed { "packed" } else { "" },
                 match selector {
                     None => "".to_string(),
@@ -747,7 +748,7 @@ impl ControlFlowGraph {
             Instr::Store { dest, pos } => format!(
                 "store {}, {}",
                 self.expr_to_string(contract, ns, dest),
-                self.vars[*pos].id.name
+                self.vars[pos].id.name
             ),
             Instr::Print { expr } => format!("print {}", self.expr_to_string(contract, ns, expr)),
             Instr::Constructor {
@@ -761,9 +762,9 @@ impl ControlFlowGraph {
                 value,
             } => format!(
                 "%{}, {} = constructor salt:{} value:{} gas:{} {} #{} ({})",
-                self.vars[*res].id.name,
+                self.vars[res].id.name,
                 match success {
-                    Some(i) => format!("%{}", self.vars[*i].id.name),
+                    Some(i) => format!("%{}", self.vars[i].id.name),
                     None => "_".to_string(),
                 },
                 match salt {
@@ -789,7 +790,7 @@ impl ControlFlowGraph {
             ),
             Instr::Hash { res, hash, expr } => format!(
                 "%{} = hash {} {}",
-                self.vars[*res].id.name,
+                self.vars[res].id.name,
                 hash,
                 self.expr_to_string(contract, ns, expr)
             ),
@@ -807,7 +808,7 @@ impl ControlFlowGraph {
                     s.push_str(", ");
                 }
                 first = false;
-                s.push_str(&self.vars[*p].id.name);
+                s.push_str(&self.vars[p].id.name);
             }
             s.push_str("\n");
         }
@@ -838,8 +839,10 @@ pub fn generate_cfg(
 ) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new();
 
-    let mut vartab =
-        Vartable::new_with_syms(&ns.contracts[base_contract_no].functions[function_no].symtable);
+    let mut vartab = Vartable::new_with_syms(
+        &ns.contracts[base_contract_no].functions[function_no].symtable,
+        ns.next_id,
+    );
     let mut loops = LoopScopes::new();
 
     let func = &ns.contracts[base_contract_no].functions[function_no];
@@ -847,7 +850,7 @@ pub fn generate_cfg(
     // populate the argument variables
     for (i, arg) in func.symtable.arguments.iter().enumerate() {
         if let Some(pos) = arg {
-            let var = &func.symtable.vars[*pos];
+            let var = &func.symtable.vars[pos];
             cfg.add(
                 &mut vartab,
                 Instr::Set {
@@ -986,7 +989,8 @@ pub struct Variable {
 
 #[derive(Default)]
 pub struct Vartable {
-    vars: Vec<Variable>,
+    vars: HashMap<usize, Variable>,
+    next_id: usize,
     dirty: Vec<DirtyTracker>,
 }
 
@@ -996,93 +1000,116 @@ pub struct DirtyTracker {
 }
 
 impl Vartable {
-    pub fn new_with_syms(sym: &Symtable) -> Self {
+    pub fn new_with_syms(sym: &Symtable, next_id: usize) -> Self {
         let vars = sym
             .vars
             .iter()
-            .map(|v| Variable {
-                id: v.id.clone(),
-                ty: v.ty.clone(),
-                pos: v.pos,
-                storage: Storage::Local,
+            .map(|(no, v)| {
+                (
+                    *no,
+                    Variable {
+                        id: v.id.clone(),
+                        ty: v.ty.clone(),
+                        pos: v.pos,
+                        storage: Storage::Local,
+                    },
+                )
             })
             .collect();
 
         Vartable {
             vars,
             dirty: Vec::new(),
+            next_id,
         }
     }
 
-    pub fn new() -> Self {
+    pub fn new(next_id: usize) -> Self {
         Vartable {
-            vars: Vec::new(),
+            vars: HashMap::new(),
             dirty: Vec::new(),
+            next_id,
         }
     }
 
     pub fn add(&mut self, id: &pt::Identifier, ty: Type) -> Option<usize> {
-        let pos = self.vars.len();
+        let pos = self.next_id;
+        self.next_id += 1;
 
-        self.vars.push(Variable {
-            id: id.clone(),
-            ty,
+        self.vars.insert(
             pos,
-            storage: Storage::Local,
-        });
+            Variable {
+                id: id.clone(),
+                ty,
+                pos,
+                storage: Storage::Local,
+            },
+        );
 
         Some(pos)
     }
 
     pub fn temp_anonymous(&mut self, ty: &Type) -> usize {
-        let pos = self.vars.len();
+        let pos = self.next_id;
+        self.next_id += 1;
 
-        self.vars.push(Variable {
-            id: pt::Identifier {
-                name: format!("temp.{}", pos),
-                loc: pt::Loc(0, 0, 0),
-            },
-            ty: ty.clone(),
+        self.vars.insert(
             pos,
-            storage: Storage::Local,
-        });
+            Variable {
+                id: pt::Identifier {
+                    name: format!("temp.{}", pos),
+                    loc: pt::Loc(0, 0, 0),
+                },
+                ty: ty.clone(),
+                pos,
+                storage: Storage::Local,
+            },
+        );
 
         pos
     }
 
     pub fn temp(&mut self, id: &pt::Identifier, ty: &Type) -> usize {
-        let pos = self.vars.len();
+        let pos = self.next_id;
+        self.next_id += 1;
 
-        self.vars.push(Variable {
-            id: pt::Identifier {
-                name: format!("{}.temp.{}", id.name, pos),
-                loc: id.loc,
-            },
-            ty: ty.clone(),
+        self.vars.insert(
             pos,
-            storage: Storage::Local,
-        });
+            Variable {
+                id: pt::Identifier {
+                    name: format!("{}.temp.{}", id.name, pos),
+                    loc: id.loc,
+                },
+                ty: ty.clone(),
+                pos,
+                storage: Storage::Local,
+            },
+        );
 
         pos
     }
 
     pub fn temp_name(&mut self, name: &str, ty: &Type) -> usize {
-        let pos = self.vars.len();
+        let pos = self.next_id;
+        self.next_id += 1;
 
-        self.vars.push(Variable {
-            id: pt::Identifier {
-                name: format!("{}.temp.{}", name, pos),
-                loc: pt::Loc(0, 0, 0),
-            },
-            ty: ty.clone(),
+        self.vars.insert(
             pos,
-            storage: Storage::Local,
-        });
+            Variable {
+                id: pt::Identifier {
+                    name: format!("{}.temp.{}", name, pos),
+                    loc: pt::Loc(0, 0, 0),
+                },
+                ty: ty.clone(),
+                pos,
+                storage: Storage::Local,
+            },
+        );
 
         pos
     }
 
-    pub fn drain(self) -> Vec<Variable> {
+    pub fn drain(self) -> HashMap<usize, Variable> {
         self.vars
     }
 
@@ -1095,9 +1122,9 @@ impl Vartable {
         }
     }
 
-    pub fn new_dirty_tracker(&mut self) {
+    pub fn new_dirty_tracker(&mut self, lim: usize) {
         self.dirty.push(DirtyTracker {
-            lim: self.vars.len(),
+            lim,
             set: HashSet::new(),
         });
     }

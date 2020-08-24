@@ -580,7 +580,7 @@ fn statement(
                     .returns
                     .iter()
                     .map(|pos| {
-                        Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[*pos].ty.clone(), *pos)
+                        Expression::Variable(pt::Loc(0, 0, 0), symtable.vars[pos].ty.clone(), *pos)
                     })
                     .collect(),
             ));

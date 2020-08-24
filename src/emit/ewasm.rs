@@ -2,6 +2,7 @@ use codegen::cfg::HashTy;
 use parser::pt;
 use sema::ast;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::str;
 
 use inkwell::attributes::{Attribute, AttributeLoc};
@@ -1686,7 +1687,7 @@ impl TargetRuntime for EwasmTarget {
         &self,
         contract: &Contract<'b>,
         expr: &ast::Expression,
-        vartab: &[Variable<'b>],
+        vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {

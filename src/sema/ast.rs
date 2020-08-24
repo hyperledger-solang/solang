@@ -329,6 +329,8 @@ pub struct Namespace {
     pub diagnostics: Vec<Diagnostic>,
     /// Symbol key is file_no, contract, identifier
     pub symbols: HashMap<(usize, Option<usize>, String), Symbol>,
+    // each variable in the symbol table should have a unique number
+    pub next_id: usize,
 }
 
 pub struct Layout {

@@ -243,6 +243,7 @@ impl ast::Namespace {
             value_length,
             symbols: HashMap::new(),
             diagnostics: Vec::new(),
+            next_id: 0,
         }
     }
 
