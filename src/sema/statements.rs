@@ -94,7 +94,7 @@ pub fn resolve_function_body(
                                 {
                                     ns.contracts[contract_no].functions[function_no]
                                         .bases
-                                        .insert(base_no, (constructor_no, args));
+                                        .insert(base_no, (base.loc, constructor_no, args));
 
                                     resolve_bases.insert(base_no, base.loc);
                                 }

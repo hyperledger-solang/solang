@@ -89,10 +89,6 @@ pub fn resolve(
     // Resolve base contract constructor arguments on contract definition (not constructor definitions)
     resolve_base_args(contracts, file_no, ns);
 
-    for (contract_no, _) in contracts {
-        check_base_args(*contract_no, ns);
-    }
-
     // Now we have all the declarations, we can create the layout of storage and handle base contracts
     for (contract_no, _) in contracts {
         layout_contract(*contract_no, ns);
@@ -100,6 +96,10 @@ pub fn resolve(
 
     // Now we can resolve the bodies
     resolve_bodies(function_bodies, file_no, ns);
+
+    for (contract_no, _) in contracts {
+        check_base_args(*contract_no, ns);
+    }
 }
 
 /// Resolve the base contracts list and check for cycles. Returns true if no
@@ -147,6 +147,7 @@ fn resolve_base_contracts(
                         // resolved any variables. This means no constants can be used on base
                         // constructor args, so we delay this until resolve_base_args()
                         ns.contracts[*contract_no].bases.push(ast::Base {
+                            loc: base.loc,
                             contract_no: no,
                             constructor: None,
                         });
@@ -207,7 +208,7 @@ fn resolve_base_args(
 }
 
 /// Visit base contracts in depth-first post-order
-fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
+pub fn visit_bases(contract_no: usize, ns: &ast::Namespace) -> Vec<usize> {
     let mut order = Vec::new();
 
     fn base<'a>(contract_no: usize, order: &mut Vec<usize>, ns: &'a ast::Namespace) {
@@ -603,30 +604,165 @@ fn resolve_bodies(
     broken
 }
 
+#[derive(Debug)]
+pub struct BaseArguments<'a> {
+    pub loc: &'a pt::Loc,
+    pub defined_constructor_no: Option<(usize, usize)>,
+    pub calling_constructor_no: usize,
+    pub args: &'a Vec<ast::Expression>,
+}
+
+// walk the list of base contracts and collect all the base constructor arguments
+pub fn collect_base_args<'a>(
+    contract_no: usize,
+    constructor_no: Option<usize>,
+    base_args: &mut HashMap<usize, BaseArguments<'a>>,
+    diagnostics: &mut HashSet<ast::Diagnostic>,
+    ns: &'a ast::Namespace,
+) {
+    let contract = &ns.contracts[contract_no];
+
+    if let Some(defined_constructor_no) = constructor_no {
+        let constructor = &contract.functions[defined_constructor_no];
+
+        for (base_no, (loc, constructor_no, args)) in &constructor.bases {
+            if let Some(prev_args) = base_args.get(base_no) {
+                diagnostics.insert(ast::Diagnostic::error_with_note(
+                    *loc,
+                    format!(
+                        "duplicate argument for base contract ‘{}’",
+                        ns.contracts[*base_no].name
+                    ),
+                    *prev_args.loc,
+                    format!(
+                        "previous argument for base contract ‘{}’",
+                        ns.contracts[*base_no].name
+                    ),
+                ));
+            } else {
+                base_args.insert(
+                    *base_no,
+                    BaseArguments {
+                        loc,
+                        defined_constructor_no: Some((contract_no, defined_constructor_no)),
+                        calling_constructor_no: *constructor_no,
+                        args,
+                    },
+                );
+
+                collect_base_args(*base_no, Some(*constructor_no), base_args, diagnostics, ns);
+            }
+        }
+    }
+
+    for base in &contract.bases {
+        if let Some((constructor_no, args)) = &base.constructor {
+            if let Some(prev_args) = base_args.get(&base.contract_no) {
+                diagnostics.insert(ast::Diagnostic::error_with_note(
+                    base.loc,
+                    format!(
+                        "duplicate argument for base contract ‘{}’",
+                        ns.contracts[base.contract_no].name
+                    ),
+                    *prev_args.loc,
+                    format!(
+                        "previous argument for base contract ‘{}’",
+                        ns.contracts[base.contract_no].name
+                    ),
+                ));
+            } else {
+                base_args.insert(
+                    base.contract_no,
+                    BaseArguments {
+                        loc: &base.loc,
+                        defined_constructor_no: None,
+                        calling_constructor_no: *constructor_no,
+                        args,
+                    },
+                );
+
+                collect_base_args(
+                    base.contract_no,
+                    Some(*constructor_no),
+                    base_args,
+                    diagnostics,
+                    ns,
+                );
+            }
+        } else {
+            collect_base_args(
+                base.contract_no,
+                ns.contracts[base.contract_no].no_args_constructor(),
+                base_args,
+                diagnostics,
+                ns,
+            );
+        }
+    }
+}
+
 /// Check if we have arguments for all the base contracts
 fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
     let contract = &ns.contracts[contract_no];
 
-    if !contract.is_concrete() || contract.have_constructor() {
-        // nothing to do, already checked in constructor or has no constructor
+    if !contract.is_concrete() {
         return;
     }
 
-    for base in &contract.bases {
-        // do we have constructor arguments
-        if base.constructor.is_some() {
-            continue;
-        }
+    let mut diagnostics = HashSet::new();
+    let base_args_needed = visit_bases(contract_no, ns)
+        .into_iter()
+        .filter(|base_no| {
+            *base_no != contract_no && ns.contracts[*base_no].constructor_needs_arguments()
+        })
+        .collect::<Vec<usize>>();
 
-        // does the contract require arguments
-        if ns.contracts[base.contract_no].constructor_needs_arguments() {
-            ns.diagnostics.push(ast::Diagnostic::error(
-                contract.loc,
-                format!(
-                    "missing arguments to base contract ‘{}’ constructor",
-                    ns.contracts[base.contract_no].name
-                ),
-            ));
+    if contract.have_constructor() {
+        for (constructor_no, _) in contract
+            .functions
+            .iter()
+            .filter(|f| f.is_constructor())
+            .enumerate()
+        {
+            let mut base_args = HashMap::new();
+
+            collect_base_args(
+                contract_no,
+                Some(constructor_no),
+                &mut base_args,
+                &mut diagnostics,
+                ns,
+            );
+
+            for base_no in &base_args_needed {
+                if !base_args.contains_key(base_no) {
+                    diagnostics.insert(ast::Diagnostic::error(
+                        contract.loc,
+                        format!(
+                            "missing arguments to base contract ‘{}’ constructor",
+                            ns.contracts[*base_no].name
+                        ),
+                    ));
+                }
+            }
+        }
+    } else {
+        let mut base_args = HashMap::new();
+
+        collect_base_args(contract_no, None, &mut base_args, &mut diagnostics, ns);
+
+        for base_no in &base_args_needed {
+            if !base_args.contains_key(base_no) {
+                diagnostics.insert(ast::Diagnostic::error(
+                    contract.loc,
+                    format!(
+                        "missing arguments to base contract ‘{}’ constructor",
+                        ns.contracts[*base_no].name
+                    ),
+                ));
+            }
         }
     }
+
+    ns.diagnostics.extend(diagnostics.into_iter());
 }

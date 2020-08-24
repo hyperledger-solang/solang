@@ -8,7 +8,7 @@ use Target;
 mod address;
 pub mod ast;
 mod builtin;
-mod contracts;
+pub mod contracts;
 pub mod diagnostics;
 pub mod eval;
 pub mod expression;
