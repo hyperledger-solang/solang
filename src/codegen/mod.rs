@@ -34,7 +34,7 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
 /// This function will set all contract storage initializers and should be called from the constructor
 fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new();
-    let mut vartab = Vartable::new();
+    let mut vartab = Vartable::new(ns.next_id);
 
     for layout in &ns.contracts[contract_no].layout {
         let var = &ns.contracts[layout.contract_no].variables[layout.var_no];

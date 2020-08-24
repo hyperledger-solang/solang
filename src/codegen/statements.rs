@@ -97,7 +97,7 @@ pub fn statement(
 
             cfg.set_basic_block(body);
 
-            vartab.new_dirty_tracker();
+            vartab.new_dirty_tracker(ns.next_id);
             loops.new_scope(end, cond);
 
             let mut body_reachable = true;
@@ -154,7 +154,7 @@ pub fn statement(
 
             cfg.set_basic_block(body);
 
-            vartab.new_dirty_tracker();
+            vartab.new_dirty_tracker(ns.next_id);
             loops.new_scope(end, cond);
 
             let mut body_reachable = true;
@@ -204,7 +204,7 @@ pub fn statement(
                 },
             );
 
-            vartab.new_dirty_tracker();
+            vartab.new_dirty_tracker(ns.next_id);
 
             let mut body_reachable = true;
 
@@ -279,7 +279,7 @@ pub fn statement(
             // continue goes to next
             loops.new_scope(end_block, next_block);
 
-            vartab.new_dirty_tracker();
+            vartab.new_dirty_tracker(ns.next_id);
 
             let mut body_reachable = true;
 
@@ -419,7 +419,7 @@ fn if_then(
 
     cfg.set_basic_block(then);
 
-    vartab.new_dirty_tracker();
+    vartab.new_dirty_tracker(ns.next_id);
 
     let mut reachable = true;
 
@@ -468,7 +468,7 @@ fn if_then_else(
     // then
     cfg.set_basic_block(then);
 
-    vartab.new_dirty_tracker();
+    vartab.new_dirty_tracker(ns.next_id);
 
     let mut then_reachable = true;
 
@@ -655,7 +655,7 @@ fn try_catch(
         _ => unreachable!(),
     }
 
-    vartab.new_dirty_tracker();
+    vartab.new_dirty_tracker(ns.next_id);
 
     let mut finally_reachable = true;
 

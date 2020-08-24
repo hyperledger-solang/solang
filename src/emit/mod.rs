@@ -208,7 +208,7 @@ pub trait TargetRuntime {
         &self,
         contract: &Contract<'b>,
         expr: &Expression,
-        vartab: &[Variable<'b>],
+        vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b>;
@@ -773,7 +773,7 @@ impl<'a> Contract<'a> {
     fn expression(
         &self,
         e: &Expression,
-        vartab: &[Variable<'a>],
+        vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'a> {
@@ -1281,7 +1281,7 @@ impl<'a> Contract<'a> {
                     .build_int_compare(IntPredicate::ULE, left, right, "")
                     .into()
             }
-            Expression::Variable(_, _, s) => vartab[*s].value,
+            Expression::Variable(_, _, s) => vartab[s].value,
             Expression::Load(_, _, e) => {
                 let expr = self
                     .expression(e, vartab, function, runtime)
@@ -2068,7 +2068,7 @@ impl<'a> Contract<'a> {
     fn string_location(
         &self,
         location: &StringLocation,
-        vartab: &[Variable<'a>],
+        vartab: &HashMap<usize, Variable<'a>>,
         function: FunctionValue<'a>,
         runtime: &dyn TargetRuntime,
     ) -> (PointerValue<'a>, IntValue<'a>) {
@@ -2758,7 +2758,7 @@ impl<'a> Contract<'a> {
 
         struct Work<'b> {
             bb_no: usize,
-            vars: Vec<Variable<'b>>,
+            vars: HashMap<usize, Variable<'b>>,
         }
 
         let mut blocks: HashMap<usize, BasicBlock> = HashMap::new();
@@ -2773,9 +2773,9 @@ impl<'a> Contract<'a> {
 
             if let Some(ref cfg_phis) = cfg_bb.phis {
                 for v in cfg_phis {
-                    let ty = self.llvm_var(&cfg.vars[*v].ty);
+                    let ty = self.llvm_var(&cfg.vars[v].ty);
 
-                    phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[*v].id.name));
+                    phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[v].id.name));
                 }
             }
 
@@ -2787,9 +2787,9 @@ impl<'a> Contract<'a> {
         blocks.insert(0, create_bb(0));
 
         // Create all the stack variables
-        let mut vars = Vec::new();
+        let mut vars = HashMap::new();
 
-        for v in &cfg.vars {
+        for (no, v) in &cfg.vars {
             match v.storage {
                 cfg::Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
                     let ty = self.llvm_type(&v.ty);
@@ -2808,39 +2808,51 @@ impl<'a> Contract<'a> {
                         .left()
                         .unwrap();
 
-                    vars.push(Variable {
-                        value: self
-                            .builder
-                            .build_pointer_cast(
-                                p.into_pointer_value(),
-                                ty.ptr_type(AddressSpace::Generic),
-                                &v.id.name,
-                            )
-                            .into(),
-                    });
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: self
+                                .builder
+                                .build_pointer_cast(
+                                    p.into_pointer_value(),
+                                    ty.ptr_type(AddressSpace::Generic),
+                                    &v.id.name,
+                                )
+                                .into(),
+                        },
+                    );
                 }
                 cfg::Storage::Local if v.ty.is_contract_storage() => {
-                    vars.push(Variable {
-                        value: self.context.custom_width_int_type(256).const_zero().into(),
-                    });
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: self.context.custom_width_int_type(256).const_zero().into(),
+                        },
+                    );
                 }
                 cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
                     if v.ty.is_reference_type() =>
                 {
                     // This needs a placeholder
-                    vars.push(Variable {
-                        value: self.context.bool_type().get_undef().into(),
-                    });
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: self.context.bool_type().get_undef().into(),
+                        },
+                    );
                 }
                 cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
                     let ty = self.llvm_type(&v.ty);
-                    vars.push(Variable {
-                        value: if ty.is_pointer_type() {
-                            ty.into_pointer_type().const_zero().into()
-                        } else {
-                            ty.into_int_type().const_zero().into()
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: if ty.is_pointer_type() {
+                                ty.into_pointer_type().const_zero().into()
+                            } else {
+                                ty.into_int_type().const_zero().into()
+                            },
                         },
-                    });
+                    );
                 }
             }
         }
@@ -2853,7 +2865,7 @@ impl<'a> Contract<'a> {
             self.builder.position_at_end(bb.bb);
 
             for (v, phi) in bb.phis.iter() {
-                w.vars[*v].value = (*phi).as_basic_value();
+                w.vars.get_mut(v).unwrap().value = (*phi).as_basic_value();
             }
 
             for ins in &cfg.bb[w.bb_no].instr {
@@ -2876,7 +2888,7 @@ impl<'a> Contract<'a> {
                     cfg::Instr::Set { res, expr } => {
                         let value_ref = self.expression(expr, &w.vars, function, runtime);
 
-                        w.vars[*res].value = value_ref;
+                        w.vars.get_mut(res).unwrap().value = value_ref;
                     }
                     cfg::Instr::Eval { expr } => {
                         self.expression(expr, &w.vars, function, runtime);
@@ -2888,7 +2900,7 @@ impl<'a> Contract<'a> {
                             .unwrap();
                         let value_ref = self.expression(const_expr, &w.vars, function, runtime);
 
-                        w.vars[*res].value = value_ref;
+                        w.vars.get_mut(res).unwrap().value = value_ref;
                     }
                     cfg::Instr::Branch { bb: dest } => {
                         let pos = self.builder.get_insert_block().unwrap();
@@ -2904,14 +2916,14 @@ impl<'a> Contract<'a> {
                         let bb = blocks.get(dest).unwrap();
 
                         for (v, phi) in bb.phis.iter() {
-                            phi.add_incoming(&[(&w.vars[*v].value, pos)]);
+                            phi.add_incoming(&[(&w.vars[v].value, pos)]);
                         }
 
                         self.builder.position_at_end(pos);
                         self.builder.build_unconditional_branch(bb.bb);
                     }
                     cfg::Instr::Store { dest, pos } => {
-                        let value_ref = w.vars[*pos].value;
+                        let value_ref = w.vars[pos].value;
                         let dest_ref = self
                             .expression(dest, &w.vars, function, runtime)
                             .into_pointer_value();
@@ -2939,7 +2951,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(true_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[(&w.vars[*v].value, pos)]);
+                                phi.add_incoming(&[(&w.vars[v].value, pos)]);
                             }
 
                             bb.bb
@@ -2957,7 +2969,7 @@ impl<'a> Contract<'a> {
                             let bb = blocks.get(false_).unwrap();
 
                             for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[(&w.vars[*v].value, pos)]);
+                                phi.add_incoming(&[(&w.vars[v].value, pos)]);
                             }
 
                             bb.bb
@@ -2979,7 +2991,7 @@ impl<'a> Contract<'a> {
                         self.storage_clear(ty, &mut slot, slot_ptr, function, runtime);
                     }
                     cfg::Instr::SetStorage { ty, local, storage } => {
-                        let value = w.vars[*local].value;
+                        let value = w.vars[local].value;
 
                         let mut slot = self
                             .expression(storage, &w.vars, function, runtime)
@@ -2993,7 +3005,7 @@ impl<'a> Contract<'a> {
                         storage,
                         offset,
                     } => {
-                        let value = w.vars[*local].value;
+                        let value = w.vars[local].value;
 
                         let slot = self
                             .expression(storage, &w.vars, function, runtime)
@@ -3018,7 +3030,7 @@ impl<'a> Contract<'a> {
                         array,
                         value,
                     } => {
-                        let a = w.vars[*array].value.into_pointer_value();
+                        let a = w.vars[array].value.into_pointer_value();
                         let len = unsafe {
                             self.builder.build_gep(
                                 a,
@@ -3085,7 +3097,7 @@ impl<'a> Contract<'a> {
                             llvm_ty.ptr_type(AddressSpace::Generic),
                             "dest",
                         );
-                        w.vars[*array].value = dest.into();
+                        w.vars.get_mut(array).unwrap().value = dest.into();
 
                         // Store the value into the last element
                         let slot_ptr = unsafe {
@@ -3106,7 +3118,7 @@ impl<'a> Contract<'a> {
                             "element pointer",
                         );
                         self.builder.build_store(elem_ptr, value);
-                        w.vars[*res].value = value;
+                        w.vars.get_mut(res).unwrap().value = value;
 
                         // Update the len and size field of the vector struct
                         let len_ptr = unsafe {
@@ -3144,7 +3156,7 @@ impl<'a> Contract<'a> {
                         self.builder.build_store(size_field, new_len);
                     }
                     cfg::Instr::PopMemory { res, ty, array } => {
-                        let a = w.vars[*array].value.into_pointer_value();
+                        let a = w.vars[array].value.into_pointer_value();
                         let len = unsafe {
                             self.builder.build_gep(
                                 a,
@@ -3231,7 +3243,7 @@ impl<'a> Contract<'a> {
                             "slot_ptr",
                         );
                         let ret_val = self.builder.build_load(slot_ptr, "");
-                        w.vars[*res].value = ret_val;
+                        w.vars.get_mut(res).unwrap().value = ret_val;
 
                         // Reallocate and reassign the array pointer
                         let a = self.builder.build_pointer_cast(
@@ -3255,7 +3267,7 @@ impl<'a> Contract<'a> {
                             llvm_ty.ptr_type(AddressSpace::Generic),
                             "dest",
                         );
-                        w.vars[*array].value = dest.into();
+                        w.vars.get_mut(array).unwrap().value = dest.into();
 
                         // Update the len and size field of the vector struct
                         let len_ptr = unsafe {
@@ -3413,12 +3425,12 @@ impl<'a> Contract<'a> {
                                     &v.name,
                                 );
 
-                                let dest = w.vars[res[i]].value;
+                                let dest = w.vars[&res[i]].value;
 
                                 if dest.is_pointer_value() && !v.ty.is_reference_type() {
                                     self.builder.build_store(dest.into_pointer_value(), val);
                                 } else {
-                                    w.vars[res[i]].value = val;
+                                    w.vars.get_mut(&res[i]).unwrap().value = val;
                                 }
                             }
                         }
@@ -3453,7 +3465,7 @@ impl<'a> Contract<'a> {
                         });
 
                         let success = match success {
-                            Some(n) => Some(&mut w.vars[*n].value),
+                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
                             None => None,
                         };
 
@@ -3474,7 +3486,8 @@ impl<'a> Contract<'a> {
                             salt,
                         );
 
-                        w.vars[*res].value = self.builder.build_load(address, "address");
+                        w.vars.get_mut(res).unwrap().value =
+                            self.builder.build_load(address, "address");
                     }
                     cfg::Instr::ExternalCall {
                         success,
@@ -3600,7 +3613,7 @@ impl<'a> Contract<'a> {
                         );
 
                         if let Some(success) = success {
-                            w.vars[*success].value = is_success.into();
+                            w.vars.get_mut(success).unwrap().value = is_success.into();
                         } else {
                             let success_block =
                                 self.context.append_basic_block(function, "success");
@@ -3624,7 +3637,7 @@ impl<'a> Contract<'a> {
                         packed,
                         args,
                     } => {
-                        w.vars[*res].value = runtime
+                        w.vars.get_mut(res).unwrap().value = runtime
                             .abi_encode_to_vector(
                                 self,
                                 selector.as_ref().map(|s| {
@@ -3774,7 +3787,7 @@ impl<'a> Contract<'a> {
                         runtime.abi_decode(self, function, &mut returns, data, data_len, &tys);
 
                         for (i, ret) in returns.into_iter().enumerate() {
-                            w.vars[res[i]].value = ret;
+                            w.vars.get_mut(&res[i]).unwrap().value = ret;
                         }
                     }
                     cfg::Instr::Unreachable => {
@@ -3814,7 +3827,7 @@ impl<'a> Contract<'a> {
                             )
                         };
 
-                        w.vars[*res].value = runtime
+                        w.vars.get_mut(res).unwrap().value = runtime
                             .hash(
                                 &self,
                                 hash.clone(),

@@ -2965,7 +2965,7 @@ impl TargetRuntime for SubstrateTarget {
         &self,
         contract: &Contract<'b>,
         expr: &ast::Expression,
-        vartab: &[Variable<'b>],
+        vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
         runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {
