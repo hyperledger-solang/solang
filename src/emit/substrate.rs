@@ -509,7 +509,7 @@ impl SubstrateTarget {
             .build_return(Some(&contract.context.i32_type().const_int(2, false)));
     }
 
-    fn emit_call(&self, contract: &Contract) {
+    fn emit_call(&mut self, contract: &Contract) {
         // create call function
         let function = contract.module.add_function(
             "call",
@@ -2351,7 +2351,7 @@ impl TargetRuntime for SubstrateTarget {
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
-        constructor_no: usize,
+        constructor_no: Option<usize>,
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
         gas: IntValue<'b>,
@@ -2360,12 +2360,10 @@ impl TargetRuntime for SubstrateTarget {
     ) {
         let resolver_contract = &contract.ns.contracts[contract_no];
 
-        let constructor = &resolver_contract
-            .functions
-            .iter()
-            .filter(|f| f.is_constructor())
-            .nth(constructor_no)
-            .unwrap();
+        let constructor = match constructor_no {
+            Some(function_no) => &resolver_contract.functions[function_no],
+            None => &resolver_contract.default_constructor.as_ref().unwrap().0,
+        };
 
         let mut args = args.to_vec();
         let mut params = constructor.params.to_vec();

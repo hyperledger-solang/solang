@@ -5,7 +5,6 @@ use parser::pt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use Target;
 
 use super::ast;
 use super::expression::{expression, match_constructor_to_args};
@@ -31,6 +30,7 @@ impl ast::Contract {
             variables: Vec::new(),
             creates: Vec::new(),
             initializer: ControlFlowGraph::new(),
+            default_constructor: None,
         }
     }
 
@@ -51,6 +51,11 @@ impl ast::Contract {
 
         out += "# storage initializer\n";
         out += &self.initializer.to_string(self, ns);
+
+        if let Some((_, constructor)) = &self.default_constructor {
+            out += "\n# default constructor\n";
+            out += &constructor.to_string(self, ns);
+        }
 
         for (contract_no, function_no, cfg) in self.function_table.values() {
             let func = &ns.contracts[*contract_no].functions[*function_no];
@@ -188,7 +193,7 @@ fn resolve_base_args(
                         }
 
                         // find constructor which matches this
-                        if let Ok((constructor_no, args)) =
+                        if let Ok((Some(constructor_no), args)) =
                             match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
                         {
                             ns.contracts[*contract_no].bases[pos].constructor =
@@ -623,26 +628,5 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
                 ),
             ));
         }
-    }
-
-    // Substrate requires one constructor. Ideally we do not create implict things
-    // in the ast, but this is required for abi generation which is done of the ast
-    if ns.target == Target::Substrate {
-        let mut fdecl = ast::Function::new(
-            pt::Loc(0, 0, 0),
-            contract_no,
-            "".to_owned(),
-            vec![],
-            pt::FunctionTy::Constructor,
-            None,
-            pt::Visibility::Public(pt::Loc(0, 0, 0)),
-            Vec::new(),
-            Vec::new(),
-            ns,
-        );
-
-        fdecl.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), Vec::new())];
-
-        ns.contracts[contract_no].functions.push(fdecl);
     }
 }

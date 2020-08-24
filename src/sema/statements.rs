@@ -89,7 +89,7 @@ pub fn resolve_function_body(
 
                             // find constructor which matches this
                             if ok {
-                                if let Ok((constructor_no, args)) =
+                                if let Ok((Some(constructor_no), args)) =
                                     match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
                                 {
                                     ns.contracts[contract_no].functions[function_no]

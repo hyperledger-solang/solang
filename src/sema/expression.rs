@@ -1910,11 +1910,10 @@ pub fn match_constructor_to_args(
     resolved_args: Vec<Expression>,
     contract_no: usize,
     ns: &mut Namespace,
-) -> Result<(usize, Vec<Expression>), ()> {
+) -> Result<(Option<usize>, Vec<Expression>), ()> {
     let marker = ns.diagnostics.len();
 
     // constructor call
-    let mut constructor_no = 0;
     let mut constructor_count = 0;
 
     for function_no in 0..ns.contracts[contract_no].functions.len() {
@@ -1923,6 +1922,7 @@ pub fn match_constructor_to_args(
         }
 
         constructor_count += 1;
+
         let params_len = ns.contracts[contract_no].functions[function_no]
             .params
             .len();
@@ -1936,7 +1936,6 @@ pub fn match_constructor_to_args(
                     resolved_args.len()
                 ),
             ));
-            constructor_no += 1;
             continue;
         }
 
@@ -1963,14 +1962,12 @@ pub fn match_constructor_to_args(
         }
 
         if matches {
-            return Ok((constructor_no, cast_args));
+            return Ok((Some(function_no), cast_args));
         }
-
-        constructor_no += 1;
     }
 
     if constructor_count == 0 && resolved_args.is_empty() {
-        return Ok((0, Vec::new()));
+        return Ok((None, Vec::new()));
     }
 
     if constructor_count != 1 {
@@ -2082,8 +2079,6 @@ pub fn constructor_named_args(
 
     let marker = ns.diagnostics.len();
 
-    let mut constructor_no = 0;
-
     // constructor call
     for function_no in 0..ns.contracts[no].functions.len() {
         if !ns.contracts[no].functions[function_no].is_constructor() {
@@ -2101,7 +2096,6 @@ pub fn constructor_named_args(
                     args.len()
                 ),
             ));
-            constructor_no += 1;
             continue;
         }
 
@@ -2136,14 +2130,13 @@ pub fn constructor_named_args(
             return Ok(Expression::Constructor {
                 loc: *loc,
                 contract_no: no,
-                constructor_no,
+                constructor_no: Some(function_no),
                 args: cast_args,
                 value: call_args.value,
                 gas: call_args.gas,
                 salt: call_args.salt,
             });
         }
-        constructor_no += 1;
     }
 
     match ns.contracts[no]
@@ -2155,7 +2148,7 @@ pub fn constructor_named_args(
         0 => Ok(Expression::Constructor {
             loc: *loc,
             contract_no: no,
-            constructor_no: 0,
+            constructor_no: None,
             args: Vec::new(),
             value: call_args.value,
             gas: call_args.gas,

@@ -183,7 +183,7 @@ pub trait TargetRuntime {
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
-        constructor_no: usize,
+        constructor_no: Option<usize>,
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
         gas: IntValue<'b>,
@@ -3858,7 +3858,7 @@ impl<'a> Contract<'a> {
         argslen: inkwell::values::IntValue<'a>,
         function: inkwell::values::FunctionValue<'a>,
         fallback: Option<inkwell::basic_block::BasicBlock>,
-        runtime: &dyn TargetRuntime,
+        runtime: &mut dyn TargetRuntime,
         nonpayable: F,
     ) where
         F: Fn(&ast::Function) -> bool,
@@ -3922,82 +3922,39 @@ impl<'a> Contract<'a> {
                 continue;
             }
 
-            let bb = self.context.append_basic_block(function, "");
-
-            let id = f.selector();
-
-            self.builder.position_at_end(bb);
-
-            if nonpayable(f) {
-                self.abort_if_value_transfer(runtime, function);
-            }
-
-            let mut args = Vec::new();
-
-            // insert abi decode
-            runtime.abi_decode(&self, function, &mut args, argsdata, argslen, &f.params);
-
-            // add return values as pointer arguments at the end
-            if !f.returns.is_empty() {
-                for v in f.returns.iter() {
-                    args.push(if !v.ty.is_reference_type() {
-                        self.builder
-                            .build_alloca(self.llvm_type(&v.ty), &v.name)
-                            .into()
-                    } else {
-                        self.builder
-                            .build_alloca(
-                                self.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
-                                &v.name,
-                            )
-                            .into()
-                    });
-                }
-            }
-
-            let ret = self
-                .builder
-                .build_call(self.functions[&f.vsignature], &args, "")
-                .try_as_basic_value()
-                .left()
-                .unwrap();
-
-            let success = self.builder.build_int_compare(
-                IntPredicate::EQ,
-                ret.into_int_value(),
-                self.context.i32_type().const_zero(),
-                "success",
+            self.add_dispatch_case(
+                f,
+                &mut cases,
+                argsdata,
+                argslen,
+                function,
+                self.functions[&f.vsignature],
+                runtime,
+                &nonpayable,
             );
+        }
 
-            let success_block = self.context.append_basic_block(function, "success");
-            let bail_block = self.context.append_basic_block(function, "bail");
-
-            self.builder
-                .build_conditional_branch(success, success_block, bail_block);
-
-            self.builder.position_at_end(success_block);
-
-            if f.returns.is_empty() {
-                // return ABI of length 0
-                runtime.return_empty_abi(&self);
-            } else {
-                let (data, length) = runtime.abi_encode(
-                    &self,
-                    None,
-                    true,
-                    function,
-                    &args[f.params.len()..],
-                    &f.returns,
+        if function_ty == pt::FunctionTy::Constructor {
+            if let Some((f, constructor_cfg)) = &self.contract.default_constructor {
+                let dest = self.module.add_function(
+                    "default_constructor",
+                    self.context.i32_type().fn_type(&[], false),
+                    Some(Linkage::Internal),
                 );
+                // emit
+                self.emit_cfg(constructor_cfg, None, dest, runtime);
 
-                runtime.return_abi(&self, data, length);
+                self.add_dispatch_case(
+                    f,
+                    &mut cases,
+                    argsdata,
+                    argslen,
+                    function,
+                    dest,
+                    runtime,
+                    &nonpayable,
+                );
             }
-
-            self.builder.position_at_end(bail_block);
-
-            runtime.return_u32(self, ret.into_int_value());
-
-            cases.push((self.context.i32_type().const_int(id as u64, false), bb));
         }
 
         self.builder.position_at_end(switch_block);
@@ -4062,6 +4019,101 @@ impl<'a> Contract<'a> {
                 runtime.return_u32(self, self.context.i32_type().const_int(2, false));
             }
         }
+    }
+
+    ///Add single case for emit_function_dispatch
+    fn add_dispatch_case<F>(
+        &self,
+        f: &ast::Function,
+        cases: &mut Vec<(
+            inkwell::values::IntValue<'a>,
+            inkwell::basic_block::BasicBlock<'a>,
+        )>,
+        argsdata: inkwell::values::PointerValue<'a>,
+        argslen: inkwell::values::IntValue<'a>,
+        function: inkwell::values::FunctionValue<'a>,
+        dest: inkwell::values::FunctionValue<'a>,
+        runtime: &dyn TargetRuntime,
+        nonpayable: &F,
+    ) where
+        F: Fn(&ast::Function) -> bool,
+    {
+        let bb = self.context.append_basic_block(function, "");
+
+        let id = f.selector();
+
+        self.builder.position_at_end(bb);
+
+        if nonpayable(f) {
+            self.abort_if_value_transfer(runtime, function);
+        }
+
+        let mut args = Vec::new();
+
+        // insert abi decode
+        runtime.abi_decode(&self, function, &mut args, argsdata, argslen, &f.params);
+
+        // add return values as pointer arguments at the end
+        if !f.returns.is_empty() {
+            for v in f.returns.iter() {
+                args.push(if !v.ty.is_reference_type() {
+                    self.builder
+                        .build_alloca(self.llvm_type(&v.ty), &v.name)
+                        .into()
+                } else {
+                    self.builder
+                        .build_alloca(
+                            self.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
+                            &v.name,
+                        )
+                        .into()
+                });
+            }
+        }
+
+        let ret = self
+            .builder
+            .build_call(dest, &args, "")
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let success = self.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret.into_int_value(),
+            self.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = self.context.append_basic_block(function, "success");
+        let bail_block = self.context.append_basic_block(function, "bail");
+
+        self.builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        self.builder.position_at_end(success_block);
+
+        if f.returns.is_empty() {
+            // return ABI of length 0
+            runtime.return_empty_abi(&self);
+        } else {
+            let (data, length) = runtime.abi_encode(
+                &self,
+                None,
+                true,
+                function,
+                &args[f.params.len()..],
+                &f.returns,
+            );
+
+            runtime.return_abi(&self, data, length);
+        }
+
+        self.builder.position_at_end(bail_block);
+
+        runtime.return_u32(self, ret.into_int_value());
+
+        cases.push((self.context.i32_type().const_int(id as u64, false), bb));
     }
 
     // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which

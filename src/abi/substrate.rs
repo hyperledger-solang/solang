@@ -401,7 +401,7 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
         }],
     };
 
-    let constructors = ns.contracts[contract_no]
+    let mut constructors = ns.contracts[contract_no]
         .functions
         .iter()
         .filter(|f| f.is_constructor())
@@ -415,7 +415,20 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
                 .collect(),
             docs: f.doc.clone(),
         })
-        .collect();
+        .collect::<Vec<Constructor>>();
+
+    if let Some((f, _)) = &ns.contracts[contract_no].default_constructor {
+        constructors.push(Constructor {
+            name: registry.string("new"),
+            selector: render_selector(f),
+            args: f
+                .params
+                .iter()
+                .map(|p| parameter_to_abi(p, ns, &mut registry))
+                .collect(),
+            docs: f.doc.clone(),
+        });
+    }
 
     let messages = ns.contracts[contract_no]
         .function_table

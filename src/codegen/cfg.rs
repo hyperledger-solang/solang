@@ -80,7 +80,7 @@ pub enum Instr {
         success: Option<usize>,
         res: usize,
         contract_no: usize,
-        constructor_no: usize,
+        constructor_no: Option<usize>,
         args: Vec<Expression>,
         value: Option<Expression>,
         gas: Expression,
@@ -470,13 +470,26 @@ impl ControlFlowGraph {
             ),
             Expression::Constructor {
                 contract_no,
-                constructor_no,
+                constructor_no: Some(constructor_no),
                 args,
                 ..
             } => format!(
                 "(constructor:{} ({}) ({})",
                 ns.contracts[*contract_no].name,
                 ns.contracts[*contract_no].functions[*constructor_no].signature,
+                args.iter()
+                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::Constructor {
+                contract_no,
+                constructor_no: None,
+                args,
+                ..
+            } => format!(
+                "(constructor:{} ({})",
+                ns.contracts[*contract_no].name,
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
@@ -761,7 +774,7 @@ impl ControlFlowGraph {
                 salt,
                 value,
             } => format!(
-                "%{}, {} = constructor salt:{} value:{} gas:{} {} #{} ({})",
+                "%{}, {} = constructor salt:{} value:{} gas:{} {} #{:?} ({})",
                 self.vars[res].id.name,
                 match success {
                     Some(i) => format!("%{}", self.vars[i].id.name),
@@ -831,21 +844,31 @@ impl ControlFlowGraph {
     }
 }
 
+/// Generate the CFG for a function. If function_no is None, generate the implicit default
+/// constructor
 pub fn generate_cfg(
     contract_no: usize,
     base_contract_no: usize,
-    function_no: usize,
+    function_no: Option<usize>,
     ns: &Namespace,
 ) -> ControlFlowGraph {
     let mut cfg = ControlFlowGraph::new();
 
-    let mut vartab = Vartable::new_with_syms(
-        &ns.contracts[base_contract_no].functions[function_no].symtable,
-        ns.next_id,
-    );
-    let mut loops = LoopScopes::new();
+    let mut vartab = match function_no {
+        Some(function_no) => Vartable::new_with_syms(
+            &ns.contracts[base_contract_no].functions[function_no].symtable,
+            ns.next_id,
+        ),
+        None => Vartable::new(ns.next_id),
+    };
 
-    let func = &ns.contracts[base_contract_no].functions[function_no];
+    let mut loops = LoopScopes::new();
+    let default_constructor = &ns.default_constructor(contract_no);
+
+    let func = match function_no {
+        Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
+        None => default_constructor,
+    };
 
     // populate the argument variables
     for (i, arg) in func.symtable.arguments.iter().enumerate() {

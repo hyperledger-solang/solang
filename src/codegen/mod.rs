@@ -18,7 +18,7 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
         let mut generated = HashMap::new();
 
         for (signature, con) in &ns.contracts[contract_no].function_table {
-            let c = cfg::generate_cfg(contract_no, con.0, con.1, ns);
+            let c = cfg::generate_cfg(contract_no, con.0, Some(con.1), ns);
             generated.insert(signature.to_owned(), c);
         }
 
@@ -28,6 +28,14 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
 
         // Generate cfg for storage initializers
         ns.contracts[contract_no].initializer = storage_initializer(contract_no, ns);
+
+        if !ns.contracts[contract_no].have_constructor() {
+            // generate the default constructor
+            let func = ns.default_constructor(contract_no);
+
+            ns.contracts[contract_no].default_constructor =
+                Some((func, cfg::generate_cfg(contract_no, contract_no, None, ns)));
+        }
     }
 }
 
