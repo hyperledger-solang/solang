@@ -734,7 +734,7 @@ impl TargetRuntime for SabreTarget {
         _function: FunctionValue,
         _success: Option<&mut BasicValueEnum<'b>>,
         _contract_no: usize,
-        _constructor_no: usize,
+        _constructor_no: Option<usize>,
         _address: PointerValue<'b>,
         _args: &[BasicValueEnum],
         _gas: IntValue<'b>,

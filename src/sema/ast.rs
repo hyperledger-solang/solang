@@ -357,6 +357,7 @@ pub struct Contract {
     pub variables: Vec<ContractVariable>,
     pub creates: Vec<usize>,
     pub initializer: ControlFlowGraph,
+    pub default_constructor: Option<(Function, ControlFlowGraph)>,
 }
 
 impl Contract {
@@ -396,8 +397,7 @@ impl Contract {
     pub fn no_args_constructor(&self) -> Option<usize> {
         self.functions
             .iter()
-            .filter(|f| f.is_constructor())
-            .position(|f| f.params.is_empty())
+            .position(|f| f.is_constructor() && f.params.is_empty())
     }
 }
 
@@ -501,7 +501,7 @@ pub enum Expression {
     Constructor {
         loc: pt::Loc,
         contract_no: usize,
-        constructor_no: usize,
+        constructor_no: Option<usize>,
         args: Vec<Expression>,
         gas: Box<Expression>,
         value: Option<Box<Expression>>,

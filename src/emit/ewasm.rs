@@ -627,7 +627,7 @@ impl EwasmTarget {
         contract.builder.build_unreachable();
     }
 
-    fn emit_function_dispatch(&self, contract: &Contract) {
+    fn emit_function_dispatch(&mut self, contract: &Contract) {
         // create start function
         let ret = contract.context.void_type();
         let ftype = ret.fn_type(&[], false);
@@ -1182,7 +1182,7 @@ impl TargetRuntime for EwasmTarget {
         function: FunctionValue,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
-        constructor_no: usize,
+        constructor_no: Option<usize>,
         address: PointerValue<'b>,
         args: &[BasicValueEnum<'b>],
         _gas: IntValue<'b>,
@@ -1208,16 +1208,9 @@ impl TargetRuntime for EwasmTarget {
             true,
         );
 
-        assert_eq!(constructor_no, 0);
-
-        let params = if let Some(f) = resolver_contract
-            .functions
-            .iter()
-            .find(|f| f.is_constructor())
-        {
-            f.params.as_slice()
-        } else {
-            &[]
+        let params = match constructor_no {
+            Some(function_no) => resolver_contract.functions[function_no].params.as_slice(),
+            None => &[],
         };
 
         // input
@@ -1235,6 +1228,7 @@ impl TargetRuntime for EwasmTarget {
         let value_ptr = contract
             .builder
             .build_alloca(contract.value_type(), "balance");
+
         contract.builder.build_store(
             value_ptr,
             match value {

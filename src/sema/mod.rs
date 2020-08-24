@@ -964,6 +964,26 @@ impl ast::Namespace {
             }
         }
     }
+
+    /// Phoney default constructor
+    pub fn default_constructor(&self, contract_no: usize) -> ast::Function {
+        let mut func = ast::Function::new(
+            pt::Loc(0, 0, 0),
+            contract_no,
+            "".to_owned(),
+            vec![],
+            pt::FunctionTy::Constructor,
+            None,
+            pt::Visibility::Public(pt::Loc(0, 0, 0)),
+            Vec::new(),
+            Vec::new(),
+            self,
+        );
+
+        func.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), Vec::new())];
+
+        func
+    }
 }
 
 impl ast::Symbol {
