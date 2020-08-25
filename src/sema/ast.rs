@@ -351,6 +351,8 @@ pub struct Contract {
     pub ty: pt::ContractTy,
     pub name: String,
     pub bases: Vec<Base>,
+    // list of libraries used by this contract
+    pub libraries: Vec<usize>,
     pub layout: Vec<Layout>,
     // events
     pub functions: Vec<Function>,
@@ -374,6 +376,15 @@ impl Contract {
     // Is this an interface
     pub fn is_interface(&self) -> bool {
         if let pt::ContractTy::Interface(_) = self.ty {
+            true
+        } else {
+            false
+        }
+    }
+
+    // Is this an library
+    pub fn is_library(&self) -> bool {
+        if let pt::ContractTy::Library(_) = self.ty {
             true
         } else {
             false
@@ -489,7 +500,7 @@ pub enum Expression {
 
     Or(pt::Loc, Box<Expression>, Box<Expression>),
     And(pt::Loc, Box<Expression>, Box<Expression>),
-    InternalFunctionCall(pt::Loc, Vec<Type>, String, Vec<Expression>),
+    InternalFunctionCall(pt::Loc, Vec<Type>, usize, String, Vec<Expression>),
     ExternalFunctionCall {
         loc: pt::Loc,
         returns: Vec<Type>,
@@ -620,7 +631,7 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::InternalFunctionCall(_, _, _, args) => {
+                Expression::InternalFunctionCall(_, _, _, _, args) => {
                     for e in args {
                         e.recurse(cx, f);
                     }

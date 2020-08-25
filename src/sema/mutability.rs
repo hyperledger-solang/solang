@@ -27,7 +27,6 @@ struct StateCheck<'a> {
     can_write_state: bool,
     func: &'a Function,
     ns: &'a Namespace,
-    contract_no: usize,
 }
 
 impl<'a> StateCheck<'a> {
@@ -75,7 +74,6 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
         can_read_state: false,
         func,
         ns,
-        contract_no,
     };
 
     match func.mutability {
@@ -229,9 +227,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Constructor { loc, .. } => {
             state.write(loc);
         }
-        Expression::InternalFunctionCall(loc, _, signature, _) => {
+        Expression::InternalFunctionCall(loc, _, contract_no, signature, _) => {
             let (base_contract_no, function_no, _) =
-                state.ns.contracts[state.contract_no].function_table[signature];
+                state.ns.contracts[*contract_no].function_table[signature];
 
             match &state.ns.contracts[base_contract_no].functions[function_no].mutability {
                 None | Some(pt::StateMutability::Payable(_)) => state.write(loc),

@@ -252,6 +252,32 @@ pub fn function_decl(
             ));
             success = false;
         }
+    } else if ns.contracts[contract_no].is_library() {
+        if func.ty != pt::FunctionTy::Function {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                format!("{} not allowed in a library", func.ty),
+            ));
+            success = false;
+        } else if func.body.is_empty() {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                "function in a library must have a body".to_string(),
+            ));
+            success = false;
+        } else if let Some((loc, _)) = is_override {
+            ns.diagnostics.push(Diagnostic::error(
+                loc,
+                "function in a library cannot override".to_string(),
+            ));
+            success = false;
+        } else if let Some(pt::StateMutability::Payable(_)) = mutability {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                "function in a library cannot be payable".to_string(),
+            ));
+            success = false;
+        }
     } else if func.ty == pt::FunctionTy::Constructor && is_virtual.is_some() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
@@ -269,6 +295,15 @@ pub fn function_decl(
         }
 
         true
+    } else if ns.contracts[contract_no].is_library() {
+        if let Some(loc) = is_virtual {
+            ns.diagnostics.push(Diagnostic::error(
+                loc,
+                "functions in a library cannot be virtual".to_string(),
+            ));
+        }
+
+        false
     } else {
         is_virtual.is_some()
     };

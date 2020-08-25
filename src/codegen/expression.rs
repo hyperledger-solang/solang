@@ -351,7 +351,7 @@ pub fn expression(
 
             Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
         }
-        Expression::InternalFunctionCall(_, _, _, _)
+        Expression::InternalFunctionCall(_, _, _, _, _)
         | Expression::ExternalFunctionCall { .. }
         | Expression::Builtin(_, _, Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, ns, vartab);
@@ -977,14 +977,14 @@ pub fn emit_function_call(
     vartab: &mut Vartable,
 ) -> Vec<Expression> {
     match expr {
-        Expression::InternalFunctionCall(_, _, signature, args) => {
+        Expression::InternalFunctionCall(_, _, contract_no, signature, args) => {
             let args = args
                 .iter()
                 .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
                 .collect();
 
             let (contract_no, function_no, _) =
-                ns.contracts[callee_contract_no].function_table[signature];
+                ns.contracts[*contract_no].function_table[signature];
 
             let ftype = &ns.contracts[contract_no].functions[function_no];
 

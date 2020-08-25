@@ -18,6 +18,7 @@ use super::ast::{
     StringLocation, Symbol, Type,
 };
 use super::builtin;
+use super::contracts::import_library;
 use super::eval::eval_const_number;
 use super::symtable::Symtable;
 use crate::Target;
@@ -88,7 +89,7 @@ impl Expression {
             | Expression::StringConcat(loc, _, _, _)
             | Expression::Keccak256(loc, _, _)
             | Expression::ReturnData(loc)
-            | Expression::InternalFunctionCall(loc, _, _, _)
+            | Expression::InternalFunctionCall(loc, _, _, _, _)
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
@@ -186,7 +187,7 @@ impl Expression {
                 panic!("two return values");
             }
             Expression::Builtin(_, returns, _, _)
-            | Expression::InternalFunctionCall(_, returns, _, _)
+            | Expression::InternalFunctionCall(_, returns, _, _, _)
             | Expression::ExternalFunctionCall { returns, .. } => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()
@@ -218,7 +219,7 @@ impl Expression {
     pub fn tys(&self) -> Vec<Type> {
         match self {
             Expression::Builtin(_, returns, _, _)
-            | Expression::InternalFunctionCall(_, returns, _, _)
+            | Expression::InternalFunctionCall(_, returns, _, _, _)
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
             Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
             Expression::ExternalFunctionCallRaw { .. } => vec![Type::Bool, Type::DynamicBytes],
@@ -3313,6 +3314,7 @@ fn function_call_pos_args(
         return Ok(Expression::InternalFunctionCall(
             *loc,
             returns,
+            contract_no.unwrap(),
             signature.to_owned(),
             cast_args,
         ));
@@ -3446,6 +3448,7 @@ fn function_call_with_named_args(
         return Ok(Expression::InternalFunctionCall(
             *loc,
             returns,
+            contract_no.unwrap(),
             signature.to_owned(),
             cast_args,
         ));
@@ -3560,6 +3563,31 @@ fn method_call_pos_args(
                 ns,
                 symtable,
             );
+        }
+
+        // library or base contract call
+        if let Some(library_contract_no) = ns.resolve_contract(file_no, &namespace) {
+            if ns.contracts[library_contract_no].is_library() {
+                if let Some(loc) = call_args_loc {
+                    ns.diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on library calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                import_library(contract_no.unwrap(), library_contract_no, ns);
+
+                return function_call_pos_args(
+                    loc,
+                    func,
+                    args,
+                    file_no,
+                    Some(library_contract_no),
+                    ns,
+                    symtable,
+                );
+            }
         }
     }
 
@@ -3992,11 +4020,39 @@ fn method_call_named_args(
     func_name: &pt::Identifier,
     args: &[pt::NamedArgument],
     call_args: &[&pt::NamedArgument],
+    call_args_loc: Option<pt::Loc>,
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
+    if let pt::Expression::Variable(namespace) = var {
+        // library or base contract call
+        if let Some(library_contract_no) = ns.resolve_contract(file_no, &namespace) {
+            if ns.contracts[library_contract_no].is_library() {
+                if let Some(loc) = call_args_loc {
+                    ns.diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not allowed on library calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
+                import_library(contract_no.unwrap(), library_contract_no, ns);
+
+                return function_call_with_named_args(
+                    loc,
+                    func_name,
+                    args,
+                    file_no,
+                    Some(library_contract_no),
+                    ns,
+                    symtable,
+                );
+            }
+        }
+    }
+
     let var_expr = expression(var, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var_expr.ty();
 
@@ -4512,6 +4568,7 @@ pub fn named_function_call_expr(
             func,
             args,
             &call_args,
+            call_args_loc,
             file_no,
             contract_no,
             ns,
