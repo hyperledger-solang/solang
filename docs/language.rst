@@ -1892,6 +1892,9 @@ As a result of this, any method call on a variable of type ``int32[100]`` will b
 For the call to match, the first argument of the function must match the variable; note that here, `bar`
 is of type ``storage``, since all contract variables are implicitly ``storage``.
 
+There is an alternative syntax ``using`` `library` ``for *;`` which binds the library functions to any
+variable that will match according to these rules.
+
 Sending and receiving value
 ---------------------------
 
