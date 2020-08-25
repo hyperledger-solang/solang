@@ -461,8 +461,9 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCall(_, _, signature, args) => format!(
-                "(call {} ({})",
+            Expression::InternalFunctionCall(_, _, contract_no, signature, args) => format!(
+                "(call {} {} ({})",
+                contract_no,
                 signature,
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))

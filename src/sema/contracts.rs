@@ -23,6 +23,7 @@ impl ast::Contract {
             loc,
             ty,
             bases: Vec::new(),
+            libraries: Vec::new(),
             layout: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
@@ -112,6 +113,16 @@ fn resolve_base_contracts(
 ) {
     for (contract_no, def) in contracts {
         for base in &def.base {
+            if ns.contracts[*contract_no].is_library() {
+                ns.diagnostics.push(ast::Diagnostic::error(
+                    base.loc,
+                    format!(
+                        "library ‘{}’ cannot have a base contract",
+                        ns.contracts[*contract_no].name
+                    ),
+                ));
+                continue;
+            }
             let name = &base.name;
             match ns.resolve_contract(file_no, name) {
                 Some(no) => {
@@ -151,6 +162,16 @@ fn resolve_base_contracts(
                             format!(
                                 "interface ‘{}’ cannot have {} ‘{}’ as a base",
                                 ns.contracts[*contract_no].name, ns.contracts[no].ty, name.name
+                            ),
+                        ));
+                    } else if ns.contracts[no].is_library() {
+                        let contract = &ns.contracts[*contract_no];
+
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            name.loc,
+                            format!(
+                                "library ‘{}’ cannot be used as base contract for {} ‘{}’",
+                                name.name, contract.ty, contract.name,
                             ),
                         ));
                     } else {
@@ -781,4 +802,23 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics.into_iter());
+}
+
+/// Make it possible to use a library in a contract
+pub fn import_library(contract_no: usize, library_no: usize, ns: &mut ast::Namespace) {
+    if ns.contracts[contract_no].libraries.contains(&library_no) {
+        return;
+    }
+
+    ns.contracts[contract_no].libraries.push(library_no);
+
+    for function_no in 0..ns.contracts[library_no].functions.len() {
+        let signature = ns.contracts[library_no].functions[function_no]
+            .vsignature
+            .to_owned();
+
+        ns.contracts[contract_no]
+            .function_table
+            .insert(signature, (library_no, function_no, None));
+    }
 }

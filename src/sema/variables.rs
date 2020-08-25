@@ -11,25 +11,22 @@ pub fn contract_variables(
 ) -> bool {
     let mut broken = false;
     let mut symtable = Symtable::new();
-    let is_interface = if let pt::ContractTy::Interface(_) = def.ty {
-        true
-    } else {
-        false
+    let may_have_state = match def.ty {
+        pt::ContractTy::Interface(_) | pt::ContractTy::Library(_) => false,
+        _ => true,
     };
 
     for parts in &def.parts {
         if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {
-            if is_interface {
+            if !may_have_state {
                 ns.diagnostics.push(Diagnostic::error(
                     s.loc,
                     format!(
-                        "interface ‘{}’ is not allowed to have variable ‘{}’",
-                        def.name.name, s.name.name
+                        "{} ‘{}’ is not allowed to have state variable ‘{}’",
+                        def.ty, def.name.name, s.name.name
                     ),
                 ));
-            }
-
-            if !var_decl(s, file_no, contract_no, ns, &mut symtable) {
+            } else if !var_decl(s, file_no, contract_no, ns, &mut symtable) {
                 broken = true;
             }
         }
