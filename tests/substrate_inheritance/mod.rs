@@ -1,5 +1,5 @@
 extern crate solang;
-use super::{build_solidity, first_error, no_errors, parse_and_resolve};
+use super::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 use solang::file_cache::FileCache;
@@ -157,27 +157,13 @@ fn test_interface() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "functions can not have bodies in an interface"
+        "function in an interface cannot have a body"
     );
 
     let ns = parse_and_resolve(
         r#"
         interface foo {
-            function bar() virtual private;
-        }
-        "#,
-        Target::Substrate,
-    );
-
-    assert_eq!(
-        first_error(ns.diagnostics),
-        "function marked ‘virtual’ cannot also be ‘private’"
-    );
-
-    let ns = parse_and_resolve(
-        r#"
-        interface bar {
-            function foo() virtual internal;
+            function bar() private;
         }
         "#,
         Target::Substrate,
@@ -186,6 +172,70 @@ fn test_interface() {
     assert_eq!(
         first_error(ns.diagnostics),
         "functions must be declared ‘external’ in an interface"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface foo {
+            function bar() internal;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "functions must be declared ‘external’ in an interface"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface foo is a {
+            function bar() internal;
+        }
+
+        abstract contract a {
+            function f() internal {}
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "interface ‘foo’ cannot have abstract contract ‘a’ as a base"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface foo is a {
+            function bar() internal;
+        }
+
+        contract a {
+            function f() internal {}
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "interface ‘foo’ cannot have contract ‘a’ as a base"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface bar {
+            function foo() virtual external;
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(ns.diagnostics),
+        "functions in an interface are implicitly virtual"
     );
 }
 
@@ -1009,6 +1059,42 @@ fn test_override() {
     assert_eq!(
         runtime.store.get(&(runtime.vm.address, slot)).unwrap(),
         &vec!(2)
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface b {
+                function bar(int64 x) external;
+        }
+        
+        contract a is b {
+                function bar(int x) public { print ("foo"); } 
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘a’ is missing function overrides"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        interface b {
+                function bar(int64 x) external;
+        }
+        
+        contract a is b {
+                function bar(int64 x) public override; 
+        }
+        "#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function with no body must be marked ‘virtual’"
     );
 }
 

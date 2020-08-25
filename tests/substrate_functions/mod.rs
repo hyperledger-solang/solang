@@ -19,6 +19,19 @@ fn constructors() {
         "‘internal’: visibility for constructors is ignored"
     );
 
+    let ns = parse_and_resolve(
+        r##"
+        contract test {
+            constructor() virtual {}
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "constructors cannot be declared ‘virtual’"
+    );
+
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Val(u64);
 

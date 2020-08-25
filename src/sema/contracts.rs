@@ -99,6 +99,7 @@ pub fn resolve(
 
     for (contract_no, _) in contracts {
         check_base_args(*contract_no, ns);
+        missing_overrides(*contract_no, ns);
     }
 }
 
@@ -140,6 +141,16 @@ fn resolve_base_contracts(
                             format!(
                                 "base ‘{}’ from contract ‘{}’ is cyclic",
                                 name.name, ns.contracts[*contract_no].name
+                            ),
+                        ));
+                    } else if ns.contracts[*contract_no].is_interface()
+                        && !ns.contracts[no].is_interface()
+                    {
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            name.loc,
+                            format!(
+                                "interface ‘{}’ cannot have {} ‘{}’ as a base",
+                                ns.contracts[*contract_no].name, ns.contracts[no].ty, name.name
                             ),
                         ));
                     } else {
@@ -239,7 +250,7 @@ pub fn is_base(base: usize, parent: usize, ns: &ast::Namespace) -> bool {
         .any(|parent| is_base(base, parent.contract_no, ns))
 }
 
-/// Layout the contract. We determine the layout of variables
+/// Layout the contract. We determine the layout of variables and deal with overriding variables
 fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     let mut syms: HashMap<String, ast::Symbol> = HashMap::new();
     let mut override_needed: HashMap<String, Vec<(usize, usize)>> = HashMap::new();
@@ -497,6 +508,42 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     }
 }
 
+// are we missing any function overrides
+fn missing_overrides(contract_no: usize, ns: &mut ast::Namespace) {
+    if ns.contracts[contract_no].is_concrete() {
+        let mut notes = Vec::new();
+        for (base_contract_no, function_no, _) in ns.contracts[contract_no].function_table.values()
+        {
+            let func = &ns.contracts[*base_contract_no].functions[*function_no];
+
+            if func.body.is_empty() {
+                match func.ty {
+                    pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
+                        notes.push(ast::Note {
+                            pos: func.loc,
+                            message: format!("missing override for ‘{}’ function", func.ty),
+                        });
+                    }
+                    _ => notes.push(ast::Note {
+                        pos: func.loc,
+                        message: format!("missing override for function ‘{}’", func.name),
+                    }),
+                }
+            }
+        }
+
+        if !notes.is_empty() {
+            let contract = &ns.contracts[contract_no];
+
+            ns.diagnostics.push(ast::Diagnostic::error_with_notes(
+                contract.loc,
+                format!("contract ‘{}’ is missing function overrides", contract.name),
+                notes,
+            ));
+        }
+    }
+}
+
 /// Resolve functions declarations, constructor declarations, and contract variables
 /// This returns a list of function bodies to resolve
 fn resolve_declarations<'a>(
@@ -526,21 +573,20 @@ fn resolve_declarations<'a>(
         }
     }
 
-    match &def.ty {
-        pt::ContractTy::Contract(loc) => {
-            if !function_no_bodies.is_empty() {
-                let notes = function_no_bodies
-                    .into_iter()
-                    .map(|function_no| ast::Note {
-                        pos: ns.contracts[contract_no].functions[function_no].loc,
-                        message: format!(
-                            "location of function ‘{}’ with no body",
-                            ns.contracts[contract_no].functions[function_no].name
-                        ),
-                    })
-                    .collect::<Vec<ast::Note>>();
+    if let pt::ContractTy::Contract(loc) = &def.ty {
+        if !function_no_bodies.is_empty() {
+            let notes = function_no_bodies
+                .into_iter()
+                .map(|function_no| ast::Note {
+                    pos: ns.contracts[contract_no].functions[function_no].loc,
+                    message: format!(
+                        "location of function ‘{}’ with no body",
+                        ns.contracts[contract_no].functions[function_no].name
+                    ),
+                })
+                .collect::<Vec<ast::Note>>();
 
-                ns.diagnostics.push(ast::Diagnostic::error_with_notes(
+            ns.diagnostics.push(ast::Diagnostic::error_with_notes(
                     *loc,
                     format!(
                         "contract should be marked ‘abstract contract’ since it has {} functions with no body",
@@ -548,37 +594,7 @@ fn resolve_declarations<'a>(
                     ),
                     notes,
                 ));
-            }
         }
-        pt::ContractTy::Interface(_) => {
-            // no constructor allowed, every function should be declared external and no bodies allowed
-            for func in &ns.contracts[contract_no].functions {
-                if func.is_constructor() {
-                    ns.diagnostics.push(ast::Diagnostic::error(
-                        func.loc,
-                        "constructor not allowed in an interface".to_string(),
-                    ));
-                    continue;
-                }
-
-                if !func.is_virtual {
-                    ns.diagnostics.push(ast::Diagnostic::error(
-                        func.loc,
-                        "functions can not have bodies in an interface".to_string(),
-                    ));
-                    continue;
-                }
-
-                if !func.is_public() {
-                    ns.diagnostics.push(ast::Diagnostic::error(
-                        func.loc,
-                        "functions must be declared ‘external’ in an interface".to_string(),
-                    ));
-                    continue;
-                }
-            }
-        }
-        _ => (),
     }
 
     // resolve state variables
