@@ -230,7 +230,50 @@ pub fn function_decl(
     let (returns, returns_success) =
         resolve_returns(func, storage_allowed, file_no, contract_no, ns);
 
-    if is_virtual.is_none() && func.body.is_empty() {
+    if ns.contracts[contract_no].is_interface() {
+        if func.ty == pt::FunctionTy::Constructor {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                "constructor not allowed in an interface".to_string(),
+            ));
+            success = false;
+        } else if !func.body.is_empty() {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                "function in an interface cannot have a body".to_string(),
+            ));
+            success = false;
+        } else if let pt::Visibility::External(_) = visibility {
+            // ok
+        } else {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                "functions must be declared ‘external’ in an interface".to_string(),
+            ));
+            success = false;
+        }
+    } else if func.ty == pt::FunctionTy::Constructor && is_virtual.is_some() {
+        ns.diagnostics.push(Diagnostic::error(
+            func.loc,
+            "constructors cannot be declared ‘virtual’".to_string(),
+        ));
+    }
+
+    // all functions in an interface are implicitly virtual
+    let is_virtual = if ns.contracts[contract_no].is_interface() {
+        if let Some(loc) = is_virtual {
+            ns.diagnostics.push(Diagnostic::warning(
+                loc,
+                "functions in an interface are implicitly virtual".to_string(),
+            ));
+        }
+
+        true
+    } else {
+        is_virtual.is_some()
+    };
+
+    if !is_virtual && func.body.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
             "function with no body must be marked ‘virtual’".to_string(),
@@ -239,7 +282,7 @@ pub fn function_decl(
     }
 
     if let pt::Visibility::Private(_) = visibility {
-        if is_virtual.is_some() {
+        if is_virtual {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
                 "function marked ‘virtual’ cannot also be ‘private’".to_string(),
@@ -270,7 +313,7 @@ pub fn function_decl(
         ns,
     );
 
-    fdecl.is_virtual = is_virtual.is_some();
+    fdecl.is_virtual = is_virtual;
     fdecl.is_override = is_override;
 
     if func.ty == pt::FunctionTy::Constructor {

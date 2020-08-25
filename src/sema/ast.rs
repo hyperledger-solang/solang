@@ -371,6 +371,15 @@ impl Contract {
         }
     }
 
+    // Is this an interface
+    pub fn is_interface(&self) -> bool {
+        if let pt::ContractTy::Interface(_) = self.ty {
+            true
+        } else {
+            false
+        }
+    }
+
     /// Get the storage slot for a variable, possibly from base contract
     pub fn get_storage_slot(&self, var_contract_no: usize, var_no: usize) -> Expression {
         if let Some(layout) = self
