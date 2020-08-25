@@ -46,6 +46,11 @@ Options:
   This takes one argument, which can either be ``none``, ``less``, ``default``,
   or ``aggressive``. These correspond to llvm optimization levels.
 
+\\-\\-importpath *directory*
+  When resolving ``import`` directives, search this directory. By default ``import``
+  will only search the current directory. This option can be specified multiple times
+  and they will be searched in-order.
+
 \\-\\-help, -h
   This displays a short description of all the options
 
