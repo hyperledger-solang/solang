@@ -3913,7 +3913,10 @@ impl<'a> Contract<'a> {
         for (signature, (base_contract_no, function_no, _)) in &self.contract.function_table {
             let f = &self.ns.contracts[*base_contract_no].functions[*function_no];
 
-            if f.ty != function_ty || !f.is_public() {
+            if f.ty != function_ty
+                || !f.is_public()
+                || self.ns.contracts[*base_contract_no].is_library()
+            {
                 continue;
             }
 

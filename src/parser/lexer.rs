@@ -168,6 +168,7 @@ pub enum Token<'input> {
     Abstract,
     Virtual,
     Override,
+    Using,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -293,6 +294,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Abstract => write!(f, "abstract"),
             Token::Virtual => write!(f, "virtual"),
             Token::Override => write!(f, "override"),
+            Token::Using => write!(f, "using"),
         }
     }
 }
@@ -509,6 +511,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "abstract" => Token::Abstract,
     "virtual" => Token::Virtual,
     "override" => Token::Override,
+    "using" => Token::Using,
 };
 
 impl<'input> Lexer<'input> {

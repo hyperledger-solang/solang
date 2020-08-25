@@ -140,3 +140,211 @@ fn simple() {
 
     assert_eq!(runtime.vm.scratch, Val(65536).encode());
 }
+
+#[test]
+fn using() {
+    let ns = parse_and_resolve(
+        r#"
+        contract c {
+            using x for x;
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "library ‘x’ not found");
+
+    let ns = parse_and_resolve(
+        r#"
+        contract x {
+            constructor() {}
+        }
+
+        contract c {
+            using x for x;
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "library expected but contract ‘x’ found"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        library x {
+            function max(uint64 a, uint64 b) private pure returns (uint64) {
+                return a > b ? a : b;
+            }
+        }
+
+        contract c {
+            using x for asdf;
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "type ‘asdf’ not found");
+
+    let ns = parse_and_resolve(
+        r#"
+        library x {
+            function max(uint64 a, uint64 b) private pure returns (uint64) {
+                return a > b ? a : b;
+            }
+        }
+
+        contract c {
+            using x for x;
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "using library ‘x’ to extend library type not possible"
+    );
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(u64);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            using ints for uint64;
+            function foo(uint64 x) public pure returns (uint64) {
+                return x.max(65536);
+            }
+        }
+
+        library ints {
+            function max(uint64 a, uint64 b) internal pure returns (uint64) {
+                return a > b ? a : b;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("foo", Val(102).encode());
+
+    assert_eq!(runtime.vm.scratch, Val(65536).encode());
+
+    // the using directive can specify a different type than the function in the library,
+    // as long as it casts implicitly and matches the type of method call _exactly_
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            using ints for uint32;
+            function foo(uint32 x) public pure returns (uint64) {
+                // x is 32 bit but the max function takes 64 bit uint
+                return x.max(65536);
+            }
+        }
+
+        library ints {
+            function max(uint64 a, uint64 b) internal pure returns (uint64) {
+                return a > b ? a : b;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("foo", Val(102).encode());
+
+    assert_eq!(runtime.vm.scratch, Val(65536).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract test {
+            using lib for int32[100];
+            bool i_exists_to_make_bar_have_non_zero_storage_slot;
+            int32[100] bar;
+    
+            function foo() public returns (int64) {
+                    bar.set(10, 571);
+    
+                    return bar[10];
+            }
+        }
+    
+        library lib {
+            function set(int32[100] storage a, uint index, int32 val) internal {
+                    a[index] = val;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("foo", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val(571).encode());
+
+    let ns = parse_and_resolve(
+        r##"
+        contract test {
+            using ints for uint64;
+            function foo(uint32 x) public pure returns (uint64) {
+                // x is 32 bit but the max function takes 64 bit uint
+                return x.max(65536);
+            }
+        }
+
+        library ints {
+            function max(uint64 a, uint64 b) internal pure returns (uint64) {
+                return a > b ? a : b;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "method ‘max’ does not exist");
+
+    let ns = parse_and_resolve(
+        r##"
+        contract test {
+            using ints for uint32;
+            function foo(uint32 x) public pure returns (uint64) {
+                // x is 32 bit but the max function takes 64 bit uint
+                return x.max(65536, 2);
+            }
+        }
+
+        library ints {
+            function max(uint64 a, uint64 b) internal pure returns (uint64) {
+                return a > b ? a : b;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "library function expects 2 arguments, 3 provided (including self)"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        contract test {
+            using ints for uint32;
+            function foo(uint32 x) public pure returns (uint64) {
+                // x is 32 bit but the max function takes 64 bit uint
+                return x.max(65536, 2);
+            }
+        }
+
+        library ints {
+            function max(uint64 a, uint64 b) internal pure returns (uint64) {
+                return a > b ? a : b;
+            }
+            function max(uint64 a) internal pure returns (uint64) {
+                return a;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "cannot find overloaded library function which matches signature"
+    );
+}

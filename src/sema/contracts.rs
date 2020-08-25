@@ -24,6 +24,7 @@ impl ast::Contract {
             ty,
             bases: Vec::new(),
             libraries: Vec::new(),
+            using: Vec::new(),
             layout: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
@@ -78,6 +79,8 @@ pub fn resolve(
     ns: &mut ast::Namespace,
 ) {
     resolve_base_contracts(contracts, file_no, ns);
+
+    resolve_using(contracts, file_no, ns);
 
     // we need to resolve declarations first, so we call functions/constructors of
     // contracts before they are declared
@@ -622,6 +625,59 @@ fn resolve_declarations<'a>(
     variables::contract_variables(&def, file_no, contract_no, ns);
 
     resolve_bodies
+}
+
+/// Resolve the using declarations in a contract
+fn resolve_using(
+    contracts: &[(usize, &pt::ContractDefinition)],
+    file_no: usize,
+    ns: &mut ast::Namespace,
+) {
+    for (contract_no, def) in contracts {
+        for part in &def.parts {
+            if let pt::ContractPart::Using(using) = part {
+                if let Some(library_no) = ns.resolve_contract(file_no, &using.library) {
+                    if !ns.contracts[library_no].is_library() {
+                        ns.diagnostics.push(ast::Diagnostic::error(
+                            using.library.loc,
+                            format!(
+                                "library expected but {} ‘{}’ found",
+                                ns.contracts[library_no].ty, using.library.name
+                            ),
+                        ));
+
+                        continue;
+                    }
+
+                    let ty = if let Some(expr) = &using.ty {
+                        match ns.resolve_type(file_no, Some(*contract_no), false, expr) {
+                            Ok(ast::Type::Contract(contract_no)) => {
+                                ns.diagnostics.push(ast::Diagnostic::error(
+                                    using.library.loc,
+                                    format!(
+                                        "using library ‘{}’ to extend {} type not possible",
+                                        using.library.name, ns.contracts[contract_no].ty
+                                    ),
+                                ));
+                                continue;
+                            }
+                            Ok(ty) => Some(ty),
+                            Err(_) => continue,
+                        }
+                    } else {
+                        None
+                    };
+
+                    ns.contracts[*contract_no].using.push((library_no, ty));
+                } else {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        using.library.loc,
+                        format!("library ‘{}’ not found", using.library.name),
+                    ));
+                }
+            }
+        }
+    }
 }
 
 /// Resolve contract functions bodies

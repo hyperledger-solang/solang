@@ -222,7 +222,10 @@ pub fn function_decl(
             }
             true
         }
-        pt::Visibility::Public(_) | pt::Visibility::External(_) => false,
+        pt::Visibility::Public(_) | pt::Visibility::External(_) => {
+            // library function abi is special. Storage vars are allowed
+            ns.contracts[contract_no].is_library()
+        }
     };
 
     let (params, params_success) = resolve_params(func, storage_allowed, file_no, contract_no, ns);
