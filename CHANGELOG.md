@@ -2,7 +2,7 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## Unreleased
+## [0.1.3]
 
 ### Added
 - `import` directives are supported

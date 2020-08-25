@@ -9,11 +9,11 @@ Download release binaries
 
 For Ubuntu, there is an x86-64 binary available in the github releases:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.2/solang_ubuntu>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.3/solang_linux>`_
 
 For Windows x64, there is a pre-built binary available here:
 
-`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.2/solang.exe>`_
+`<https://github.com/hyperledger-labs/solang/releases/download/v0.1.3/solang.exe>`_
 
 Using hyperledgerlabs/solang docker hub images
 ----------------------------------------------
