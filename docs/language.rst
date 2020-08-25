@@ -31,22 +31,71 @@ although it this might be convenient.
 
 .. code-block:: javascript
 
-  contract A {
-      /// foo simply returns true
-      function foo() public return (bool) {
-          return true;
-      }
-  }
+    import "foo.sol";
 
-  contract B {
-      /// bar simply returns false
-      function bar() public return (bool) {
-          return false;
-      }
-  }
+    contract A {
+        /// foo simply returns true
+        function foo() public return (bool) {
+            return true;
+        }
+    }
+
+    contract B {
+        /// bar simply returns false
+        function bar() public return (bool) {
+            return false;
+        }
+    }
 
 When compiling this, Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI
 files for each contract.
+
+Imports
+_______
+
+The ``import`` directive is used to import types by name from other Solidity files; this means that
+structs, enums, contracts, abstract contract, libraries, and interfaces can be used from another
+Solidity file. This can be useful to keep a single definition in one file, which can be used
+in multiple other files.
+
+There are a few different flavours of import. You can specify if you want all types imported,
+or a just a select few. You can also rename the types. The simplest form is:
+
+.. code-block:: javascript
+
+    import "foo.sol";
+
+This means that every type defined in `foo.sol` is now usable in your Solidity file, actually
+also on the lines before the import statement. However, if a type with the same name is defined
+in `foo.sol` and also in the current file, you will get a warning. Note that if the same file
+gets imported more than once, the duplicate types are removed.
+
+It is also possible to import only types with a specific name, or to rename them. In this case,
+this means only type `foo` will be imported, and `bar` will be imported as `baz`. 
+
+.. code-block:: javascript
+
+    import {bar as baz,foo} from "foo.sol";
+
+Rather than renaming individual types, it is also possible to make all the types in a file
+available under a special import type. In this case, the `bar` defined in `foo.sol` can is
+now visible as `foo.bar`. As long as there is no previous type `foo`, this means there can be
+no naming conflicts.
+
+.. code-block:: javascript
+
+    import "foo.sol" as foo;
+
+This also has a slightly more baroque syntax, which does exactly the same.
+
+.. code-block:: javascript
+
+    import * as foo from "foo.sol";
+
+
+
+
+
 
 Pragmas
 _______
@@ -65,11 +114,6 @@ when using Solang.
 The `ABIEncoderV2` pragma is not needed with Solang; structures can always be ABI encoded or
 decoded. All other pragma statements are ignored, but generate warnings. A pragma must be
 terminated with a semicolon.
-
-.. note::
-
-    The Ethereum Foundation Solidity compiler can also contain elements other than contracts and
-    pragmas: ``import``, ``library``, ``interface``. These are not supported yet.
 
 Types
 -----
@@ -1577,6 +1621,276 @@ Both functions must be declare ``external``.
             // execute if function selector does not match "foo(uint32)" and value sent
         }
     }
+
+Base contracts, abstract contracts and interfaces
+-------------------------------------------------
+
+Solidity contracts support object-oriented programming. The style Solidity is somewhat similar to C++,
+but there are many differences. In Solidity we are dealing with contracts, not classes.
+
+Specifying base contracts
+_________________________
+
+To inherit from another contract, you have to specify it as a base contract. Multiple contracts can
+be specified here.
+
+.. code-block:: javascript
+
+    contact a is b, c {
+        constructor() {}
+    }
+
+    contact b {
+        int foo;
+        function func2() public {}
+        constructor() {}
+    }
+
+    contact c {
+        int bar;
+        constructor() {}
+        function func1() public {}
+    }
+
+In this case, contract ``a`` inherits both ``b`` and ``c``. This means that both ``func1()`` and ``func1()``
+are visible in contract ``a``, and will be part of its public interface if they are declare ``public`` or
+``external``. In addition, the contract storage variables ``foo`` and ``bar`` are also availabe in ``a``.
+
+Inheriting contracts is recursive; this means that if you inherit a contract, you also inherit everything
+that that contract inherits. In this example, contract ``a`` inherits ``b`` directly, and inherits ``c``
+through ``b``. This means that contract ``b`` also has a variable ``bar``. 
+
+.. code-block:: javascript
+
+    contact a is b {
+        constructor() {}
+    }
+
+    contact b is c {
+        int foo;
+        function func2() public {}
+        constructor() {}
+    }
+
+    contact c {
+        int bar;
+        constructor() {}
+        function func1() public {}
+    }
+
+Virtual Functions
+_________________
+
+When inheriting a base contract, it is possible to override a function with a newer function with the same name
+and signature. For this to be possible, the base contract must have specified the function as ``virtual``. The
+inheriting contract must then specify the same function with the same name, arguments and return values, and
+add the ``override`` keyword.
+
+.. code-block:: javascript
+
+    contact a is b {
+        function func(int a) override public returns (int) {
+            return a + 11;
+        }
+    }
+
+    contact b {
+        function func(int a) virtual public returns (int) {
+            return a + 10;
+        }
+    }
+
+If the function is present in more than one base contract, the ``override`` attribute must list all the base
+contracts it is overriding.
+
+.. code-block:: javascript
+
+    contact a is b,c {
+        function func(int a) override(b,c) public returns (int) {
+            return a + 11;
+        }
+    }
+
+    contact b {
+        function func(int a) virtual public returns (int) {
+            return a + 10;
+        }
+    }
+
+    contact c {
+        function func(int a) virtual public returns (int) {
+            return a + 5;
+        }
+    }
+
+
+Specifying constructor arguments
+________________________________
+
+If a contract inherits another contract, then when it is instantiated or deployed, then the constructor for
+its inherited contracts is called. The constructor arguments can be specified on the base contract itself.
+
+.. code-block:: javascript
+
+    contact a is b(1) {
+        constructor() {}
+    }
+
+    contact b is c(2) {
+        int foo;
+        function func2(int i) public {}
+        constructor() {}
+    }
+
+    contact c {
+        int bar;
+        constructor(int32 j) {}
+        function func1() public {}
+    }
+
+When ``a`` is deployed, the constructor for ``c`` is executed first, then ``b``, and lastly ``a``. When the
+constructor arguments are specified on the base contract, the values must be constant. It is possible to specify
+the base arguments on the constructor for inheriting contract. Now we have access to the constructor arguments,
+which means we can have runtime-defined arguments to the inheriting constructors.
+
+.. code-block:: javascript
+
+    contact a is b {
+        constructor(int i) b(i+2) {}
+    }
+
+    contact b is c {
+        int foo;
+        function func2() public {}
+        constructor(int j) c(j+3) {}
+    }
+
+    contact c {
+        int bar;
+        constructor(int32 k) {}
+        function func1() public {}
+    }
+
+The execution is not entirely intuitive in this case. When contract ``a`` is deployed with an int argument of 10,
+then first the constructor argument or contract ``b`` is calculated: 10+2, and that value is used as an 
+argument to constructor ``b``. constructor ``b`` calculates the arguments for constructor ``c`` to be: 12+3. Now,
+with all the arguments for all the constructors established, constructor ``c`` is executed with argument 15, then 
+constructor ``b`` with argument 12, and lastly constructor ``a`` with the original argument 10.
+
+Abstract Contracts
+__________________
+
+An ``abstract contract`` is one that cannot be instantiated, but it can be used as a base for another contract,
+which can be instantiated. A contract can be abstract because the functions it defines do not have a body,
+for example:
+
+.. code-block:: javascript
+
+    abstract contact a {
+        function func2() virtual public;
+    }
+
+This contract cannot be instantiated, since there is no body or implementation for ``func2``. Another contract
+can define this contract as a base contract and override ``func2`` with a body.
+
+Another reason why a contract must be abstract is missing constructor arguments. In this case, if we were to
+instantiate contract ``a`` we would not know what the constructor arguments to its base ``b`` would have to be.
+Note that contract ``c`` does inherit from ``a`` and can specify the arguments for ``b`` on its constructor,
+even though ``c`` does not directly inherit ``b`` (but does indirectly).
+
+.. code-block:: javascript
+
+    abstract contact a is b {
+        constructor() {}
+    }
+
+    contact b {
+        constructor(int j) {}
+    }
+
+    contract c is a {
+        constructor(int k) b(k*2) {}
+    }
+
+Interfaces
+__________
+
+An interface is a contract sugar type with restrictions. This type cannot be instantiated; it can only define the
+functions prototypes for a contract. This is useful as a generic interface.
+
+- Interfaces can only have other interfaces as a base contract
+- All functions must the ``external`` visibilty
+- No constructor can be declared
+- No contract storage variables can exist
+- No function can have a body or implementation
+
+Libraries
+_________
+
+Libraries are a special type of contract which can be reused in contract. Functions declared in a library can
+be called with the ``library.function()`` syntax. When the library has been imported or declared, any contract
+can use its functions simply by using its name.
+
+.. code-block:: javascript
+
+    contract test {
+        function foo(uint64 x) public pure returns (uint64) {
+            return ints.max(x, 65536);
+        }
+    }
+
+    library ints {
+        function max(uint64 a, uint64 b) public pure returns (uint64) {
+            return a > b ? a : b;
+        }
+    }
+
+When writing libraries there are restrictions compared to contracts:
+
+- A library cannot have constructors, fallback or receive function
+- A library cannot have base contracts
+- A library cannot be a base contract
+- A library cannot have virtual or override functions
+- A library cannot have payable functions
+
+.. note:: 
+
+    When using the Ethereum Foundation Solidity compiler, library are a special contract type and libraries are
+    called using `delegatecall`. Parity Substrate has no ``deletegatecall`` functionality so Solang statically
+    links the library calls into your contract code. This does make for larger contract code, however this
+    reduces the call overhead and make it possible to do compiler optimizations across library and contract code.
+
+Library Using For
+_________________
+
+Libraries can be used as method calls on variables. The type of the variable needs to be bound to the 
+library, and the type of the first parameter of the function of the library must match the type of a
+variable.
+
+.. code-block:: javascript
+
+    contract test {
+        using lib for int32[100];
+
+        int32[100] bar;
+
+        function foo() public returns (int64) {
+            bar.set(10, 571);
+        }
+    }
+
+    library lib {
+        function set(int32[100] storage a, uint index, int32 val) internal {
+            a[index] = val;
+        }
+    }
+
+The syntax ``using`` `library` ``for`` `Type` ``;`` is the syntax that binds the library to the type. This
+must be specified on the contract. This binds library ``lib`` to any variable with type ``int32[100]``.
+As a result of this, any method call on a variable of type ``int32[100]`` will be matched to library ``lib``.
+
+For the call to match, the first argument of the function must match the variable; note that here, `bar`
+is of type ``storage``, since all contract variables are implicitly ``storage``.
 
 Sending and receiving value
 ---------------------------

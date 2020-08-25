@@ -10,6 +10,8 @@ will be documented here.
 - Contracts can have base contracts
 - Contracts can be abstract
 - Interfaces are supported
+- Libraries are supported
+- The `using` library `for` type syntax is supported
 
 ### Changed
 - Solang now uses llvm 10.0 rather than llvm 8.0
