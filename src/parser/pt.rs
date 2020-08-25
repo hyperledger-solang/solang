@@ -111,6 +111,14 @@ pub enum ContractPart {
     EnumDefinition(Box<EnumDefinition>),
     ContractVariableDefinition(Box<ContractVariableDefinition>),
     FunctionDefinition(Box<FunctionDefinition>),
+    Using(Box<Using>),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Using {
+    pub loc: Loc,
+    pub library: Identifier,
+    pub ty: Option<Expression>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

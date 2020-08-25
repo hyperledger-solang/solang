@@ -9,6 +9,7 @@ use num_traits::Zero;
 use std::cmp;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::ops::Shl;
 use std::ops::Sub;
 
@@ -4006,6 +4007,117 @@ fn method_call_pos_args(
             });
         }
     }
+
+    // resolve it using library extension
+    if let Some(contract_no) = contract_no {
+        let extended_ty = var_ty.deref_any();
+
+        // first collect all possible libraries that match the using directive type
+        // Use HashSet for deduplication.
+        // If the using directive specifies a type, the type must match the type of
+        // the method call object exactly.
+        let libraries: HashSet<usize> = ns.contracts[contract_no]
+            .using
+            .iter()
+            .filter_map(|(library_no, ty)| match ty {
+                None => Some(*library_no),
+                Some(ty) if ty == extended_ty => Some(*library_no),
+                _ => None,
+            })
+            .collect();
+
+        let mut resolved_args = vec![var_expr];
+
+        for arg in args {
+            let expr = expression(arg, file_no, Some(contract_no), ns, symtable, false)?;
+            resolved_args.push(expr);
+        }
+
+        let mut name_matches = 0;
+        let mut errors = Vec::new();
+
+        for library_no in libraries {
+            for function_no in 0..ns.contracts[library_no].functions.len() {
+                let libfunc = &ns.contracts[library_no].functions[function_no];
+
+                if libfunc.name != func.name {
+                    continue;
+                }
+
+                name_matches += 1;
+
+                let params_len = libfunc.params.len();
+
+                if params_len != resolved_args.len() {
+                    errors.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "library function expects {} arguments, {} provided (including self)",
+                            params_len,
+                            resolved_args.len()
+                        ),
+                    ));
+                    continue;
+                }
+
+                let mut matches = true;
+                let mut cast_args = Vec::new();
+
+                // check if arguments can be implicitly casted
+                for (i, arg) in resolved_args.iter().enumerate() {
+                    match try_cast(&arg.loc(), arg.clone(), &libfunc.params[i].ty, true, ns) {
+                        Ok(expr) => cast_args.push(expr),
+                        Err(e) => {
+                            errors.push(e);
+                            matches = false;
+                            break;
+                        }
+                    }
+                }
+
+                if !matches {
+                    continue;
+                }
+
+                if libfunc.is_private() {
+                    errors.push(Diagnostic::error_with_note(
+                        *loc,
+                        "cannot call private library function".to_string(),
+                        libfunc.loc,
+                        format!("declaration of function ‘{}’", libfunc.name),
+                    ));
+
+                    continue;
+                }
+
+                let returns = function_returns(libfunc);
+                let signature = libfunc.signature.to_owned();
+
+                import_library(contract_no, library_no, ns);
+
+                return Ok(Expression::InternalFunctionCall(
+                    *loc, returns, library_no, signature, cast_args,
+                ));
+            }
+        }
+
+        match name_matches {
+            0 => (),
+            1 => {
+                ns.diagnostics.extend(errors);
+
+                return Err(());
+            }
+            _ => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find overloaded library function which matches signature".to_string(),
+                ));
+                return Err(());
+            }
+        }
+    }
+
     ns.diagnostics.push(Diagnostic::error(
         func.loc,
         format!("method ‘{}’ does not exist", func.name),

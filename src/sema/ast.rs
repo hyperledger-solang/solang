@@ -353,6 +353,7 @@ pub struct Contract {
     pub bases: Vec<Base>,
     // list of libraries used by this contract
     pub libraries: Vec<usize>,
+    pub using: Vec<(usize, Option<Type>)>,
     pub layout: Vec<Layout>,
     // events
     pub functions: Vec<Function>,

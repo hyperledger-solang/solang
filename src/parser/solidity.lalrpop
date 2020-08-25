@@ -97,6 +97,7 @@ ContractPart: ContractPart = {
     EnumDefinition => ContractPart::EnumDefinition(<>),
     ContractVariableDefinition => ContractPart::ContractVariableDefinition(<>),
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
+    Using => ContractPart::Using(<>),
 }
 
 Bases: Vec<Base> = {
@@ -413,6 +414,19 @@ FunctionDefinition: Box<FunctionDefinition> = {
     },
 }
 
+Using: Box<Using> = {
+    <l:@L> "using" <library:Identifier> "for" <ty:Precedence0> <r:@R> ";" => Box::new(Using {
+        loc: Loc(file_no, l, r),
+        library,
+        ty: Some(ty),
+    }),
+    <l:@L> "using" <library:Identifier> "for" "*" <r:@R> ";" => Box::new(Using {
+        loc: Loc(file_no, l, r),
+        library,
+        ty: None,
+    }),
+}
+
 BlockStatement: Statement = {
     <l:@L> "{" <s:Statement*> "}" <r:@R> => Statement::Block(Loc(file_no, l, r), s),
     <l:@L> "{" <v:CommaOne<NamedArgument>> "}" <r:@R> => Statement::Args(Loc(file_no, l, r), v),
@@ -646,6 +660,7 @@ extern {
         "abstract" => Token::Abstract,
         "virtual" => Token::Virtual,
         "override" => Token::Override,
+        "using" => Token::Using,
         DocComment => Token::DocComment(<CommentType>, <&'input str>)
     }
 }

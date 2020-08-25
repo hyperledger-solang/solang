@@ -433,8 +433,12 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
     let messages = ns.contracts[contract_no]
         .function_table
         .values()
-        .map(|(base_contract_no, function_no, _)| {
-            &ns.contracts[*base_contract_no].functions[*function_no]
+        .filter_map(|(base_contract_no, function_no, _)| {
+            if ns.contracts[*base_contract_no].is_library() {
+                None
+            } else {
+                Some(&ns.contracts[*base_contract_no].functions[*function_no])
+            }
         })
         .filter(|f| match f.visibility {
             pt::Visibility::Public(_) | pt::Visibility::External(_) => {
