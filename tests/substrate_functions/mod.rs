@@ -258,10 +258,38 @@ fn mutability() {
 
     let ns = parse_and_resolve(
         "contract test {
+            function bar(int64[] storage foo) private pure returns (int64) {
+                return foo[0];
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘pure’ but this expression reads from state"
+    );
+
+    let ns = parse_and_resolve(
+        "contract test {
             int64 foo = 1844674;
 
             function bar() public view {
                 foo = 102;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘view’ but this expression writes to state"
+    );
+
+    let ns = parse_and_resolve(
+        "contract test {
+            function bar(int[] storage foo) internal view {
+                foo[0] = 102;
             }
         }",
         Target::Substrate,

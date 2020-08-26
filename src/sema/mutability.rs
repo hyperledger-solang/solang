@@ -199,6 +199,7 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         | Expression::StorageBytesSubscript(loc, _, _)
         | Expression::StorageVariable(loc, _, _, _)
         | Expression::StorageLoad(loc, _, _) => state.read(loc),
+        Expression::Variable(loc, ty, _) if ty.is_contract_storage() => state.read(loc),
         Expression::StorageBytesPush(loc, _, _) | Expression::StorageBytesPop(loc, _) => {
             state.write(loc);
         }
@@ -260,7 +261,14 @@ fn write_expression(expr: &Expression, state: &mut StateCheck) -> bool {
     if let Expression::StorageVariable(loc, _, _, _) = expr {
         state.write(loc);
         false
+    } else if let Expression::Variable(loc, ty, _) = expr {
+        if ty.is_contract_storage() {
+            state.write(loc);
+            false
+        } else {
+            true
+        }
     } else {
-        read_expression(expr, state)
+        true
     }
 }
