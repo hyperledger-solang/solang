@@ -65,6 +65,9 @@ or a just a select few. You can also rename the types. The simplest form is:
 
     import "foo.sol";
 
+Solang will look for the file `foo.sol` in the same directory as the current file. You can specify
+more directories to search with the ``--importpath`` commandline option.
+
 This means that every type defined in `foo.sol` is now usable in your Solidity file, actually
 also on the lines before the import statement. However, if a type with the same name is defined
 in `foo.sol` and also in the current file, you will get a warning. Note that if the same file
@@ -1856,7 +1859,7 @@ When writing libraries there are restrictions compared to contracts:
 .. note:: 
 
     When using the Ethereum Foundation Solidity compiler, library are a special contract type and libraries are
-    called using `delegatecall`. Parity Substrate has no ``deletegatecall`` functionality so Solang statically
+    called using `delegatecall`. Parity Substrate has no ``delegatecall`` functionality so Solang statically
     links the library calls into your contract code. This does make for larger contract code, however this
     reduces the call overhead and make it possible to do compiler optimizations across library and contract code.
 
