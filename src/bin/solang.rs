@@ -111,6 +111,12 @@ fn main() {
 
     let mut cache = FileCache::new();
 
+    for filename in matches.values_of("INPUT").unwrap() {
+        if let Ok(path) = PathBuf::from(filename).canonicalize() {
+            cache.add_import_path(path.parent().unwrap().to_path_buf());
+        }
+    }
+
     match PathBuf::from(".").canonicalize() {
         Ok(p) => cache.add_import_path(p),
         Err(e) => {
