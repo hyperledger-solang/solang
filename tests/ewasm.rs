@@ -6,7 +6,7 @@ extern crate rand;
 extern crate solang;
 extern crate wasmi;
 
-use ethabi::{decode, Token};
+use ethabi::{decode, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
@@ -60,6 +60,12 @@ struct TestRuntime {
     accounts: HashMap<Address, (Vec<u8>, u128)>,
     store: HashMap<(Address, [u8; 32]), [u8; 32]>,
     vm: VM,
+    events: Vec<Event>,
+}
+
+struct Event {
+    topics: Vec<[u8; 32]>,
+    data: Vec<u8>,
 }
 
 #[derive(FromPrimitive)]
@@ -82,6 +88,7 @@ pub enum Extern {
     getAddress,
     getExternalBalance,
     selfDestruct,
+    log,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -454,6 +461,54 @@ impl Externals for TestRuntime {
 
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeFinish {}))))
             }
+            Some(Extern::log) => {
+                let data_ptr: u32 = args.nth_checked(0)?;
+                let data_len: u32 = args.nth_checked(1)?;
+
+                let mut data = Vec::new();
+                data.resize(data_len as usize, 0u8);
+
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
+                    panic!("log: {}", e);
+                }
+
+                let topic_count: u32 = args.nth_checked(2)?;
+
+                let mut event = Event {
+                    data,
+                    topics: Vec::new(),
+                };
+
+                if topic_count > 4 {
+                    panic!("log: wrong topic count {}", topic_count);
+                }
+
+                for topic in 0..topic_count {
+                    let topic_ptr: u32 = args.nth_checked(3 + topic as usize)?;
+                    let mut topic_data = [0u8; 32];
+
+                    if let Err(e) = self.vm.memory.get_into(topic_ptr, &mut topic_data) {
+                        panic!("log: topic {} {}", topic, e);
+                    }
+
+                    event.topics.push(topic_data);
+                }
+
+                println!(
+                    "log: data: {} topics: {}",
+                    hex::encode(&event.data),
+                    event
+                        .topics
+                        .iter()
+                        .map(hex::encode)
+                        .collect::<Vec<String>>()
+                        .join(" ")
+                );
+
+                self.events.push(event);
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -479,6 +534,7 @@ impl ModuleImportResolver for TestRuntime {
             "getAddress" => Extern::getAddress,
             "getExternalBalance" => Extern::getExternalBalance,
             "selfDestruct" => Extern::selfDestruct,
+            "log" => Extern::log,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -658,6 +714,16 @@ impl TestRuntime {
 
         true
     }
+
+    fn events(&self) -> Vec<RawLog> {
+        self.events
+            .iter()
+            .map(|e| RawLog {
+                data: e.data.clone(),
+                topics: e.topics.iter().map(ethereum_types::H256::from).collect(),
+            })
+            .collect()
+    }
 }
 
 fn build_solidity(src: &'static str) -> TestRuntime {
@@ -690,6 +756,7 @@ fn build_solidity(src: &'static str) -> TestRuntime {
         store: HashMap::new(),
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         contracts: res.into_iter().map(|v| v.0).collect(),
+        events: Vec::new(),
     }
 }
 
@@ -2094,4 +2161,44 @@ fn selfdestruct() {
 
     runtime.function("step2", &[]);
     runtime.accounts.get_mut(&runtime.vm.cur).unwrap().1 = 511;
+}
+
+#[test]
+fn event() {
+    let mut runtime = build_solidity(
+        r##"
+        contract c {
+            event foo (
+                bool indexed y,
+                int32 x
+            ) anonymous;
+
+            function func() public {
+                emit foo(true, 102);
+            }
+        }"##,
+    );
+
+    runtime.constructor(&[]);
+
+    runtime.function("func", &[]);
+
+    assert_eq!(runtime.events.len(), 1);
+
+    let event = &runtime.abi.events_by_name("foo").unwrap()[0];
+
+    for log in runtime.events() {
+        let decoded = event.parse_log(log).unwrap();
+
+        for log in &decoded.params {
+            match log.name.as_str() {
+                "y" => assert_eq!(log.value, ethabi::Token::Bool(true)),
+                "x" => assert_eq!(
+                    log.value,
+                    ethabi::Token::Int(ethereum_types::U256::from(102))
+                ),
+                _ => panic!("unexpected field {}", log.name),
+            }
+        }
+    }
 }

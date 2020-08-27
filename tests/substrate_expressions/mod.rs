@@ -1383,7 +1383,7 @@ fn destructure() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`c\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`c\' is not found");
 
     let ns = parse_and_resolve(
         "contract test {

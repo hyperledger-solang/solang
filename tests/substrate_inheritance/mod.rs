@@ -526,7 +526,7 @@ fn inherit_variables() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`foo\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`foo\' is not found");
 
     let ns = parse_and_resolve(
         r#"

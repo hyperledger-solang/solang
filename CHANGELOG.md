@@ -2,6 +2,11 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Added
+- `event` can be declared and emitted with `emit`
+
 ## [0.1.3]
 
 ### Added

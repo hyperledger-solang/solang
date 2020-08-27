@@ -139,7 +139,7 @@ fn parse_structs() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "struct ‘s’ has infinite size");
+    assert_eq!(first_error(ns.diagnostics), "struct ‘s2’ has infinite size");
 
     // literal initializers
     let ns = parse_and_resolve(

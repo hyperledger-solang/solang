@@ -67,6 +67,7 @@ impl SubstrateTarget {
             "ext_caller",
             "ext_tombstone_deposit",
             "ext_terminate",
+            "ext_deposit_event",
         ]);
 
         c
@@ -466,6 +467,18 @@ impl SubstrateTarget {
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr, u32_val, // address ptr and len
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_deposit_event",
+            contract.context.void_type().fn_type(
+                &[
+                    u8_ptr, u32_val, // topic ptr and len
+                    u8_ptr, u32_val, // data ptr and len
                 ],
                 false,
             ),
@@ -2410,6 +2423,7 @@ impl TargetRuntime for SubstrateTarget {
             loc: pt::Loc(0, 0, 0),
             ty: salt_ty,
             name: "salt".to_string(),
+            indexed: false,
         });
 
         // input
@@ -2956,6 +2970,95 @@ impl TargetRuntime for SubstrateTarget {
         );
 
         contract.builder.build_load(temp, "hash").into_int_value()
+    }
+
+    /// Send event
+    fn send_event<'b>(
+        &self,
+        contract: &Contract<'b>,
+        event_no: usize,
+        data_ptr: PointerValue<'b>,
+        data_len: IntValue<'b>,
+        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+    ) {
+        let event = &contract.ns.events[event_no];
+
+        let topic_count = topics.len() + if event.anonymous { 0 } else { 1 };
+        let topic_size = contract
+            .context
+            .i32_type()
+            .const_int(32 * topic_count as u64, false);
+
+        let topic_buf = if topic_count > 0 {
+            let topic_buf = contract.builder.build_array_alloca(
+                contract.context.i8_type(),
+                topic_size,
+                "topic",
+            );
+
+            let mut dest = topic_buf;
+
+            if !event.anonymous {
+                let hash = contract.emit_global_string(
+                    &format!("event_{}_signature", event),
+                    blake2_rfc::blake2b::blake2b(32, &[], event.signature.as_bytes()).as_bytes(),
+                    true,
+                );
+
+                contract.builder.build_call(
+                    contract.module.get_function("__memcpy8").unwrap(),
+                    &[
+                        dest.into(),
+                        hash.into(),
+                        contract.context.i32_type().const_int(4, false).into(),
+                    ],
+                    "",
+                );
+
+                dest = unsafe {
+                    contract.builder.build_gep(
+                        dest,
+                        &[contract.context.i32_type().const_int(32, false)],
+                        "dest",
+                    )
+                };
+            }
+
+            for (ptr, len) in topics {
+                contract.builder.build_call(
+                    contract.module.get_function("ext_hash_blake2_256").unwrap(),
+                    &[ptr.into(), len.into(), dest.into()],
+                    "hash",
+                );
+
+                dest = unsafe {
+                    contract.builder.build_gep(
+                        dest,
+                        &[contract.context.i32_type().const_int(32, false)],
+                        "dest",
+                    )
+                };
+            }
+
+            topic_buf
+        } else {
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null()
+        };
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_deposit_event").unwrap(),
+            &[
+                topic_buf.into(),
+                topic_size.into(),
+                data_ptr.into(),
+                data_len.into(),
+            ],
+            "",
+        );
     }
 
     /// builtin expressions

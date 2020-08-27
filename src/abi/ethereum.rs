@@ -1,6 +1,6 @@
 // ethereum style ABIs
 use parser::pt;
-use sema::ast::{Namespace, Type};
+use sema::ast::{Namespace, Parameter, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -12,6 +12,8 @@ pub struct ABIParam {
     pub internal_ty: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub components: Vec<ABIParam>,
+    #[serde(skip_serializing_if = "is_false")]
+    pub indexed: bool,
 }
 
 #[derive(Serialize)]
@@ -25,6 +27,13 @@ pub struct ABI {
     pub outputs: Vec<ABIParam>,
     #[serde(rename = "stateMutability")]
     pub mutability: String,
+    #[serde(skip_serializing_if = "is_false")]
+    pub anonymous: bool,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_false(boolean: &bool) -> bool {
+    !(*boolean)
 }
 
 impl Type {
@@ -39,22 +48,23 @@ impl Type {
 }
 
 pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
-    fn parameter_to_abi(name: &str, ty: &Type, ns: &Namespace) -> ABIParam {
-        let components = if let Some(n) = ty.is_struct_or_array_of_struct() {
+    fn parameter_to_abi(param: &Parameter, ns: &Namespace) -> ABIParam {
+        let components = if let Some(n) = param.ty.is_struct_or_array_of_struct() {
             ns.structs[n]
                 .fields
                 .iter()
-                .map(|f| parameter_to_abi(&f.name, &f.ty, ns))
+                .map(|p| parameter_to_abi(p, ns))
                 .collect::<Vec<ABIParam>>()
         } else {
             Vec::new()
         };
 
         ABIParam {
-            name: name.to_string(),
-            ty: ty.to_signature_string(ns),
-            internal_ty: ty.to_string(ns),
+            name: param.name.to_string(),
+            ty: param.ty.to_signature_string(ns),
+            internal_ty: param.ty.to_string(ns),
             components,
+            indexed: param.indexed,
         }
     }
 
@@ -69,16 +79,30 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
             name: f.name.to_owned(),
             mutability: f.print_mutability(),
             ty: f.ty.to_string(),
-            inputs: f
-                .params
-                .iter()
-                .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
-                .collect(),
-            outputs: f
-                .returns
-                .iter()
-                .map(|p| parameter_to_abi(&p.name, &p.ty, ns))
-                .collect(),
+            inputs: f.params.iter().map(|p| parameter_to_abi(p, ns)).collect(),
+            outputs: f.returns.iter().map(|p| parameter_to_abi(p, ns)).collect(),
+            anonymous: false,
         })
+        .chain(
+            ns.contracts[contract_no]
+                .sends_events
+                .iter()
+                .map(|event_no| {
+                    let event = &ns.events[*event_no];
+
+                    ABI {
+                        name: event.name.to_owned(),
+                        mutability: String::new(),
+                        inputs: event
+                            .fields
+                            .iter()
+                            .map(|p| parameter_to_abi(p, ns))
+                            .collect(),
+                        outputs: Vec::new(),
+                        ty: "event".to_owned(),
+                        anonymous: event.anonymous,
+                    }
+                }),
+        )
         .collect()
 }

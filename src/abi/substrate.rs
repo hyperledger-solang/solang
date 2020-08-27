@@ -58,6 +58,7 @@ pub struct Contract {
     pub name: usize,
     pub constructors: Vec<Constructor>,
     pub messages: Vec<Message>,
+    pub events: Vec<Event>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -134,10 +135,24 @@ impl Message {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct Event {
+    docs: Vec<String>,
+    name: usize,
+    args: Vec<ParamIndexed>,
+}
+
+#[derive(Deserialize, Serialize)]
 struct Param {
     name: usize,
     #[serde(rename = "type")]
     ty: ParamType,
+}
+
+#[derive(Deserialize, Serialize)]
+struct ParamIndexed {
+    #[serde(flatten)]
+    param: Param,
+    indexed: bool,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -478,10 +493,32 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
         })
         .collect();
 
+    let events = ns.contracts[contract_no]
+        .sends_events
+        .iter()
+        .map(|event_no| {
+            let event = &ns.events[*event_no];
+
+            let name = registry.string(&event.name);
+            let args = event
+                .fields
+                .iter()
+                .map(|p| ParamIndexed {
+                    param: parameter_to_abi(p, ns, &mut registry),
+                    indexed: p.indexed,
+                })
+                .collect();
+            let docs = event.doc.clone();
+
+            Event { name, args, docs }
+        })
+        .collect();
+
     let contract = Contract {
         name: registry.string(&ns.contracts[contract_no].name),
         constructors,
         messages,
+        events,
     };
 
     Metadata {

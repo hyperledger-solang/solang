@@ -2,7 +2,7 @@ use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
     cast, constructor_named_args, expression, function_call_expr, match_constructor_to_args,
-    named_function_call_expr, new,
+    named_function_call_expr, new, try_cast,
 };
 use super::symtable::{LoopScopes, Symtable};
 use num_bigint::BigInt;
@@ -179,12 +179,14 @@ pub fn resolve_function_body(
         }
     }
 
-    if def.body.is_empty() {
+    if def.body.is_none() {
         return Ok(());
     }
 
+    let body = def.body.as_ref().unwrap();
+
     let reachable = statement(
-        &def.body,
+        body,
         &mut res,
         file_no,
         contract_no,
@@ -200,7 +202,7 @@ pub fn resolve_function_body(
             // ok
         } else if return_required {
             ns.diagnostics.push(Diagnostic::error(
-                def.body.loc(),
+                body.loc(),
                 "missing return statement".to_string(),
             ));
             return Err(());
@@ -261,6 +263,7 @@ fn statement(
                         loc: decl.loc,
                         ty: var_ty,
                         name: decl.name.name.to_owned(),
+                        indexed: false,
                     },
                     initializer,
                 ));
@@ -674,8 +677,174 @@ fn statement(
 
             Ok(reachable)
         }
+        pt::Statement::Emit(loc, ty) => {
+            if let Ok(emit) = emit_event(loc, ty, file_no, contract_no, symtable, ns) {
+                res.push(emit);
+            }
+
+            Ok(true)
+        }
         _ => unreachable!(),
     }
+}
+
+/// Resolve emit event
+fn emit_event(
+    loc: &pt::Loc,
+    ty: &pt::Expression,
+    file_no: usize,
+    contract_no: usize,
+    symtable: &mut Symtable,
+    ns: &mut Namespace,
+) -> Result<Statement, ()> {
+    match ty {
+        pt::Expression::FunctionCall(_, ty, args) => {
+            let event_no = ns.resolve_event(file_no, Some(contract_no), ty)?;
+
+            let mut resolved_args = Vec::new();
+
+            for arg in args {
+                let expr = expression(arg, file_no, Some(contract_no), ns, symtable, false)?;
+                resolved_args.push(expr);
+            }
+
+            let event = &ns.events[event_no];
+            if resolved_args.len() != event.fields.len() {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "event type ‘{}’ has {} fields, {} provided",
+                        event.name,
+                        event.fields.len(),
+                        resolved_args.len()
+                    ),
+                ));
+                return Err(());
+            }
+            let mut diagnostics = Vec::new();
+            let mut cast_args = Vec::new();
+            // check if arguments can be implicitly casted
+            for (i, arg) in resolved_args.iter().enumerate() {
+                match try_cast(&arg.loc(), arg.clone(), &event.fields[i].ty, true, ns) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(e) => {
+                        diagnostics.push(e);
+                    }
+                }
+            }
+
+            if diagnostics.is_empty() {
+                if !ns.contracts[contract_no].sends_events.contains(&event_no) {
+                    ns.contracts[contract_no].sends_events.push(event_no);
+                }
+                return Ok(Statement::Emit {
+                    loc: *loc,
+                    event_no,
+                    args: cast_args,
+                });
+            } else {
+                ns.diagnostics.extend(diagnostics);
+            }
+        }
+        pt::Expression::NamedFunctionCall(_, ty, args) => {
+            let event_no = ns.resolve_event(file_no, Some(contract_no), ty)?;
+
+            let mut arguments = HashMap::new();
+
+            for arg in args {
+                if arguments.contains_key(&arg.name.name) {
+                    ns.diagnostics.push(Diagnostic::error(
+                        arg.name.loc,
+                        format!("duplicate argument with name ‘{}’", arg.name.name),
+                    ));
+                    return Err(());
+                }
+                arguments.insert(
+                    arg.name.name.to_string(),
+                    expression(&arg.expr, file_no, Some(contract_no), ns, symtable, false)?,
+                );
+            }
+
+            let event = &ns.events[event_no];
+            let params_len = event.fields.len();
+
+            if params_len != arguments.len() {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "event expects {} arguments, {} provided",
+                        params_len,
+                        args.len()
+                    ),
+                ));
+                return Err(());
+            }
+
+            let mut matches = true;
+            let mut cast_args = Vec::new();
+            let mut diagnostics = Vec::new();
+
+            // check if arguments can be implicitly casted
+            for i in 0..params_len {
+                let param = event.fields[i].clone();
+
+                if param.name.is_empty() {
+                    ns.diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "event ‘{}’ cannot emitted by argument name since argument {} has no name",
+                            event.name, i,
+                        ),
+                    ));
+                    matches = false;
+                    break;
+                }
+
+                let arg = match arguments.get(&param.name) {
+                    Some(a) => a,
+                    None => {
+                        matches = false;
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "missing argument ‘{}’ to event ‘{}’",
+                                param.name, event.name,
+                            ),
+                        ));
+                        break;
+                    }
+                };
+                match try_cast(&arg.loc(), arg.clone(), &param.ty, true, ns) {
+                    Ok(expr) => cast_args.push(expr),
+                    Err(e) => {
+                        diagnostics.push(e);
+                        matches = false;
+                    }
+                }
+            }
+
+            if matches {
+                return Ok(Statement::Emit {
+                    loc: *loc,
+                    event_no,
+                    args: cast_args,
+                });
+            } else {
+                ns.diagnostics.extend(diagnostics);
+            }
+        }
+        pt::Expression::FunctionCallBlock(_, ty, block) => {
+            let _ = ns.resolve_event(file_no, Some(contract_no), ty);
+
+            ns.diagnostics.push(Diagnostic::error(
+                block.loc(),
+                "expected event arguments, found code block".to_string(),
+            ));
+        }
+        _ => unreachable!(),
+    }
+
+    Err(())
 }
 
 /// Resolve destructuring assignment
@@ -824,6 +993,7 @@ fn destructure(
                             loc: *loc,
                             name: name.name.to_owned(),
                             ty,
+                            indexed: false,
                         },
                     ));
                 }
@@ -1187,6 +1357,7 @@ fn try_catch(
                                 loc: param.0,
                                 ty: ret_ty,
                                 name: name.name.to_string(),
+                                indexed: false,
                             },
                         ));
                     }
@@ -1196,6 +1367,7 @@ fn try_catch(
                         Parameter {
                             loc: param.0,
                             ty: ret_ty,
+                            indexed: false,
                             name: "".to_string(),
                         },
                     ));
@@ -1268,6 +1440,7 @@ fn try_catch(
             loc: error_stmt.0.loc,
             ty: Type::String,
             name: "".to_string(),
+            indexed: false,
         };
 
         if let Some(name) = &error_stmt.1.name {
@@ -1324,6 +1497,7 @@ fn try_catch(
         loc: catch_stmt.0.loc,
         ty: Type::DynamicBytes,
         name: "".to_owned(),
+        indexed: false,
     };
     let mut catch_param_pos = None;
     let mut catch_stmt_resolved = Vec::new();

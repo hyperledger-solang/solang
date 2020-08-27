@@ -403,7 +403,7 @@ fn scopes() {
 
     let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(ns.diagnostics), "`a\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`a\' is not found");
 
     let src = "
     contract test {
@@ -417,7 +417,7 @@ fn scopes() {
 
     let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(ns.diagnostics), "`i\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`i\' is not found");
 }
 
 #[test]

@@ -18,7 +18,7 @@ fn test_variable_errors() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`b' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`b' is not found");
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn test_variable_initializer_errors() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`y' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`y' is not found");
 
     // cannot refer to variable declared later (constant)
     let ns = parse_and_resolve(
@@ -73,7 +73,7 @@ fn test_variable_initializer_errors() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`y' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`y' is not found");
 
     // cannot refer to yourself
     let ns = parse_and_resolve(
@@ -83,5 +83,5 @@ fn test_variable_initializer_errors() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`x' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`x' is not found");
 }
