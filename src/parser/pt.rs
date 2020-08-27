@@ -20,6 +20,7 @@ pub enum SourceUnitPart {
     ImportDirective(Import),
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
+    EventDefinition(Box<EventDefinition>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -160,6 +161,7 @@ pub struct ContractDefinition {
 #[derive(Debug, PartialEq)]
 pub struct EventParameter {
     pub ty: Expression,
+    pub loc: Loc,
     pub indexed: bool,
     pub name: Option<Identifier>,
 }
@@ -167,6 +169,7 @@ pub struct EventParameter {
 #[derive(Debug, PartialEq)]
 pub struct EventDefinition {
     pub doc: Vec<String>,
+    pub loc: Loc,
     pub name: Identifier,
     pub fields: Vec<EventParameter>,
     pub anonymous: bool,
@@ -456,7 +459,7 @@ pub struct FunctionDefinition {
     pub params: Vec<(Loc, Option<Parameter>)>,
     pub attributes: Vec<FunctionAttribute>,
     pub returns: Vec<(Loc, Option<Parameter>)>,
-    pub body: Statement,
+    pub body: Option<Statement>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -480,7 +483,7 @@ pub enum Statement {
     Continue(Loc),
     Break(Loc),
     Return(Loc, Option<Expression>),
-    Emit(Loc, Identifier, Vec<Expression>),
+    Emit(Loc, Expression),
     Try(
         Loc,
         Expression,
@@ -488,19 +491,9 @@ pub enum Statement {
         Option<Box<(Identifier, Parameter, Statement)>>,
         Box<(Parameter, Statement)>,
     ),
-    Empty(Loc),
 }
 
 impl Statement {
-    /// The Empty statement means no body for function
-    pub fn is_empty(&self) -> bool {
-        if let Statement::Empty(_) = &self {
-            true
-        } else {
-            false
-        }
-    }
-
     pub fn loc(&self) -> Loc {
         match self {
             Statement::Block(loc, _)
@@ -515,9 +508,8 @@ impl Statement {
             | Statement::Continue(loc)
             | Statement::Break(loc)
             | Statement::Return(loc, _)
-            | Statement::Emit(loc, _, _)
-            | Statement::Try(loc, _, _, _, _)
-            | Statement::Empty(loc) => *loc,
+            | Statement::Emit(loc, _)
+            | Statement::Try(loc, _, _, _, _) => *loc,
         }
     }
 }

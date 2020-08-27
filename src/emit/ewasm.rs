@@ -13,6 +13,7 @@ use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
+use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
@@ -101,6 +102,7 @@ impl EwasmTarget {
             "getTxOrigin",
             "getBlockCoinbase",
             "getCaller",
+            "log",
         ]);
 
         deploy_code
@@ -516,6 +518,23 @@ impl EwasmTarget {
             void_ty.fn_type(
                 &[
                     u8_ptr_ty.into(), // address_ptr result
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "log",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // data_ptr result
+                    u32_ty.into(),    // data length
+                    u32_ty.into(),    // number of topics
+                    u8_ptr_ty.into(), // topic1
+                    u8_ptr_ty.into(), // topic2
+                    u8_ptr_ty.into(), // topic3
+                    u8_ptr_ty.into(), // topic4
                 ],
                 false,
             ),
@@ -1674,6 +1693,76 @@ impl TargetRuntime for EwasmTarget {
         );
 
         contract.builder.build_load(temp, "hash").into_int_value()
+    }
+
+    /// Send event
+    fn send_event<'b>(
+        &self,
+        contract: &Contract<'b>,
+        event_no: usize,
+        data: PointerValue<'b>,
+        data_len: IntValue<'b>,
+        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+    ) {
+        let empty_topic = contract
+            .context
+            .i8_type()
+            .ptr_type(AddressSpace::Generic)
+            .const_null();
+
+        let mut encoded_topics = [empty_topic; 4];
+
+        let event = &contract.ns.events[event_no];
+
+        let mut topic_count = 0;
+
+        if !event.anonymous {
+            let mut hasher = Keccak::v256();
+            hasher.update(event.signature.as_bytes());
+            let mut hash = [0u8; 32];
+            hasher.finalize(&mut hash);
+
+            encoded_topics[0] =
+                contract.emit_global_string(&format!("event_{}_signature", event), &hash, true);
+
+            topic_count += 1;
+        }
+
+        for (ptr, len) in topics.into_iter() {
+            if let Some(32) = len.get_zero_extended_constant() {
+                encoded_topics[topic_count] = ptr;
+            } else {
+                let dest = contract.builder.build_array_alloca(
+                    contract.context.i8_type(),
+                    contract.context.i32_type().const_int(32, false),
+                    "hash",
+                );
+
+                self.keccak256_hash(contract, ptr, len, dest);
+
+                encoded_topics[topic_count] = dest;
+            }
+
+            topic_count += 1;
+        }
+
+        contract.builder.build_call(
+            contract.module.get_function("log").unwrap(),
+            &[
+                data.into(),
+                data_len.into(),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(topic_count as u64, false)
+                    .into(),
+                encoded_topics[0].into(),
+                encoded_topics[1].into(),
+                encoded_topics[2].into(),
+                encoded_topics[3].into(),
+            ],
+            "",
+        );
     }
 
     /// builtin expressions

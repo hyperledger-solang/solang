@@ -787,6 +787,18 @@ impl TargetRuntime for SabreTarget {
         panic!("Sabre does not have the concept of selfdestruct");
     }
 
+    /// Send event
+    fn send_event<'b>(
+        &self,
+        _contract: &Contract<'b>,
+        _event_no: usize,
+        _data: PointerValue<'b>,
+        _data_len: IntValue<'b>,
+        _topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+    ) {
+        unimplemented!();
+    }
+
     /// builtin expressions
     fn builtin<'b>(
         &self,

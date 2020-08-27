@@ -240,7 +240,7 @@ pub fn function_decl(
                 "constructor not allowed in an interface".to_string(),
             ));
             success = false;
-        } else if !func.body.is_empty() {
+        } else if func.body.is_some() {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
                 "function in an interface cannot have a body".to_string(),
@@ -262,7 +262,7 @@ pub fn function_decl(
                 format!("{} not allowed in a library", func.ty),
             ));
             success = false;
-        } else if func.body.is_empty() {
+        } else if func.body.is_none() {
             ns.diagnostics.push(Diagnostic::error(
                 func.loc,
                 "function in a library must have a body".to_string(),
@@ -311,7 +311,7 @@ pub fn function_decl(
         is_virtual.is_some()
     };
 
-    if !is_virtual && func.body.is_empty() {
+    if !is_virtual && func.body.is_none() {
         ns.diagnostics.push(Diagnostic::error(
             func.loc,
             "function with no body must be marked ‘virtual’".to_string(),
@@ -578,6 +578,7 @@ fn resolve_params(
                         .as_ref()
                         .map_or("".to_string(), |id| id.name.to_string()),
                     ty,
+                    indexed: false,
                 });
             }
             Err(()) => success = false,
@@ -668,6 +669,7 @@ fn resolve_returns(
                         .as_ref()
                         .map_or("".to_string(), |id| id.name.to_string()),
                     ty,
+                    indexed: false,
                 });
             }
             Err(()) => success = false,
@@ -702,11 +704,13 @@ fn signatures() {
                 loc: pt::Loc(0, 0, 0),
                 name: "".to_string(),
                 ty: Type::Uint(8),
+                indexed: false,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
                 name: "".to_string(),
                 ty: Type::Address(false),
+                indexed: false,
             },
         ],
         Vec::new(),

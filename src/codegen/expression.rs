@@ -1149,6 +1149,7 @@ pub fn emit_function_call(
                             name: "".to_owned(),
                             loc: *loc,
                             ty: ty.clone(),
+                            indexed: false,
                         })
                         .collect(),
                     data,

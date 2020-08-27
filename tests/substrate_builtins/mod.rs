@@ -608,7 +608,7 @@ fn block() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`block\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`block\' is not found");
 
     let ns = parse_and_resolve(
         r#"
@@ -622,7 +622,7 @@ fn block() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`block\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`block\' is not found");
 
     let ns = parse_and_resolve(
         r#"
@@ -636,7 +636,7 @@ fn block() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`block\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`block\' is not found");
 }
 
 #[test]
@@ -683,7 +683,7 @@ fn tx() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "`tx\' is not declared");
+    assert_eq!(first_error(ns.diagnostics), "`tx\' is not found");
 }
 
 #[test]

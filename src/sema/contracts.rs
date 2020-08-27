@@ -31,6 +31,7 @@ impl ast::Contract {
             function_table: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),
+            sends_events: Vec::new(),
             initializer: ControlFlowGraph::new(),
             default_constructor: None,
         }
@@ -588,7 +589,7 @@ fn resolve_declarations<'a>(
     for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
             if let Some(function_no) = functions::function_decl(f, file_no, contract_no, ns) {
-                if !f.body.is_empty() {
+                if f.body.is_some() {
                     resolve_bodies.push((contract_no, function_no, f.as_ref()));
                 } else {
                     function_no_bodies.push(function_no);

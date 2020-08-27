@@ -1,5 +1,5 @@
 use super::ast::{
-    Contract, Diagnostic, EnumDecl, Namespace, StructDecl, StructField, Symbol, Type,
+    Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Type,
 };
 use num_bigint::BigInt;
 use num_traits::One;
@@ -9,14 +9,23 @@ use std::ops::Mul;
 #[cfg(test)]
 use Target;
 
+/// List the types which should be resolved later
+pub struct ResolveFields<'a> {
+    pub structs: Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)>,
+    pub events: Vec<(EventDecl, &'a pt::EventDefinition, Option<usize>)>,
+}
+
 /// Resolve all the types we can find (enums, structs, contracts). structs can have other
 /// structs as fields, including ones that have not been declared yet.
 pub fn resolve_typenames<'a>(
     s: &'a pt::SourceUnit,
     file_no: usize,
     ns: &mut Namespace,
-) -> Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)> {
-    let mut structs = Vec::new();
+) -> ResolveFields<'a> {
+    let mut delay = ResolveFields {
+        structs: Vec::new(),
+        events: Vec::new(),
+    };
 
     // Find all the types: contracts, enums, and structs. Either in a contract or not
     // We do not resolve the struct fields yet as we do not know all the possible types until we're
@@ -24,7 +33,7 @@ pub fn resolve_typenames<'a>(
     for part in &s.0 {
         match part {
             pt::SourceUnitPart::ContractDefinition(def) => {
-                resolve_contract(&def, file_no, &mut structs, ns);
+                resolve_contract(&def, file_no, &mut delay, ns);
             }
             pt::SourceUnitPart::EnumDefinition(def) => {
                 let _ = enum_decl(&def, file_no, None, ns);
@@ -34,7 +43,7 @@ pub fn resolve_typenames<'a>(
                     file_no,
                     None,
                     &def.name,
-                    Symbol::Struct(def.name.loc, ns.structs.len()),
+                    Symbol::Struct(def.name.loc, delay.structs.len()),
                 ) {
                     let s = StructDecl {
                         name: def.name.name.to_owned(),
@@ -43,26 +52,51 @@ pub fn resolve_typenames<'a>(
                         fields: Vec::new(),
                     };
 
-                    structs.push((s, def, None));
+                    delay.structs.push((s, def, None));
+                }
+            }
+            pt::SourceUnitPart::EventDefinition(def) => {
+                if ns.add_symbol(
+                    file_no,
+                    None,
+                    &def.name,
+                    Symbol::Event(def.name.loc, delay.events.len()),
+                ) {
+                    let s = EventDecl {
+                        doc: def.doc.clone(),
+                        name: def.name.name.to_owned(),
+                        loc: def.name.loc,
+                        contract: None,
+                        fields: Vec::new(),
+                        anonymous: def.anonymous,
+                        signature: String::new(),
+                    };
+
+                    delay.events.push((s, def, None));
                 }
             }
             _ => (),
         }
     }
 
-    structs
+    delay
 }
 
-pub fn resolve_structs(
-    structs: Vec<(StructDecl, &pt::StructDefinition, Option<usize>)>,
-    file_no: usize,
-    ns: &mut Namespace,
-) {
+pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
     // now we can resolve the fields for the structs
-    for (mut decl, def, contract) in structs {
+    for (mut decl, def, contract) in delay.structs {
         if let Some(fields) = struct_decl(def, file_no, contract, ns) {
             decl.fields = fields;
             ns.structs.push(decl);
+        }
+    }
+
+    // now we can resolve the fields for the events
+    for (mut decl, def, contract) in delay.events {
+        if let Some(fields) = event_decl(def, file_no, contract, ns) {
+            decl.signature = ns.signature(&decl.name, &fields);
+            decl.fields = fields;
+            ns.events.push(decl);
         }
     }
 
@@ -104,7 +138,7 @@ pub fn resolve_structs(
 fn resolve_contract<'a>(
     def: &'a pt::ContractDefinition,
     file_no: usize,
-    structs: &mut Vec<(StructDecl, &'a pt::StructDefinition, Option<usize>)>,
+    delay: &mut ResolveFields<'a>,
     ns: &mut Namespace,
 ) -> bool {
     let contract_no = ns.contracts.len();
@@ -130,7 +164,7 @@ fn resolve_contract<'a>(
                     file_no,
                     Some(contract_no),
                     &s.name,
-                    Symbol::Struct(s.name.loc, structs.len()),
+                    Symbol::Struct(s.name.loc, delay.structs.len()),
                 ) {
                     let decl = StructDecl {
                         name: s.name.name.to_owned(),
@@ -139,7 +173,29 @@ fn resolve_contract<'a>(
                         fields: Vec::new(),
                     };
 
-                    structs.push((decl, s, Some(contract_no)));
+                    delay.structs.push((decl, s, Some(contract_no)));
+                } else {
+                    broken = true;
+                }
+            }
+            pt::ContractPart::EventDefinition(ref s) => {
+                if ns.add_symbol(
+                    file_no,
+                    Some(contract_no),
+                    &s.name,
+                    Symbol::Event(s.name.loc, delay.events.len()),
+                ) {
+                    let decl = EventDecl {
+                        doc: s.doc.clone(),
+                        name: s.name.name.to_owned(),
+                        loc: s.name.loc,
+                        contract: Some(def.name.name.to_owned()),
+                        fields: Vec::new(),
+                        anonymous: s.anonymous,
+                        signature: String::new(),
+                    };
+
+                    delay.events.push((decl, s, Some(contract_no)));
                 } else {
                     broken = true;
                 }
@@ -160,9 +216,9 @@ pub fn struct_decl(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> Option<Vec<StructField>> {
+) -> Option<Vec<Parameter>> {
     let mut valid = true;
-    let mut fields: Vec<StructField> = Vec::new();
+    let mut fields: Vec<Parameter> = Vec::new();
 
     for field in &def.fields {
         let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty) {
@@ -202,10 +258,11 @@ pub fn struct_decl(
             valid = false;
         }
 
-        fields.push(StructField {
+        fields.push(Parameter {
             loc: field.name.loc,
             name: field.name.name.to_string(),
             ty,
+            indexed: false,
         });
     }
 
@@ -216,6 +273,106 @@ pub fn struct_decl(
                 format!("struct definition for ‘{}’ has no fields", def.name.name),
             ));
         }
+
+        valid = false;
+    }
+
+    if valid {
+        Some(fields)
+    } else {
+        None
+    }
+}
+
+/// Resolve a parsed event definition. The return value will be true if the entire
+/// definition is valid; however, whatever could be parsed will be added to the resolved
+/// contract, so that we can continue producing compiler messages for the remainder
+/// of the contract, even if the struct contains an invalid definition.
+pub fn event_decl(
+    def: &pt::EventDefinition,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+) -> Option<Vec<Parameter>> {
+    let mut valid = true;
+    let mut fields: Vec<Parameter> = Vec::new();
+    let mut indexed_fields = 0;
+
+    for field in &def.fields {
+        let ty = match ns.resolve_type(file_no, contract_no, false, &field.ty) {
+            Ok(s) => s,
+            Err(()) => {
+                valid = false;
+                continue;
+            }
+        };
+
+        if ty.contains_mapping(ns) {
+            ns.diagnostics.push(Diagnostic::error(
+                field.loc,
+                "mapping type is not permitted as event field".to_string(),
+            ));
+            valid = false;
+        }
+
+        let name = if let Some(name) = &field.name {
+            if let Some(other) = fields.iter().find(|f| f.name == name.name) {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    name.loc,
+                    format!(
+                        "event ‘{}’ has duplicate field name ‘{}’",
+                        def.name.name, name.name
+                    ),
+                    other.loc,
+                    format!("location of previous declaration of ‘{}’", other.name),
+                ));
+                valid = false;
+                continue;
+            }
+            name.name.to_owned()
+        } else {
+            String::new()
+        };
+
+        if field.indexed {
+            indexed_fields += 1;
+        }
+
+        fields.push(Parameter {
+            loc: field.loc,
+            name,
+            ty,
+            indexed: field.indexed,
+        });
+    }
+
+    if fields.is_empty() {
+        if valid {
+            ns.diagnostics.push(Diagnostic::error(
+                def.name.loc,
+                format!("event definition for ‘{}’ has no fields", def.name.name),
+            ));
+        }
+
+        valid = false;
+    } else if def.anonymous && indexed_fields > 4 {
+        ns.diagnostics.push(Diagnostic::error(
+            def.name.loc,
+            format!(
+                "anonymous event definition for ‘{}’ has {} indexed fields where 4 permitted",
+                def.name.name, indexed_fields
+            ),
+        ));
+
+        valid = false;
+    } else if !def.anonymous && indexed_fields > 3 {
+        ns.diagnostics.push(Diagnostic::error(
+            def.name.loc,
+            format!(
+                "event definition for ‘{}’ has {} indexed fields where 3 permitted",
+                def.name.name, indexed_fields
+            ),
+        ));
 
         valid = false;
     }

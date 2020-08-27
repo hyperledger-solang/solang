@@ -389,6 +389,43 @@ pub fn statement(
             vartab,
             loops,
         ),
+        Statement::Emit { event_no, args, .. } => {
+            let event = &ns.events[*event_no];
+            let mut data = Vec::new();
+            let mut data_tys = Vec::new();
+            let mut topics = Vec::new();
+            let mut topic_tys = Vec::new();
+
+            for (i, arg) in args.iter().enumerate() {
+                let param = Parameter {
+                    ty: arg.ty(),
+                    loc: arg.loc(),
+                    name: "".to_owned(),
+                    indexed: false,
+                };
+
+                let e = expression(arg, cfg, contract_no, ns, vartab);
+
+                if event.fields[i].indexed {
+                    topics.push(e);
+                    topic_tys.push(param);
+                } else {
+                    data.push(e);
+                    data_tys.push(param);
+                }
+            }
+
+            cfg.add(
+                vartab,
+                Instr::EmitEvent {
+                    event_no: *event_no,
+                    data,
+                    data_tys,
+                    topics,
+                    topic_tys,
+                },
+            );
+        }
     }
 }
 

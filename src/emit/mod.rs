@@ -236,6 +236,16 @@ pub trait TargetRuntime {
         string: PointerValue<'b>,
         length: IntValue<'b>,
     ) -> IntValue<'b>;
+
+    /// Send event
+    fn send_event<'b>(
+        &self,
+        contract: &Contract<'b>,
+        event_no: usize,
+        data: PointerValue<'b>,
+        data_len: IntValue<'b>,
+        topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
+    );
 }
 
 pub struct Contract<'a> {
@@ -3327,6 +3337,7 @@ impl<'a> Contract<'a> {
                                 loc: pt::Loc(0, 0, 0),
                                 name: "error".to_owned(),
                                 ty: ast::Type::String,
+                                indexed: false,
                             }],
                         );
 
@@ -3841,6 +3852,40 @@ impl<'a> Contract<'a> {
                                     .into_int_value(),
                             )
                             .into();
+                    }
+                    cfg::Instr::EmitEvent {
+                        event_no,
+                        data,
+                        data_tys,
+                        topics,
+                        topic_tys,
+                    } => {
+                        let (data_ptr, data_len) = runtime.abi_encode(
+                            self,
+                            None,
+                            false,
+                            function,
+                            &data
+                                .iter()
+                                .map(|a| self.expression(&a, &w.vars, function, runtime))
+                                .collect::<Vec<BasicValueEnum>>(),
+                            data_tys,
+                        );
+
+                        let mut encoded = Vec::new();
+
+                        for (i, topic) in topics.iter().enumerate() {
+                            encoded.push(runtime.abi_encode(
+                                self,
+                                None,
+                                false,
+                                function,
+                                &[self.expression(topic, &w.vars, function, runtime)],
+                                &[topic_tys[i].clone()],
+                            ));
+                        }
+
+                        runtime.send_event(self, *event_no, data_ptr, data_len, encoded);
                     }
                 }
             }

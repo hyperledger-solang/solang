@@ -28,18 +28,31 @@ pub enum Type {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct StructField {
-    pub name: String,
-    pub loc: pt::Loc,
-    pub ty: Type,
-}
-
-#[derive(PartialEq, Clone, Debug)]
 pub struct StructDecl {
     pub name: String,
     pub loc: pt::Loc,
     pub contract: Option<String>,
-    pub fields: Vec<StructField>,
+    pub fields: Vec<Parameter>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct EventDecl {
+    pub doc: Vec<String>,
+    pub name: String,
+    pub loc: pt::Loc,
+    pub contract: Option<String>,
+    pub fields: Vec<Parameter>,
+    pub signature: String,
+    pub anonymous: bool,
+}
+
+impl fmt::Display for EventDecl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.contract {
+            Some(c) => write!(f, "{}.{}", c, self.name),
+            None => write!(f, "{}", self.name),
+        }
+    }
 }
 
 impl StructDecl {
@@ -72,11 +85,12 @@ impl EnumDecl {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Parameter {
     pub loc: pt::Loc,
     pub name: String,
     pub ty: Type,
+    pub indexed: bool,
 }
 
 pub struct Function {
@@ -111,15 +125,7 @@ impl Function {
         returns: Vec<Parameter>,
         ns: &Namespace,
     ) -> Self {
-        let signature = format!(
-            "{}({})",
-            name,
-            params
-                .iter()
-                .map(|p| p.ty.to_signature_string(ns))
-                .collect::<Vec<String>>()
-                .join(",")
-        );
+        let signature = ns.signature(&name, &params);
 
         let vsignature = match ty {
             pt::FunctionTy::Fallback => "@fallback".to_string(),
@@ -300,6 +306,7 @@ pub enum Symbol {
     Function(Vec<pt::Loc>),
     Variable(pt::Loc, usize, usize),
     Struct(pt::Loc, usize),
+    Event(pt::Loc, usize),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),
 }
@@ -311,6 +318,7 @@ impl Symbol {
             Symbol::Function(funcs) => &funcs[0],
             Symbol::Variable(loc, _, _) => loc,
             Symbol::Struct(loc, _) => loc,
+            Symbol::Event(loc, _) => loc,
             Symbol::Contract(loc, _) => loc,
             Symbol::Import(loc, _) => loc,
         }
@@ -323,6 +331,7 @@ pub struct Namespace {
     pub files: Vec<String>,
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
+    pub events: Vec<EventDecl>,
     pub contracts: Vec<Contract>,
     pub address_length: usize,
     pub value_length: usize,
@@ -355,11 +364,13 @@ pub struct Contract {
     pub libraries: Vec<usize>,
     pub using: Vec<(usize, Option<Type>)>,
     pub layout: Vec<Layout>,
-    // events
     pub functions: Vec<Function>,
     pub function_table: HashMap<String, (usize, usize, Option<ControlFlowGraph>)>,
     pub variables: Vec<ContractVariable>,
+    // List of contracts this contract instantiates
     pub creates: Vec<usize>,
+    // List of events this contract produces
+    pub sends_events: Vec<usize>,
     pub initializer: ControlFlowGraph,
     pub default_constructor: Option<(Function, ControlFlowGraph)>,
 }
@@ -782,6 +793,11 @@ pub enum Statement {
     Continue(pt::Loc),
     Break(pt::Loc),
     Return(pt::Loc, Vec<Expression>),
+    Emit {
+        loc: pt::Loc,
+        event_no: usize,
+        args: Vec<Expression>,
+    },
     TryCatch {
         loc: pt::Loc,
         reachable: bool,
@@ -810,6 +826,7 @@ impl Statement {
             | Statement::While(_, reachable, _, _)
             | Statement::DoWhile(_, reachable, _, _)
             | Statement::Expression(_, reachable, _) => *reachable,
+            Statement::Emit { .. } => true,
             Statement::Delete(_, _, _) => true,
             Statement::Continue(_) | Statement::Break(_) | Statement::Return(_, _) => false,
             Statement::For { reachable, .. } | Statement::TryCatch { reachable, .. } => *reachable,

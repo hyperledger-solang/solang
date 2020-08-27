@@ -39,6 +39,7 @@ mod substrate_arrays;
 mod substrate_builtins;
 mod substrate_calls;
 mod substrate_contracts;
+mod substrate_events;
 mod substrate_first;
 mod substrate_functions;
 mod substrate_imports;
@@ -105,6 +106,12 @@ enum SubstrateExternal {
     ext_gas_left,
     ext_caller,
     ext_tombstone_deposit,
+    ext_deposit_event,
+}
+
+pub struct Event {
+    topics: Vec<[u8; 32]>,
+    data: Vec<u8>,
 }
 
 pub struct VM {
@@ -134,6 +141,7 @@ pub struct TestRuntime {
     pub accounts: HashMap<Address, (Vec<u8>, u128)>,
     pub abi: abi::substrate::Metadata,
     pub vm: VM,
+    pub events: Vec<Event>,
 }
 
 impl Externals for TestRuntime {
@@ -686,6 +694,51 @@ impl Externals for TestRuntime {
 
                 Err(Trap::new(TrapKind::Host(Box::new(HostCodeTerminate {}))))
             }
+            Some(SubstrateExternal::ext_deposit_event) => {
+                let mut topic_ptr: u32 = args.nth_checked(0)?;
+                let topic_len: u32 = args.nth_checked(1)?;
+                let data_ptr: u32 = args.nth_checked(2)?;
+                let data_len: u32 = args.nth_checked(3)?;
+
+                let mut topics = Vec::new();
+
+                if (topic_len % 32) != 0 {
+                    panic!(
+                        "ext_depost_event: topic_len {} is not multiple of 32",
+                        topic_len
+                    );
+                }
+
+                for _ in 0..topic_len / 32 {
+                    let mut topic = [0u8; 32];
+                    if let Err(e) = self.vm.memory.get_into(topic_ptr, &mut topic) {
+                        panic!("ext_deposit_event: topic: {}", e);
+                    }
+                    topics.push(topic);
+                    topic_ptr += 32;
+                }
+
+                let mut data = Vec::new();
+                data.resize(data_len as usize, 0);
+
+                if let Err(e) = self.vm.memory.get_into(data_ptr, &mut data) {
+                    panic!("ext_deposit_event: data: {}", e);
+                }
+
+                println!(
+                    "ext_deposit_event: topic: {} data: {}",
+                    topics
+                        .iter()
+                        .map(|t| hex::encode(&t))
+                        .collect::<Vec<String>>()
+                        .join(" "),
+                    hex::encode(&data)
+                );
+
+                self.events.push(Event { topics, data });
+
+                Ok(None)
+            }
             _ => panic!("external {} unknown", index),
         }
     }
@@ -720,6 +773,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_gas_left" => SubstrateExternal::ext_gas_left,
             "ext_caller" => SubstrateExternal::ext_caller,
             "ext_tombstone_deposit" => SubstrateExternal::ext_tombstone_deposit,
+            "ext_deposit_event" => SubstrateExternal::ext_deposit_event,
             _ => {
                 panic!("{} not implemented", field_name);
             }
@@ -971,6 +1025,7 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         contracts: res,
         vm: VM::new(address, address_new(), 0),
         abi: abi::substrate::load(&abistr).unwrap(),
+        events: Vec::new(),
     };
 
     t.accounts.insert(address, (code, 0));

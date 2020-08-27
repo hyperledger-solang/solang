@@ -120,6 +120,13 @@ pub enum Instr {
         hash: HashTy,
         expr: Expression,
     },
+    EmitEvent {
+        event_no: usize,
+        data: Vec<Expression>,
+        data_tys: Vec<Parameter>,
+        topics: Vec<Expression>,
+        topic_tys: Vec<Parameter>,
+    },
 }
 
 #[derive(Clone, PartialEq)]
@@ -808,6 +815,24 @@ impl ControlFlowGraph {
                 self.vars[res].id.name,
                 hash,
                 self.expr_to_string(contract, ns, expr)
+            ),
+            Instr::EmitEvent {
+                data,
+                topics,
+                event_no,
+                ..
+            } => format!(
+                "emit event {} topics {} data {}",
+                ns.events[*event_no],
+                topics
+                    .iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                data.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
             ),
         }
     }

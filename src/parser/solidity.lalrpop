@@ -16,6 +16,7 @@ SourceUnitPart: SourceUnitPart = {
     ImportDirective => SourceUnitPart::ImportDirective(<>),
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
     StructDefinition => SourceUnitPart::StructDefinition(<>),
+    EventDefinition => SourceUnitPart::EventDefinition(<>),
 }
 
 ImportDirective: Import = {
@@ -121,15 +122,15 @@ ContractDefinition: Box<ContractDefinition> = {
 }
 
 EventParameter: EventParameter = {
-    <ty:Precedence0> <i:"indexed"?> <name:Identifier?> => EventParameter{
-        ty, indexed: i.is_some(), name
+    <l:@L> <ty:Precedence0> <i:"indexed"?> <name:Identifier?> <r:@R> => EventParameter{
+        loc: Loc(file_no, l, r), ty, indexed: i.is_some(), name
     }
 }
 
 EventDefinition: Box<EventDefinition> = {
-    <doc:DocComments> "event" <name:Identifier> "(" <v:CommaOne<EventParameter>> ")" <a:"anonymous"?> ";" => {
+    <doc:DocComments> <l:@L> "event" <name:Identifier> "(" <v:Comma<EventParameter>> ")" <a:"anonymous"?> ";" <r:@R> => {
         Box::new(EventDefinition{
-            doc, name, fields: v, anonymous: a.is_some()
+            loc: Loc(file_no, l, r), doc, name, fields: v, anonymous: a.is_some()
         })
     },
 }
@@ -389,9 +390,9 @@ FunctionTy: FunctionTy = {
     "function" => FunctionTy::Function,
 }
 
-BlockStatementOrSemiColon: Statement = {
-    <@L> <@R> ";" => Statement::Empty(Loc(file_no, <>)),
-    BlockStatement => <>,
+BlockStatementOrSemiColon: Option<Statement> = {
+    <@L> <@R> ";" => None,
+    BlockStatement => Some(<>),
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
@@ -511,8 +512,8 @@ NonIfStatement: Statement = {
                 box_option(error),
                 Box::new((p, b)))
     },
-    <l:@L> "emit" <id:Identifier> "(" <v:CommaOne<Expression>> ")" <r:@R> ";" => {
-        Statement::Emit(Loc(file_no, l, r), id, v)
+    <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
+        Statement::Emit(Loc(file_no, l, r), ty)
     },
 }
 
