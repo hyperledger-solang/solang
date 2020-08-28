@@ -83,8 +83,8 @@ impl EwasmTarget {
             "getCodeSize",
             "printMem",
             "call",
-            "staticcall",
-            "delegatecall",
+            "callStatic",
+            "callDelegate",
             "create",
             "getReturnDataSize",
             "returnDataCopy",
@@ -370,7 +370,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
         contract.module.add_function(
-            "staticcall",
+            "callStatic",
             u32_ty.fn_type(
                 &[
                     u64_ty.into(),    // gas
@@ -384,7 +384,7 @@ impl EwasmTarget {
             Some(Linkage::External),
         );
         contract.module.add_function(
-            "delegatecall",
+            "callDelegate",
             u32_ty.fn_type(
                 &[
                     u64_ty.into(),    // gas
@@ -1318,8 +1318,8 @@ impl TargetRuntime for EwasmTarget {
                     .module
                     .get_function(match callty {
                         ast::CallTy::Regular => "call",
-                        ast::CallTy::Static => "staticcall",
-                        ast::CallTy::Delegate => "delegatecall",
+                        ast::CallTy::Static => "callStatic",
+                        ast::CallTy::Delegate => "callDelegate",
                     })
                     .unwrap(),
                 &[
