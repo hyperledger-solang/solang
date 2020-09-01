@@ -14,6 +14,7 @@ pub mod eval;
 pub mod expression;
 mod functions;
 mod mutability;
+pub mod printer;
 mod statements;
 pub mod symtable;
 mod types;

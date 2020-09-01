@@ -47,7 +47,7 @@ fn main() {
                 .help("Emit compiler state at early stage")
                 .long("emit")
                 .takes_value(true)
-                .possible_values(&["cfg", "llvm", "bc", "object"]),
+                .possible_values(&["ast", "cfg", "llvm", "bc", "object"]),
         )
         .arg(
             Arg::with_name("OPT")
@@ -190,6 +190,11 @@ fn process_filename(
     // codegen all the contracts
     for contract_no in 0..ns.contracts.len() {
         codegen(contract_no, &mut ns);
+    }
+
+    if let Some("ast") = matches.value_of("EMIT") {
+        println!("{}", ns.print(filename));
+        return;
     }
 
     // emit phase
