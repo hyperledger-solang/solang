@@ -67,6 +67,9 @@ Options:
 
   Phase:
 
+  ast
+    Output Abstract Syntax Tree, the parsed and resolved input
+
   cfg
     Output control flow graph.
 
