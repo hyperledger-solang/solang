@@ -303,6 +303,10 @@ impl Externals for TestRuntime {
 
                 let module = self.create_module(&code);
 
+                if let Some(ExternVal::Memory(memory_ref)) = module.export_by_name("memory") {
+                    self.vm.memory = memory_ref;
+                }
+
                 match module.invoke_export("main", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                         TrapKind::Host(host_error) => {
@@ -369,6 +373,10 @@ impl Externals for TestRuntime {
                 self.vm.input = buf;
 
                 let module = self.create_module(&code);
+
+                if let Some(ExternVal::Memory(memory_ref)) = module.export_by_name("memory") {
+                    self.vm.memory = memory_ref;
+                }
 
                 let ret = match module.invoke_export("main", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -577,6 +585,10 @@ impl TestRuntime {
 
         self.vm.input = calldata;
 
+        if let Some(ExternVal::Memory(memory_ref)) = module.export_by_name("memory") {
+            self.vm.memory = memory_ref;
+        }
+
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(_) => {}
@@ -608,6 +620,10 @@ impl TestRuntime {
 
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
+        if let Some(ExternVal::Memory(memory_ref)) = module.export_by_name("memory") {
+            self.vm.memory = memory_ref;
+        }
+
         self.vm.input = calldata;
 
         match module.invoke_export("main", &[], self) {
@@ -634,6 +650,10 @@ impl TestRuntime {
         println!("FUNCTION CALLDATA: {}", hex::encode(&calldata));
 
         self.vm.input = calldata;
+
+        if let Some(ExternVal::Memory(memory_ref)) = module.export_by_name("memory") {
+            self.vm.memory = memory_ref;
+        }
 
         match module.invoke_export("main", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -686,6 +706,10 @@ impl TestRuntime {
         let module = self.create_module(self.contracts.last().unwrap());
 
         println!("CONSTRUCTOR CALLDATA: {}", hex::encode(&calldata));
+
+        if let Some(ExternVal::Memory(memory_ref)) = module.export_by_name("memory") {
+            self.vm.memory = memory_ref;
+        }
 
         self.vm.code.extend(calldata);
         self.vm.cur = address_new();
