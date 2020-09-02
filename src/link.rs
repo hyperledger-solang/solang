@@ -88,11 +88,7 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
         }
 
         match target {
-            Target::Ewasm => imports.push(ImportEntry::new(
-                "ethereum".into(),
-                "memory".into(),
-                elements::External::Memory(elements::MemoryType::new(2, Some(2))),
-            )),
+            Target::Ewasm => exports.push(ExportEntry::new("memory".into(), Internal::Memory(0))),
             Target::Substrate => imports.push(ImportEntry::new(
                 "env".into(),
                 "memory".into(),
@@ -106,8 +102,10 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
 
     let mut linked = builder::module().with_module(module);
 
-    if Target::Sabre == target {
-        linked.push_memory(Default::default());
+    if Target::Sabre == target || Target::Ewasm == target {
+        let memory = builder::MemoryBuilder::new().with_min(2);
+
+        linked.push_memory(memory.build());
     }
 
     for e in exports {
