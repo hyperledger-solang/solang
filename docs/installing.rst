@@ -1,17 +1,16 @@
 Installing Solang
 =================
 
-The Solang compiler is a single binary. It can be installed in many different
-ways, so the method that suits your needs.
+The Solang compiler is a single binary. It can be installed in different ways.
 
 Download release binaries
 -------------------------
 
-For Ubuntu, there is an x86-64 binary available in the github releases:
+For Linux x86-64, there is a binary available in the github releases:
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.3/solang_linux>`_
 
-For Windows x64, there is a pre-built binary available here:
+For Windows x64, there is also a binary available:
 
 `<https://github.com/hyperledger-labs/solang/releases/download/v0.1.3/solang.exe>`_
 
@@ -20,19 +19,13 @@ Using hyperledgerlabs/solang docker hub images
 
 New images are automatically made available on
 `docker hub <https://hub.docker.com/repository/docker/hyperledgerlabs/solang/>`_. 
-Simply pull the `latest` tag docker image using:
+There is a release `v0.1.3` tag and a `latest` tag:
 
 .. code-block:: bash
 
 	docker pull hyperledgerlabs/solang
 
-And if you are using podman:
-
-.. code-block:: bash
-
-	podman image pull hyperlederlabs/solang
-
-The Solang binary is in ``/usr/bin/solang`` in this image. The `latest` tag
+The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` tag
 gets updated each time there is a commit to the master branch of the solang
 git repository.
 
@@ -117,7 +110,7 @@ if you want to do Solang development.
 Any build of llvm 10.0, with the WebAssembly target enabled, should work.
 Note that you will also need clang; the Solidity standard library is written in C,
 and is compiled to wasm by clang. The version of clang *must* be the same as the
-version of llvm.
+version of llvm which solang links against.
 
 
 Installing LLVM on Ubuntu
@@ -208,6 +201,7 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 .. code-block::
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
+
 
 
 Building LLVM using docker

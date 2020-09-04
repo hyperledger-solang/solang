@@ -127,9 +127,10 @@ On podman you might need to add ``:Z`` to your volume argument if SELinux is use
 
 On Windows, you need to specify absolute paths:
 
-.. code-block:: bash
+.. code-block::
 
 	docker run --rm -it -v C:\Users\User:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
+
 
 Using Solang with Substrate
 ---------------------------
