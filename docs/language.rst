@@ -54,7 +54,7 @@ Imports
 _______
 
 The ``import`` directive is used to import types by name from other Solidity files; this means that
-structs, enums, contracts, abstract contract, libraries, and interfaces can be used from another
+structs, enums, events, contracts, abstract contract, libraries, and interfaces can be used from another
 Solidity file. This can be useful to keep a single definition in one file, which can be used
 in multiple other files.
 
@@ -96,12 +96,12 @@ This also has a slightly more baroque syntax, which does exactly the same.
     import * as foo from "foo.sol";
 
 
-
-
-
-
 Pragmas
 _______
+
+A pragma value is a special directive to the compiler. It has a name, and a value. The name
+is an identifier and the value is any text terminated by a semicolon `;`. Solang parses
+pragmas but does not recognise any.
 
 Often, Solidity source files start with a ``pragma solidity`` which specifies the Ethereum
 Foundation Solidity compiler version which is permitted to compile this code. Solang does
@@ -115,8 +115,7 @@ when using Solang.
     pragma experimental ABIEncoderV2;
 
 The `ABIEncoderV2` pragma is not needed with Solang; structures can always be ABI encoded or
-decoded. All other pragma statements are ignored, but generate warnings. A pragma must be
-terminated with a semicolon.
+decoded. All other pragma statements are ignored, but generate warnings. 
 
 Types
 -----
@@ -263,8 +262,8 @@ when compiling:
 
 Since the hexadecimal string is 40 characters without underscores, and the string does
 not match the EIP-55 encoding, the compiler will refused to compile this. To make this
-a regular hexadecimal number, not an address, add some leading zeros or some underscores.
-To make this an address, the compiler error message will give the correct capitalization:
+a regular hexadecimal number, not an address literal, add some leading zeros or some underscores.
+In order to fix the address literal, copy the address literal from the compiler error message:
 
 .. code-block:: none
 
@@ -356,9 +355,7 @@ in a contract, in which case it can be used without the contract name prefix.
 Struct Type
 ___________
 
-A struct is composite type of several other types. This is used to group related items together. A
-struct type must have a definition before it can be used. The name of the struct type can then be
-used as a type itself. For example:
+A struct is composite type of several other types. This is used to group related items together.
 
 .. code-block:: javascript
 
@@ -415,11 +412,8 @@ all the fields set.
 
 The two contract storage variables ``card1`` and ``card2`` have initializers using struct literals. Struct
 literals can either set fields by their position, or field name. In either syntax, all the fields must
-be specified. When specifying structs fields by position, it is more likely that the wrong field gets
-set to the wrong value. In the example of the card, if the order is wrong then the compiler will give
-an errors because the field type does no match; setting a ``suit`` enum field with ``value`` enum
-is not permitted. However, if both fields were the of the same type, then the compiler would have no
-way of knowing if the fields are in the intended order.
+be specified. When specifying structs fields by position, the order of the fields must match with the
+struct definition. When fields are specified by name, the order is not important.
 
 Struct definitions from other contracts can be used, by referring to them with the `contractname.`
 prefix. Struct definitions can appear outside of contract definitions, in which case they can be used
@@ -448,7 +442,7 @@ in any contract without the prefix.
 The `users` struct contains an array of `user`, which is another struct. The `users` struct is
 defined in contract `db`, and can be used in another contract with the type name `db.users`. Astute
 readers may have noticed that the `db.users` struct is used before it is declared. In Solidity,
-types can be always be used before their declaration.
+types can be always be used before their declaration, or before they are imported.
 
 Structs can be contract storage variables. Structs in contract storage can be assigned to structs
 in memory and vice versa, like in the *set_card1()* function. Copying structs between storage
@@ -457,7 +451,7 @@ and memory is expensive; code has to be generated for each field and executed.
 - The function argument ``c`` has to ABI decoded (1 copy + decoding overhead)
 - The ``card1`` has to load from contract storage (1 copy + contract storage overhead)
 - The ``c`` has to be stored into contract storage (1 copy + contract storage overhead)
-- The ``pervious`` struct has to ABI encoded (1 copy + encoding overhead)
+- The ``previous`` struct has to ABI encoded (1 copy + encoding overhead)
 
 Note that struct variables are references. When contract struct variables or normal struct variables
 are passed around, just the memory address or storage slot is passed around internally. This makes
@@ -598,8 +592,7 @@ expression requires a single unsigned integer argument. The length can be read u
 
 .. note::
 
-    There is a `bounty available <https://github.com/hyperledger-labs/solang/issues/177>`_
-    to make memory arrays have push() and pop() functions.
+    There is experimental support for `push()` and `pop()` on memory arrays.
 
 Storage dynamic memory arrays do not have to be allocated. By default, the have a
 length of zero and elements can be added and removed using the ``push()`` and ``pop()``
@@ -711,7 +704,7 @@ ________
 Mappings are a dictionary type, or associative arrays. Mappings have a number of
 limitations:
 
-- it has to have to be in contract storage, not memory
+- it has to be in contract storage, not memory
 - they are not iterable
 - the key cannot be a ``struct``, array, or another mapping.
 
@@ -1216,7 +1209,7 @@ like so:
   contract mycontract {
       uint foo;
 
-      constructor(uint foo_value) public {
+      constructor(uint foo_value) {
           foo = foo_value;
       }
   }
@@ -1224,8 +1217,7 @@ like so:
 A constructor does not have a name and may have any number of arguments. If a constructor has arguments,
 then when the contract is deployed then those arguments must be supplied.
 
-A constructor must be declared ``public``. If a contract is expected to hold receive value on
-instantiation, then the constructor should be declare ``payable``.
+If a contract is expected to hold receive value on instantiation, the constructor should be declares ``payable``.
 
 .. note::
 
@@ -1251,7 +1243,7 @@ constructor arguments, which need to be provided.
     contact hatchling {
         string name;
 
-        constructor(string id) public {
+        constructor(string id) {
             require(id != "", "name must be provided");
             name = id;
         }
@@ -1277,7 +1269,7 @@ syntax, like so:
     contact hatchling {
         string name;
 
-        constructor(string id) payable public {
+        constructor(string id) payable {
             require(id != "", "name must be provided");
             name = id;
         }
@@ -1605,7 +1597,7 @@ is executed. This made clear in the declarations; ``receive()`` must be declared
 with value and no ``receive()`` function is defined, then the call reverts, likewise if
 call is made without value and no ``fallback()`` is defined, then the call also reverts. 
 
-Both functions must be declare ``external``.
+Both functions must be declared ``external``.
 
 .. code-block:: javascript
 
@@ -1655,8 +1647,8 @@ be specified here.
         function func1() public {}
     }
 
-In this case, contract ``a`` inherits both ``b`` and ``c``. This means that both ``func1()`` and ``func1()``
-are visible in contract ``a``, and will be part of its public interface if they are declare ``public`` or
+In this case, contract ``a`` inherits both ``b`` and ``c``. This means that both ``func1()`` and ``func2()``
+are visible in contract ``a``, and will be part of its public interface if they are declared ``public`` or
 ``external``. In addition, the contract storage variables ``foo`` and ``bar`` are also availabe in ``a``.
 
 Inheriting contracts is recursive; this means that if you inherit a contract, you also inherit everything
@@ -1684,8 +1676,8 @@ through ``b``. This means that contract ``b`` also has a variable ``bar``.
 Virtual Functions
 _________________
 
-When inheriting a base contract, it is possible to override a function with a newer function with the same name
-and signature. For this to be possible, the base contract must have specified the function as ``virtual``. The
+When inheriting a base contract, it is possible to override a function with a newer function with the same name.
+For this to be possible, the base contract must have specified the function as ``virtual``. The
 inheriting contract must then specify the same function with the same name, arguments and return values, and
 add the ``override`` keyword.
 
@@ -1961,7 +1953,7 @@ Here is an example:
     contract A {
         B other;
 
-        constructor() public {
+        constructor() {
             other = new B();
 
             bool complete = payable(other).transfer(100);
@@ -1973,9 +1965,6 @@ Here is an example:
             // if the following fails, our transaction will fail
             other.send(100);
         }
-
-
-
     }
 
     contract B {
@@ -1991,7 +1980,7 @@ Here is an example:
 Statements
 ----------
 
-In functions, you can declare variables with the types or an enum. If the name is the same as
+In functions, you can declare variables in code blocks. If the name is the same as
 an existing function, enum type, or another variable, then the compiler will generate a
 warning as the original item is no longer accessible.
 
@@ -2157,8 +2146,8 @@ The destructuring statement can be used for making function calls to functions t
 multiple return values. The list can contain either:
 
 1. The name of an existing variable. The type must match the type of the return value.
-2. A variable declaration with a type. The type must match the type of the return value.
-3. Empty; this return value is not used or accessible.
+2. A new variable declaration with a type. Again, the type must match the type of the return value.
+3. Empty; this return value is ignored and not accessible.
 
 .. code-block:: javascript
 
@@ -2169,7 +2158,7 @@ multiple return values. The list can contain either:
 
         function test() public {
             string s;
-            (bool b, _, s) = func();
+            (bool b, , s) = func();
         }
     }
 
@@ -2194,14 +2183,14 @@ usually cause the entire chain of execution to be aborted. However, it is possib
 some of these problems and continue execution.
 
 This is only possible for contract instantiation through new, and external function calls.
-Internal function call cannot be handing this way. Not all problems can be handled either,
+An internal function cannot be called from a try catch statement. Not all problems can be handled,
 for example, out of gas cannot be caught. The ``revert()`` and ``require()`` builtins may
 be passed a reason code, which can be inspected using the ``catch Error(string)`` syntax.
 
 .. code-block:: javascript
 
     contract aborting {
-        constructor() public {
+        constructor() {
             revert("bar");
         }
     }
@@ -2238,7 +2227,7 @@ return value is not accessible.
         function test() public {
             aborting abort = new aborting();
 
-            try new abort.abort() returns (int32 a, bool b) {
+            try abort.abort() returns (int32 a, bool b) {
                 // call succeeded; return values are in a and b
             }
             catch Error(string x) {
@@ -2252,8 +2241,8 @@ return value is not accessible.
         }
     }
 
-There is an alternate syntax which avoids the abi decoding by leaving that part out. This
-might be useful when no error string is expected, and will generate shorter code.
+There is an alternate syntax which avoids the abi decoding by leaving the `catch Error(…)` out.
+This might be useful when no error string is expected, and will generate shorter code.
 
 .. code-block:: javascript
 
@@ -2280,7 +2269,7 @@ Builtin Functions and Variables
 -------------------------------
 
 The Solidity language has a number of built-in variables and functions which give
-access to the environment or pre-defined functions. Some of these functions will
+access to the chain environment or pre-defined functions. Some of these functions will
 be different on different chains.
 
 Block and transaction
@@ -2389,7 +2378,7 @@ Assert takes a boolean argument. If that evaluates to false, execution is aborte
 .. code-block:: javascript
 
     contract c {
-        constructor(int x) public {
+        constructor(int x) {
             assert(x > 0);
         }
     }
@@ -2408,7 +2397,7 @@ statement.
 .. code-block:: javascript
 
     contract x {
-        constructor(address foobar) public {
+        constructor(address foobar) {
             if (a == address(0)) {
                 revert("foobar must a valid address");
             }
@@ -2427,7 +2416,7 @@ to identify what the problem is.
 .. code-block:: javascript
 
     contract x {
-        constructor(address foobar) public {
+        constructor(address foobar) {
             require(foobar != address(0), "foobar must a valid address");
         }
     }
@@ -2567,7 +2556,7 @@ print() takes a string argument.
 .. code-block:: javascript
 
     contract c {
-        constructor() public {
+        constructor() {
             print("Hello, world!");
         }
     }
