@@ -743,10 +743,12 @@ impl<'a> Contract<'a> {
         let mut defines = Vec::new();
 
         for (cfg_no, cfg) in self.contract.cfg.iter().enumerate() {
-            let func_decl = self.declare_function(cfg);
-            self.functions.insert(cfg_no, func_decl);
+            if !cfg.is_placeholder() {
+                let func_decl = self.declare_function(cfg);
+                self.functions.insert(cfg_no, func_decl);
 
-            defines.push((func_decl, cfg));
+                defines.push((func_decl, cfg));
+            }
         }
 
         for (func_decl, cfg) in defines {

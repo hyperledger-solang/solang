@@ -103,7 +103,10 @@ pub struct Function {
     pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
     pub returns: Vec<Parameter>,
+    // constructor arguments for base contracts, only present on constructors
     pub bases: HashMap<usize, (pt::Loc, usize, Vec<Expression>)>,
+    // modifiers for functions
+    pub modifiers: Vec<Expression>,
     pub is_virtual: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
     pub body: Vec<Statement>,
@@ -139,6 +142,7 @@ impl Function {
             params,
             returns,
             bases: HashMap::new(),
+            modifiers: Vec::new(),
             is_virtual: false,
             is_override: None,
             body: Vec::new(),
@@ -809,6 +813,7 @@ pub enum Statement {
         catch_param_pos: Option<usize>,
         catch_stmt: Vec<Statement>,
     },
+    Underscore(pt::Loc),
 }
 
 #[derive(Clone, Debug)]
@@ -819,9 +824,83 @@ pub enum DestructureField {
 }
 
 impl Statement {
+    /// recurse over the statement
+    pub fn recurse<T>(&mut self, cx: &mut T, f: fn(stmt: &mut Statement, ctx: &mut T) -> bool) {
+        if f(self, cx) {
+            match self {
+                Statement::If(_, _, _, then_stmt, else_stmt) => {
+                    for stmt in then_stmt {
+                        stmt.recurse(cx, f);
+                    }
+
+                    for stmt in else_stmt {
+                        stmt.recurse(cx, f);
+                    }
+                }
+                Statement::For {
+                    init, next, body, ..
+                } => {
+                    for stmt in init {
+                        stmt.recurse(cx, f);
+                    }
+
+                    for stmt in body {
+                        stmt.recurse(cx, f);
+                    }
+
+                    for stmt in next {
+                        stmt.recurse(cx, f);
+                    }
+                }
+                Statement::While(_, _, _, body) => {
+                    for stmt in body {
+                        stmt.recurse(cx, f);
+                    }
+                }
+                Statement::DoWhile(_, _, body, _) => {
+                    for stmt in body {
+                        stmt.recurse(cx, f);
+                    }
+                }
+                Statement::TryCatch {
+                    ok_stmt,
+                    catch_stmt,
+                    error,
+                    ..
+                } => {
+                    for stmt in ok_stmt {
+                        stmt.recurse(cx, f);
+                    }
+
+                    if let Some((_, _, error)) = error {
+                        for stmt in error {
+                            stmt.recurse(cx, f);
+                        }
+                    }
+
+                    for stmt in catch_stmt {
+                        stmt.recurse(cx, f);
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
+    /// Shorthand for checking underscore
+    pub fn is_underscore(&self) -> bool {
+        if let Statement::Underscore(_) = &self {
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn reachable(&self) -> bool {
         match self {
-            Statement::Destructure(_, _, _) | Statement::VariableDecl(_, _, _, _) => true,
+            Statement::Underscore(_)
+            | Statement::Destructure(_, _, _)
+            | Statement::VariableDecl(_, _, _, _) => true,
             Statement::If(_, reachable, _, _, _)
             | Statement::While(_, reachable, _, _)
             | Statement::DoWhile(_, reachable, _, _)

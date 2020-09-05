@@ -646,7 +646,7 @@ fn this_address() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function ‘other’ is not ‘public’ or ‘extern’"
+        "function ‘other’ is not ‘public’ or ‘external’"
     );
 
     let ns = parse_and_resolve(
@@ -668,7 +668,7 @@ fn this_address() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "function ‘other’ is not ‘public’ or ‘extern’"
+        "function ‘other’ is not ‘public’ or ‘external’"
     );
 }
 

@@ -1,8 +1,8 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
-    cast, constructor_named_args, expression, function_call_expr, match_constructor_to_args,
-    named_function_call_expr, new, try_cast,
+    call_position_args, cast, constructor_named_args, expression, function_call_expr,
+    match_constructor_to_args, named_function_call_expr, new, try_cast,
 };
 use super::symtable::{LoopScopes, Symtable};
 use num_bigint::BigInt;
@@ -47,7 +47,7 @@ pub fn resolve_function_body(
         let mut all_ok = true;
 
         for attr in &def.attributes {
-            if let pt::FunctionAttribute::BaseArguments(loc, base) = attr {
+            if let pt::FunctionAttribute::BaseOrModifier(loc, base) = attr {
                 match ns.resolve_contract(file_no, &base.name) {
                     Some(base_no) => {
                         if base_no == contract_no || !is_base(base_no, contract_no, ns) {
@@ -149,6 +149,30 @@ pub fn resolve_function_body(
         }
     }
 
+    // resolve modifiers on functions
+    if def.ty == pt::FunctionTy::Function {
+        let mut modifiers = Vec::new();
+
+        for attr in &def.attributes {
+            if let pt::FunctionAttribute::BaseOrModifier(_, modifier) = attr {
+                if let Ok(e) = call_position_args(
+                    &modifier.loc,
+                    &modifier.name,
+                    pt::FunctionTy::Modifier,
+                    modifier.args.as_ref().unwrap_or(&Vec::new()),
+                    file_no,
+                    Some(contract_no),
+                    ns,
+                    &symtable,
+                ) {
+                    modifiers.push(e);
+                }
+            }
+        }
+
+        ns.contracts[contract_no].functions[function_no].modifiers = modifiers;
+    }
+
     // a function with no return values does not need a return statement
     let mut return_required = !def.returns.is_empty();
 
@@ -221,7 +245,33 @@ pub fn resolve_function_body(
         }
     }
 
+    if def.ty == pt::FunctionTy::Modifier {
+        let mut has_underscore = false;
+
+        // unsure modifier has underscore
+        fn check_statement(stmt: &mut Statement, has_underscore: &mut bool) -> bool {
+            if stmt.is_underscore() {
+                *has_underscore = true;
+                false
+            } else {
+                true
+            }
+        }
+
+        for stmt in &mut res {
+            stmt.recurse(&mut has_underscore, check_statement);
+        }
+
+        if !has_underscore {
+            ns.diagnostics.push(Diagnostic::error(
+                body.loc(),
+                "missing ‘_’ in modifier".to_string(),
+            ));
+        }
+    }
+
     ns.contracts[contract_no].functions[function_no].body = res;
+
     std::mem::swap(
         &mut ns.contracts[contract_no].functions[function_no].symtable,
         &mut symtable,
@@ -632,6 +682,25 @@ fn statement(
                 };
             }
 
+            // is it an underscore modifier statement
+            if let pt::Expression::Variable(id) = expr {
+                if id.name == "_" {
+                    return if ns.contracts[contract_no].functions[function_no].ty
+                        == pt::FunctionTy::Modifier
+                    {
+                        res.push(Statement::Underscore(*loc));
+
+                        Ok(true)
+                    } else {
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            "underscore statement only permitted in modifiers".to_string(),
+                        ));
+                        Err(())
+                    };
+                }
+            }
+
             // is it a destructure statement
             if let pt::Expression::Assign(_, var, expr) = expr {
                 if let pt::Expression::List(_, var) = var.as_ref() {
@@ -684,7 +753,6 @@ fn statement(
 
             Ok(true)
         }
-        _ => unreachable!(),
     }
 }
 

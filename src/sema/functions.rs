@@ -72,6 +72,15 @@ pub fn function_decl(
                 return None;
             }
         }
+        pt::FunctionTy::Modifier => {
+            if !func.returns.is_empty() {
+                ns.diagnostics.push(Diagnostic::error(
+                    func.loc,
+                    "constructor cannot have return values".to_string(),
+                ));
+                return None;
+            }
+        }
     }
 
     let mut mutability: Option<pt::StateMutability> = None;
@@ -168,14 +177,17 @@ pub fn function_decl(
 
                 is_override = Some((*loc, list));
             }
-            pt::FunctionAttribute::BaseArguments(loc, _) => {
+            pt::FunctionAttribute::BaseOrModifier(loc, _) => {
                 // We can only fully resolve the base constructors arguments
                 // once we have resolved all the constructors, this is not done here yet
                 // so we fully resolve these along with the constructor body
-                if func.ty != pt::FunctionTy::Constructor {
+                if func.ty != pt::FunctionTy::Constructor && func.ty != pt::FunctionTy::Function {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        "base contract is only allowed on constructor".to_string(),
+                        format!(
+                            "function modifiers or base contracts are not allowed on {}",
+                            func.ty
+                        ),
                     ));
                 }
             }
@@ -184,7 +196,14 @@ pub fn function_decl(
 
     let visibility = match visibility {
         Some(v) => {
-            if func.ty == pt::FunctionTy::Constructor {
+            if func.ty == pt::FunctionTy::Modifier {
+                ns.diagnostics.push(Diagnostic::error(
+                    v.loc(),
+                    format!("‘{}’: modifiers can not have visibility", v),
+                ));
+
+                pt::Visibility::Internal(v.loc())
+            } else if func.ty == pt::FunctionTy::Constructor {
                 ns.diagnostics.push(Diagnostic::warning(
                     v.loc(),
                     format!("‘{}’: visibility for constructors is ignored", v),
@@ -196,18 +215,33 @@ pub fn function_decl(
             }
         }
         None => {
-            if func.ty != pt::FunctionTy::Constructor {
-                ns.diagnostics.push(Diagnostic::error(
-                    func.loc,
-                    "no visibility specified".to_string(),
-                ));
+            match func.ty {
+                pt::FunctionTy::Constructor => pt::Visibility::Public(pt::Loc(0, 0, 0)),
+                pt::FunctionTy::Modifier => pt::Visibility::Internal(pt::Loc(0, 0, 0)),
+                _ => {
+                    ns.diagnostics.push(Diagnostic::error(
+                        func.loc,
+                        "no visibility specified".to_string(),
+                    ));
 
-                success = false;
+                    success = false;
+                    // continue processing while assuming it's a public
+                    pt::Visibility::Public(pt::Loc(0, 0, 0))
+                }
             }
-            // continue processing while assuming it's a public
-            pt::Visibility::Public(pt::Loc(0, 0, 0))
         }
     };
+
+    if let Some(m) = &mutability {
+        if func.ty == pt::FunctionTy::Modifier {
+            ns.diagnostics.push(Diagnostic::error(
+                m.loc(),
+                "modifier cannot have mutability specifier".to_string(),
+            ));
+            success = false;
+            mutability = None;
+        }
+    }
 
     // Reference types can't be passed through the ABI encoder/decoder, so
     // storage parameters/returns are only allowed in internal/private functions
@@ -487,7 +521,7 @@ pub fn function_decl(
         {
             ns.diagnostics.push(Diagnostic::error_with_note(
                 func.loc,
-                "overloaded function with this signature already exist".to_string(),
+                format!("overloaded {} with this signature already exist", func.ty),
                 ns.contracts[*func_contract_no].functions[*func_no].loc,
                 "location of previous definition".to_string(),
             ));

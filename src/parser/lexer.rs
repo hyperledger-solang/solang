@@ -138,7 +138,6 @@ pub enum Token<'input> {
     Colon,
     OpenBracket,
     CloseBracket,
-    Underscore,
     Complement,
     Question,
 
@@ -169,6 +168,7 @@ pub enum Token<'input> {
     Virtual,
     Override,
     Using,
+    Modifier,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -224,7 +224,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Colon => write!(f, ":"),
             Token::OpenBracket => write!(f, "["),
             Token::CloseBracket => write!(f, "]"),
-            Token::Underscore => write!(f, "_"),
             Token::Complement => write!(f, "~"),
             Token::Question => write!(f, "?"),
             Token::ShiftRightAssign => write!(f, "<<="),
@@ -295,6 +294,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Virtual => write!(f, "virtual"),
             Token::Override => write!(f, "override"),
             Token::Using => write!(f, "using"),
+            Token::Modifier => write!(f, "modifier"),
         }
     }
 }
@@ -454,7 +454,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "string" => Token::String,
     "struct" => Token::Struct,
     "throw" => Token::Throw,
-    "_" => Token::Underscore,
     "true" => Token::True,
     "uint8" => Token::Uint(8),
     "uint16" => Token::Uint(16),
@@ -512,6 +511,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "virtual" => Token::Virtual,
     "override" => Token::Override,
     "using" => Token::Using,
+    "modifier" => Token::Modifier,
 };
 
 impl<'input> Lexer<'input> {

@@ -427,7 +427,7 @@ pub enum FunctionAttribute {
     Visibility(Visibility),
     Virtual(Loc),
     Override(Loc, Vec<Identifier>),
-    BaseArguments(Loc, Base),
+    BaseOrModifier(Loc, Base),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -436,6 +436,7 @@ pub enum FunctionTy {
     Function,
     Fallback,
     Receive,
+    Modifier,
 }
 
 impl fmt::Display for FunctionTy {
@@ -445,6 +446,7 @@ impl fmt::Display for FunctionTy {
             FunctionTy::Function => write!(f, "function"),
             FunctionTy::Fallback => write!(f, "fallback"),
             FunctionTy::Receive => write!(f, "receive"),
+            FunctionTy::Modifier => write!(f, "modifier"),
         }
     }
 }
@@ -469,7 +471,6 @@ pub enum Statement {
     Args(Loc, Vec<NamedArgument>),
     If(Loc, Expression, Box<Statement>, Option<Box<Statement>>),
     While(Loc, Expression, Box<Statement>),
-    PlaceHolder(Loc),
     Expression(Loc, Expression),
     VariableDefinition(Loc, VariableDeclaration, Option<Expression>),
     For(
@@ -500,7 +501,6 @@ impl Statement {
             | Statement::Args(loc, _)
             | Statement::If(loc, _, _, _)
             | Statement::While(loc, _, _)
-            | Statement::PlaceHolder(loc)
             | Statement::Expression(loc, _)
             | Statement::VariableDefinition(loc, _, _)
             | Statement::For(loc, _, _, _, _)

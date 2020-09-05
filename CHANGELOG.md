@@ -6,6 +6,7 @@ will be documented here.
 
 ### Added
 - `event` can be declared and emitted with `emit`
+- Function modifiers have been implemented
 
 ## [0.1.3]
 
