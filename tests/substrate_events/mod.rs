@@ -369,3 +369,83 @@ fn event_imported() {
 
     no_errors(ns.diagnostics);
 }
+
+#[test]
+fn signatures() {
+    let ns = parse_and_resolve(
+        r#"
+        event foo(bool a, int b);
+        event bar(bool a, int b);
+
+        contract c {
+            event foo(int b);
+            event bar(int b);
+
+            function f() public {
+                emit foo(true, 1);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        event foo(bool a, int b);
+        event foo(bool x, int y);
+
+        contract c {
+            event foo(int b);
+
+            function f() public {
+                emit foo(true, 1);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "event ‘foo’ already defined with same fields"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        event foo(bool a, int b);
+
+        contract c {
+            event foo(int b);
+            event foo(int x);
+
+            function f() public {
+                emit foo(true, 1);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "event ‘foo’ already defined with same fields"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        event foo(bool a, int b);
+
+        contract c {
+            event foo(bool x, int y);
+
+            function f() public {
+                emit foo(true, 1);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "event ‘foo’ already defined with same fields"
+    );
+}

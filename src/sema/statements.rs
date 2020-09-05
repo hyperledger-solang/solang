@@ -699,7 +699,7 @@ fn emit_event(
 ) -> Result<Statement, ()> {
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
-            let event_no = ns.resolve_event(file_no, Some(contract_no), ty)?;
+            let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
 
             let mut resolved_args = Vec::new();
 
@@ -708,46 +708,59 @@ fn emit_event(
                 resolved_args.push(expr);
             }
 
-            let event = &ns.events[event_no];
-            if resolved_args.len() != event.fields.len() {
-                ns.diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "event type ‘{}’ has {} fields, {} provided",
-                        event.name,
-                        event.fields.len(),
-                        resolved_args.len()
-                    ),
-                ));
-                return Err(());
-            }
             let mut diagnostics = Vec::new();
-            let mut cast_args = Vec::new();
-            // check if arguments can be implicitly casted
-            for (i, arg) in resolved_args.iter().enumerate() {
-                match try_cast(&arg.loc(), arg.clone(), &event.fields[i].ty, true, ns) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(e) => {
-                        diagnostics.push(e);
+
+            for event_no in &event_nos {
+                let event = &ns.events[*event_no];
+                if resolved_args.len() != event.fields.len() {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "event type ‘{}’ has {} fields, {} provided",
+                            event.name,
+                            event.fields.len(),
+                            resolved_args.len()
+                        ),
+                    ));
+                    continue;
+                }
+                let mut cast_args = Vec::new();
+
+                let mut matches = true;
+                // check if arguments can be implicitly casted
+                for (i, arg) in resolved_args.iter().enumerate() {
+                    match try_cast(&arg.loc(), arg.clone(), &event.fields[i].ty, true, ns) {
+                        Ok(expr) => cast_args.push(expr),
+                        Err(e) => {
+                            diagnostics.push(e);
+                            matches = false;
+                        }
                     }
+                }
+
+                if matches {
+                    if !ns.contracts[contract_no].sends_events.contains(event_no) {
+                        ns.contracts[contract_no].sends_events.push(*event_no);
+                    }
+                    return Ok(Statement::Emit {
+                        loc: *loc,
+                        event_no: *event_no,
+                        args: cast_args,
+                    });
                 }
             }
 
-            if diagnostics.is_empty() {
-                if !ns.contracts[contract_no].sends_events.contains(&event_no) {
-                    ns.contracts[contract_no].sends_events.push(event_no);
-                }
-                return Ok(Statement::Emit {
-                    loc: *loc,
-                    event_no,
-                    args: cast_args,
-                });
-            } else {
+            if event_nos.len() == 1 {
                 ns.diagnostics.extend(diagnostics);
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find event which matches signature".to_string(),
+                ));
             }
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
-            let event_no = ns.resolve_event(file_no, Some(contract_no), ty)?;
+            let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
 
             let mut arguments = HashMap::new();
 
@@ -765,72 +778,82 @@ fn emit_event(
                 );
             }
 
-            let event = &ns.events[event_no];
-            let params_len = event.fields.len();
-
-            if params_len != arguments.len() {
-                ns.diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!(
-                        "event expects {} arguments, {} provided",
-                        params_len,
-                        args.len()
-                    ),
-                ));
-                return Err(());
-            }
-
-            let mut matches = true;
-            let mut cast_args = Vec::new();
             let mut diagnostics = Vec::new();
 
-            // check if arguments can be implicitly casted
-            for i in 0..params_len {
-                let param = event.fields[i].clone();
+            for event_no in &event_nos {
+                let event = &ns.events[*event_no];
+                let params_len = event.fields.len();
 
-                if param.name.is_empty() {
-                    ns.diagnostics.push(Diagnostic::error(
+                if params_len != arguments.len() {
+                    diagnostics.push(Diagnostic::error(
+                        *loc,
+                        format!(
+                            "event expects {} arguments, {} provided",
+                            params_len,
+                            args.len()
+                        ),
+                    ));
+                    continue;
+                }
+
+                let mut matches = true;
+                let mut cast_args = Vec::new();
+
+                // check if arguments can be implicitly casted
+                for i in 0..params_len {
+                    let param = event.fields[i].clone();
+
+                    if param.name.is_empty() {
+                        ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!(
                             "event ‘{}’ cannot emitted by argument name since argument {} has no name",
                             event.name, i,
                         ),
                     ));
-                    matches = false;
-                    break;
-                }
-
-                let arg = match arguments.get(&param.name) {
-                    Some(a) => a,
-                    None => {
                         matches = false;
-                        ns.diagnostics.push(Diagnostic::error(
-                            *loc,
-                            format!(
-                                "missing argument ‘{}’ to event ‘{}’",
-                                param.name, event.name,
-                            ),
-                        ));
                         break;
                     }
-                };
-                match try_cast(&arg.loc(), arg.clone(), &param.ty, true, ns) {
-                    Ok(expr) => cast_args.push(expr),
-                    Err(e) => {
-                        diagnostics.push(e);
-                        matches = false;
+
+                    let arg = match arguments.get(&param.name) {
+                        Some(a) => a,
+                        None => {
+                            matches = false;
+                            ns.diagnostics.push(Diagnostic::error(
+                                *loc,
+                                format!(
+                                    "missing argument ‘{}’ to event ‘{}’",
+                                    param.name, event.name,
+                                ),
+                            ));
+                            break;
+                        }
+                    };
+                    match try_cast(&arg.loc(), arg.clone(), &param.ty, true, ns) {
+                        Ok(expr) => cast_args.push(expr),
+                        Err(e) => {
+                            diagnostics.push(e);
+                            matches = false;
+                        }
                     }
+                }
+
+                if matches {
+                    return Ok(Statement::Emit {
+                        loc: *loc,
+                        event_no: *event_no,
+                        args: cast_args,
+                    });
                 }
             }
 
-            if matches {
-                return Ok(Statement::Emit {
-                    loc: *loc,
-                    event_no,
-                    args: cast_args,
-                });
-            } else {
+            if event_nos.len() == 1 {
                 ns.diagnostics.extend(diagnostics);
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    "cannot find event which matches signature".to_string(),
+                ));
             }
         }
         pt::Expression::FunctionCallBlock(_, ty, block) => {

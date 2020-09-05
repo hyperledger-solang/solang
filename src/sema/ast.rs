@@ -306,7 +306,7 @@ pub enum Symbol {
     Function(Vec<pt::Loc>),
     Variable(pt::Loc, usize, usize),
     Struct(pt::Loc, usize),
-    Event(pt::Loc, usize),
+    Event(Vec<(pt::Loc, usize)>),
     Contract(pt::Loc, usize),
     Import(pt::Loc, usize),
 }
@@ -318,7 +318,7 @@ impl Symbol {
             Symbol::Function(funcs) => &funcs[0],
             Symbol::Variable(loc, _, _) => loc,
             Symbol::Struct(loc, _) => loc,
-            Symbol::Event(loc, _) => loc,
+            Symbol::Event(events) => &events[0].0,
             Symbol::Contract(loc, _) => loc,
             Symbol::Import(loc, _) => loc,
         }

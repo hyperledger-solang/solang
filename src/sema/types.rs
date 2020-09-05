@@ -56,24 +56,31 @@ pub fn resolve_typenames<'a>(
                 }
             }
             pt::SourceUnitPart::EventDefinition(def) => {
-                if ns.add_symbol(
+                if let Some(Symbol::Event(events)) =
+                    ns.symbols
+                        .get_mut(&(file_no, None, def.name.name.to_owned()))
+                {
+                    events.push((def.name.loc, delay.events.len()));
+                } else if !ns.add_symbol(
                     file_no,
                     None,
                     &def.name,
-                    Symbol::Event(def.name.loc, delay.events.len()),
+                    Symbol::Event(vec![(def.name.loc, delay.events.len())]),
                 ) {
-                    let s = EventDecl {
-                        doc: def.doc.clone(),
-                        name: def.name.name.to_owned(),
-                        loc: def.name.loc,
-                        contract: None,
-                        fields: Vec::new(),
-                        anonymous: def.anonymous,
-                        signature: String::new(),
-                    };
-
-                    delay.events.push((s, def, None));
+                    continue;
                 }
+
+                let s = EventDecl {
+                    doc: def.doc.clone(),
+                    name: def.name.name.to_owned(),
+                    loc: def.name.loc,
+                    contract: None,
+                    fields: Vec::new(),
+                    anonymous: def.anonymous,
+                    signature: String::new(),
+                };
+
+                delay.events.push((s, def, None));
             }
             _ => (),
         }
@@ -88,15 +95,6 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         if let Some(fields) = struct_decl(def, file_no, contract, ns) {
             decl.fields = fields;
             ns.structs.push(decl);
-        }
-    }
-
-    // now we can resolve the fields for the events
-    for (mut decl, def, contract) in delay.events {
-        if let Some(fields) = event_decl(def, file_no, contract, ns) {
-            decl.signature = ns.signature(&decl.name, &fields);
-            decl.fields = fields;
-            ns.events.push(decl);
         }
     }
 
@@ -131,6 +129,72 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
         };
 
         check(s, file_no, &mut vec![s], ns);
+    }
+
+    // now we can resolve the fields for the events
+    for (mut decl, def, contract) in delay.events {
+        if let Some(fields) = event_decl(def, file_no, contract, ns) {
+            decl.signature = ns.signature(&decl.name, &fields);
+            decl.fields = fields;
+            ns.events.push(decl);
+        }
+    }
+
+    // events can have the same name, but they cannot have the same signature
+    // events in the global scope cannot have matching name and signature
+    // events in the contract scope cannot hve matching name and signature in
+    // same scope or in global scope
+
+    // first check global scope
+    let mut global_signatures: HashMap<&String, &EventDecl> = HashMap::new();
+
+    for event_no in 0..ns.events.len() {
+        let event = &ns.events[event_no];
+
+        if event.contract.is_some() {
+            continue;
+        }
+
+        if let Some(prev) = global_signatures.get(&event.signature) {
+            ns.diagnostics.push(Diagnostic::error_with_note(
+                event.loc,
+                format!("event ‘{}’ already defined with same fields", event.name),
+                prev.loc,
+                format!("location of previous definition of ‘{}’", prev.name),
+            ));
+        } else {
+            global_signatures.insert(&event.signature, &event);
+        }
+    }
+
+    // first check contract scope
+    let mut contract_signatures: HashMap<(&String, &String), &EventDecl> = HashMap::new();
+
+    for event_no in 0..ns.events.len() {
+        let event = &ns.events[event_no];
+
+        if let Some(contract_name) = &event.contract {
+            if let Some(prev) = global_signatures.get(&event.signature) {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    event.loc,
+                    format!("event ‘{}’ already defined with same fields", event.name),
+                    prev.loc,
+                    format!("location of previous definition of ‘{}’", prev.name),
+                ));
+                continue;
+            }
+
+            if let Some(prev) = contract_signatures.get(&(contract_name, &event.signature)) {
+                ns.diagnostics.push(Diagnostic::error_with_note(
+                    event.loc,
+                    format!("event ‘{}’ already defined with same fields", event.name),
+                    prev.loc,
+                    format!("location of previous definition of ‘{}’", prev.name),
+                ));
+            } else {
+                contract_signatures.insert((contract_name, &event.signature), &event);
+            }
+        }
     }
 }
 
@@ -179,26 +243,32 @@ fn resolve_contract<'a>(
                 }
             }
             pt::ContractPart::EventDefinition(ref s) => {
-                if ns.add_symbol(
+                if let Some(Symbol::Event(events)) =
+                    ns.symbols
+                        .get_mut(&(file_no, Some(contract_no), s.name.name.to_owned()))
+                {
+                    events.push((s.name.loc, delay.events.len()));
+                } else if !ns.add_symbol(
                     file_no,
                     Some(contract_no),
                     &s.name,
-                    Symbol::Event(s.name.loc, delay.events.len()),
+                    Symbol::Event(vec![(s.name.loc, delay.events.len())]),
                 ) {
-                    let decl = EventDecl {
-                        doc: s.doc.clone(),
-                        name: s.name.name.to_owned(),
-                        loc: s.name.loc,
-                        contract: Some(def.name.name.to_owned()),
-                        fields: Vec::new(),
-                        anonymous: s.anonymous,
-                        signature: String::new(),
-                    };
-
-                    delay.events.push((decl, s, Some(contract_no)));
-                } else {
                     broken = true;
+                    continue;
                 }
+
+                let decl = EventDecl {
+                    doc: s.doc.clone(),
+                    name: s.name.name.to_owned(),
+                    loc: s.name.loc,
+                    contract: Some(def.name.name.to_owned()),
+                    fields: Vec::new(),
+                    anonymous: s.anonymous,
+                    signature: String::new(),
+                };
+
+                delay.events.push((decl, s, Some(contract_no)));
             }
             _ => (),
         }
