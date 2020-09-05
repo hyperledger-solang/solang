@@ -3219,9 +3219,10 @@ fn struct_literal(
 }
 
 /// Resolve a function call with positional arguments
-fn function_call_pos_args(
+pub fn call_position_args(
     loc: &pt::Loc,
     id: &pt::Identifier,
+    func_ty: pt::FunctionTy,
     args: &[pt::Expression],
     file_no: usize,
     contract_no: Option<usize>,
@@ -3238,16 +3239,24 @@ fn function_call_pos_args(
 
     // is it a builtin
     if builtin::is_builtin_call(None, &id.name, ns) {
-        let expr = builtin::resolve_call(loc, id, resolved_args, ns)?;
-
-        return if expr.tys().len() > 1 {
+        return if func_ty == pt::FunctionTy::Modifier {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
-                format!("builtin function ‘{}’ returns more than one value", id.name),
+                format!("cannot call builtin ‘{}’ via function modifier", id.name),
             ));
             Err(())
         } else {
-            Ok(expr)
+            let expr = builtin::resolve_call(loc, id, resolved_args, ns)?;
+
+            if expr.tys().len() > 1 {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!("builtin function ‘{}’ returns more than one value", id.name),
+                ));
+                Err(())
+            } else {
+                Ok(expr)
+            }
         };
     }
 
@@ -3258,7 +3267,7 @@ fn function_call_pos_args(
     for (base_contract_no, function_no) in ns.contracts[contract_no.unwrap()].all_functions.keys() {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
-        if func.name != id.name {
+        if func.name != id.name || func.ty != func_ty {
             continue;
         }
 
@@ -3270,7 +3279,8 @@ fn function_call_pos_args(
             errors.push(Diagnostic::error(
                 *loc,
                 format!(
-                    "function expects {} arguments, {} provided",
+                    "{} expects {} arguments, {} provided",
+                    func.ty,
                     params_len,
                     args.len()
                 ),
@@ -3300,9 +3310,9 @@ fn function_call_pos_args(
         if Some(*base_contract_no) != contract_no && func.is_private() {
             errors.push(Diagnostic::error_with_note(
                 *loc,
-                "cannot call private function".to_string(),
+                format!("cannot call private {}", func.ty),
                 func.loc,
-                format!("declaration of function ‘{}’", func.name),
+                format!("declaration of {} ‘{}’", func.ty, func.name),
             ));
 
             continue;
@@ -3326,16 +3336,23 @@ fn function_call_pos_args(
 
     match name_matches {
         0 => {
-            ns.diagnostics.push(Diagnostic::error(
-                id.loc,
-                format!("unknown function or type ‘{}’", id.name),
-            ));
+            if func_ty == pt::FunctionTy::Modifier {
+                ns.diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("unknown modifier ‘{}’", id.name),
+                ));
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!("unknown {} or type ‘{}’", func_ty, id.name),
+                ));
+            }
         }
         1 => ns.diagnostics.extend(errors),
         _ => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
-                "cannot find overloaded function which matches signature".to_string(),
+                format!("cannot find overloaded {} which matches signature", func_ty),
             ));
         }
     }
@@ -3378,7 +3395,7 @@ fn function_call_with_named_args(
     for (base_contract_no, function_no) in ns.contracts[contract_no.unwrap()].all_functions.keys() {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
-        if func.name != id.name {
+        if func.name != id.name || func.ty != pt::FunctionTy::Function {
             continue;
         }
 
@@ -3585,9 +3602,10 @@ fn method_call_pos_args(
 
                 import_library(contract_no.unwrap(), library_contract_no, ns);
 
-                return function_call_pos_args(
+                return call_position_args(
                     loc,
                     func,
+                    pt::FunctionTy::Function,
                     args,
                     file_no,
                     Some(library_contract_no),
@@ -3809,7 +3827,9 @@ fn method_call_pos_args(
         let mut name_match = 0;
 
         for function_no in 0..ns.contracts[*contract_no].functions.len() {
-            if func.name != ns.contracts[*contract_no].functions[function_no].name {
+            if func.name != ns.contracts[*contract_no].functions[function_no].name
+                || ns.contracts[*contract_no].functions[function_no].ty != pt::FunctionTy::Function
+            {
                 continue;
             }
 
@@ -3856,7 +3876,7 @@ fn method_call_pos_args(
                 if !ns.contracts[*contract_no].functions[function_no].is_public() {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("function ‘{}’ is not ‘public’ or ‘extern’", func.name),
+                        format!("function ‘{}’ is not ‘public’ or ‘external’", func.name),
                     ));
                     return Err(());
                 }
@@ -4046,7 +4066,7 @@ fn method_call_pos_args(
             for function_no in 0..ns.contracts[library_no].functions.len() {
                 let libfunc = &ns.contracts[library_no].functions[function_no];
 
-                if libfunc.name != func.name {
+                if libfunc.name != func.name || libfunc.ty != pt::FunctionTy::Function {
                     continue;
                 }
 
@@ -4203,7 +4223,10 @@ fn method_call_named_args(
 
         // function call
         for function_no in 0..ns.contracts[*external_contract_no].functions.len() {
-            if ns.contracts[*external_contract_no].functions[function_no].name != func_name.name {
+            if ns.contracts[*external_contract_no].functions[function_no].name != func_name.name
+                || ns.contracts[*external_contract_no].functions[function_no].ty
+                    != pt::FunctionTy::Function
+            {
                 continue;
             }
 
@@ -4258,7 +4281,10 @@ fn method_call_named_args(
                 if !ns.contracts[*external_contract_no].functions[function_no].is_public() {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
-                        format!("function ‘{}’ is not ‘public’ or ‘extern’", func_name.name),
+                        format!(
+                            "function ‘{}’ is not ‘public’ or ‘external’",
+                            func_name.name
+                        ),
                     ));
                     return Err(());
                 }
@@ -4652,7 +4678,16 @@ pub fn function_call_expr(
                 return Err(());
             }
 
-            function_call_pos_args(loc, &id, args, file_no, contract_no, ns, symtable)
+            call_position_args(
+                loc,
+                &id,
+                pt::FunctionTy::Function,
+                args,
+                file_no,
+                contract_no,
+                ns,
+                symtable,
+            )
         }
         pt::Expression::ArraySubscript(_, _, _) => {
             ns.diagnostics.push(Diagnostic::error(

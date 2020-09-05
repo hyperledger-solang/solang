@@ -47,6 +47,7 @@ mod substrate_inheritance;
 mod substrate_libraries;
 mod substrate_loops;
 mod substrate_mappings;
+mod substrate_modifier;
 mod substrate_primitives;
 mod substrate_strings;
 mod substrate_structs;

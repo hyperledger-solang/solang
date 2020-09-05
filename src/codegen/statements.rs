@@ -12,12 +12,14 @@ use sema::expression::try_cast;
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub fn statement(
     stmt: &Statement,
-    f: &Function,
+    func: &Function,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     ns: &Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
+    placeholder: Option<&Instr>,
+    return_override: Option<&Instr>,
 ) {
     match stmt {
         Statement::VariableDecl(_, pos, _, Some(init)) => {
@@ -29,12 +31,16 @@ pub fn statement(
             // nothing to do
         }
         Statement::Return(_, values) => {
-            let values = values
-                .iter()
-                .map(|expr| expression(expr, cfg, contract_no, ns, vartab))
-                .collect();
+            if let Some(return_instr) = return_override {
+                cfg.add(vartab, return_instr.clone());
+            } else {
+                let values = values
+                    .iter()
+                    .map(|expr| expression(expr, cfg, contract_no, ns, vartab))
+                    .collect();
 
-            cfg.add(vartab, Instr::Return { value: values });
+                cfg.add(vartab, Instr::Return { value: values });
+            }
         }
         Statement::Expression(_, reachable, expr) => {
             let expr = expression(expr, cfg, contract_no, ns, vartab);
@@ -75,18 +81,31 @@ pub fn statement(
             );
         }
         Statement::If(_, _, cond, then_stmt, else_stmt) if else_stmt.is_empty() => {
-            if_then(cond, then_stmt, f, cfg, contract_no, ns, vartab, loops);
+            if_then(
+                cond,
+                then_stmt,
+                func,
+                cfg,
+                contract_no,
+                ns,
+                vartab,
+                loops,
+                placeholder,
+                return_override,
+            );
         }
         Statement::If(_, _, cond, then_stmt, else_stmt) => if_then_else(
             cond,
             then_stmt,
             else_stmt,
-            f,
+            func,
             cfg,
             contract_no,
             ns,
             vartab,
             loops,
+            placeholder,
+            return_override,
         ),
         Statement::DoWhile(_, _, body_stmt, cond_expr) => {
             let body = cfg.new_basic_block("body".to_string());
@@ -103,7 +122,17 @@ pub fn statement(
             let mut body_reachable = true;
 
             for stmt in body_stmt {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
 
                 body_reachable = stmt.reachable();
             }
@@ -160,7 +189,17 @@ pub fn statement(
             let mut body_reachable = true;
 
             for stmt in body_stmt {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
 
                 body_reachable = stmt.reachable();
             }
@@ -188,7 +227,17 @@ pub fn statement(
             let end_block = cfg.new_basic_block("endfor".to_string());
 
             for stmt in init {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
             }
 
             cfg.add(vartab, Instr::Branch { bb: body_block });
@@ -209,7 +258,17 @@ pub fn statement(
             let mut body_reachable = true;
 
             for stmt in body {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
 
                 body_reachable = stmt.reachable();
             }
@@ -225,7 +284,17 @@ pub fn statement(
                     cfg.set_basic_block(next_block);
 
                     for stmt in next {
-                        statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                        statement(
+                            stmt,
+                            func,
+                            cfg,
+                            contract_no,
+                            ns,
+                            vartab,
+                            loops,
+                            placeholder,
+                            return_override,
+                        );
                         body_reachable = stmt.reachable();
                     }
                 }
@@ -256,7 +325,17 @@ pub fn statement(
             let end_block = cfg.new_basic_block("endfor".to_string());
 
             for stmt in init {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
             }
 
             cfg.add(vartab, Instr::Branch { bb: cond_block });
@@ -284,7 +363,17 @@ pub fn statement(
             let mut body_reachable = true;
 
             for stmt in body {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
 
                 body_reachable = stmt.reachable();
             }
@@ -300,7 +389,17 @@ pub fn statement(
             let mut next_reachable = true;
 
             for stmt in next {
-                statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+                statement(
+                    stmt,
+                    func,
+                    cfg,
+                    contract_no,
+                    ns,
+                    vartab,
+                    loops,
+                    placeholder,
+                    return_override,
+                );
 
                 next_reachable = stmt.reachable();
             }
@@ -382,12 +481,14 @@ pub fn statement(
             error,
             catch_param_pos,
             catch_stmt,
-            f,
+            func,
             cfg,
             contract_no,
             ns,
             vartab,
             loops,
+            placeholder,
+            return_override,
         ),
         Statement::Emit { event_no, args, .. } => {
             let event = &ns.events[*event_no];
@@ -426,6 +527,14 @@ pub fn statement(
                 },
             );
         }
+        Statement::Underscore(_) => {
+            cfg.add(
+                vartab,
+                placeholder
+                    .expect("placeholder should be provided for modifiers")
+                    .clone(),
+            );
+        }
     }
 }
 
@@ -433,12 +542,14 @@ pub fn statement(
 fn if_then(
     cond: &Expression,
     then_stmt: &[Statement],
-    f: &Function,
+    func: &Function,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     ns: &Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
+    placeholder: Option<&Instr>,
+    return_override: Option<&Instr>,
 ) {
     let cond = expression(cond, cfg, contract_no, ns, vartab);
 
@@ -461,7 +572,17 @@ fn if_then(
     let mut reachable = true;
 
     for stmt in then_stmt {
-        statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+        statement(
+            stmt,
+            func,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+        );
 
         reachable = stmt.reachable();
     }
@@ -480,12 +601,14 @@ fn if_then_else(
     cond: &Expression,
     then_stmt: &[Statement],
     else_stmt: &[Statement],
-    f: &Function,
+    func: &Function,
     cfg: &mut ControlFlowGraph,
     contract_no: usize,
     ns: &Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
+    placeholder: Option<&Instr>,
+    return_override: Option<&Instr>,
 ) {
     let cond = expression(cond, cfg, contract_no, ns, vartab);
 
@@ -510,7 +633,17 @@ fn if_then_else(
     let mut then_reachable = true;
 
     for stmt in then_stmt {
-        statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+        statement(
+            stmt,
+            func,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+        );
 
         then_reachable = stmt.reachable();
     }
@@ -525,7 +658,17 @@ fn if_then_else(
     let mut else_reachable = true;
 
     for stmt in else_stmt {
-        statement(stmt, f, cfg, contract_no, ns, vartab, loops);
+        statement(
+            stmt,
+            func,
+            cfg,
+            contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+        );
 
         else_reachable = stmt.reachable();
     }
@@ -548,12 +691,14 @@ fn try_catch(
     error: &Option<(Option<usize>, Parameter, Vec<Statement>)>,
     catch_param_pos: &Option<usize>,
     catch_stmt: &[Statement],
-    f: &Function,
+    func: &Function,
     cfg: &mut ControlFlowGraph,
     callee_contract_no: usize,
     ns: &Namespace,
     vartab: &mut Vartable,
     loops: &mut LoopScopes,
+    placeholder: Option<&Instr>,
+    return_override: Option<&Instr>,
 ) {
     let success = vartab.temp(
         &pt::Identifier {
@@ -697,7 +842,17 @@ fn try_catch(
     let mut finally_reachable = true;
 
     for stmt in ok_stmt {
-        statement(stmt, f, cfg, callee_contract_no, ns, vartab, loops);
+        statement(
+            stmt,
+            func,
+            cfg,
+            callee_contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+        );
 
         finally_reachable = stmt.reachable();
     }
@@ -730,7 +885,17 @@ fn try_catch(
         let mut reachable = true;
 
         for stmt in error_stmt {
-            statement(stmt, f, cfg, callee_contract_no, ns, vartab, loops);
+            statement(
+                stmt,
+                func,
+                cfg,
+                callee_contract_no,
+                ns,
+                vartab,
+                loops,
+                placeholder,
+                return_override,
+            );
 
             reachable = stmt.reachable();
         }
@@ -754,7 +919,17 @@ fn try_catch(
     let mut reachable = true;
 
     for stmt in catch_stmt {
-        statement(stmt, f, cfg, callee_contract_no, ns, vartab, loops);
+        statement(
+            stmt,
+            func,
+            cfg,
+            callee_contract_no,
+            ns,
+            vartab,
+            loops,
+            placeholder,
+            return_override,
+        );
 
         reachable = stmt.reachable();
     }

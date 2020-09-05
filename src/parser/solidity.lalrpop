@@ -98,6 +98,7 @@ ContractPart: ContractPart = {
     EnumDefinition => ContractPart::EnumDefinition(<>),
     ContractVariableDefinition => ContractPart::ContractVariableDefinition(<>),
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
+    ModifierDefinition => ContractPart::FunctionDefinition(<>),
     Using => ContractPart::Using(<>),
 }
 
@@ -380,9 +381,10 @@ FunctionAttribute: FunctionAttribute = {
     <l:@L> "virtual" <r:@R> => FunctionAttribute::Virtual(Loc(file_no, <>)),
     <l:@L> "override" <r:@R> => FunctionAttribute::Override(Loc(file_no, <>), Vec::new()),
     <l:@L> "override" "(" <list:CommaOne<Identifier>> ")" <r:@R> => FunctionAttribute::Override(Loc(file_no, l, r), list),
-    <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseArguments(Loc(file_no, l, r), base),
+    <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc(file_no, l, r), base),
 }
 
+// Modifier has special case
 FunctionTy: FunctionTy = {
     "constructor" => FunctionTy::Constructor,
     "fallback" => FunctionTy::Fallback,
@@ -393,6 +395,29 @@ FunctionTy: FunctionTy = {
 BlockStatementOrSemiColon: Option<Statement> = {
     <@L> <@R> ";" => None,
     BlockStatement => Some(<>),
+}
+
+// Modifiers can't have attributes or return values, but we parse them anyway so we can give nice
+// error messages.
+ModifierDefinition: Box<FunctionDefinition> = {
+    <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList?>
+    <attributes:FunctionAttribute*>
+    <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+        let params = params.unwrap_or(Vec::new());
+        let returns = returns.unwrap_or(Vec::new());
+
+        Box::new(FunctionDefinition{
+            doc,
+            loc: Loc(file_no, l, r),
+            ty: FunctionTy::Modifier,
+            name: Some(name),
+            name_loc: Loc(file_no, nl, nr),
+            params,
+            attributes,
+            returns,
+            body,
+        })
+    },
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
@@ -488,9 +513,6 @@ TryReturns: (Vec<(Loc, Option<Parameter>)>, Box<Statement>) = {
 NonIfStatement: Statement = {
     BlockStatement => <>,
     <SimpleStatement> ";" => <>,
-    <l:@L> "_" <r:@R> ";" => {
-        Statement::PlaceHolder(Loc(file_no, l, r))
-    },
     <l:@L>"do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
         Statement::DoWhile(Loc(file_no, l, r), Box::new(b), e)
     },
@@ -543,39 +565,16 @@ extern {
     type Error = LexicalError;
 
     enum Token<'input> {
-        ";" => Token::Semicolon,
-        "import" => Token::Import,
-        "contract" => Token::Contract,
-        "pragma" => Token::Pragma,
-        "bool" => Token::Bool,
-        "address" => Token::Address,
-        "string" => Token::String,
-        "bytes" => Token::DynamicBytes,
-        Uint => Token::Uint(<u16>),
-        Int => Token::Int(<u16>),
-        Bytes => Token::Bytes(<u8>),
-        "memory" => Token::Memory,
-        "calldata" => Token::Calldata,
-        "storage" => Token::Storage,
         LexIdentifier => Token::Identifier(<&'input str>),
         LexStringLiteral => Token::StringLiteral(<&'input str>),
         LexHexLiteral => Token::HexLiteral(<&'input str>),
         LexNumber => Token::Number(<&'input str>),
         LexHexNumber => Token::HexNumber(<&'input str>),
-        "struct" => Token::Struct,
+        ";" => Token::Semicolon,
         "{" => Token::OpenCurlyBrace,
         "}" => Token::CloseCurlyBrace,
         "(" => Token::OpenParenthesis,
         ")" => Token::CloseParenthesis,
-        "interface" => Token::Interface,
-        "library" => Token::Library,
-        "event" => Token::Event,
-        "enum" => Token::Enum,
-        "public" => Token::Public,
-        "private" => Token::Private,
-        "external" => Token::External,
-        "internal" => Token::Internal,
-        "constant" => Token::Constant,
         "=" => Token::Assign,
         "==" => Token::Equal,
         "=>" => Token::Arrow,
@@ -611,13 +610,38 @@ extern {
         "**" => Token::Power,
         "!" => Token::Not,
         "~" => Token::Complement,
-        "delete" => Token::Delete,
-        "new" => Token::New,
         "++" => Token::Increment,
         "--" => Token::Decrement,
         "[" => Token::OpenBracket,
         "]" => Token::CloseBracket,
         "." => Token::Member,
+        "," => Token::Comma,
+        DocComment => Token::DocComment(<CommentType>, <&'input str>),
+        Uint => Token::Uint(<u16>),
+        Int => Token::Int(<u16>),
+        Bytes => Token::Bytes(<u8>),
+        "struct" => Token::Struct,
+        "memory" => Token::Memory,
+        "calldata" => Token::Calldata,
+        "storage" => Token::Storage,
+        "import" => Token::Import,
+        "contract" => Token::Contract,
+        "pragma" => Token::Pragma,
+        "bool" => Token::Bool,
+        "address" => Token::Address,
+        "string" => Token::String,
+        "bytes" => Token::DynamicBytes,
+        "delete" => Token::Delete,
+        "new" => Token::New,
+        "interface" => Token::Interface,
+        "library" => Token::Library,
+        "event" => Token::Event,
+        "enum" => Token::Enum,
+        "public" => Token::Public,
+        "private" => Token::Private,
+        "external" => Token::External,
+        "internal" => Token::Internal,
+        "constant" => Token::Constant,
         "true" => Token::True,
         "false" => Token::False,
         "pure" => Token::Pure,
@@ -631,13 +655,11 @@ extern {
         "for" => Token::For,
         "while" => Token::While,
         "else" => Token::Else,
-        "_" => Token::Underscore,
         "do" => Token::Do,
         "continue" => Token::Continue,
         "break" => Token::Break,
         "throw" => Token::Throw,
         "emit" => Token::Emit,
-        "," => Token::Comma,
         "anonymous" => Token::Anonymous,
         "indexed" => Token::Indexed,
         "mapping" => Token::Mapping,
@@ -662,6 +684,6 @@ extern {
         "virtual" => Token::Virtual,
         "override" => Token::Override,
         "using" => Token::Using,
-        DocComment => Token::DocComment(<CommentType>, <&'input str>)
+        "modifier" => Token::Modifier,
     }
 }

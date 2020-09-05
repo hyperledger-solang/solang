@@ -8,7 +8,9 @@ use super::expression::expression;
 use super::statements::{statement, LoopScopes};
 use hex;
 use parser::pt;
-use sema::ast::{CallTy, Contract, Expression, Namespace, Parameter, StringLocation, Type};
+use sema::ast::{
+    CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
+};
 use sema::contracts::{collect_base_args, visit_bases};
 use sema::symtable::Symtable;
 use Target;
@@ -212,6 +214,11 @@ impl ControlFlowGraph {
             selector: 0,
             current: 0,
         }
+    }
+
+    /// Is this a placeholder
+    pub fn is_placeholder(&self) -> bool {
+        self.bb.is_empty()
     }
 
     pub fn new_basic_block(&mut self, name: String) -> usize {
@@ -908,6 +915,102 @@ pub fn generate_cfg(
     contract_no: usize,
     base_contract_no: usize,
     function_no: Option<usize>,
+    cfg_no: usize,
+    all_cfgs: &mut Vec<ControlFlowGraph>,
+    ns: &mut Namespace,
+) {
+    let default_constructor = &ns.default_constructor();
+
+    let func = match function_no {
+        Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
+        None => default_constructor,
+    };
+
+    // if the function is a fallback or receive, then don't bother with the overriden functions; they cannot be used
+    if func.ty == pt::FunctionTy::Receive {
+        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
+            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
+                return;
+            }
+        }
+    }
+
+    if func.ty == pt::FunctionTy::Fallback {
+        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
+            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
+                return;
+            }
+        }
+    }
+
+    if func.ty == pt::FunctionTy::Modifier {
+        return;
+    }
+
+    let mut cfg = function_cfg(contract_no, base_contract_no, function_no, ns);
+
+    // if the function is a modifier, generate the modifier chain
+    if !func.modifiers.is_empty() {
+        // only function can have modifiers
+        assert_eq!(func.ty, pt::FunctionTy::Function);
+        let public = cfg.public;
+        let nonpayable = cfg.nonpayable;
+
+        cfg.public = false;
+
+        for call in func.modifiers.iter().rev() {
+            let modifier_cfg_no = all_cfgs.len();
+
+            all_cfgs.push(cfg);
+
+            let (modifier_contract_no, modifier_no, args) =
+                resolve_modifier_call(call, &ns.contracts[contract_no]);
+            let modifier = &ns.contracts[modifier_contract_no].functions[modifier_no];
+
+            cfg =
+                generate_modifier_dispatch(contract_no, func, modifier, modifier_cfg_no, args, ns);
+        }
+
+        cfg.public = public;
+        cfg.nonpayable = nonpayable;
+        cfg.selector = func.selector();
+    }
+
+    all_cfgs[cfg_no] = cfg;
+}
+
+/// resolve modifier call
+fn resolve_modifier_call<'a>(
+    call: &'a Expression,
+    contract: &Contract,
+) -> (usize, usize, &'a Vec<Expression>) {
+    if let Expression::InternalFunctionCall {
+        contract_no,
+        function_no,
+        signature,
+        args,
+        ..
+    } = call
+    {
+        // is it a virtual function call
+        let (contract_no, function_no) = if let Some(signature) = signature {
+            contract.virtual_functions[signature]
+        } else {
+            (*contract_no, *function_no)
+        };
+
+        (contract_no, function_no, args)
+    } else {
+        panic!("modifier should internal call");
+    }
+}
+
+/// Generate the CFG for a function. If function_no is None, generate the implicit default
+/// constructor
+fn function_cfg(
+    contract_no: usize,
+    base_contract_no: usize,
+    function_no: Option<usize>,
     ns: &Namespace,
 ) -> ControlFlowGraph {
     let mut vartab = match function_no {
@@ -951,22 +1054,6 @@ pub fn generate_cfg(
     cfg.public = func.is_public()
         && !ns.contracts[base_contract_no].is_library()
         && !(func.is_constructor() && contract_no != base_contract_no);
-    // if the function is a fallback or receive, then the override functions should not be public
-    if func.ty == pt::FunctionTy::Receive {
-        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
-            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
-                cfg.public = false;
-            }
-        }
-    }
-
-    if func.ty == pt::FunctionTy::Fallback {
-        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
-            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
-                cfg.public = false;
-            }
-        }
-    }
 
     cfg.ty = func.ty;
     cfg.nonpayable = if ns.target == Target::Substrate {
@@ -1121,12 +1208,106 @@ pub fn generate_cfg(
             ns,
             &mut vartab,
             &mut loops,
+            None,
+            None,
         );
     }
 
     cfg.vars = vartab.drain();
 
     // walk cfg to check for use for before initialize
+    cfg
+}
+
+/// Generate the CFG for a modifier on a function
+pub fn generate_modifier_dispatch(
+    contract_no: usize,
+    func: &Function,
+    modifier: &Function,
+    cfg_no: usize,
+    args: &[Expression],
+    ns: &Namespace,
+) -> ControlFlowGraph {
+    let name = format!(
+        "sol::modifier::{}::{}::{}",
+        &ns.contracts[contract_no].name,
+        func.llvm_symbol(ns),
+        modifier.llvm_symbol(ns)
+    );
+    let mut cfg = ControlFlowGraph::new(name);
+
+    cfg.params = func.params.clone();
+    cfg.returns = func.returns.clone();
+
+    let mut vartab = Vartable::new_with_syms(&func.symtable, ns.next_id);
+
+    vartab.add_symbol_table(&modifier.symtable);
+    let mut loops = LoopScopes::new();
+
+    // a modifier takes the same arguments as the function it is applied to. This way we can pass
+    // the arguments to the function
+    for (i, arg) in func.symtable.arguments.iter().enumerate() {
+        if let Some(pos) = arg {
+            let var = &func.symtable.vars[pos];
+            cfg.add(
+                &mut vartab,
+                Instr::Set {
+                    res: *pos,
+                    expr: Expression::FunctionArg(var.id.loc, var.ty.clone(), i),
+                },
+            );
+        }
+    }
+
+    // now set the modifier args
+    for (i, arg) in modifier.symtable.arguments.iter().enumerate() {
+        if let Some(pos) = arg {
+            let expr = expression(&args[i], &mut cfg, contract_no, ns, &mut vartab);
+            cfg.add(&mut vartab, Instr::Set { res: *pos, expr });
+        }
+    }
+
+    // modifiers do not have return values in their syntax, but the return values from the function
+    // need to be passed on. So, we need to create some var
+    let mut value = Vec::new();
+    for (i, arg) in func.returns.iter().enumerate() {
+        value.push(Expression::Variable(
+            arg.loc,
+            arg.ty.clone(),
+            func.symtable.returns[i],
+        ));
+    }
+
+    let return_instr = Instr::Return { value };
+
+    // create the instruction for the place holder
+    let placeholder = Instr::Call {
+        res: func.symtable.returns.clone(),
+        cfg_no,
+        args: func
+            .params
+            .iter()
+            .enumerate()
+            .map(|(i, p)| Expression::FunctionArg(p.loc, p.ty.clone(), i))
+            .collect(),
+    };
+
+    for stmt in &modifier.body {
+        statement(
+            stmt,
+            func,
+            &mut cfg,
+            contract_no,
+            ns,
+            &mut vartab,
+            &mut loops,
+            Some(&placeholder),
+            Some(&return_instr),
+        );
+    }
+
+    cfg.vars = vartab.drain();
+
     cfg
 }
 

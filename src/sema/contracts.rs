@@ -54,12 +54,14 @@ impl ast::Contract {
         let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
 
         for cfg in &self.cfg {
-            out += &format!(
-                "\n# {} {} public:{} nonpayable:{}\n",
-                cfg.ty, cfg.name, cfg.public, cfg.nonpayable
-            );
+            if !cfg.is_placeholder() {
+                out += &format!(
+                    "\n# {} {} public:{} nonpayable:{}\n",
+                    cfg.ty, cfg.name, cfg.public, cfg.nonpayable
+                );
 
-            out += &cfg.to_string(self, ns);
+                out += &cfg.to_string(self, ns);
+            }
         }
 
         out
@@ -706,7 +708,7 @@ fn resolve_bodies(
 }
 
 #[derive(Debug)]
-pub struct BaseArguments<'a> {
+pub struct BaseOrModifier<'a> {
     pub loc: &'a pt::Loc,
     pub defined_constructor_no: Option<(usize, usize)>,
     pub calling_constructor_no: usize,
@@ -717,7 +719,7 @@ pub struct BaseArguments<'a> {
 pub fn collect_base_args<'a>(
     contract_no: usize,
     constructor_no: Option<usize>,
-    base_args: &mut HashMap<usize, BaseArguments<'a>>,
+    base_args: &mut HashMap<usize, BaseOrModifier<'a>>,
     diagnostics: &mut HashSet<ast::Diagnostic>,
     ns: &'a ast::Namespace,
 ) {
@@ -743,7 +745,7 @@ pub fn collect_base_args<'a>(
             } else {
                 base_args.insert(
                     *base_no,
-                    BaseArguments {
+                    BaseOrModifier {
                         loc,
                         defined_constructor_no: Some((contract_no, defined_constructor_no)),
                         calling_constructor_no: *constructor_no,
@@ -774,7 +776,7 @@ pub fn collect_base_args<'a>(
             } else {
                 base_args.insert(
                     base.contract_no,
-                    BaseArguments {
+                    BaseOrModifier {
                         loc: &base.loc,
                         defined_constructor_no: None,
                         calling_constructor_no: *constructor_no,
