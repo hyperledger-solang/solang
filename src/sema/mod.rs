@@ -298,11 +298,11 @@ impl ast::Namespace {
                         "location of previous definition".to_string(),
                     ));
                 }
-                ast::Symbol::Event(c, _) => {
+                ast::Symbol::Event(events) => {
                     self.diagnostics.push(ast::Diagnostic::error_with_note(
                         id.loc,
                         format!("{} is already defined as an event", id.name.to_string()),
-                        *c,
+                        events[0].0,
                         "location of previous definition".to_string(),
                     ));
                 }
@@ -338,8 +338,10 @@ impl ast::Namespace {
             return false;
         }
 
-        // if there is nothing on the contract level, try top-level scope
-        if contract_no.is_some() {
+        // if there is nothing on the contract level, try top-level scope if its not an event
+        if let ast::Symbol::Event(_) = &symbol {
+            // it's ok to have event of same name in contract and global scope
+        } else if contract_no.is_some() {
             if let Some(sym) = self.symbols.get(&(file_no, None, id.name.to_owned())) {
                 match sym {
                     ast::Symbol::Contract(c, _) => {
@@ -369,11 +371,11 @@ impl ast::Namespace {
                             "location of previous definition".to_string(),
                         ));
                     }
-                    ast::Symbol::Event(c, _) => {
+                    ast::Symbol::Event(e) => {
                         self.diagnostics.push(ast::Diagnostic::warning_with_note(
                             id.loc,
                             format!("{} is already defined as an event", id.name),
-                            *c,
+                            e[0].0,
                             "location of previous definition".to_string(),
                         ));
                     }
@@ -460,7 +462,7 @@ impl ast::Namespace {
         file_no: usize,
         contract_no: Option<usize>,
         expr: &pt::Expression,
-    ) -> Result<usize, ()> {
+    ) -> Result<Vec<usize>, ()> {
         let (namespace, id, dimensions) = self.expr_to_type(file_no, contract_no, expr)?;
 
         if !dimensions.is_empty() {
@@ -482,10 +484,62 @@ impl ast::Namespace {
             }
         };
 
+        // if we are resolving an event name without namespace (so no explicit contract name
+        // or import symbol), then we should look both in the current contract and global scope
+        if namespace.is_empty() {
+            let mut events = Vec::new();
+
+            // we should only be resolving events for emit statements
+            assert!(contract_no.is_some());
+
+            match self
+                .symbols
+                .get(&(file_no, contract_no, id.name.to_owned()))
+            {
+                None => (),
+                Some(ast::Symbol::Event(ev)) => {
+                    for (_, event_no) in ev {
+                        events.push(*event_no);
+                    }
+                }
+                sym => {
+                    let error = ast::Namespace::wrong_symbol(sym, &id);
+
+                    self.diagnostics.push(error);
+
+                    return Err(());
+                }
+            }
+
+            return match self.symbols.get(&(file_no, None, id.name.to_owned())) {
+                None if events.is_empty() => {
+                    self.diagnostics.push(ast::Diagnostic::decl_error(
+                        id.loc,
+                        format!("event ‘{}’ not found", id.name),
+                    ));
+                    Err(())
+                }
+                None => Ok(events),
+                Some(ast::Symbol::Event(ev)) => {
+                    for (_, event_no) in ev {
+                        events.push(*event_no);
+                    }
+                    Ok(events)
+                }
+                sym => {
+                    let error = ast::Namespace::wrong_symbol(sym, &id);
+
+                    self.diagnostics.push(error);
+
+                    Err(())
+                }
+            };
+        }
+
         let s = self.resolve_namespace(namespace, file_no, contract_no, &id)?;
 
-        if let Some(ast::Symbol::Event(_, n)) = s {
-            Ok(*n)
+        if let Some(ast::Symbol::Event(events)) = s {
+            Ok(events.iter().map(|(_, event_no)| *event_no).collect())
         } else {
             let error = ast::Namespace::wrong_symbol(s, &id);
 
@@ -504,7 +558,7 @@ impl ast::Namespace {
             Some(ast::Symbol::Struct(_, _)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is a struct", id.name))
             }
-            Some(ast::Symbol::Event(_, _)) => {
+            Some(ast::Symbol::Event(_)) => {
                 ast::Diagnostic::decl_error(id.loc, format!("`{}' is an event", id.name))
             }
             Some(ast::Symbol::Function(_)) => {
@@ -633,12 +687,19 @@ impl ast::Namespace {
                     "previous definition of struct".to_string(),
                 ));
             }
-            Some(ast::Symbol::Event(loc, _)) => {
-                self.diagnostics.push(ast::Diagnostic::warning_with_note(
+            Some(ast::Symbol::Event(events)) => {
+                let notes = events
+                    .iter()
+                    .map(|(pos, _)| ast::Note {
+                        pos: *pos,
+                        message: "previous definition of event".to_owned(),
+                    })
+                    .collect();
+
+                self.diagnostics.push(ast::Diagnostic::warning_with_notes(
                     id.loc,
                     format!("declaration of `{}' shadows event definition", id.name),
-                    *loc,
-                    "previous definition of event".to_string(),
+                    notes,
                 ));
             }
             Some(ast::Symbol::Function(v)) => {
@@ -815,7 +876,7 @@ impl ast::Namespace {
                 Box::new(ast::Type::Contract(*n)),
                 resolve_dimensions(&dimensions, self)?,
             )),
-            Some(ast::Symbol::Event(_, _)) => {
+            Some(ast::Symbol::Event(_)) => {
                 self.diagnostics.push(ast::Diagnostic::decl_error(
                     id.loc,
                     format!("‘{}’ is an event", id.name),
@@ -907,7 +968,7 @@ impl ast::Namespace {
                         ));
                         return Err(());
                     }
-                    Some(ast::Symbol::Event(_, _)) => {
+                    Some(ast::Symbol::Event(_)) => {
                         self.diagnostics.push(ast::Diagnostic::decl_error(
                             id.loc,
                             format!("‘{}’ is an event", id.name),
