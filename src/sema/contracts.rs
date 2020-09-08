@@ -12,7 +12,6 @@ use super::functions;
 use super::statements;
 use super::symtable::Symtable;
 use super::variables;
-use codegen::cfg::ControlFlowGraph;
 use emit;
 
 impl ast::Contract {
@@ -28,12 +27,14 @@ impl ast::Contract {
             layout: Vec::new(),
             doc: Vec::new(),
             functions: Vec::new(),
-            function_table: HashMap::new(),
+            all_functions: HashMap::new(),
+            virtual_functions: HashMap::new(),
             variables: Vec::new(),
             creates: Vec::new(),
             sends_events: Vec::new(),
-            initializer: ControlFlowGraph::new(),
+            initializer: None,
             default_constructor: None,
+            cfg: Vec::new(),
         }
     }
 
@@ -52,21 +53,13 @@ impl ast::Contract {
     pub fn print_to_string(&self, ns: &ast::Namespace) -> String {
         let mut out = format!("#\n# Contract: {}\n#\n\n", self.name);
 
-        out += "# storage initializer\n";
-        out += &self.initializer.to_string(self, ns);
+        for cfg in &self.cfg {
+            out += &format!(
+                "\n# {} {} public:{} nonpayable:{}\n",
+                cfg.ty, cfg.name, cfg.public, cfg.nonpayable
+            );
 
-        if let Some((_, constructor)) = &self.default_constructor {
-            out += "\n# default constructor\n";
-            out += &constructor.to_string(self, ns);
-        }
-
-        for (contract_no, function_no, cfg) in self.function_table.values() {
-            let func = &ns.contracts[*contract_no].functions[*function_no];
-            let contract_name = &ns.contracts[*contract_no].name;
-
-            out += &format!("\n# {} {}.{}\n", func.ty, contract_name, func.signature);
-
-            out += &cfg.as_ref().unwrap().to_string(self, ns);
+            out += &cfg.to_string(self, ns);
         }
 
         out
@@ -330,13 +323,13 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 
         // add functions to our function_table
         for function_no in 0..ns.contracts[base_contract_no].functions.len() {
-            let vsignature = ns.contracts[base_contract_no].functions[function_no]
-                .vsignature
+            let signature = ns.contracts[base_contract_no].functions[function_no]
+                .signature
                 .to_owned();
 
             let cur = &ns.contracts[base_contract_no].functions[function_no];
 
-            if let Some(entry) = override_needed.get(&vsignature) {
+            if let Some(entry) = override_needed.get(&signature) {
                 let non_virtual = entry
                     .iter()
                     .filter_map(|(contract_no, function_no)| {
@@ -425,7 +418,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         }
                     }
 
-                    override_needed.remove(&vsignature);
+                    override_needed.remove(&signature);
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
@@ -435,7 +428,16 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         ),
                     ));
                 }
-            } else if let Some(prev) = ns.contracts[contract_no].function_table.get(&vsignature) {
+            } else if let Some(prev) =
+                ns.contracts[contract_no]
+                    .all_functions
+                    .keys()
+                    .find(|(base_no, function_no)| {
+                        let func = &ns.contracts[*base_no].functions[*function_no];
+
+                        func.ty != pt::FunctionTy::Constructor && func.signature == signature
+                    })
+            {
                 let func_prev = &ns.contracts[prev.0].functions[prev.1];
 
                 if base_contract_no == prev.0 {
@@ -480,11 +482,11 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         continue;
                     }
                 } else {
-                    if let Some(entry) = override_needed.get_mut(&vsignature) {
+                    if let Some(entry) = override_needed.get_mut(&signature) {
                         entry.push((base_contract_no, function_no));
                     } else {
                         override_needed.insert(
-                            vsignature,
+                            signature,
                             vec![(prev.0, prev.1), (base_contract_no, function_no)],
                         );
                     }
@@ -500,9 +502,15 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                 continue;
             }
 
+            if cur.is_override.is_some() || cur.is_virtual {
+                ns.contracts[contract_no]
+                    .virtual_functions
+                    .insert(signature, (base_contract_no, function_no));
+            }
+
             ns.contracts[contract_no]
-                .function_table
-                .insert(vsignature, (base_contract_no, function_no, None));
+                .all_functions
+                .insert((base_contract_no, function_no), usize::MAX);
         }
     }
 
@@ -537,8 +545,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
 fn missing_overrides(contract_no: usize, ns: &mut ast::Namespace) {
     if ns.contracts[contract_no].is_concrete() {
         let mut notes = Vec::new();
-        for (base_contract_no, function_no, _) in ns.contracts[contract_no].function_table.values()
-        {
+        for (base_contract_no, function_no) in ns.contracts[contract_no].all_functions.keys() {
             let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
             if func.body.is_empty() {
@@ -870,12 +877,8 @@ pub fn import_library(contract_no: usize, library_no: usize, ns: &mut ast::Names
     ns.contracts[contract_no].libraries.push(library_no);
 
     for function_no in 0..ns.contracts[library_no].functions.len() {
-        let signature = ns.contracts[library_no].functions[function_no]
-            .vsignature
-            .to_owned();
-
         ns.contracts[contract_no]
-            .function_table
-            .insert(signature, (library_no, function_no, None));
+            .all_functions
+            .insert((library_no, function_no), usize::MAX);
     }
 }

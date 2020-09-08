@@ -90,7 +90,7 @@ impl Expression {
             | Expression::StringConcat(loc, _, _, _)
             | Expression::Keccak256(loc, _, _)
             | Expression::ReturnData(loc)
-            | Expression::InternalFunctionCall(loc, _, _, _, _)
+            | Expression::InternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
@@ -188,7 +188,7 @@ impl Expression {
                 panic!("two return values");
             }
             Expression::Builtin(_, returns, _, _)
-            | Expression::InternalFunctionCall(_, returns, _, _, _)
+            | Expression::InternalFunctionCall { returns, .. }
             | Expression::ExternalFunctionCall { returns, .. } => {
                 assert_eq!(returns.len(), 1);
                 returns[0].clone()
@@ -220,7 +220,7 @@ impl Expression {
     pub fn tys(&self) -> Vec<Type> {
         match self {
             Expression::Builtin(_, returns, _, _)
-            | Expression::InternalFunctionCall(_, returns, _, _, _)
+            | Expression::InternalFunctionCall { returns, .. }
             | Expression::ExternalFunctionCall { returns, .. } => returns.to_vec(),
             Expression::List(_, list) => list.iter().map(|e| e.ty()).collect(),
             Expression::ExternalFunctionCallRaw { .. } => vec![Type::Bool, Type::DynamicBytes],
@@ -3255,9 +3255,7 @@ fn function_call_pos_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for (signature, (base_contract_no, function_no, _)) in
-        &ns.contracts[contract_no.unwrap()].function_table
-    {
+    for (base_contract_no, function_no) in ns.contracts[contract_no.unwrap()].all_functions.keys() {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
         if func.name != id.name {
@@ -3312,13 +3310,18 @@ fn function_call_pos_args(
 
         let returns = function_returns(func);
 
-        return Ok(Expression::InternalFunctionCall(
-            *loc,
+        return Ok(Expression::InternalFunctionCall {
+            loc: *loc,
             returns,
-            contract_no.unwrap(),
-            signature.to_owned(),
-            cast_args,
-        ));
+            contract_no: *base_contract_no,
+            function_no: *function_no,
+            signature: if func.is_virtual || func.is_override.is_some() {
+                Some(func.signature.clone())
+            } else {
+                None
+            },
+            args: cast_args,
+        });
     }
 
     match name_matches {
@@ -3372,9 +3375,7 @@ fn function_call_with_named_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for (signature, (base_contract_no, function_no, _)) in
-        &ns.contracts[contract_no.unwrap()].function_table
-    {
+    for (base_contract_no, function_no) in ns.contracts[contract_no.unwrap()].all_functions.keys() {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
         if func.name != id.name {
@@ -3446,13 +3447,18 @@ fn function_call_with_named_args(
 
         let returns = function_returns(func);
 
-        return Ok(Expression::InternalFunctionCall(
-            *loc,
+        return Ok(Expression::InternalFunctionCall {
+            loc: *loc,
             returns,
-            contract_no.unwrap(),
-            signature.to_owned(),
-            cast_args,
-        ));
+            contract_no: *base_contract_no,
+            function_no: *function_no,
+            signature: if func.is_virtual || func.is_override.is_some() {
+                Some(func.signature.clone())
+            } else {
+                None
+            },
+            args: cast_args,
+        });
     }
 
     match name_matches {
@@ -4091,13 +4097,17 @@ fn method_call_pos_args(
                 }
 
                 let returns = function_returns(libfunc);
-                let signature = libfunc.signature.to_owned();
 
                 import_library(contract_no, library_no, ns);
 
-                return Ok(Expression::InternalFunctionCall(
-                    *loc, returns, library_no, signature, cast_args,
-                ));
+                return Ok(Expression::InternalFunctionCall {
+                    loc: *loc,
+                    returns,
+                    contract_no: library_no,
+                    function_no,
+                    signature: None,
+                    args: cast_args,
+                });
             }
         }
 

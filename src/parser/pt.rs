@@ -430,7 +430,7 @@ pub enum FunctionAttribute {
     BaseArguments(Loc, Base),
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FunctionTy {
     Constructor,
     Function,

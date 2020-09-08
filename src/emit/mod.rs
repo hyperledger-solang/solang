@@ -259,7 +259,7 @@ pub struct Contract<'a> {
     triple: TargetTriple,
     contract: &'a ast::Contract,
     ns: &'a ast::Namespace,
-    functions: HashMap<String, FunctionValue<'a>>,
+    functions: HashMap<usize, FunctionValue<'a>>,
     wasm: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
     code_size: RefCell<Option<IntValue<'a>>>,
@@ -742,36 +742,15 @@ impl<'a> Contract<'a> {
     fn emit_functions(&mut self, runtime: &mut dyn TargetRuntime) {
         let mut defines = Vec::new();
 
-        for (signature, (base_contract_no, function_no, cfg)) in &self.contract.function_table {
-            let contract_name = &self.ns.contracts[*base_contract_no].name;
-            let codegen_func = &self.ns.contracts[*base_contract_no].functions[*function_no];
+        for (cfg_no, cfg) in self.contract.cfg.iter().enumerate() {
+            let func_decl = self.declare_function(cfg);
+            self.functions.insert(cfg_no, func_decl);
 
-            let name = match codegen_func.ty {
-                pt::FunctionTy::Function => format!(
-                    "sol::function::{}::{}",
-                    contract_name,
-                    codegen_func.wasm_symbol(self.ns)
-                ),
-                pt::FunctionTy::Constructor => format!(
-                    "sol::constructor::{}{}",
-                    contract_name,
-                    codegen_func.wasm_symbol(self.ns)
-                ),
-                _ => format!("sol::{}::{}", contract_name, codegen_func.ty),
-            };
-
-            let func_decl = self.declare_function(&name, codegen_func);
-            self.functions.insert(signature.to_owned(), func_decl);
-
-            defines.push((
-                func_decl,
-                codegen_func,
-                cfg.as_ref().expect("cfg should have been generated"),
-            ));
+            defines.push((func_decl, cfg));
         }
 
-        for (func_decl, codegen_func, cfg) in defines {
-            self.emit_cfg(cfg, Some(codegen_func), func_decl, runtime);
+        for (func_decl, cfg) in defines {
+            self.emit_cfg(cfg, func_decl, runtime);
         }
     }
 
@@ -2721,22 +2700,24 @@ impl<'a> Contract<'a> {
             Some(Linkage::Internal),
         );
 
-        self.emit_cfg(&self.contract.initializer, None, function, runtime);
+        let cfg = &self.contract.cfg[self.contract.initializer.unwrap()];
+
+        self.emit_cfg(cfg, function, runtime);
 
         function
     }
 
     /// Emit function prototype
-    fn declare_function(&self, fname: &str, f: &ast::Function) -> FunctionValue<'a> {
+    fn declare_function(&self, cfg: &cfg::ControlFlowGraph) -> FunctionValue<'a> {
         // function parameters
-        let mut args = f
+        let mut args = cfg
             .params
             .iter()
             .map(|p| self.llvm_var(&p.ty))
             .collect::<Vec<BasicTypeEnum>>();
 
         // add return values
-        for p in &f.returns {
+        for p in &cfg.returns {
             args.push(if p.ty.is_reference_type() && !p.ty.is_contract_storage() {
                 self.llvm_type(&p.ty)
                     .ptr_type(AddressSpace::Generic)
@@ -2749,14 +2730,13 @@ impl<'a> Contract<'a> {
         let ftype = self.context.i32_type().fn_type(&args, false);
 
         self.module
-            .add_function(&fname, ftype, Some(Linkage::Internal))
+            .add_function(&cfg.name, ftype, Some(Linkage::Internal))
     }
 
     #[allow(clippy::cognitive_complexity)]
     fn emit_cfg(
         &self,
         cfg: &cfg::ControlFlowGraph,
-        codegen_function: Option<&ast::Function>,
         function: FunctionValue<'a>,
         runtime: &mut dyn TargetRuntime,
     ) {
@@ -2885,7 +2865,7 @@ impl<'a> Contract<'a> {
                             .build_return(Some(&self.context.i32_type().const_zero()));
                     }
                     cfg::Instr::Return { value } => {
-                        let returns_offset = codegen_function.unwrap().params.len();
+                        let returns_offset = cfg.params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
                             let retval = self.expression(val, &w.vars, function, runtime);
@@ -3382,13 +3362,8 @@ impl<'a> Contract<'a> {
                                 .into_int_value(),
                         );
                     }
-                    cfg::Instr::Call {
-                        res,
-                        base,
-                        func,
-                        args,
-                    } => {
-                        let f = &self.ns.contracts[*base].functions[*func];
+                    cfg::Instr::Call { res, cfg_no, args } => {
+                        let f = &self.contract.cfg[*cfg_no];
 
                         let mut parms = args
                             .iter()
@@ -3407,7 +3382,7 @@ impl<'a> Contract<'a> {
 
                         let ret = self
                             .builder
-                            .build_call(self.functions[&f.vsignature], &parms, "")
+                            .build_call(self.functions[cfg_no], &parms, "")
                             .try_as_basic_value()
                             .left()
                             .unwrap();
@@ -3906,7 +3881,7 @@ impl<'a> Contract<'a> {
         runtime: &mut dyn TargetRuntime,
         nonpayable: F,
     ) where
-        F: Fn(&ast::Function) -> bool,
+        F: Fn(&cfg::ControlFlowGraph) -> bool,
     {
         // create start function
         let no_function_matched = match fallback {
@@ -3955,54 +3930,21 @@ impl<'a> Contract<'a> {
 
         let mut cases = Vec::new();
 
-        for (signature, (base_contract_no, function_no, _)) in &self.contract.function_table {
-            let f = &self.ns.contracts[*base_contract_no].functions[*function_no];
-
-            if f.ty != function_ty
-                || !f.is_public()
-                || self.ns.contracts[*base_contract_no].is_library()
-            {
-                continue;
-            }
-
-            if f.is_constructor() && !signature.starts_with(&format!("@{}", self.contract.name)) {
-                // base constructor, no dispatch needed
+        for (cfg_no, cfg) in self.contract.cfg.iter().enumerate() {
+            if cfg.ty != function_ty || !cfg.public {
                 continue;
             }
 
             self.add_dispatch_case(
-                f,
+                cfg,
                 &mut cases,
                 argsdata,
                 argslen,
                 function,
-                self.functions[&f.vsignature],
+                self.functions[&cfg_no],
                 runtime,
                 &nonpayable,
             );
-        }
-
-        if function_ty == pt::FunctionTy::Constructor {
-            if let Some((f, constructor_cfg)) = &self.contract.default_constructor {
-                let dest = self.module.add_function(
-                    "default_constructor",
-                    self.context.i32_type().fn_type(&[], false),
-                    Some(Linkage::Internal),
-                );
-                // emit
-                self.emit_cfg(constructor_cfg, None, dest, runtime);
-
-                self.add_dispatch_case(
-                    f,
-                    &mut cases,
-                    argsdata,
-                    argslen,
-                    function,
-                    dest,
-                    runtime,
-                    &nonpayable,
-                );
-            }
         }
 
         self.builder.position_at_end(switch_block);
@@ -4016,7 +3958,21 @@ impl<'a> Contract<'a> {
         // emit fallback code
         self.builder.position_at_end(no_function_matched);
 
-        if self.functions.get("@fallback").is_none() && self.functions.get("@receive").is_none() {
+        let fallback = self
+            .contract
+            .cfg
+            .iter()
+            .enumerate()
+            .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Fallback);
+
+        let receive = self
+            .contract
+            .cfg
+            .iter()
+            .enumerate()
+            .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Receive);
+
+        if fallback.is_none() && receive.is_none() {
             // no need to check value transferred; we will abort either way
             runtime.return_u32(self, self.context.i32_type().const_int(2, false));
 
@@ -4044,9 +4000,9 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(fallback_block);
 
-        match self.functions.get("@fallback") {
-            Some(f) => {
-                self.builder.build_call(*f, &[], "");
+        match fallback {
+            Some((cfg_no, _)) => {
+                self.builder.build_call(self.functions[&cfg_no], &[], "");
 
                 runtime.return_empty_abi(self);
             }
@@ -4057,9 +4013,9 @@ impl<'a> Contract<'a> {
 
         self.builder.position_at_end(receive_block);
 
-        match self.functions.get("@receive") {
-            Some(f) => {
-                self.builder.build_call(*f, &[], "");
+        match receive {
+            Some((cfg_no, _)) => {
+                self.builder.build_call(self.functions[&cfg_no], &[], "");
 
                 runtime.return_empty_abi(self);
             }
@@ -4072,7 +4028,7 @@ impl<'a> Contract<'a> {
     ///Add single case for emit_function_dispatch
     fn add_dispatch_case<F>(
         &self,
-        f: &ast::Function,
+        f: &cfg::ControlFlowGraph,
         cases: &mut Vec<(
             inkwell::values::IntValue<'a>,
             inkwell::basic_block::BasicBlock<'a>,
@@ -4084,11 +4040,9 @@ impl<'a> Contract<'a> {
         runtime: &dyn TargetRuntime,
         nonpayable: &F,
     ) where
-        F: Fn(&ast::Function) -> bool,
+        F: Fn(&cfg::ControlFlowGraph) -> bool,
     {
         let bb = self.context.append_basic_block(function, "");
-
-        let id = f.selector();
 
         self.builder.position_at_end(bb);
 
@@ -4161,7 +4115,10 @@ impl<'a> Contract<'a> {
 
         runtime.return_u32(self, ret.into_int_value());
 
-        cases.push((self.context.i32_type().const_int(id as u64, false), bb));
+        cases.push((
+            self.context.i32_type().const_int(f.selector as u64, false),
+            bb,
+        ));
     }
 
     // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which

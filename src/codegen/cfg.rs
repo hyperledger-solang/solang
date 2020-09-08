@@ -11,8 +11,10 @@ use parser::pt;
 use sema::ast::{CallTy, Contract, Expression, Namespace, Parameter, StringLocation, Type};
 use sema::contracts::{collect_base_args, visit_bases};
 use sema::symtable::Symtable;
+use Target;
 
 #[allow(clippy::large_enum_variant)]
+#[derive(Clone)]
 pub enum Instr {
     ClearStorage {
         ty: Type,
@@ -52,8 +54,7 @@ pub enum Instr {
     },
     Call {
         res: Vec<usize>,
-        base: usize,
-        func: usize,
+        cfg_no: usize,
         args: Vec<Expression>,
     },
     Return {
@@ -150,6 +151,7 @@ impl fmt::Display for HashTy {
     }
 }
 
+#[derive(Clone)]
 pub struct BasicBlock {
     pub phis: Option<HashSet<usize>>,
     pub name: String,
@@ -162,26 +164,54 @@ impl BasicBlock {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone)]
 pub struct ControlFlowGraph {
+    pub name: String,
+    pub params: Vec<Parameter>,
+    pub returns: Vec<Parameter>,
     pub vars: HashMap<usize, Variable>,
     pub bb: Vec<BasicBlock>,
+    pub nonpayable: bool,
+    pub public: bool,
+    pub ty: pt::FunctionTy,
+    pub selector: u32,
     current: usize,
-    pub writes_contract_storage: bool,
 }
 
 impl ControlFlowGraph {
-    pub fn new() -> Self {
+    pub fn new(name: String) -> Self {
         let mut cfg = ControlFlowGraph {
+            name,
+            params: Vec::new(),
+            returns: Vec::new(),
             vars: HashMap::new(),
             bb: Vec::new(),
+            nonpayable: false,
+            public: false,
+            ty: pt::FunctionTy::Function,
+            selector: 0,
             current: 0,
-            writes_contract_storage: false,
         };
 
         cfg.new_basic_block("entry".to_string());
 
         cfg
+    }
+
+    /// Create an empty CFG which will be replaced later
+    pub fn placeholder() -> Self {
+        ControlFlowGraph {
+            name: String::new(),
+            params: Vec::new(),
+            returns: Vec::new(),
+            vars: HashMap::new(),
+            bb: Vec::new(),
+            nonpayable: false,
+            public: false,
+            ty: pt::FunctionTy::Function,
+            selector: 0,
+            current: 0,
+        }
     }
 
     pub fn new_basic_block(&mut self, name: String) -> usize {
@@ -468,15 +498,23 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCall(_, _, contract_no, signature, args) => format!(
-                "(call {} {} ({})",
-                contract_no,
-                signature,
+            Expression::InternalFunctionCall { contract_no, function_no, signature, args, .. } => {
+                let (base_contract_no, function_no) = if let Some(signature) = signature {
+                    contract.virtual_functions[signature]
+                } else {
+                    (*contract_no, *function_no)
+                };
+
+                let cfg_no = contract.all_functions[&(base_contract_no, function_no)];
+
+                format!(
+                "(call {} ({})",
+                contract.cfg[cfg_no].name,
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
                     .join(", ")
-            ),
+            )},
             Expression::Constructor {
                 contract_no,
                 constructor_no: Some(constructor_no),
@@ -557,7 +595,7 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, e)
             ),
             Expression::Builtin(_, _, builtin, args) =>
-                format!("(builtin {:?} ({}))", builtin,                
+                format!("(builtin {:?} ({}))", builtin,
                      args.iter().map(|a| self.expr_to_string(contract, ns, &a)).collect::<Vec<String>>().join(", ")
             )
             ,
@@ -661,20 +699,13 @@ impl ControlFlowGraph {
             Instr::AssertFailure { expr: Some(expr) } => {
                 format!("assert-failure:{}", self.expr_to_string(contract, ns, expr))
             }
-            Instr::Call {
-                res,
-                base,
-                func,
-                args,
-            } => format!(
-                "{} = call {} {}.{} {}",
+            Instr::Call { res, cfg_no, args } => format!(
+                "{} = call {} {}",
                 res.iter()
                     .map(|local| format!("%{}", self.vars[local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
-                *func,
-                ns.contracts[*base].name.to_owned(),
-                contract.functions[*func].name.to_owned(),
+                contract.cfg[*cfg_no].name,
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
@@ -879,8 +910,6 @@ pub fn generate_cfg(
     function_no: Option<usize>,
     ns: &Namespace,
 ) -> ControlFlowGraph {
-    let mut cfg = ControlFlowGraph::new();
-
     let mut vartab = match function_no {
         Some(function_no) => Vartable::new_with_syms(
             &ns.contracts[base_contract_no].functions[function_no].symtable,
@@ -890,11 +919,60 @@ pub fn generate_cfg(
     };
 
     let mut loops = LoopScopes::new();
-    let default_constructor = &ns.default_constructor(contract_no);
+    let default_constructor = &ns.default_constructor();
 
     let func = match function_no {
         Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
         None => default_constructor,
+    };
+
+    // symbol name
+    let contract_name = &ns.contracts[base_contract_no].name;
+
+    let name = match func.ty {
+        pt::FunctionTy::Function => {
+            format!("sol::function::{}::{}", contract_name, func.llvm_symbol(ns))
+        }
+        pt::FunctionTy::Constructor => format!(
+            "sol::constructor::{}{}",
+            contract_name,
+            func.llvm_symbol(ns)
+        ),
+        _ => format!("sol::{}::{}", contract_name, func.ty),
+    };
+
+    let mut cfg = ControlFlowGraph::new(name);
+
+    cfg.params = func.params.clone();
+    cfg.returns = func.returns.clone();
+    cfg.selector = func.selector();
+
+    // a function is public if is not a library and not a base constructor
+    cfg.public = func.is_public()
+        && !ns.contracts[base_contract_no].is_library()
+        && !(func.is_constructor() && contract_no != base_contract_no);
+    // if the function is a fallback or receive, then the override functions should not be public
+    if func.ty == pt::FunctionTy::Receive {
+        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
+            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
+                cfg.public = false;
+            }
+        }
+    }
+
+    if func.ty == pt::FunctionTy::Fallback {
+        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
+            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
+                cfg.public = false;
+            }
+        }
+    }
+
+    cfg.ty = func.ty;
+    cfg.nonpayable = if ns.target == Target::Substrate {
+        !func.is_constructor() && !func.is_payable()
+    } else {
+        !func.is_payable()
     };
 
     // populate the argument variables
@@ -996,22 +1074,24 @@ pub fn generate_cfg(
             }
 
             if let Some((constructor_no, args)) = gen_base_args.remove(base_no) {
+                let cfg_no = ns.contracts[contract_no].all_functions[&(*base_no, constructor_no)];
+
                 cfg.add(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        base: *base_no,
-                        func: constructor_no,
+                        cfg_no,
                         args,
                     },
                 );
             } else if let Some(constructor_no) = ns.contracts[*base_no].no_args_constructor() {
+                let cfg_no = ns.contracts[contract_no].all_functions[&(*base_no, constructor_no)];
+
                 cfg.add(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        base: *base_no,
-                        func: constructor_no,
+                        cfg_no,
                         args: Vec::new(),
                     },
                 );
