@@ -179,7 +179,6 @@ pub fn array_pop(
     let empty_array = cfg.new_basic_block("empty_array".to_string());
     let has_elements = cfg.new_basic_block("has_elements".to_string());
 
-    cfg.writes_contract_storage = true;
     cfg.add(
         vartab,
         Instr::BranchCond {

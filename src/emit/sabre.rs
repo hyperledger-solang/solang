@@ -175,11 +175,12 @@ impl SabreTarget {
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
 
-        if let Some(con) = contract
+        if let Some((cfg_no, con)) = contract
             .contract
             .functions
             .iter()
-            .find(|f| f.is_constructor())
+            .enumerate()
+            .find(|(_, f)| f.is_constructor())
         {
             let mut args = Vec::new();
 
@@ -195,7 +196,7 @@ impl SabreTarget {
 
             contract
                 .builder
-                .build_call(contract.functions[&con.vsignature], &args, "");
+                .build_call(contract.functions[&cfg_no], &args, "");
         }
 
         // return 1 for success

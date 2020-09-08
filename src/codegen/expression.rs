@@ -351,7 +351,7 @@ pub fn expression(
 
             Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
         }
-        Expression::InternalFunctionCall(_, _, _, _, _)
+        Expression::InternalFunctionCall { .. }
         | Expression::ExternalFunctionCall { .. }
         | Expression::Builtin(_, _, Builtin::AbiDecode, _) => {
             let mut returns = emit_function_call(expr, contract_no, cfg, ns, vartab);
@@ -977,16 +977,28 @@ pub fn emit_function_call(
     vartab: &mut Vartable,
 ) -> Vec<Expression> {
     match expr {
-        Expression::InternalFunctionCall(_, _, contract_no, signature, args) => {
+        Expression::InternalFunctionCall {
+            contract_no,
+            function_no,
+            signature,
+            args,
+            ..
+        } => {
             let args = args
                 .iter()
                 .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
                 .collect();
 
-            let (contract_no, function_no, _) =
-                ns.contracts[*contract_no].function_table[signature];
+            let (base_contract_no, function_no) = if let Some(signature) = signature {
+                ns.contracts[callee_contract_no].virtual_functions[signature]
+            } else {
+                (*contract_no, *function_no)
+            };
 
-            let ftype = &ns.contracts[contract_no].functions[function_no];
+            let cfg_no =
+                ns.contracts[callee_contract_no].all_functions[&(base_contract_no, function_no)];
+
+            let ftype = &ns.contracts[base_contract_no].functions[function_no];
 
             if !ftype.returns.is_empty() {
                 let mut res = Vec::new();
@@ -1003,15 +1015,7 @@ pub fn emit_function_call(
                     returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
                 }
 
-                cfg.add(
-                    vartab,
-                    Instr::Call {
-                        res,
-                        base: contract_no,
-                        func: function_no,
-                        args,
-                    },
-                );
+                cfg.add(vartab, Instr::Call { res, cfg_no, args });
 
                 returns
             } else {
@@ -1019,8 +1023,7 @@ pub fn emit_function_call(
                     vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        base: contract_no,
-                        func: function_no,
+                        cfg_no,
                         args,
                     },
                 );

@@ -1110,10 +1110,9 @@ impl ast::Namespace {
     }
 
     /// Phoney default constructor
-    pub fn default_constructor(&self, contract_no: usize) -> ast::Function {
+    pub fn default_constructor(&self) -> ast::Function {
         let mut func = ast::Function::new(
             pt::Loc(0, 0, 0),
-            contract_no,
             "".to_owned(),
             vec![],
             pt::FunctionTy::Constructor,

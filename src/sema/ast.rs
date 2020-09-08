@@ -99,8 +99,6 @@ pub struct Function {
     pub name: String,
     pub ty: pt::FunctionTy,
     pub signature: String,
-    // Signature used for function table
-    pub vsignature: String,
     pub mutability: Option<pt::StateMutability>,
     pub visibility: pt::Visibility,
     pub params: Vec<Parameter>,
@@ -115,7 +113,6 @@ pub struct Function {
 impl Function {
     pub fn new(
         loc: pt::Loc,
-        contract_no: usize,
         name: String,
         doc: Vec<String>,
         ty: pt::FunctionTy,
@@ -125,15 +122,10 @@ impl Function {
         returns: Vec<Parameter>,
         ns: &Namespace,
     ) -> Self {
-        let signature = ns.signature(&name, &params);
-
-        let vsignature = match ty {
-            pt::FunctionTy::Fallback => "@fallback".to_string(),
-            pt::FunctionTy::Receive => "@receive".to_string(),
-            pt::FunctionTy::Constructor => {
-                format!("@{}{}", ns.contracts[contract_no].name, signature)
-            }
-            pt::FunctionTy::Function => signature.clone(),
+        let signature = match ty {
+            pt::FunctionTy::Fallback => String::from("@fallback"),
+            pt::FunctionTy::Receive => String::from("@receive"),
+            _ => ns.signature(&name, &params),
         };
 
         Function {
@@ -142,7 +134,6 @@ impl Function {
             name,
             ty,
             signature,
-            vsignature,
             mutability,
             visibility,
             params,
@@ -196,8 +187,8 @@ impl Function {
         }
     }
 
-    /// Return a unique string for this function which is a valid wasm symbol
-    pub fn wasm_symbol(&self, ns: &Namespace) -> String {
+    /// Return a unique string for this function which is a valid llvm symbol
+    pub fn llvm_symbol(&self, ns: &Namespace) -> String {
         let mut sig = self.name.to_owned();
 
         if !self.params.is_empty() {
@@ -365,14 +356,16 @@ pub struct Contract {
     pub using: Vec<(usize, Option<Type>)>,
     pub layout: Vec<Layout>,
     pub functions: Vec<Function>,
-    pub function_table: HashMap<String, (usize, usize, Option<ControlFlowGraph>)>,
+    pub all_functions: HashMap<(usize, usize), usize>,
+    pub virtual_functions: HashMap<String, (usize, usize)>,
     pub variables: Vec<ContractVariable>,
     // List of contracts this contract instantiates
     pub creates: Vec<usize>,
     // List of events this contract produces
     pub sends_events: Vec<usize>,
-    pub initializer: ControlFlowGraph,
-    pub default_constructor: Option<(Function, ControlFlowGraph)>,
+    pub initializer: Option<usize>,
+    pub default_constructor: Option<(Function, usize)>,
+    pub cfg: Vec<ControlFlowGraph>,
 }
 
 impl Contract {
@@ -512,7 +505,14 @@ pub enum Expression {
 
     Or(pt::Loc, Box<Expression>, Box<Expression>),
     And(pt::Loc, Box<Expression>, Box<Expression>),
-    InternalFunctionCall(pt::Loc, Vec<Type>, usize, String, Vec<Expression>),
+    InternalFunctionCall {
+        loc: pt::Loc,
+        returns: Vec<Type>,
+        contract_no: usize,
+        function_no: usize,
+        signature: Option<String>,
+        args: Vec<Expression>,
+    },
     ExternalFunctionCall {
         loc: pt::Loc,
         returns: Vec<Type>,
@@ -643,7 +643,7 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::InternalFunctionCall(_, _, _, _, args) => {
+                Expression::InternalFunctionCall { args, .. } => {
                     for e in args {
                         e.recurse(cx, f);
                     }

@@ -340,10 +340,9 @@ pub fn function_decl(
 
     let mut fdecl = Function::new(
         func.loc,
-        contract_no,
         name,
         func.doc.clone(),
-        func.ty.clone(),
+        func.ty,
         mutability,
         visibility,
         params,
@@ -477,9 +476,14 @@ pub fn function_decl(
     } else {
         let id = func.name.as_ref().unwrap();
 
-        if let Some((func_contract_no, func_no, _)) = ns.contracts[contract_no]
-            .function_table
-            .get(&fdecl.vsignature)
+        if let Some((func_contract_no, func_no)) = ns.contracts[contract_no]
+            .all_functions
+            .keys()
+            .find(|(func_contract_no, func_no)| {
+                let func = &ns.contracts[*func_contract_no].functions[*func_no];
+
+                func.signature == fdecl.signature
+            })
         {
             ns.diagnostics.push(Diagnostic::error_with_note(
                 func.loc,
@@ -693,7 +697,6 @@ fn signatures() {
 
     let fdecl = Function::new(
         pt::Loc(0, 0, 0),
-        0,
         "foo".to_owned(),
         vec![],
         pt::FunctionTy::Function,

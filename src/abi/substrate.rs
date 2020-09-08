@@ -446,9 +446,9 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
     }
 
     let messages = ns.contracts[contract_no]
-        .function_table
-        .values()
-        .filter_map(|(base_contract_no, function_no, _)| {
+        .all_functions
+        .keys()
+        .filter_map(|(base_contract_no, function_no)| {
             if ns.contracts[*base_contract_no].is_library() {
                 None
             } else {

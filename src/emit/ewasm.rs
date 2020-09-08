@@ -608,11 +608,12 @@ impl EwasmTarget {
         contract.builder.build_call(initializer, &[], "");
 
         // ewasm only allows one constructor, hence find()
-        if let Some(con) = contract
+        if let Some((cfg_no, con)) = contract
             .contract
-            .functions
+            .cfg
             .iter()
-            .find(|f| f.is_constructor())
+            .enumerate()
+            .find(|(_, f)| f.ty == pt::FunctionTy::Constructor && f.public)
         {
             let mut args = Vec::new();
 
@@ -622,7 +623,7 @@ impl EwasmTarget {
 
             contract
                 .builder
-                .build_call(contract.functions[&con.vsignature], &args, "");
+                .build_call(contract.functions[&cfg_no], &args, "");
         }
 
         // the deploy code should return the runtime wasm code
@@ -661,7 +662,7 @@ impl EwasmTarget {
             function,
             None,
             self,
-            |func| !contract.function_abort_value_transfers && !func.is_payable(),
+            |func| !contract.function_abort_value_transfers && func.nonpayable,
         );
     }
 

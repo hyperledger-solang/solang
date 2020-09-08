@@ -543,7 +543,7 @@ impl SubstrateTarget {
             function,
             None,
             self,
-            |func| !contract.function_abort_value_transfers && !func.is_payable(),
+            |func| !contract.function_abort_value_transfers && func.nonpayable,
         );
     }
 
