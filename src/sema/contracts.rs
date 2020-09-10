@@ -430,78 +430,82 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         ),
                     ));
                 }
-            } else if let Some(prev) =
-                ns.contracts[contract_no]
+            } else {
+                let previous_defs = ns.contracts[contract_no]
                     .all_functions
                     .keys()
-                    .find(|(base_no, function_no)| {
+                    .filter(|(base_no, function_no)| {
                         let func = &ns.contracts[*base_no].functions[*function_no];
 
                         func.ty != pt::FunctionTy::Constructor && func.signature == signature
                     })
-            {
-                let func_prev = &ns.contracts[prev.0].functions[prev.1];
+                    .cloned()
+                    .collect::<Vec<(usize, usize)>>();
 
-                if base_contract_no == prev.0 {
-                    ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                if previous_defs.is_empty() && cur.is_override.is_some() {
+                    ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
-                        format!(
-                            "function ‘{}’ overrides function in same contract",
-                            cur.name
-                        ),
-                        func_prev.loc,
-                        format!("previous definition of ‘{}’", func_prev.name),
+                        format!("function ‘{}’ does not override anything", cur.name),
                     ));
-
                     continue;
                 }
 
-                if let Some((loc, override_list)) = &cur.is_override {
-                    if !func_prev.is_virtual {
+                for prev in previous_defs.into_iter() {
+                    let func_prev = &ns.contracts[prev.0].functions[prev.1];
+
+                    if base_contract_no == prev.0 {
                         ns.diagnostics.push(ast::Diagnostic::error_with_note(
                             cur.loc,
                             format!(
-                                "function ‘{}’ overrides function which is not virtual",
+                                "function ‘{}’ overrides function in same contract",
                                 cur.name
                             ),
                             func_prev.loc,
-                            format!("previous definition of function ‘{}’", func_prev.name),
+                            format!("previous definition of ‘{}’", func_prev.name),
                         ));
 
                         continue;
                     }
 
-                    if !override_list.is_empty() && !override_list.contains(&base_contract_no) {
-                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
-                            *loc,
-                            format!(
-                                "function ‘{}’ override list does not contain ‘{}’",
-                                cur.name, ns.contracts[prev.0].name
-                            ),
-                            func_prev.loc,
-                            format!("previous definition of function ‘{}’", func_prev.name),
-                        ));
-                        continue;
-                    }
-                } else {
-                    if let Some(entry) = override_needed.get_mut(&signature) {
-                        entry.push((base_contract_no, function_no));
+                    if let Some((loc, override_list)) = &cur.is_override {
+                        if !func_prev.is_virtual {
+                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                                cur.loc,
+                                format!(
+                                    "function ‘{}’ overrides function which is not virtual",
+                                    cur.name
+                                ),
+                                func_prev.loc,
+                                format!("previous definition of function ‘{}’", func_prev.name),
+                            ));
+
+                            continue;
+                        }
+
+                        if !override_list.is_empty() && !override_list.contains(&prev.0) {
+                            ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                                *loc,
+                                format!(
+                                    "function ‘{}’ override list does not contain ‘{}’",
+                                    cur.name, ns.contracts[prev.0].name
+                                ),
+                                func_prev.loc,
+                                format!("previous definition of function ‘{}’", func_prev.name),
+                            ));
+                            continue;
+                        }
                     } else {
-                        override_needed.insert(
-                            signature,
-                            vec![(prev.0, prev.1), (base_contract_no, function_no)],
-                        );
+                        if let Some(entry) = override_needed.get_mut(&signature) {
+                            entry.push((base_contract_no, function_no));
+                        } else {
+                            override_needed.insert(
+                                signature.clone(),
+                                vec![(prev.0, prev.1), (base_contract_no, function_no)],
+                            );
+                        }
+                        continue;
                     }
-
-                    continue;
                 }
-            } else if cur.is_override.is_some() {
-                ns.diagnostics.push(ast::Diagnostic::error(
-                    cur.loc,
-                    format!("function ‘{}’ does not override anything", cur.name),
-                ));
-
-                continue;
             }
 
             if cur.is_override.is_some() || cur.is_virtual {
