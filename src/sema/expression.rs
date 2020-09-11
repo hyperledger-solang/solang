@@ -60,6 +60,7 @@ impl Expression {
             | Expression::SignExt(loc, _, _)
             | Expression::Trunc(loc, _, _)
             | Expression::Cast(loc, _, _)
+            | Expression::BytesCast(loc, _, _, _)
             | Expression::UMore(loc, _, _)
             | Expression::ULess(loc, _, _)
             | Expression::UMoreEqual(loc, _, _)
@@ -157,6 +158,7 @@ impl Expression {
             | Expression::SignExt(_, ty, _)
             | Expression::Trunc(_, ty, _)
             | Expression::Cast(_, ty, _)
+            | Expression::BytesCast(_, _, ty, _)
             | Expression::Complement(_, ty, _)
             | Expression::UnaryMinus(_, ty, _)
             | Expression::Ternary(_, ty, _, _, _)
@@ -859,6 +861,9 @@ fn cast_types(
                 ))
             }
         }
+        (Type::Bytes(_), Type::DynamicBytes) | (Type::DynamicBytes, Type::Bytes(_)) => Ok(
+            Expression::BytesCast(*loc, from.clone(), to.clone(), Box::new(expr)),
+        ),
         // Explicit conversion from bytesN to int/uint only allowed with expliciy
         // cast and if it is the same size (i.e. no conversion required)
         (Type::Bytes(from_len), Type::Uint(to_len))

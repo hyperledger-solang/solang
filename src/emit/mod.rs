@@ -1327,6 +1327,135 @@ impl<'a> Contract<'a> {
                     .into()
             }
             Expression::Cast(_, _, e) => self.expression(e, vartab, function, runtime),
+            Expression::BytesCast(_, ast::Type::Bytes(_), ast::Type::DynamicBytes, e) => {
+                let e = self
+                    .expression(e, vartab, function, runtime)
+                    .into_int_value();
+
+                let size = e.get_type().get_bit_width() / 8;
+                let size = self.context.i32_type().const_int(size as u64, false);
+                let elem_size = self.context.i32_type().const_int(1, false);
+
+                // Swap the byte order
+                let bytes_ptr = self.builder.build_alloca(e.get_type(), "bytes_ptr");
+                self.builder.build_store(bytes_ptr, e);
+                let bytes_ptr = self.builder.build_pointer_cast(
+                    bytes_ptr,
+                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "bytes_ptr",
+                );
+                let init = self.builder.build_pointer_cast(
+                    self.builder.build_alloca(e.get_type(), "init"),
+                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "init",
+                );
+                self.builder.build_call(
+                    self.module.get_function("__leNtobeN").unwrap(),
+                    &[bytes_ptr.into(), init.into(), size.into()],
+                    "",
+                );
+
+                let v = self
+                    .builder
+                    .build_call(
+                        self.module.get_function("vector_new").unwrap(),
+                        &[size.into(), elem_size.into(), init.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                self.builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        self.module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
+            }
+            Expression::BytesCast(_, ast::Type::DynamicBytes, ast::Type::Bytes(n), e) => {
+                let array = self
+                    .expression(e, vartab, function, runtime)
+                    .into_pointer_value();
+                let len_ptr = unsafe {
+                    self.builder.build_gep(
+                        array,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_zero(),
+                        ],
+                        "array_len",
+                    )
+                };
+                let len = self
+                    .builder
+                    .build_load(len_ptr, "array_len")
+                    .into_int_value();
+
+                // Check if equal to n
+                let is_equal_to_n = self.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    len,
+                    self.context.i32_type().const_int(*n as u64, false),
+                    "is_equal_to_n",
+                );
+                let cast = self.context.append_basic_block(function, "cast");
+                let error = self.context.append_basic_block(function, "error");
+                self.builder
+                    .build_conditional_branch(is_equal_to_n, cast, error);
+
+                self.builder.position_at_end(error);
+                runtime.assert_failure(
+                    self,
+                    self.context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .const_null(),
+                    self.context.i32_type().const_zero(),
+                );
+
+                self.builder.position_at_end(cast);
+                let bytes_ptr = unsafe {
+                    self.builder.build_gep(
+                        array,
+                        &[
+                            self.context.i32_type().const_zero(),
+                            self.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
+
+                // Switch byte order
+                let bytes_ptr = self.builder.build_pointer_cast(
+                    bytes_ptr,
+                    self.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "bytes_ptr",
+                );
+
+                let ty = self.context.custom_width_int_type(*n as u32 * 8);
+                let le_bytes_ptr = self.builder.build_alloca(ty, "le_bytes");
+
+                self.builder.build_call(
+                    self.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        bytes_ptr.into(),
+                        self.builder
+                            .build_pointer_cast(
+                                le_bytes_ptr,
+                                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "le_bytes_ptr",
+                            )
+                            .into(),
+                        len.into(),
+                    ],
+                    "",
+                );
+                self.builder.build_load(le_bytes_ptr, "bytes")
+            }
             Expression::Not(_, e) => {
                 let e = self
                     .expression(e, vartab, function, runtime)

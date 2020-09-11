@@ -463,6 +463,7 @@ pub enum Expression {
     SignExt(pt::Loc, Type, Box<Expression>),
     Trunc(pt::Loc, Type, Box<Expression>),
     Cast(pt::Loc, Type, Box<Expression>),
+    BytesCast(pt::Loc, Type, Type, Box<Expression>),
 
     PreIncrement(pt::Loc, Type, Box<Expression>),
     PreDecrement(pt::Loc, Type, Box<Expression>),
@@ -588,6 +589,7 @@ impl Expression {
                 | Expression::SignExt(_, _, expr)
                 | Expression::Trunc(_, _, expr)
                 | Expression::Cast(_, _, expr)
+                | Expression::BytesCast(_, _, _, expr)
                 | Expression::PreIncrement(_, _, expr)
                 | Expression::PreDecrement(_, _, expr)
                 | Expression::PostIncrement(_, _, expr)
