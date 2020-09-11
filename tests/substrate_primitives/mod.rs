@@ -638,3 +638,55 @@ fn literal_bytes_cast() {
 
     runtime.function("foo", Vec::new());
 }
+
+#[test]
+fn implicit_bytes_cast() {
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                bytes4 b1 = hex"01020304";
+
+                bytes b2 = b1;
+
+                assert(b2 == hex"01020304");
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                bytes b1 = hex"01020304";
+
+                bytes4 b2 = b1;
+
+                assert(b2 == hex"01020304");
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+}
+
+#[test]
+#[should_panic]
+fn implicit_bytes_cast_incompatible_size() {
+    let mut runtime = build_solidity(
+        r#"
+        contract c {
+            function test() public {
+                bytes b1 = hex"01020304";
+
+                bytes3 b2 = b1;
+            }
+        }
+        "#,
+    );
+
+    runtime.function("test", Vec::new());
+}
