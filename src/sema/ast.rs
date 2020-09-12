@@ -29,6 +29,7 @@ pub enum Type {
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct StructDecl {
+    pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
     pub contract: Option<String>,
@@ -37,7 +38,7 @@ pub struct StructDecl {
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct EventDecl {
-    pub doc: Vec<String>,
+    pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
     pub contract: Option<String>,
@@ -67,6 +68,7 @@ impl StructDecl {
 }
 
 pub struct EnumDecl {
+    pub tags: Vec<Tag>,
     pub name: String,
     pub contract: Option<String>,
     pub loc: pt::Loc,
@@ -94,7 +96,7 @@ pub struct Parameter {
 }
 
 pub struct Function {
-    pub doc: Vec<String>,
+    pub tags: Vec<Tag>,
     pub loc: pt::Loc,
     pub name: String,
     pub ty: pt::FunctionTy,
@@ -117,7 +119,7 @@ impl Function {
     pub fn new(
         loc: pt::Loc,
         name: String,
-        doc: Vec<String>,
+        tags: Vec<Tag>,
         ty: pt::FunctionTy,
         mutability: Option<pt::StateMutability>,
         visibility: pt::Visibility,
@@ -132,7 +134,7 @@ impl Function {
         };
 
         Function {
-            doc,
+            tags,
             loc,
             name,
             ty,
@@ -276,7 +278,7 @@ pub enum ContractVariableType {
 }
 
 pub struct ContractVariable {
-    pub doc: Vec<String>,
+    pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
     pub ty: Type,
@@ -350,7 +352,7 @@ pub struct Base {
 }
 
 pub struct Contract {
-    pub doc: Vec<String>,
+    pub tags: Vec<Tag>,
     pub loc: pt::Loc,
     pub ty: pt::ContractTy,
     pub name: String,
@@ -946,4 +948,11 @@ pub struct Diagnostic {
     pub pos: Option<pt::Loc>,
     pub message: String,
     pub notes: Vec<Note>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct Tag {
+    pub tag: String,
+    pub no: usize,
+    pub value: String,
 }

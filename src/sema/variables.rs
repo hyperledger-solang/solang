@@ -1,6 +1,7 @@
 use super::ast::{ContractVariable, ContractVariableType, Diagnostic, Namespace, Symbol};
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
+use super::tags::resolve_tags;
 use parser::pt;
 
 pub fn contract_variables(
@@ -26,7 +27,7 @@ pub fn contract_variables(
                         def.ty, def.name.name, s.name.name
                     ),
                 ));
-            } else if !var_decl(s, file_no, contract_no, ns, &mut symtable) {
+            } else if !var_decl(def, s, file_no, contract_no, ns, &mut symtable) {
                 broken = true;
             }
         }
@@ -36,6 +37,7 @@ pub fn contract_variables(
 }
 
 fn var_decl(
+    contract: &pt::ContractDefinition,
     s: &pt::ContractVariableDefinition,
     file_no: usize,
     contract_no: usize,
@@ -129,10 +131,26 @@ fn var_decl(
         None
     };
 
+    let bases: Vec<&str> = contract
+        .base
+        .iter()
+        .map(|base| -> &str { &base.name.name })
+        .collect();
+
+    let tags = resolve_tags(
+        s.name.loc.0,
+        "state variable",
+        &s.doc,
+        None,
+        None,
+        Some(&bases),
+        ns,
+    );
+
     let sdecl = ContractVariable {
         name: s.name.name.to_string(),
         loc: s.loc,
-        doc: s.doc.clone(),
+        tags,
         visibility,
         ty,
         var,

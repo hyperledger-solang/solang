@@ -2,7 +2,8 @@ use std::str::FromStr;
 use num_bigint::BigInt;
 use parser::pt::*;
 use parser::box_option;
-use super::lexer::{Token, LexicalError, fold_doc_comments, CommentType};
+use super::lexer::{Token, LexicalError, CommentType};
+use super::doc::tags;
 
 grammar<'input>(input: &'input str, file_no: usize);
 
@@ -38,8 +39,12 @@ PragmaDirective: (Identifier, StringLiteral) = {
     "pragma" <i:Identifier> <s:StringLiteral> ";" => (i, s)
 }
 
-DocComments: Vec<String> = {
-    DocComment* => fold_doc_comments(<>)
+DocComments: Vec<DocComment> = {
+    SingleDocComment* => tags(&<>)
+}
+
+SingleDocComment: (usize, CommentType, &'input str)= {
+    <l:@L> <c:DocComment> => (l, c.0, c.1)
 }
 
 Type: Type = {
@@ -117,7 +122,7 @@ Base: Base = {
 
 ContractDefinition: Box<ContractDefinition> = {
     <doc:DocComments> <l:@L> <ty:ContractTy> <name:Identifier> <base:Bases>
-    "{" <parts:(<ContractPart>)+> "}" <r:@R> => {
+    "{" <parts:(<ContractPart>)*> "}" <r:@R> => {
         Box::new(ContractDefinition{doc, loc: Loc(file_no, l, r), ty, name, base, parts})
     }
 }

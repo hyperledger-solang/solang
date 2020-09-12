@@ -1,6 +1,7 @@
 use super::ast::{
-    Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Type,
+    Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Tag, Type,
 };
+use super::tags::resolve_tags;
 use num_bigint::BigInt;
 use num_traits::One;
 use parser::pt;
@@ -46,6 +47,7 @@ pub fn resolve_typenames<'a>(
                     Symbol::Struct(def.name.loc, delay.structs.len()),
                 ) {
                     let s = StructDecl {
+                        tags: Vec::new(),
                         name: def.name.name.to_owned(),
                         loc: def.name.loc,
                         contract: None,
@@ -71,7 +73,7 @@ pub fn resolve_typenames<'a>(
                 }
 
                 let s = EventDecl {
-                    doc: def.doc.clone(),
+                    tags: Vec::new(),
                     name: def.name.name.to_owned(),
                     loc: def.name.loc,
                     contract: None,
@@ -92,7 +94,8 @@ pub fn resolve_typenames<'a>(
 pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) {
     // now we can resolve the fields for the structs
     for (mut decl, def, contract) in delay.structs {
-        if let Some(fields) = struct_decl(def, file_no, contract, ns) {
+        if let Some((tags, fields)) = struct_decl(def, file_no, contract, ns) {
+            decl.tags = tags;
             decl.fields = fields;
             ns.structs.push(decl);
         }
@@ -133,9 +136,10 @@ pub fn resolve_fields(delay: ResolveFields, file_no: usize, ns: &mut Namespace) 
 
     // now we can resolve the fields for the events
     for (mut decl, def, contract) in delay.events {
-        if let Some(fields) = event_decl(def, file_no, contract, ns) {
+        if let Some((tags, fields)) = event_decl(def, file_no, contract, ns) {
             decl.signature = ns.signature(&decl.name, &fields);
             decl.fields = fields;
+            decl.tags = tags;
             ns.events.push(decl);
         }
     }
@@ -206,8 +210,11 @@ fn resolve_contract<'a>(
     ns: &mut Namespace,
 ) -> bool {
     let contract_no = ns.contracts.len();
+
+    let doc = resolve_tags(def.name.loc.0, "contract", &def.doc, None, None, None, ns);
+
     ns.contracts
-        .push(Contract::new(&def.name.name, def.ty.clone(), def.loc));
+        .push(Contract::new(&def.name.name, def.ty.clone(), doc, def.loc));
 
     let mut broken = !ns.add_symbol(
         file_no,
@@ -231,6 +238,7 @@ fn resolve_contract<'a>(
                     Symbol::Struct(s.name.loc, delay.structs.len()),
                 ) {
                     let decl = StructDecl {
+                        tags: Vec::new(),
                         name: s.name.name.to_owned(),
                         loc: s.name.loc,
                         contract: Some(def.name.name.to_owned()),
@@ -259,7 +267,7 @@ fn resolve_contract<'a>(
                 }
 
                 let decl = EventDecl {
-                    doc: s.doc.clone(),
+                    tags: Vec::new(),
                     name: s.name.name.to_owned(),
                     loc: s.name.loc,
                     contract: Some(def.name.name.to_owned()),
@@ -286,7 +294,7 @@ pub fn struct_decl(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> Option<Vec<Parameter>> {
+) -> Option<(Vec<Tag>, Vec<Parameter>)> {
     let mut valid = true;
     let mut fields: Vec<Parameter> = Vec::new();
 
@@ -348,7 +356,17 @@ pub fn struct_decl(
     }
 
     if valid {
-        Some(fields)
+        let doc = resolve_tags(
+            def.name.loc.0,
+            "struct",
+            &def.doc,
+            Some(&fields),
+            None,
+            None,
+            ns,
+        );
+
+        Some((doc, fields))
     } else {
         None
     }
@@ -363,7 +381,7 @@ pub fn event_decl(
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
-) -> Option<Vec<Parameter>> {
+) -> Option<(Vec<Tag>, Vec<Parameter>)> {
     let mut valid = true;
     let mut fields: Vec<Parameter> = Vec::new();
     let mut indexed_fields = 0;
@@ -448,7 +466,17 @@ pub fn event_decl(
     }
 
     if valid {
-        Some(fields)
+        let doc = resolve_tags(
+            def.name.loc.0,
+            "event",
+            &def.doc,
+            Some(&fields),
+            None,
+            None,
+            ns,
+        );
+
+        Some((doc, fields))
     } else {
         None
     }
@@ -503,7 +531,10 @@ fn enum_decl(
         entries.insert(e.name.to_string(), (e.loc, i));
     }
 
+    let tags = resolve_tags(enum_.name.loc.0, "enum", &enum_.doc, None, None, None, ns);
+
     let decl = EnumDecl {
+        tags,
         name: enum_.name.name.to_string(),
         loc: enum_.loc,
         contract: match contract_no {

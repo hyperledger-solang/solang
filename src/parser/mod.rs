@@ -1,3 +1,4 @@
+mod doc;
 pub mod lexer;
 pub mod pt;
 

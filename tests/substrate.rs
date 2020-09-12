@@ -51,6 +51,7 @@ mod substrate_modifier;
 mod substrate_primitives;
 mod substrate_strings;
 mod substrate_structs;
+mod substrate_tags;
 mod substrate_value;
 mod substrate_variables;
 

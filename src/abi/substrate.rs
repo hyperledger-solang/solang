@@ -2,6 +2,7 @@
 use num_traits::ToPrimitive;
 use parser::pt;
 use sema::ast;
+use sema::tags::render;
 use serde::{Deserialize, Serialize};
 
 /// Substrate contracts abi consists of a a registry of strings and types, the contract itself
@@ -428,7 +429,7 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
                 .iter()
                 .map(|p| parameter_to_abi(p, ns, &mut registry))
                 .collect(),
-            docs: f.doc.clone(),
+            docs: vec![render(&f.tags)],
         })
         .collect::<Vec<Constructor>>();
 
@@ -441,7 +442,7 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
                 .iter()
                 .map(|p| parameter_to_abi(p, ns, &mut registry))
                 .collect(),
-            docs: f.doc.clone(),
+            docs: vec![render(&f.tags)],
         });
     }
 
@@ -489,7 +490,7 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
                 .iter()
                 .map(|p| parameter_to_abi(p, ns, &mut registry))
                 .collect(),
-            docs: f.doc.clone(),
+            docs: vec![render(&f.tags)],
         })
         .collect();
 
@@ -508,7 +509,7 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
                     indexed: p.indexed,
                 })
                 .collect();
-            let docs = event.doc.clone();
+            let docs = vec![render(&event.tags)];
 
             Event { name, args, docs }
         })
