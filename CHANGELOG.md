@@ -7,6 +7,7 @@ will be documented here.
 ### Added
 - `event` can be declared and emitted with `emit`
 - Function modifiers have been implemented
+- Tags in doc comments are parsed and resolved
 
 ## [0.1.3]
 

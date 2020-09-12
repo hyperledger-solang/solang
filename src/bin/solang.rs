@@ -1,4 +1,5 @@
 extern crate clap;
+extern crate handlebars;
 extern crate serde;
 extern crate solang;
 
@@ -13,6 +14,8 @@ use solang::abi;
 use solang::codegen::codegen;
 use solang::file_cache::FileCache;
 use solang::sema::diagnostics;
+
+mod doc;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -91,6 +94,11 @@ fn main() {
                 .takes_value(true)
                 .multiple(true),
         )
+        .arg(
+            Arg::with_name("DOC")
+                .help("Generate documention for contracts using doc comments")
+                .long("doc"),
+        )
         .get_matches();
 
     let mut json = JsonResult {
@@ -141,12 +149,38 @@ fn main() {
         }
     }
 
-    for filename in matches.values_of("INPUT").unwrap() {
-        process_filename(filename, &mut cache, target, &matches, &mut json);
-    }
+    if matches.is_present("DOC") {
+        let verbose = matches.is_present("VERBOSE");
+        let mut success = true;
+        let mut files = Vec::new();
 
-    if matches.is_present("STD-JSON") {
-        println!("{}", serde_json::to_string(&json).unwrap());
+        for filename in matches.values_of("INPUT").unwrap() {
+            let ns = solang::parse_and_resolve(filename, &mut cache, target);
+
+            diagnostics::print_messages(&mut cache, &ns, verbose);
+
+            if ns.contracts.is_empty() {
+                eprintln!("{}: error: no contracts found", filename);
+                success = false;
+            } else if diagnostics::any_errors(&ns.diagnostics) {
+                success = false;
+            } else {
+                files.push(ns);
+            }
+        }
+
+        if success {
+            // generate docs
+            doc::generate_docs(matches.value_of("OUTPUT").unwrap_or("."), &files, verbose);
+        }
+    } else {
+        for filename in matches.values_of("INPUT").unwrap() {
+            process_filename(filename, &mut cache, target, &matches, &mut json);
+        }
+
+        if matches.is_present("STD-JSON") {
+            println!("{}", serde_json::to_string(&json).unwrap());
+        }
     }
 }
 
