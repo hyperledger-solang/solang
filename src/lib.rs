@@ -19,7 +19,7 @@ pub mod codegen;
 mod emit;
 pub mod file_cache;
 pub mod link;
-mod parser;
+pub mod parser;
 pub mod sema;
 
 use file_cache::FileCache;

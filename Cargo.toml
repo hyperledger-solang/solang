@@ -30,6 +30,7 @@ inkwell = { version = "0.1.0-llvm10sample", features = ["target-webassembly", "l
 blake2-rfc = "0.2.18"
 phf = { version = "0.8", features = ["macros"] }
 unicode-xid = "0.2.0"
+handlebars = "3.4"
 
 [dev-dependencies]
 parity-scale-codec-derive = "1.2"
