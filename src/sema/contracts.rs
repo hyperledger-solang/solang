@@ -16,7 +16,7 @@ use emit;
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library
-    pub fn new(name: &str, ty: pt::ContractTy, loc: pt::Loc) -> Self {
+    pub fn new(name: &str, ty: pt::ContractTy, tags: Vec<ast::Tag>, loc: pt::Loc) -> Self {
         ast::Contract {
             name: name.to_owned(),
             loc,
@@ -25,7 +25,7 @@ impl ast::Contract {
             libraries: Vec::new(),
             using: Vec::new(),
             layout: Vec::new(),
-            doc: Vec::new(),
+            tags,
             functions: Vec::new(),
             all_functions: HashMap::new(),
             virtual_functions: HashMap::new(),
@@ -601,7 +601,7 @@ fn resolve_declarations<'a>(
     // resolve function signatures
     for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            if let Some(function_no) = functions::function_decl(f, file_no, contract_no, ns) {
+            if let Some(function_no) = functions::function_decl(def, f, file_no, contract_no, ns) {
                 if f.body.is_some() {
                     resolve_bodies.push((contract_no, function_no, f.as_ref()));
                 } else {

@@ -10,6 +10,13 @@ pub struct Identifier {
     pub name: String,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct DocComment {
+    pub offset: usize,
+    pub tag: String,
+    pub value: String,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct SourceUnit(pub Vec<SourceUnitPart>);
 
@@ -99,8 +106,8 @@ pub struct VariableDeclaration {
 #[derive(Debug, PartialEq)]
 #[allow(clippy::vec_box)]
 pub struct StructDefinition {
+    pub doc: Vec<DocComment>,
     pub loc: Loc,
-    pub doc: Vec<String>,
     pub name: Identifier,
     pub fields: Vec<VariableDeclaration>,
 }
@@ -150,7 +157,7 @@ pub struct Base {
 
 #[derive(Debug, PartialEq)]
 pub struct ContractDefinition {
-    pub doc: Vec<String>,
+    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: ContractTy,
     pub name: Identifier,
@@ -168,7 +175,7 @@ pub struct EventParameter {
 
 #[derive(Debug, PartialEq)]
 pub struct EventDefinition {
-    pub doc: Vec<String>,
+    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub name: Identifier,
     pub fields: Vec<EventParameter>,
@@ -177,8 +184,8 @@ pub struct EventDefinition {
 
 #[derive(Debug, PartialEq)]
 pub struct EnumDefinition {
+    pub doc: Vec<DocComment>,
     pub loc: Loc,
-    pub doc: Vec<String>,
     pub name: Identifier,
     pub values: Vec<Identifier>,
 }
@@ -191,7 +198,7 @@ pub enum VariableAttribute {
 
 #[derive(Debug, PartialEq)]
 pub struct ContractVariableDefinition {
-    pub doc: Vec<String>,
+    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: Expression,
     pub attrs: Vec<VariableAttribute>,
@@ -453,7 +460,7 @@ impl fmt::Display for FunctionTy {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionDefinition {
-    pub doc: Vec<String>,
+    pub doc: Vec<DocComment>,
     pub loc: Loc,
     pub ty: FunctionTy,
     pub name: Option<Identifier>,

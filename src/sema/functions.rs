@@ -1,10 +1,12 @@
 use super::ast::{Diagnostic, Function, Namespace, Parameter, Symbol, Type};
 use super::contracts::is_base;
+use super::tags::resolve_tags;
 use parser::pt;
 use Target;
 
 /// Resolve function declaration
 pub fn function_decl(
+    contract: &pt::ContractDefinition,
     func: &pt::FunctionDefinition,
     file_no: usize,
     contract_no: usize,
@@ -372,16 +374,24 @@ pub fn function_decl(
         None => "".to_owned(),
     };
 
-    let mut fdecl = Function::new(
-        func.loc,
-        name,
-        func.doc.clone(),
-        func.ty,
-        mutability,
-        visibility,
-        params,
-        returns,
+    let bases: Vec<&str> = contract
+        .base
+        .iter()
+        .map(|base| -> &str { &base.name.name })
+        .collect();
+
+    let doc = resolve_tags(
+        func.loc.0,
+        "function",
+        &func.doc,
+        Some(&params),
+        Some(&returns),
+        Some(&bases),
         ns,
+    );
+
+    let mut fdecl = Function::new(
+        func.loc, name, doc, func.ty, mutability, visibility, params, returns, ns,
     );
 
     fdecl.is_virtual = is_virtual;
@@ -726,6 +736,7 @@ fn signatures() {
     ns.contracts.push(ast::Contract::new(
         "bar",
         pt::ContractTy::Contract(pt::Loc(0, 0, 0)),
+        Vec::new(),
         pt::Loc(0, 0, 0),
     ));
 

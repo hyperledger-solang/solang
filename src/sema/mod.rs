@@ -17,6 +17,7 @@ mod mutability;
 pub mod printer;
 mod statements;
 pub mod symtable;
+pub mod tags;
 mod types;
 mod variables;
 

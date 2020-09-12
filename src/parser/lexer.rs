@@ -999,47 +999,6 @@ impl<'input> Iterator for Lexer<'input> {
     }
 }
 
-/// Given an array of DocComments from the lexer, fold them into strings (one per line)
-/// If the last entry is a block comment, return that.
-/// If the last entry is a line comment, return that and any
-/// preceding line comments. Any block comments preceding line
-/// comments are ignored.
-pub fn fold_doc_comments(docs: Vec<(CommentType, &str)>) -> Vec<String> {
-    let mut comment = Vec::new();
-
-    for d in docs.iter().rev() {
-        match d {
-            (CommentType::Block, s) => {
-                return if comment.is_empty() {
-                    s.lines()
-                        .filter_map(|s| {
-                            if let Some((i, _)) = s
-                                .char_indices()
-                                .find(|(_, ch)| !ch.is_whitespace() && *ch != '*')
-                            {
-                                return Some(s[i..].to_string());
-                            }
-
-                            None
-                        })
-                        .collect()
-                } else {
-                    comment
-                };
-            }
-            (CommentType::Line, s) => {
-                let s = s.trim();
-
-                if !s.is_empty() {
-                    comment.insert(0, s.to_string());
-                }
-            }
-        }
-    }
-
-    comment
-}
-
 #[test]
 fn lexertest() {
     let tokens = Lexer::new("bool").collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
@@ -1253,50 +1212,4 @@ fn lexertest() {
             Ok((65, Token::Identifier("カラス"), 74))
         )
     );
-}
-
-#[test]
-fn doc_comment_lexer() {
-    let tokens = Lexer::new("/** jadajadad\njada */\n/* bar */")
-        .map(|e| match e {
-            Ok((_, Token::DocComment(t, s), _)) => (t, s),
-            _ => unreachable!(),
-        })
-        .collect();
-
-    assert_eq!(fold_doc_comments(tokens), vec!("jadajadad", "jada "));
-
-    let tokens = Lexer::new("/** bar *//** jadajadad\njada */\n/* bar */")
-        .map(|e| match e {
-            Ok((_, Token::DocComment(t, s), _)) => (t, s),
-            _ => unreachable!(),
-        })
-        .collect();
-
-    assert_eq!(fold_doc_comments(tokens), vec!("jadajadad", "jada "));
-
-    let tokens = Lexer::new("/// bar   \n///    jadajadad\n\n/* bar */")
-        .map(|e| match e {
-            Ok((_, Token::DocComment(t, s), _)) => (t, s),
-            _ => unreachable!(),
-        })
-        .collect();
-
-    assert_eq!(fold_doc_comments(tokens), vec!("bar", "jadajadad"));
-
-    let tokens = Lexer::new(
-        r#"
-    /**
-     * bar
-     * 
-     * foo 
-     */"#,
-    )
-    .map(|e| match e {
-        Ok((_, Token::DocComment(t, s), _)) => (t, s),
-        _ => unreachable!(),
-    })
-    .collect();
-
-    assert_eq!(fold_doc_comments(tokens), vec!("bar", "foo "));
 }
