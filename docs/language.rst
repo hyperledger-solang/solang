@@ -1,12 +1,12 @@
 Solidity Language
 =================
 
-The Solidity language supported by Solang is compatible with the
+The Solidity language supported by Solang aims to be compatible with the latest
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
 these caveats:
 
-- At this point Solang is very much a work in progress; not all features are
-  supported yet.
+- All the major language features are implemented, but there are some exceptions. These
+  are recent additions to the Solidity language which have not been added to Solang yet.
 
 - Solang can target different blockchains and some features depending on the target.
   For example, Parity Substrate uses a different ABI encoding and allows constructors
@@ -1606,6 +1606,117 @@ values. Here is an example of an overloaded function:
 
 In the function foo, abs() is called with an ``int64`` so the second implementation
 of the function abs() is called.
+
+Function Modifiers
+__________________
+
+Function modifiers are used to check pre-conditions or post-conditions for a function call. First a
+new modifier must be declared which declared much like a function, but uses the ``modifier``
+keyword rather than ``function``.
+
+.. code-block:: javascript
+
+    contract example {
+        address owner;
+
+        modifier only_owner() {
+            require(msg.sender == owner);
+            _;
+            // post conditions would be checked here
+        }
+
+        function foo() only_owner public {
+            // ...
+        }
+    }
+
+The function `foo` can only be run by the owner of the contract, else the ``require()`` in its
+modifier will fail. The special symbol ``_;`` will be replaced by body of the function. In fact,
+if you specify ``_;`` twice, the function will execute twice, which might not be a good idea.
+
+A modifier cannot have visibility (e.g. ``public``) or mutability (e.g. ``view``) specified,
+since a modifier is never externally callable. Modifiers can only be used by attaching them
+to functions.
+
+A modifier can have arguments, just like regular functions. Here if the price is less
+than 50, `foo()` itself will never be executed, and execution will return to the caller with
+nothing done since ``_;`` is not reached in the modifier.
+
+.. code-block:: javascript
+
+    contract example {
+        modifier check_price(int64 price) {
+            if (price >= 50) {
+                _;
+            }
+        }
+
+        function foo(int64 price) check_price(price) public {
+            // ...
+        }
+    }
+
+Multiple modifiers can be applied to single function. The modifiers are executed in the
+order of the modifiers on the function declaration. Execution will continue to the next modifier
+when the ``_;`` is reached. In
+this example, the `only_owner` modifier is run first, and if that reaches ``_;``, then
+`check_price` is executed. The body of function `foo()` is only reached once `check_price()`
+reaches ``_;``.
+
+.. code-block:: javascript
+
+    contract example {
+        address owner;
+
+        // a modifier with no arguments does not need "()" in its declaration
+        modifier only_owner {
+            require(msg.sender == owner);
+            _;
+        }
+
+        modifier check_price(int64 price) {
+            if (price >= 50) {
+                _;
+            }
+        }
+
+        function foo(int64 price) only_owner check_price(price) public {
+            // ...
+        }
+    }
+
+Modifiers can be inherited or declared ``virtual`` in a base contract and then overriden, exactly like
+functions can be.
+
+.. code-block:: javascript
+
+    contract base {
+        address owner;
+
+        modifier only_owner {
+            require(msg.sender == owner);
+            _;
+        }
+
+        modifier check_price(int64 price) virtual {
+            if (price >= 10) {
+                _;
+            }
+        }
+    }
+
+    contract example is base {
+        modifier check_price(int64 price) override {
+            if (price >= 50) {
+                _;
+            }
+        }
+
+        function foo(int64 price) only_owner check_price(price) public {
+            // ...
+        }
+    }
+
 
 Calling an external function using ``call()``
 _____________________________________________
