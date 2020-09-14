@@ -2984,19 +2984,40 @@ impl TargetRuntime for SubstrateTarget {
         let event = &contract.ns.events[event_no];
 
         let topic_count = topics.len() + if event.anonymous { 0 } else { 1 };
-        let topic_size = contract
-            .context
-            .i32_type()
-            .const_int(32 * topic_count as u64, false);
+        let topic_size = contract.context.i32_type().const_int(
+            if topic_count > 0 {
+                32 * topic_count as u64 + 1
+            } else {
+                0
+            },
+            false,
+        );
 
         let topic_buf = if topic_count > 0 {
+            // the topic buffer is a vector of hashes.
             let topic_buf = contract.builder.build_array_alloca(
                 contract.context.i8_type(),
                 topic_size,
                 "topic",
             );
 
-            let mut dest = topic_buf;
+            // a vector with scale encoding first has the length. Since we will never have more than
+            // 64 topics (we're limited to 4 at the moment), we can assume this is a single byte
+            contract.builder.build_store(
+                topic_buf,
+                contract
+                    .context
+                    .i8_type()
+                    .const_int(topic_count as u64 * 4, false),
+            );
+
+            let mut dest = unsafe {
+                contract.builder.build_gep(
+                    topic_buf,
+                    &[contract.context.i32_type().const_int(1, false)],
+                    "dest",
+                )
+            };
 
             if !event.anonymous {
                 let hash = contract.emit_global_string(
