@@ -74,7 +74,7 @@ in `foo.sol` and also in the current file, you will get a warning. Note that if 
 gets imported more than once, the duplicate types are removed.
 
 It is also possible to import only types with a specific name, or to rename them. In this case,
-this means only type `foo` will be imported, and `bar` will be imported as `baz`. 
+this means only type `foo` will be imported, and `bar` will be imported as `baz`.
 
 .. code-block:: javascript
 
@@ -115,7 +115,7 @@ when using Solang.
     pragma experimental ABIEncoderV2;
 
 The `ABIEncoderV2` pragma is not needed with Solang; structures can always be ABI encoded or
-decoded. All other pragma statements are ignored, but generate warnings. 
+decoded. All other pragma statements are ignored, but generate warnings.
 
 Types
 -----
@@ -269,7 +269,7 @@ In order to fix the address literal, copy the address literal from the compiler 
 
   error: address literal has incorrect checksum, expected ‘0xE9430d8C01C4E4Bb33E44fd7748942085D82fC91’
 
-An address can be payable or not. An payable address can used with the 
+An address can be payable or not. An payable address can used with the
 :ref:`.send() and .transfer() functions <send_transfer>`, and
 :ref:`selfdestruct` function. A non-payable address or contract can be cast to an ``address payable``
 using the ``payable()`` cast, like so:
@@ -805,7 +805,7 @@ Since child does not have a constructor, no arguments are needed for the new sta
 `c` of the contract `child` type, which simply holds its address. Functions can be called on
 this type. The contract type can be cast to and from address, provided an explicit cast is used.
 
-The expression ``this`` evaluates to the current contract, which can be cast to ``address`` or 
+The expression ``this`` evaluates to the current contract, which can be cast to ``address`` or
 ``address payable``.
 
 .. code-block:: javascript
@@ -1062,7 +1062,7 @@ Unit        Multiplier
 ``seconds`` 1
 ``minutes`` 60
 ``hours``   3600
-``days``    86400 
+``days``    86400
 ``weeks``   604800
 ``wei``     1
 ``szabo``   1_000_000_000_000
@@ -1197,6 +1197,82 @@ not allowed to call functions or read variables in the initializer:
       uint constant byzantium_block = 4_370_000;
   }
 
+Events
+------
+
+In Solidity, contracts can emit events that signal that changes have occurred. For example, a Solidity
+contract could emit a `Deposit` event, or `BetPlaced` in a poker game. These events are stored
+in the blockchain transaction log, so they become part of the permanent record. From Solidity's perspective,
+you can emit events but you cannot access events on the chain.
+
+Once those events are added to the chain, an application can listen for events. For example, the Web3.js
+interface has a `subscribe()` function. `Hyperledger Burrow <https://hyperledger.github.io/burrow/#/reference/vent>`_
+has a vent command to commit events to the Postgres database.
+
+An event has two parts. First, there is a limited set of topics. Usually there are no more than 3 topics,
+and each of those has a fixed length of 32 bytes. They are there so that an application listening for events
+can easily filter for particular types of events. There is also an data section of variable length bytes, which
+is ABI encoded. To decode this part, the ABI for the event must be known.
+
+From Solidity's perspective, an event has a name, and one or more fields. The fields can either be ``indexed`` or
+not. ``indexed`` are stored as topics, so there can only be a limited number of ``indexed`` fields. The other
+fields are stored in the data section of the event. The event name does not need to be unique; just like
+functions, they can be overloaded as long as the fields are of different types, or the event has
+a different number of arguments.
+In Parity Substrate, the topic fields are always the hash of the value of the field. Ethereum only hashes fields
+which do not fit in the 32 bytes. When fields are hashed, it is only possible to compare the topic against a
+known value.
+
+An event can be declared in a contract, or outside.
+
+.. code-block:: javascript
+
+    event CounterpartySigned (
+        address indexed party,
+        address counter_party,
+        uint contract_no
+    );
+
+    contract Signer {
+        funtion sign(address counter_party, uint contract_no) internal {
+            emit CounterpartySigned(address(this), counter_party, contract_no);
+        }
+    }
+
+Like function calls, the emit statement can have the fields specified by position, or by field name. Using
+field names rather than position may be useful in case the event name is overloaded, since the field names
+make it clearer which exact event is being emitted.
+
+
+.. code-block:: javascript
+
+    event UserModified(
+        address user,
+        string name
+    ) anonymous;
+
+    event UserModified(
+        address user,
+        uint64 groupid
+    );
+
+    contract user {
+        function set_name(string name) public {
+            emit UserModified({ user: msg.sender, name: name });
+        }
+
+        function set_groupid(uint64 id) public {
+            emit UserModified({ user: msg.sender, groupid: id });
+        }
+    }
+
+In the transaction log, the first topic of an event is the keccak256 hash of the signature of the
+event. The signature is the event name, followed by the fields types in a comma separated list in parentheses. So
+the first topic for the second UserModified event would be the keccak256 hash of ``UserModified(address,uint64)``.
+You can leave this topic out by declaring the event ``anonymous``. This makes the event slightly smaller (32 bytes
+less) and makes it possible to have 4 ``indexed`` fields rather than 3.
+
+
 Constructors and contract instantiation
 ---------------------------------------
 
@@ -1299,7 +1375,7 @@ When a new contract is created, the address for the new contract is a hash of th
 (the constructor arguments) to the new contract. So, a contract cannot be created twice
 with the same input. This is why the salt is concatenated to the input. The salt is
 either a random value or it can be explicitly set using the ``{salt: 2}`` syntax. A
-constant will remove the need for the runtime random generation, however creating 
+constant will remove the need for the runtime random generation, however creating
 a contract twice with the same salt and arguments will fail. The salt is of type
 ``uint256``.
 
@@ -1481,7 +1557,7 @@ there are runtime checks as well, which cause the function to be reverted if val
 sent.
 
 A constructor can be marked ``payable``, in which case value can be passed with the
-constructor. 
+constructor.
 
 .. note::
     If value is sent to a non-payable function on Parity Substrate, the call will be
@@ -1595,7 +1671,7 @@ If the call comes with value, then ``receive()`` is executed, otherwise ``fallba
 is executed. This made clear in the declarations; ``receive()`` must be declared
 ``payable``, and ``fallback()`` must not be declared ``payable``. If a call is made
 with value and no ``receive()`` function is defined, then the call reverts, likewise if
-call is made without value and no ``fallback()`` is defined, then the call also reverts. 
+call is made without value and no ``fallback()`` is defined, then the call also reverts.
 
 Both functions must be declared ``external``.
 
@@ -1653,7 +1729,7 @@ are visible in contract ``a``, and will be part of its public interface if they 
 
 Inheriting contracts is recursive; this means that if you inherit a contract, you also inherit everything
 that that contract inherits. In this example, contract ``a`` inherits ``b`` directly, and inherits ``c``
-through ``b``. This means that contract ``b`` also has a variable ``bar``. 
+through ``b``. This means that contract ``b`` also has a variable ``bar``.
 
 .. code-block:: javascript
 
@@ -1767,9 +1843,9 @@ which means we can have runtime-defined arguments to the inheriting constructors
     }
 
 The execution is not entirely intuitive in this case. When contract ``a`` is deployed with an int argument of 10,
-then first the constructor argument or contract ``b`` is calculated: 10+2, and that value is used as an 
+then first the constructor argument or contract ``b`` is calculated: 10+2, and that value is used as an
 argument to constructor ``b``. constructor ``b`` calculates the arguments for constructor ``c`` to be: 12+3. Now,
-with all the arguments for all the constructors established, constructor ``c`` is executed with argument 15, then 
+with all the arguments for all the constructors established, constructor ``c`` is executed with argument 15, then
 constructor ``b`` with argument 12, and lastly constructor ``a`` with the original argument 10.
 
 Abstract Contracts
@@ -1848,7 +1924,7 @@ When writing libraries there are restrictions compared to contracts:
 - A library cannot have virtual or override functions
 - A library cannot have payable functions
 
-.. note:: 
+.. note::
 
     When using the Ethereum Foundation Solidity compiler, library are a special contract type and libraries are
     called using `delegatecall`. Parity Substrate has no ``delegatecall`` functionality so Solang statically
@@ -1858,7 +1934,7 @@ When writing libraries there are restrictions compared to contracts:
 Library Using For
 _________________
 
-Libraries can be used as method calls on variables. The type of the variable needs to be bound to the 
+Libraries can be used as method calls on variables. The type of the variable needs to be bound to the
 library, and the type of the first parameter of the function of the library must match the type of a
 variable.
 
@@ -1921,14 +1997,14 @@ is ``address(this).balance``.
 Creating contracts with an initial value
 ________________________________________
 
-You can specify the value you want to be deposited in the new contract by 
+You can specify the value you want to be deposited in the new contract by
 specifying ``{value: 100 ether}`` before the constructor arguments. This is
 explained in `sending value to the new contract`_.
 
 Sending value with an external call
 ___________________________________
 
-You can specify the value you want to be sent along with the function call by 
+You can specify the value you want to be sent along with the function call by
 specifying ``{value: 100 ether}`` before the function arguments. This is
 explained in `passing value and gas with external calls`_.
 
