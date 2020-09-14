@@ -704,11 +704,20 @@ impl Externals for TestRuntime {
 
                 let mut topics = Vec::new();
 
-                if (topic_len % 32) != 0 {
-                    panic!(
-                        "ext_depost_event: topic_len {} is not multiple of 32",
-                        topic_len
-                    );
+                if topic_len != 0 {
+                    assert_eq!(topic_len % 32, 1);
+                    assert_eq!((topic_len - 1) % 32, 0);
+
+                    let mut vec_length = [0u8];
+
+                    if let Err(e) = self.vm.memory.get_into(topic_ptr, &mut vec_length) {
+                        panic!("ext_deposit_event: topic: {}", e);
+                    }
+
+                    println!("topic_len: {} first byte: {}", topic_len, vec_length[0]);
+                    assert_eq!(vec_length[0] as u32, (topic_len - 1) / 8);
+
+                    topic_ptr += 1;
                 }
 
                 for _ in 0..topic_len / 32 {
