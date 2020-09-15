@@ -3,17 +3,7 @@ Solidity Language
 
 The Solidity language supported by Solang aims to be compatible with the latest
 `Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_ with
-these caveats:
-
-- All the major language features are implemented, but there are some exceptions. These
-  are recent additions to the Solidity language which have not been added to Solang yet.
-
-- Solang can target different blockchains and some features depending on the target.
-  For example, Parity Substrate uses a different ABI encoding and allows constructors
-  to be overloaded.
-
-- Solang generates WebAssembly rather than EVM. This means that the ``assembly {}``
-  statement using EVM instructions is not supported, and probably never will be.
+some caveats, please check out our :ref:`language_status` page.
 
 .. note::
 

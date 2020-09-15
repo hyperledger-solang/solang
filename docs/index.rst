@@ -28,6 +28,7 @@ and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/cha
    :caption: Contents:
 
    installing
+   status
    running
    language
    examples
