@@ -2,12 +2,14 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
-## [Unreleased]
+## [0.1.4]
 
 ### Added
 - `event` can be declared and emitted with `emit`
 - Function modifiers have been implemented
 - Tags in doc comments are parsed and resolved
+- All major Solidity language features implemented, see our language status page:
+  https://solang.readthedocs.io/en/latest/status.html
 
 ## [0.1.3]
 
