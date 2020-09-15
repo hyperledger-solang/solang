@@ -38,6 +38,11 @@ Options:
   This takes one argument, which can either be ``ewasm``, ``sabre``, or ``substrate``.
   The default is substrate.
 
+\\-\\-doc
+  Generate documentation for the given Solidity as a simple html page. This uses the
+  doccomment tags. The result is saved in ``soldoc.html``. See :ref:`tags` for
+  further information.
+
 -o, \\-\\-output *directory*
   This option takes one argument, which is the directory where output should
   be saved. The default is the current directory.
