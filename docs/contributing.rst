@@ -4,8 +4,8 @@ Contributing
 Solang is in active development, so there are many ways in which you can
 contribute.
 
-Target Specific Tests
----------------------
+Target Specific
+---------------
 
 Solang supports Substrate and ewasm. These targets need testing
 via integration tests. New targets like
