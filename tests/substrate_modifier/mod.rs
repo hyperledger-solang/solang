@@ -467,3 +467,38 @@ fn return_values() {
         StructS(true, 5, String::from("Hello, World!")).encode()
     );
 }
+
+#[test]
+fn mutability() {
+    let ns = parse_and_resolve(
+        r#"
+        contract c {
+            uint64 var;
+            modifier foo(uint64 x) { _; }
+
+            function bar() foo(var) public pure {}
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘pure’ but this expression reads from state"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract c {
+            uint64 var;
+            modifier foo() { uint64 x = var; _; }
+
+            function bar() foo() public pure {}
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘pure’ but this expression reads from state"
+    );
+}
