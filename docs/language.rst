@@ -655,6 +655,12 @@ concatenated and compared; no other operations are allowed on them.
 Strings can be cast to `bytes`. This cast has no runtime cost, since both types use
 the same underlying data structure.
 
+.. note::
+
+    The Ethereum Foundation Solidity compiler does not allow unicode characters in string literals,
+    unless it is prefixed with unicode, e.g. ``unicode"€"`` . For compatibility, Solang also
+    accepts the unicode prefix. Solang always allows unicode characters in strings.
+
 Dynamic Length Bytes
 ____________________
 

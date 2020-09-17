@@ -31,7 +31,6 @@ Missing features:
 - Solang generates WebAssembly rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported.
 - Defining functions outside of contracts (solc 0.7.1).
-- Unicode strings using ``unicode"€"``.
 - Getting the selector of the a function using the ``.selector`` syntax.
 
 Unique features to Solang:
