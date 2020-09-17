@@ -467,6 +467,55 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         continue;
                     }
 
+                    if func_prev.ty != cur.ty {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!("{} ‘{}’ overrides {}", cur.ty, cur.name, func_prev.ty,),
+                            func_prev.loc,
+                            format!("previous definition of ‘{}’", func_prev.name),
+                        ));
+
+                        continue;
+                    }
+
+                    if func_prev
+                        .params
+                        .iter()
+                        .zip(cur.params.iter())
+                        .any(|(a, b)| a.ty != b.ty)
+                    {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!(
+                                "{} ‘{}’ overrides {} with different argument types",
+                                cur.ty, cur.name, func_prev.ty,
+                            ),
+                            func_prev.loc,
+                            format!("previous definition of ‘{}’", func_prev.name),
+                        ));
+
+                        continue;
+                    }
+
+                    if func_prev
+                        .returns
+                        .iter()
+                        .zip(cur.returns.iter())
+                        .any(|(a, b)| a.ty != b.ty)
+                    {
+                        ns.diagnostics.push(ast::Diagnostic::error_with_note(
+                            cur.loc,
+                            format!(
+                                "{} ‘{}’ overrides {} with different return types",
+                                cur.ty, cur.name, func_prev.ty,
+                            ),
+                            func_prev.loc,
+                            format!("previous definition of ‘{}’", func_prev.name),
+                        ));
+
+                        continue;
+                    }
+
                     if let Some((loc, override_list)) = &cur.is_override {
                         if !func_prev.is_virtual {
                             ns.diagnostics.push(ast::Diagnostic::error_with_note(

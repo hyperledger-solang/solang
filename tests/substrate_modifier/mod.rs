@@ -501,4 +501,23 @@ fn mutability() {
         first_error(ns.diagnostics),
         "function declared ‘pure’ but this expression reads from state"
     );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            modifier foo() virtual {
+                _;
+            }
+        }
+
+        contract apex is base {
+            function foo() public override {}
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ overrides modifier"
+    );
 }
