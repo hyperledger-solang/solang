@@ -87,6 +87,34 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
         }
     };
 
+    for arg in &func.modifiers {
+        if let Expression::InternalFunctionCall {
+            contract_no,
+            function_no,
+            signature,
+            args,
+            ..
+        } = &arg
+        {
+            // check the arguments to the modifiers
+            for arg in args {
+                arg.recurse(&mut state, read_expression);
+            }
+
+            // check the modifier itself
+            let (base_contract_no, function_no) = if let Some(signature) = signature {
+                state.ns.contracts[*contract_no].virtual_functions[signature]
+            } else {
+                (*contract_no, *function_no)
+            };
+
+            // modifiers do not have mutability, bases or modifiers itself
+            let func = &ns.contracts[base_contract_no].functions[function_no];
+
+            recurse_statements(&func.body, &mut state);
+        }
+    }
+
     recurse_statements(&func.body, &mut state);
 
     if pt::FunctionTy::Function == func.ty {
