@@ -576,6 +576,41 @@ impl<'input> Lexer<'input> {
         )))
     }
 
+    fn lex_string(
+        &mut self,
+        token_start: usize,
+        string_start: usize,
+    ) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
+        let mut end;
+
+        let mut last_was_escape = false;
+
+        loop {
+            if let Some((i, ch)) = self.chars.next() {
+                end = i;
+                if !last_was_escape {
+                    if ch == '"' {
+                        break;
+                    }
+                    last_was_escape = ch == '\\';
+                } else {
+                    last_was_escape = false;
+                }
+            } else {
+                return Some(Err(LexicalError::EndOfFileInString(
+                    token_start,
+                    self.input.len(),
+                )));
+            }
+        }
+
+        Some(Ok((
+            token_start,
+            Token::StringLiteral(&self.input[string_start..end]),
+            end + 1,
+        )))
+    }
+
     fn next(&mut self) -> Option<Result<(usize, Token<'input>, usize), LexicalError>> {
         loop {
             match self.chars.next() {
@@ -596,6 +631,14 @@ impl<'input> Lexer<'input> {
                     }
 
                     let id = &self.input[start..end];
+
+                    if id == "unicode" {
+                        if let Some((_, '"')) = self.chars.peek() {
+                            self.chars.next();
+
+                            return self.lex_string(start, start + 8);
+                        }
+                    }
 
                     if id == "hex" {
                         if let Some((_, '"')) = self.chars.peek() {
@@ -638,34 +681,7 @@ impl<'input> Lexer<'input> {
                     };
                 }
                 Some((start, '"')) => {
-                    let mut end;
-
-                    let mut last_was_escape = false;
-
-                    loop {
-                        if let Some((i, ch)) = self.chars.next() {
-                            end = i;
-                            if !last_was_escape {
-                                if ch == '"' {
-                                    break;
-                                }
-                                last_was_escape = ch == '\\';
-                            } else {
-                                last_was_escape = false;
-                            }
-                        } else {
-                            return Some(Err(LexicalError::EndOfFileInString(
-                                start,
-                                self.input.len(),
-                            )));
-                        }
-                    }
-
-                    return Some(Ok((
-                        start,
-                        Token::StringLiteral(&self.input[start + 1..end]),
-                        end + 1,
-                    )));
+                    return self.lex_string(start, start + 1);
                 }
                 Some((start, '/')) => {
                     match self.chars.peek() {
@@ -1210,6 +1226,22 @@ fn lexertest() {
             Ok((7, Token::Identifier("très"), 12)),
             Ok((15, Token::Identifier("αβγδεζηθικλμνξοπρστυφχψω"), 63)),
             Ok((65, Token::Identifier("カラス"), 74))
+        )
+    );
+
+    let tokens =
+        Lexer::new(r#"unicode"€""#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(Ok((0, Token::StringLiteral("€"), 12)),));
+
+    let tokens =
+        Lexer::new(r#"unicode "€""#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((0, Token::Identifier("unicode"), 7)),
+            Ok((8, Token::StringLiteral("€"), 13)),
         )
     );
 }
