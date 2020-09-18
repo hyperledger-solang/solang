@@ -25,13 +25,14 @@ on a continuous basis.
 
 Missing features:
 
-- ``immutable`` is not supported. Note this is impossible to implement on Parity Substrate or Hyperledger Sawtooth; this is purely an ethereum features
+- ``immutable`` is not supported. Note this is impossible to implement on Parity Substrate or Hyperledger Sawtooth; this is purely an ethereum feature
 - libraries functions are always statically linked into the contract wasm
 - function types are not implemented yet
 - Solang generates WebAssembly rather than EVM. This means that the ``assembly {}``
-  statement using EVM instructions is not supported.
-- Defining functions outside of contracts (solc 0.7.1).
-- Getting the selector of the a function using the ``.selector`` syntax.
+  statement using EVM instructions is not supported
+- Defining functions outside of contracts (solc 0.7.1)
+- Getting the selector of the a function using the ``.selector`` syntax
+- Calling base contract functions through ``basecontractname.functionname()``
 
 Unique features to Solang:
 
@@ -39,7 +40,7 @@ Unique features to Solang:
   For example, Parity Substrate uses a different ABI encoding and allows constructors
   to be overloaded.
 - Events can be declared outside of contracts
-- Base contracts can be specified in any order
+- Base contracts can be declared in any order
 - There is a ``print()`` function for debugging.
 
 Target Status
