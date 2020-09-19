@@ -32,7 +32,7 @@ Missing features:
   statement using EVM instructions is not supported
 - Defining functions outside of contracts (solc 0.7.1)
 - Getting the selector of the a function using the ``.selector`` syntax
-- Calling base contract functions through ``basecontractname.functionname()``
+- Calling parent contract via ``super``
 
 Unique features to Solang:
 

@@ -19,7 +19,7 @@ use super::ast::{
     StringLocation, Symbol, Type,
 };
 use super::builtin;
-use super::contracts::import_library;
+use super::contracts::{import_library, is_base};
 use super::eval::eval_const_number;
 use super::symtable::Symtable;
 use crate::Target;
@@ -3230,6 +3230,8 @@ pub fn call_position_args(
     func_ty: pt::FunctionTy,
     args: &[pt::Expression],
     file_no: usize,
+    call_contract_no: usize,
+    virtual_call: bool,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3269,7 +3271,7 @@ pub fn call_position_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for (base_contract_no, function_no) in ns.contracts[contract_no.unwrap()].all_functions.keys() {
+    for (base_contract_no, function_no) in ns.contracts[call_contract_no].all_functions.keys() {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
         if func.name != id.name || func.ty != func_ty {
@@ -3330,7 +3332,7 @@ pub fn call_position_args(
             returns,
             contract_no: *base_contract_no,
             function_no: *function_no,
-            signature: if func.is_virtual || func.is_override.is_some() {
+            signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
                 Some(func.signature.clone())
             } else {
                 None
@@ -3371,6 +3373,8 @@ fn function_call_with_named_args(
     id: &pt::Identifier,
     args: &[pt::NamedArgument],
     file_no: usize,
+    call_contract_no: usize,
+    virtual_call: bool,
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
@@ -3397,7 +3401,7 @@ fn function_call_with_named_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for (base_contract_no, function_no) in ns.contracts[contract_no.unwrap()].all_functions.keys() {
+    for (base_contract_no, function_no) in ns.contracts[call_contract_no].all_functions.keys() {
         let func = &ns.contracts[*base_contract_no].functions[*function_no];
 
         if func.name != id.name || func.ty != pt::FunctionTy::Function {
@@ -3474,7 +3478,7 @@ fn function_call_with_named_args(
             returns,
             contract_no: *base_contract_no,
             function_no: *function_no,
-            signature: if func.is_virtual || func.is_override.is_some() {
+            signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
                 Some(func.signature.clone())
             } else {
                 None
@@ -3595,8 +3599,8 @@ fn method_call_pos_args(
         }
 
         // library or base contract call
-        if let Some(library_contract_no) = ns.resolve_contract(file_no, &namespace) {
-            if ns.contracts[library_contract_no].is_library() {
+        if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
+            if ns.contracts[call_contract_no].is_library() {
                 if let Some(loc) = call_args_loc {
                     ns.diagnostics.push(Diagnostic::error(
                         loc,
@@ -3605,7 +3609,7 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                import_library(contract_no.unwrap(), library_contract_no, ns);
+                import_library(contract_no.unwrap(), call_contract_no, ns);
 
                 return call_position_args(
                     loc,
@@ -3613,10 +3617,38 @@ fn method_call_pos_args(
                     pt::FunctionTy::Function,
                     args,
                     file_no,
-                    Some(library_contract_no),
+                    call_contract_no,
+                    true,
+                    contract_no,
                     ns,
                     symtable,
                 );
+            }
+
+            // is a base contract of us
+            if let Some(contract_no) = contract_no {
+                if is_base(call_contract_no, contract_no, ns) {
+                    if let Some(loc) = call_args_loc {
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            "call arguments not allowed on internal calls".to_string(),
+                        ));
+                        return Err(());
+                    }
+
+                    return call_position_args(
+                        loc,
+                        func,
+                        pt::FunctionTy::Function,
+                        args,
+                        file_no,
+                        call_contract_no,
+                        false,
+                        Some(contract_no),
+                        ns,
+                        symtable,
+                    );
+                }
             }
         }
     }
@@ -4175,8 +4207,8 @@ fn method_call_named_args(
 ) -> Result<Expression, ()> {
     if let pt::Expression::Variable(namespace) = var {
         // library or base contract call
-        if let Some(library_contract_no) = ns.resolve_contract(file_no, &namespace) {
-            if ns.contracts[library_contract_no].is_library() {
+        if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
+            if ns.contracts[call_contract_no].is_library() {
                 if let Some(loc) = call_args_loc {
                     ns.diagnostics.push(Diagnostic::error(
                         loc,
@@ -4185,17 +4217,44 @@ fn method_call_named_args(
                     return Err(());
                 }
 
-                import_library(contract_no.unwrap(), library_contract_no, ns);
+                import_library(contract_no.unwrap(), call_contract_no, ns);
 
                 return function_call_with_named_args(
                     loc,
                     func_name,
                     args,
                     file_no,
-                    Some(library_contract_no),
+                    call_contract_no,
+                    true,
+                    contract_no,
                     ns,
                     symtable,
                 );
+            }
+
+            // is a base contract of us
+            if let Some(contract_no) = contract_no {
+                if is_base(call_contract_no, contract_no, ns) {
+                    if let Some(loc) = call_args_loc {
+                        ns.diagnostics.push(Diagnostic::error(
+                            loc,
+                            "call arguments not allowed on internal calls".to_string(),
+                        ));
+                        return Err(());
+                    }
+
+                    return function_call_with_named_args(
+                        loc,
+                        func_name,
+                        args,
+                        file_no,
+                        call_contract_no,
+                        false,
+                        Some(contract_no),
+                        ns,
+                        symtable,
+                    );
+                }
             }
         }
     }
@@ -4689,6 +4748,8 @@ pub fn function_call_expr(
                 pt::FunctionTy::Function,
                 args,
                 file_no,
+                contract_no.unwrap(),
+                true,
                 contract_no,
                 ns,
                 symtable,
@@ -4745,7 +4806,17 @@ pub fn named_function_call_expr(
                 return Err(());
             }
 
-            function_call_with_named_args(loc, &id, args, file_no, contract_no, ns, symtable)
+            function_call_with_named_args(
+                loc,
+                &id,
+                args,
+                file_no,
+                contract_no.unwrap(),
+                true,
+                contract_no,
+                ns,
+                symtable,
+            )
         }
         pt::Expression::ArraySubscript(_, _, _) => {
             ns.diagnostics.push(Diagnostic::error(

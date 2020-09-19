@@ -1896,6 +1896,43 @@ contracts it is overriding.
         }
     }
 
+Calling function in specific base contract
+__________________________________________
+
+When a virtual function is called, the dispatch is *virtual*. If the function being called is
+overriden in another contract, then the overriding function is called. For example:
+
+
+.. code-block:: javascript
+
+    contract a is b {
+        function baz() public returns (uint64) {
+            return foo();
+        }
+
+        function foo() internal override returns (uint64) {
+            return 2;
+        }
+    }
+
+    contract a {
+        function foo() internal virtual returns (uint64) {
+            return 1;
+        }
+
+        function bar() internal returns (uint64) {
+            // since foo() is virtual, is a virtual dispatch call
+            // when foo is called and a is a base contract of b, then foo in contract b will
+            // be called; foo will return 2.
+            return foo();
+        }
+
+        function bar2() internal returns (uint64) {
+            // this explicitly says "call foo of base contract a", and dispatch is not virtual
+            return a.foo();
+        }
+    }
+
 
 Specifying constructor arguments
 ________________________________
