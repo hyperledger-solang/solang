@@ -1299,11 +1299,6 @@ If a contract is expected to hold receive value on instantiation, the constructo
 
   When the contract is deployed in the Polkadot UI, the user can select the constructor to be used.
 
-.. note::
-
-  The Ethereum Foundation Solidity compiler allows constructors to be declared ``internal`` if
-  for abstract contracts. Since Solang does not support abstract contracts, this is not possible yet.
-
 Instantiation using new
 _______________________
 
