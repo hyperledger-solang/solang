@@ -8,7 +8,7 @@ use solang::Target;
 fn restrictions() {
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             constructor() {}
         }"#,
         Target::Substrate,
@@ -21,7 +21,7 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             receive() internal {}
         }"#,
         Target::Substrate,
@@ -34,7 +34,7 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             fallback() internal {}
         }"#,
         Target::Substrate,
@@ -47,7 +47,7 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             function f() public payable {}
         }"#,
         Target::Substrate,
@@ -60,7 +60,7 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             function foo() virtual public {}
         }"#,
         Target::Substrate,
@@ -73,7 +73,7 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             function foo() override public {}
         }"#,
         Target::Substrate,
@@ -86,7 +86,7 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c is x {        
+        library c is x {
             fallback() internal {}
         }"#,
         Target::Substrate,
@@ -99,11 +99,11 @@ fn restrictions() {
 
     let ns = parse_and_resolve(
         r#"
-        library c {        
+        library c {
             function foo() public { }
         }
-        
-        contract a is c {        
+
+        contract a is c {
             function bar() public { }
         }"#,
         Target::Substrate,
@@ -129,7 +129,7 @@ fn simple() {
         }
 
         library ints {
-            function max(uint64 a, uint64 b) private pure returns (uint64) {
+            function max(uint64 a, uint64 b) internal pure returns (uint64) {
                 return a > b ? a : b;
             }
         }"##,
@@ -259,14 +259,14 @@ fn using() {
             using lib for int32[100];
             bool i_exists_to_make_bar_have_non_zero_storage_slot;
             int32[100] bar;
-    
+
             function foo() public returns (int64) {
                     bar.set(10, 571);
-    
+
                     return bar[10];
             }
         }
-    
+
         library lib {
             function set(int32[100] storage a, uint index, int32 val) internal {
                     a[index] = val;

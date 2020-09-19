@@ -1666,3 +1666,66 @@ fn base_contract_on_constructor() {
         "duplicate argument for base contract ‘a’"
     );
 }
+
+#[test]
+fn call_base_function_via_basename() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(i32);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val64(u64);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c is b {
+            function bar() public returns (uint64) {
+                return a.foo();
+            }
+        }
+
+        contract b is a {
+            function foo() internal override returns (uint64) {
+                return 2;
+            }
+        }
+
+        contract a {
+            function foo() internal virtual returns (uint64) {
+                return 1;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val64(1).encode());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract c is b {
+            uint64 constant private C = 100;
+            function bar() public returns (uint64) {
+                return a.foo({ x: C });
+            }
+        }
+
+        contract b is a {
+            uint64 constant private C = 300;
+            function foo(uint64 x) internal override returns (uint64) {
+                return 2;
+            }
+        }
+
+        contract a {
+            uint64 constant private C = 200;
+            function foo(uint64 x) internal virtual returns (uint64) {
+                return 1 + x;
+            }
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Val64(101).encode());
+}

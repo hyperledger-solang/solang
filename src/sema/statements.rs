@@ -161,6 +161,8 @@ pub fn resolve_function_body(
                     pt::FunctionTy::Modifier,
                     modifier.args.as_ref().unwrap_or(&Vec::new()),
                     file_no,
+                    contract_no,
+                    true,
                     Some(contract_no),
                     ns,
                     &symtable,
