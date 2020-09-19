@@ -9,7 +9,7 @@ use solang::Target;
 fn test_virtual() {
     let ns = parse_and_resolve(
         r#"
-        contract c {        
+        contract c {
             function test() public;
         }"#,
         Target::Substrate,
@@ -22,7 +22,7 @@ fn test_virtual() {
 
     let ns = parse_and_resolve(
         r#"
-        contract c {        
+        contract c {
             function test() virtual public {}
         }"#,
         Target::Substrate,
@@ -52,11 +52,11 @@ fn test_abstract() {
         abstract contract foo {
             constructor(int arg1) public {
             }
-        
+
             function f1() public {
             }
         }
-        
+
         contract bar {
             function test() public {
                 foo x = new foo(1);
@@ -76,11 +76,11 @@ fn test_abstract() {
         abstract contract foo {
             constructor(int arg1) public {
             }
-        
+
             function f1() public {
             }
         }
-        
+
         contract bar {
             function test() public {
                 foo x = new foo({arg: 1});
@@ -103,11 +103,11 @@ fn test_abstract() {
         abstract contract foo {
             constructor(int arg1) public {
             }
-        
+
             function f1() public {
             }
         }
-        
+
         contract bar {
             function test() public returns (uint32) {
                 return 102;
@@ -497,9 +497,9 @@ fn inherit_variables() {
     let ns = parse_and_resolve(
         r#"
         contract b {
-            int public foo;
+            int foo;
         }
-        
+
         contract c is b {
             function getFoo() public returns (int) {
                 return foo;
@@ -516,7 +516,7 @@ fn inherit_variables() {
         contract b {
             int private foo;
         }
-        
+
         contract c is b {
             function getFoo() public returns (int) {
                 return foo;
@@ -663,7 +663,7 @@ fn call_inherited_function() {
 
         contract base {
             function foo() public returns (uint64) {
-                return 102;	
+                return 102;
             }
         }"##,
     );
@@ -677,10 +677,10 @@ fn call_inherited_function() {
         r#"
         contract base {
             function foo() private returns (uint64) {
-                return 102;	
+                return 102;
             }
         }
-        
+
         contract apex is base {
             function bar() public returns (uint64) {
                 return foo() + 3;
@@ -696,10 +696,10 @@ fn call_inherited_function() {
         r#"
         contract base {
             function foo(uint64 a) private returns (uint64) {
-                return a + 102;	
+                return a + 102;
             }
         }
-        
+
         contract apex is base {
             function bar() public returns (uint64) {
                 return foo({a: 3}) + 3;
@@ -715,13 +715,13 @@ fn call_inherited_function() {
         r#"
         contract base {
             function foo(uint64 a) private returns (uint64) {
-                return a + 102;	
+                return a + 102;
             }
         }
-        
+
         contract apex is base {
             function foo(uint64 a) public returns (uint64) {
-                return a + 64;	
+                return a + 64;
             }
 
             function bar() public returns (uint64) {
@@ -751,7 +751,7 @@ fn call_inherited_function() {
             uint64 private x = 5;
 
             function foo() public returns (uint64) {
-                return x + 11;	
+                return x + 11;
             }
         }"##,
     );
@@ -775,15 +775,15 @@ fn call_inherited_function() {
             uint64 private x = 50000;
 
             function foo() public returns (uint64) {
-                return x + 110000;	
+                return x + 110000;
             }
         }
-        
+
         contract base2 {
             uint64 private x = 600;
 
             function foo2() public returns (uint64) {
-                return x + 1100;	
+                return x + 1100;
             }
         }"##,
     );
@@ -803,13 +803,13 @@ fn call_inherited_function() {
 
         contract base {
             function foo() public returns (uint64) {
-                return 1;	
+                return 1;
             }
         }
-        
+
         contract base2 {
             function foo(bool) public returns (uint64) {
-                return 2;	
+                return 2;
             }
         }"##,
     );
@@ -950,7 +950,7 @@ fn test_override() {
             function f() virtual payable external {
                 x = 1;
             }
-        
+
             function f() override payable external {
                 x = 2;
             }
@@ -995,14 +995,14 @@ fn test_override() {
                 x = 2;
             }
         }
-        
+
         contract a {
             int8 public x = 3;
             receive() virtual payable external {
                 x = 1;
             }
         }
-        
+
         contract c is b {
             function test() public returns (int8) {
                 return x;
@@ -1035,7 +1035,7 @@ fn test_override() {
                 x = 2;
             }
         }
-        
+
         contract a {
             int8 public x = 3;
             fallback() virtual external {
@@ -1066,9 +1066,9 @@ fn test_override() {
         interface b {
                 function bar(int64 x) external;
         }
-        
+
         contract a is b {
-                function bar(int x) public { print ("foo"); } 
+                function bar(int x) public { print ("foo"); }
         }
         "#,
         Target::Substrate,
@@ -1084,9 +1084,9 @@ fn test_override() {
         interface b {
                 function bar(int64 x) external;
         }
-        
+
         contract a is b {
-                function bar(int64 x) public override; 
+                function bar(int64 x) public override;
         }
         "#,
         Target::Substrate,
@@ -1359,7 +1359,7 @@ fn base_contract() {
         r##"
         contract b is a(foo) {
             int32 constant foo = 102;
-    
+
             function f() public returns (int32) {
                     return bar;
             }
@@ -1467,7 +1467,7 @@ fn base_contract_on_constructor() {
         contract base {
             constructor(bool x) {}
         }
-        
+
         contract apex is base {
                 function foo() pure public {}
         }"#,
@@ -1484,7 +1484,7 @@ fn base_contract_on_constructor() {
         contract base {
             constructor(bool x) {}
         }
-        
+
         contract apex is base {
             constructor() base(true) base(false) {}
             function foo() pure public {}
@@ -1502,9 +1502,9 @@ fn base_contract_on_constructor() {
         contract b is a {
             int32 constant BAR = 102;
             int64 public foo;
-    
+
             constructor(int64 i) a(BAR) { foo = i; }
-    
+
             function get_x() public returns (int32) {
                     return x;
             }
@@ -1512,7 +1512,7 @@ fn base_contract_on_constructor() {
 
         contract a {
                 int32 public x;
-        
+
                 constructor(int32 i) { x = i; }
         }"##,
     );
@@ -1531,20 +1531,20 @@ fn base_contract_on_constructor() {
 
         contract a {
                 int32 public x;
-        
+
                 constructor(int32 i) { x = i; }
         }
-        
+
         contract b is a {
                 int32 constant BAR = 102;
                 int64 public foo;
-        
+
                 constructor(int64 i) a(BAR + int32(i)) { foo = i; }
-        
+
                 function get_x() public view returns (int32) {
                         return x;
                 }
-        
+
                 function get_foo() public view returns (int64) {
                         return foo;
                 }
@@ -1561,11 +1561,11 @@ fn base_contract_on_constructor() {
         contract c is b {
             constructor(int64 x) b(x+3) {}
         }
-        
+
         contract b is a {
             constructor(int64 y) a(y+2) {}
         }
-        
+
         contract a {
             int64 foo;
             function get_foo() public returns (int64) { return foo; }
@@ -1583,11 +1583,11 @@ fn base_contract_on_constructor() {
         contract c is b {
             constructor(int64 x) b(x+3) a(x+5){}
         }
-        
+
         abstract contract b is a {
             constructor(int64 y) {}
         }
-        
+
         contract a {
             int64 foo;
             function get_foo() public returns (int64) { return foo; }
@@ -1605,11 +1605,11 @@ fn base_contract_on_constructor() {
         contract c is b {
             constructor(int64 x) b(x+3) {}
         }
-        
+
         abstract contract b is a {
             constructor(int64 y) {}
         }
-        
+
         contract a {
             int64 foo;
             function get_foo() public returns (int64) { return foo; }
@@ -1628,11 +1628,11 @@ fn base_contract_on_constructor() {
         contract c is b {
             constructor(int64 x) b(x+3) b(0) {}
         }
-        
+
         abstract contract b is a {
             constructor(int64 y) {}
         }
-        
+
         contract a {
             int64 foo;
             function get_foo() public returns (int64) { return foo; }
@@ -1648,11 +1648,11 @@ fn base_contract_on_constructor() {
         contract c is b {
             constructor(int64 x) b(x+3) a(0) {}
         }
-        
+
         abstract contract b is a(2) {
             constructor(int64 y) {}
         }
-        
+
         contract a {
             int64 foo;
             function get_foo() public returns (int64) { return foo; }

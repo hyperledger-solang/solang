@@ -90,7 +90,7 @@ fn var_decl(
 
     let visibility = match visibility {
         Some(v) => v,
-        None => pt::Visibility::Private(pt::Loc(0, 0, 0)),
+        None => pt::Visibility::Internal(s.ty.loc()),
     };
 
     let var = if !is_constant {
