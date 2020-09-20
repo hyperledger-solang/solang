@@ -24,7 +24,7 @@ pub enum Token<'input> {
     Identifier(&'input str),
     StringLiteral(&'input str),
     HexLiteral(&'input str),
-    Number(&'input str),
+    Number(&'input str, &'input str),
     HexNumber(&'input str),
     DocComment(CommentType, &'input str),
     Divide,
@@ -179,7 +179,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Identifier(id) => write!(f, "{}", id),
             Token::StringLiteral(s) => write!(f, "\"{}\"", s),
             Token::HexLiteral(hex) => write!(f, "{}", hex),
-            Token::Number(n) => write!(f, "{}", n),
+            Token::Number(base, exp) if exp.is_empty() => write!(f, "{}", base),
+            Token::Number(base, exp) => write!(f, "{}e{}", base, exp),
             Token::HexNumber(n) => write!(f, "{}", n),
             Token::Uint(w) => write!(f, "uint{}", w),
             Token::Int(w) => write!(f, "int{}", w),
@@ -313,6 +314,7 @@ pub enum LexicalError {
     MissingNumber(usize, usize),
     InvalidCharacterInHexLiteral(usize, char),
     UnrecognisedToken(usize, usize, String),
+    MissingExponent(usize, usize),
 }
 
 impl fmt::Display for LexicalError {
@@ -330,6 +332,7 @@ impl fmt::Display for LexicalError {
                 write!(f, "invalid character ‘{}’ in hex literal string", ch)
             }
             LexicalError::UnrecognisedToken(_, _, t) => write!(f, "unrecognised token ‘{}’", t),
+            LexicalError::MissingExponent(_, _) => write!(f, "missing number"),
         }
     }
 }
@@ -343,6 +346,7 @@ impl LexicalError {
             LexicalError::MissingNumber(start, end) => Loc(file_no, *start, *end),
             LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(file_no, *pos, *pos),
             LexicalError::UnrecognisedToken(start, end, _) => Loc(file_no, *start, *end),
+            LexicalError::MissingExponent(start, end) => Loc(file_no, *start, *end),
         }
     }
 }
@@ -569,11 +573,29 @@ impl<'input> Lexer<'input> {
             self.chars.next();
         }
 
-        Some(Ok((
-            start,
-            Token::Number(&self.input[start..=end]),
-            end + 1,
-        )))
+        let base = &self.input[start..=end];
+
+        let mut exp_start = end + 1;
+
+        if let Some((i, 'e')) = self.chars.peek() {
+            exp_start = i + 1;
+            self.chars.next();
+            while let Some((i, ch)) = self.chars.peek() {
+                if !ch.is_ascii_digit() && *ch != '_' {
+                    break;
+                }
+                end = *i;
+                self.chars.next();
+            }
+
+            if exp_start > end {
+                return Some(Err(LexicalError::MissingExponent(start, self.input.len())));
+            }
+        }
+
+        let exp = &self.input[exp_start..=end];
+
+        Some(Ok((start, Token::Number(base, exp), end + 1)))
     }
 
     fn lex_string(
@@ -1044,8 +1066,8 @@ fn lexertest() {
         tokens,
         vec!(
             Ok((11, Token::HexNumber("0x00fead0_12"), 23)),
-            Ok((24, Token::Number("00090"), 29)),
-            Ok((30, Token::Number("0_0"), 33))
+            Ok((24, Token::Number("00090", ""), 29)),
+            Ok((30, Token::Number("0_0", ""), 33))
         )
     );
 
@@ -1126,7 +1148,7 @@ fn lexertest() {
         tokens,
         vec!(
             Ok((0, Token::Subtract, 1)),
-            Ok((1, Token::Number("16"), 3)),
+            Ok((1, Token::Number("16", ""), 3)),
             Ok((4, Token::Decrement, 6)),
             Ok((7, Token::Subtract, 8)),
             Ok((9, Token::SubtractAssign, 11)),
@@ -1137,7 +1159,10 @@ fn lexertest() {
 
     assert_eq!(
         tokens,
-        vec!(Ok((0, Token::Subtract, 1)), Ok((1, Token::Number("4"), 2)),)
+        vec!(
+            Ok((0, Token::Subtract, 1)),
+            Ok((1, Token::Number("4", ""), 2)),
+        )
     );
 
     let tokens =
@@ -1242,6 +1267,44 @@ fn lexertest() {
         vec!(
             Ok((0, Token::Identifier("unicode"), 7)),
             Ok((8, Token::StringLiteral("€"), 13)),
+        )
+    );
+
+    // scientific notation
+    let tokens =
+        Lexer::new(r#" 1e0 "#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(tokens, vec!(Ok((1, Token::Number("1", "0"), 4)),));
+
+    let tokens =
+        Lexer::new(r#" -9e0123"#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((1, Token::Subtract, 2)),
+            Ok((2, Token::Number("9", "0123"), 8)),
+        )
+    );
+
+    let tokens =
+        Lexer::new(r#" -9e"#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Ok((1, Token::Subtract, 2)),
+            Err(LexicalError::MissingExponent(2, 4))
+        )
+    );
+
+    let tokens = Lexer::new(r#"9ea"#).collect::<Vec<Result<(usize, Token, usize), LexicalError>>>();
+
+    assert_eq!(
+        tokens,
+        vec!(
+            Err(LexicalError::MissingExponent(0, 3)),
+            Ok((2, Token::Identifier("a"), 3))
         )
     );
 }

@@ -1,6 +1,9 @@
 use std::str::FromStr;
 use num_bigint::BigInt;
+use num_bigint::BigUint;
+use num_traits::Pow;
 use parser::pt::*;
+use std::ops::Mul;
 use parser::box_option;
 use super::lexer::{Token, LexicalError, CommentType};
 use super::doc::tags;
@@ -306,9 +309,19 @@ Precedence0: Expression = {
     <Identifier> => Expression::Variable(<>),
     <l:@L> <e:Precedence0> <u:Unit> <r:@R> => Expression::Unit(Loc(file_no, l, r), Box::new(e), u),
     <l:@L> <n:LexNumber> <r:@R> => {
-        let s: String = n.chars().filter(|v| *v != '_').collect();
+        let base: String = n.0.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.1.chars().filter(|v| *v != '_').collect();
 
-        Expression::NumberLiteral(Loc(file_no, l, r), BigInt::from_str(&s).unwrap())
+        let n = if exp.is_empty() {
+            BigInt::from_str(&base).unwrap()
+        } else {
+            let base = BigInt::from_str(&base).unwrap();
+            let exp = BigInt::from_str("10").unwrap().pow(BigUint::from_str(&exp).unwrap());
+
+            base.mul(exp)
+        };
+
+        Expression::NumberLiteral(Loc(file_no, l, r), n)
     },
     <l:@L> <n:LexHexNumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc(file_no, l, r), n.to_owned())
@@ -573,7 +586,7 @@ extern {
         LexIdentifier => Token::Identifier(<&'input str>),
         LexStringLiteral => Token::StringLiteral(<&'input str>),
         LexHexLiteral => Token::HexLiteral(<&'input str>),
-        LexNumber => Token::Number(<&'input str>),
+        LexNumber => Token::Number(<&'input str>, <&'input str>),
         LexHexNumber => Token::HexNumber(<&'input str>),
         ";" => Token::Semicolon,
         "{" => Token::OpenCurlyBrace,

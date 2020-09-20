@@ -149,6 +149,9 @@ Underscores ``_`` are allowed in numbers, as long as the number does not start w
 an underscore. This means that ``1_000`` is allowed but ``_1000`` is not. Similarly
 ``0xffff_0000`` is fine, but ``0x_f`` is not.
 
+Scientific notation is supported, e.g. ``1e6`` is one million. Only integer values
+are supported.
+
 Assigning values which cannot fit into the type gives a compiler error. For example::
 
     uint8 foo = 300;
