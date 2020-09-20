@@ -43,6 +43,34 @@ fn various_constants() {
     let mut runtime = build_solidity(
         "
         contract test {
+            function foo() public returns (uint32) {
+                return 1e3;
+            }
+        }",
+    );
+
+    runtime.function("foo", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, FooReturn(1000).encode());
+
+    // parse
+    let mut runtime = build_solidity(
+        "
+        contract test {
+            function foo() public returns (int64) {
+                return -7e3;
+            }
+        }",
+    );
+
+    runtime.function("foo", Vec::new());
+
+    assert_eq!(runtime.vm.scratch, Foo64Return(-7000).encode());
+
+    // parse
+    let mut runtime = build_solidity(
+        "
+        contract test {
             function foo() public returns (int64) {
                 return -0x7afedeaddeedcafe;
             }
@@ -375,7 +403,7 @@ fn address_payable_type() {
                 other b = a;
             }
         }
-        
+
         contract other {
             function test() public {
             }
@@ -395,7 +423,7 @@ fn address_payable_type() {
                 other b = a;
             }
         }
-        
+
         contract other {
             function test() public {
             }
@@ -415,7 +443,7 @@ fn address_payable_type() {
                 other b = other(a);
             }
         }
-        
+
         contract other {
             function test() public {
             }
