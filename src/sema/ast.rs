@@ -56,13 +56,13 @@ impl fmt::Display for EventDecl {
     }
 }
 
-impl StructDecl {
+impl fmt::Display for StructDecl {
     /// Make the struct name into a string for printing. The enum can be declared either
     /// inside or outside a contract.
-    pub fn print_to_string(&self) -> String {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
-            Some(c) => format!("{}.{}", c, self.name),
-            None => self.name.to_owned(),
+            Some(c) => write!(f, "{}.{}", c, self.name),
+            None => write!(f, "{}", self.name),
         }
     }
 }
@@ -76,13 +76,13 @@ pub struct EnumDecl {
     pub values: HashMap<String, (pt::Loc, usize)>,
 }
 
-impl EnumDecl {
+impl fmt::Display for EnumDecl {
     /// Make the enum name into a string for printing. The enum can be declared either
     /// inside or outside a contract.
-    pub fn print_to_string(&self) -> String {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.contract {
-            Some(c) => format!("{}.{}", c, self.name),
-            None => self.name.to_owned(),
+            Some(c) => write!(f, "{}.{}", c, self.name),
+            None => write!(f, "{}", self.name),
         }
     }
 }
@@ -214,8 +214,8 @@ impl Function {
                         Type::Bytes(n) => format!("bytes{}", n),
                         Type::DynamicBytes => "bytes".to_string(),
                         Type::String => "string".to_string(),
-                        Type::Enum(i) => ns.enums[*i].print_to_string(),
-                        Type::Struct(i) => ns.structs[*i].print_to_string(),
+                        Type::Enum(i) => format!("{}", ns.enums[*i]),
+                        Type::Struct(i) => format!("{}", ns.structs[*i]),
                         Type::Array(ty, len) => format!(
                             "{}{}",
                             type_to_wasm_name(ty, ns),

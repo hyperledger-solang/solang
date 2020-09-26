@@ -617,8 +617,8 @@ impl Type {
             Type::Bytes(n) => format!("bytes{}", n),
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
-            Type::Enum(n) => format!("enum {}", ns.enums[*n].print_to_string()),
-            Type::Struct(n) => format!("struct {}", ns.structs[*n].print_to_string()),
+            Type::Enum(n) => format!("enum {}", ns.enums[*n]),
+            Type::Struct(n) => format!("struct {}", ns.structs[*n]),
             Type::Array(ty, len) => format!(
                 "{}{}",
                 ty.to_string(ns),
