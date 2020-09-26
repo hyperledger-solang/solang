@@ -305,7 +305,8 @@ void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
 // Some compiler runtime builtins we need.
 
 // 128 bit shift left.
-typedef union {
+typedef union
+{
 	__uint128_t all;
 	struct
 	{
@@ -420,7 +421,7 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 	return v;
 }
 
-bool memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
+bool __memcmp(uint8_t *left, uint32_t left_len, uint8_t *right, uint32_t right_len)
 {
 	if (left_len != right_len)
 		return false;

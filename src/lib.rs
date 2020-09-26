@@ -37,6 +37,8 @@ pub enum Target {
     Ewasm,
     /// Sawtooth Sabre, see https://github.com/hyperledger/sawtooth-sabre
     Sabre,
+    /// Generate a generic object file for linking
+    Generic,
 }
 
 impl fmt::Display for Target {
@@ -45,6 +47,7 @@ impl fmt::Display for Target {
             Target::Substrate => write!(f, "Substrate"),
             Target::Ewasm => write!(f, "ewasm"),
             Target::Sabre => write!(f, "Sawtooth Sabre"),
+            Target::Generic => write!(f, "generic"),
         }
     }
 }
@@ -103,7 +106,8 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
         match target {
             Target::Ewasm => 20,
             Target::Substrate => 32,
-            Target::Sabre => 0, // Sabre has no address type
+            Target::Sabre => 0,    // Sabre has no address type
+            Target::Generic => 20, // Same as ethereum
         },
         16,
     );

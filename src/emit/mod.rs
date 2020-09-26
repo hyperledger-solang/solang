@@ -30,6 +30,7 @@ use inkwell::OptimizationLevel;
 
 mod ethabiencoder;
 mod ewasm;
+mod generic;
 mod sabre;
 mod substrate;
 
@@ -283,6 +284,9 @@ impl<'a> Contract<'a> {
             }
             super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
             super::Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename, opt),
+            super::Target::Generic => {
+                generic::GenericTarget::build(context, contract, ns, filename, opt)
+            }
         }
     }
 
@@ -1934,7 +1938,7 @@ impl<'a> Contract<'a> {
 
                 self.builder
                     .build_call(
-                        self.module.get_function("memcmp").unwrap(),
+                        self.module.get_function("__memcmp").unwrap(),
                         &[left.into(), left_len.into(), right.into(), right_len.into()],
                         "",
                     )
