@@ -463,10 +463,7 @@ impl Namespace {
                 values[*pos] = Tree::Leaf(name.clone());
             }
 
-            t.push(Tree::Branch(
-                format!("enum {}", e.print_to_string()),
-                values,
-            ));
+            t.push(Tree::Branch(format!("enum {}", e), values));
         }
 
         // structs
@@ -477,10 +474,7 @@ impl Namespace {
                 .map(|p| Tree::Leaf(format!("field {} {}", p.ty.to_string(&self), p.name)))
                 .collect();
 
-            t.push(Tree::Branch(
-                format!("struct {}", s.print_to_string()),
-                fields,
-            ));
+            t.push(Tree::Branch(format!("struct {}", s), fields));
         }
 
         // events

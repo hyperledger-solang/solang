@@ -379,17 +379,14 @@ fn get_int_length(
         Type::Enum(n) => {
             ns.diagnostics.push(Diagnostic::error(
                 *l_loc,
-                format!("type enum {} not allowed", ns.enums[*n].print_to_string(),),
+                format!("type enum {} not allowed", ns.enums[*n]),
             ));
             Err(())
         }
         Type::Struct(n) => {
             ns.diagnostics.push(Diagnostic::error(
                 *l_loc,
-                format!(
-                    "type struct {} not allowed",
-                    ns.structs[*n].print_to_string()
-                ),
+                format!("type struct {} not allowed", ns.structs[*n]),
             ));
             Err(())
         }
@@ -2894,11 +2891,7 @@ fn enum_value(
             None => {
                 ns.diagnostics.push(Diagnostic::error(
                     id.loc,
-                    format!(
-                        "enum {} does not have value {}",
-                        ns.enums[e].print_to_string(),
-                        id.name
-                    ),
+                    format!("enum {} does not have value {}", ns.enums[e], id.name),
                 ));
                 Err(())
             }
@@ -3049,8 +3042,7 @@ fn member_access(
                     id.loc,
                     format!(
                         "struct ‘{}’ does not have a field called ‘{}’",
-                        ns.structs[n].print_to_string(),
-                        id.name
+                        ns.structs[n], id.name
                     ),
                 ));
                 return Err(());
