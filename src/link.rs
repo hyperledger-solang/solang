@@ -21,6 +21,11 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
     let mut module: Module =
         parity_wasm::deserialize_buffer(input).expect("cannot deserialize llvm wasm");
 
+    if target == Target::Generic {
+        // Cannot link generic object
+        return input.to_vec();
+    }
+
     let mut exports = Vec::new();
     let mut globals = Vec::new();
 
@@ -31,6 +36,7 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
         Target::Ewasm => name == "main",
         Target::Substrate => name == "deploy" || name == "call",
         Target::Sabre => name == "entrypoint",
+        Target::Generic => unreachable!(),
     };
 
     for c in module.custom_sections() {
@@ -95,6 +101,7 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
                 elements::External::Memory(elements::MemoryType::new(16, Some(16))),
             )),
             Target::Sabre => exports.push(ExportEntry::new("memory".into(), Internal::Memory(0))),
+            _ => (),
         }
     }
 
