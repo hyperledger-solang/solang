@@ -446,7 +446,7 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_gas_price",
-            contract.context.void_type().fn_type(&[], false),
+            contract.context.void_type().fn_type(&[u64_val], false),
             Some(Linkage::External),
         );
 
@@ -3159,11 +3159,53 @@ impl TargetRuntime for SubstrateTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
                 get_seal_value!("gas_left", "ext_gas_left", 64)
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, _) => get_seal_value!(
-                "gas_price",
-                "ext_gas_price",
-                contract.ns.value_length as u32 * 8
-            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, expr) => {
+                // gasprice is available as "tx.gasprice" which will give you the price for one unit
+                // of gas, or "tx.gasprice(uint64)" which will give you the price of N gas units
+                let gas = if expr.is_empty() {
+                    contract.context.i64_type().const_int(1, false)
+                } else {
+                    contract
+                        .expression(&expr[0], vartab, function, runtime)
+                        .into_int_value()
+                };
+
+                let value_length = contract.ns.value_length as u32 * 8;
+
+                let value = contract.builder.build_alloca(
+                    contract.context.custom_width_int_type(value_length),
+                    "price",
+                );
+
+                contract.builder.build_call(
+                    contract.module.get_function("ext_gas_price").unwrap(),
+                    &[gas.into()],
+                    "gas_price",
+                );
+
+                contract.builder.build_call(
+                    contract.module.get_function("ext_scratch_read").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                value,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        contract.context.i32_type().const_zero().into(),
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(value_length as u64 / 8, false)
+                            .into(),
+                    ],
+                    "price",
+                );
+
+                contract.builder.build_load(value, "price")
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
                 get_seal_value!("caller", "ext_caller", 256)
             }

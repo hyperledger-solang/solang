@@ -11,6 +11,7 @@ use sema::eval::eval_const_number;
 use sema::expression::{cast_shift_arg, try_bigint_to_expression, try_cast};
 use std::collections::HashSet;
 use std::ops::Mul;
+use Target;
 
 pub fn expression(
     expr: &Expression,
@@ -897,6 +898,16 @@ pub fn expression(
             );
 
             Expression::Variable(*loc, Type::DynamicBytes, res)
+        }
+        // The Substrate gas price builtin takes an argument; the others do not
+        Expression::Builtin(loc, _, Builtin::Gasprice, expr)
+            if expr.len() == 1 && ns.target != Target::Substrate =>
+        {
+            let ty = Type::Uint(ns.value_length as u16 * 8);
+            let gasprice = Expression::Builtin(*loc, vec![ty.clone()], Builtin::Gasprice, vec![]);
+            let units = expression(&expr[0], cfg, contract_no, ns, vartab);
+
+            Expression::Multiply(*loc, ty, Box::new(units), Box::new(gasprice))
         }
         _ => expr.clone(),
     }

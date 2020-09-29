@@ -14,7 +14,7 @@ struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: [Prototype; 22] = [
+static BUILTIN_FUNCTIONS: [Prototype; 23] = [
     Prototype {
         builtin: Builtin::Assert,
         namespace: None,
@@ -173,6 +173,14 @@ static BUILTIN_FUNCTIONS: [Prototype; 22] = [
         name: "encodeWithSignature",
         args: &[Type::String],
         ret: &[],
+        target: None,
+    },
+    Prototype {
+        builtin: Builtin::Gasprice,
+        namespace: Some("tx"),
+        name: "gasprice",
+        args: &[Type::Uint(64)],
+        ret: &[Type::Uint(128)],
         target: None,
     },
     Prototype {
@@ -357,14 +365,27 @@ pub fn is_reserved(fname: &str) -> bool {
 /// Resolve a builtin call
 pub fn resolve_call(
     loc: &pt::Loc,
-    id: &pt::Identifier,
-    args: Vec<Expression>,
+    file_no: usize,
+    namespace: Option<&str>,
+    id: &str,
+    args: &[pt::Expression],
+    contract_no: Option<usize>,
     ns: &mut Namespace,
+    symtable: &Symtable,
 ) -> Result<Expression, ()> {
     let matches = BUILTIN_FUNCTIONS
         .iter()
-        .filter(|p| p.name == id.name && p.namespace.is_none())
+        .filter(|p| p.name == id && p.namespace == namespace)
         .collect::<Vec<&Prototype>>();
+
+    let mut resolved_args = Vec::new();
+
+    for arg in args {
+        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
+
+        resolved_args.push(expr);
+    }
+
     let marker = ns.diagnostics.len();
     for func in &matches {
         if func.args.len() != args.len() {
@@ -384,7 +405,7 @@ pub fn resolve_call(
         let mut cast_args = Vec::new();
 
         // check if arguments can be implicitly casted
-        for (i, arg) in args.iter().enumerate() {
+        for (i, arg) in resolved_args.iter().enumerate() {
             match cast(&pt::Loc(0, 0, 0), arg.clone(), &func.args[i], true, ns) {
                 Ok(expr) => cast_args.push(expr),
                 Err(()) => {
@@ -423,16 +444,28 @@ pub fn resolve_call(
 pub fn resolve_method_call(
     loc: &pt::Loc,
     file_no: usize,
-    namespace: &pt::Identifier,
-    id: &pt::Identifier,
+    namespace: &str,
+    name: &str,
     args: &[pt::Expression],
     contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    assert_eq!(namespace.name, "abi");
+    // The abi.* functions need special handling, others do not
+    if namespace != "abi" {
+        return resolve_call(
+            loc,
+            file_no,
+            Some(namespace),
+            name,
+            args,
+            contract_no,
+            ns,
+            symtable,
+        );
+    }
 
-    let builtin = match id.name.as_str() {
+    let builtin = match name {
         "decode" => Builtin::AbiDecode,
         "encode" => Builtin::AbiEncode,
         "encodePacked" => Builtin::AbiEncodePacked,

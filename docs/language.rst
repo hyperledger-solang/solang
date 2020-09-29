@@ -2543,6 +2543,25 @@ address ``msg.sender``
     that called the current contract, or the address that started the transaction
     if it called the current contract directly.
 
+``tx`` properties
++++++++++++++++++
+
+uint128 ``tx.gasprice``
+    The cost of one unit of gas.
+
+uint128 ``tx.gasprice(uint64 gas)``
+    The cost of `gas` units of gas.
+
+.. note::
+    On Parity Substrate, the cost of one gas unit may not be an exact whole round value. So, to
+    avoid rounding errors, use the ``tx.gasprice()`` function to get the correct pricing
+    for a total units of gas. This function is not available on the Ethereum Foundation Solidity
+    compiler.
+
+adddress ``tx.origin``
+    The address that started this transaction. Not available on Parity Substrate
+
+
 ``block`` properties
 ++++++++++++++++++++++
 
