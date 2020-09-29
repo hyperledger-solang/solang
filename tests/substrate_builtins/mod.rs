@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, parse_and_resolve};
+use super::{build_solidity, first_error, first_warning, parse_and_resolve};
 use solang::Target;
 
 #[test]
@@ -645,7 +645,7 @@ fn tx() {
         r##"
         contract bar {
             function test() public {
-                uint128 b = tx.gasprice;
+                uint128 b = tx.gasprice(1);
 
                 assert(b == 59_541_253_813_967);
             }
@@ -671,7 +671,37 @@ fn tx() {
         r#"
         contract bar {
             function test() public {
-                int64 b = tx.gasprice;
+                int128 b = tx.gasprice;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "use the function ‘tx.gasprice(gas)’ in stead, as ‘tx.gasprice’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int128 b = tx.gasprice(4-3);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(ns.diagnostics),
+        "the function call ‘tx.gasprice(1)’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice"
+    );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test() public {
+                int64 b = tx.gasprice(100);
 
                 assert(b == 14_250_083_331_950_119_597);
             }

@@ -1127,7 +1127,7 @@ pub fn expression(
                 };
             }
 
-            if let Some((builtin, ty)) = builtin::builtin_var(None, &id.name, ns) {
+            if let Some((builtin, ty)) = builtin::builtin_var(&id.loc, None, &id.name, ns) {
                 return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
             }
 
@@ -2914,7 +2914,8 @@ fn member_access(
 ) -> Result<Expression, ()> {
     // is it a builtin special variable like "block.timestamp"
     if let pt::Expression::Variable(namespace) = e {
-        if let Some((builtin, ty)) = builtin::builtin_var(Some(&namespace.name), &id.name, ns) {
+        if let Some((builtin, ty)) = builtin::builtin_var(loc, Some(&namespace.name), &id.name, ns)
+        {
             return Ok(Expression::Builtin(*loc, vec![ty], builtin, vec![]));
         }
     }

@@ -1,7 +1,10 @@
 use super::ast::{Builtin, Diagnostic, Expression, Namespace, Type};
+use super::eval::eval_const_number;
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
 use crate::Target;
+use num_bigint::BigInt;
+use num_traits::One;
 use parser::pt;
 
 struct Prototype {
@@ -328,15 +331,24 @@ pub fn is_builtin_call(namespace: Option<&str>, fname: &str, ns: &Namespace) -> 
 
 /// Does variable name match builtin
 pub fn builtin_var(
+    loc: &pt::Loc,
     namespace: Option<&str>,
     fname: &str,
-    ns: &Namespace,
+    ns: &mut Namespace,
 ) -> Option<(Builtin, Type)> {
     if let Some(p) = BUILTIN_VARIABLE
         .iter()
         .find(|p| p.name == fname && p.namespace == namespace)
     {
         if p.target.is_none() || p.target == Some(ns.target) {
+            if ns.target == Target::Substrate && p.builtin == Builtin::Gasprice {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from(
+                        "use the function ‘tx.gasprice(gas)’ in stead, as ‘tx.gasprice’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
+                    ),
+                ));
+            }
             return Some((p.builtin.clone(), p.ret[0].clone()));
         }
     }
@@ -417,6 +429,21 @@ pub fn resolve_call(
 
         if matches {
             ns.diagnostics.truncate(marker);
+
+            // tx.gasprice(1) is a bad idea, just like tx.gasprice. Warn about this
+            if ns.target == Target::Substrate && func.builtin == Builtin::Gasprice {
+                if let Ok((_, val)) = eval_const_number(&cast_args[0], contract_no, ns) {
+                    if val == BigInt::one() {
+                        ns.diagnostics.push(Diagnostic::warning(
+                            *loc,
+                            String::from(
+                                "the function call ‘tx.gasprice(1)’ may round down to zero. See https://solang.readthedocs.io/en/latest/language.html#gasprice",
+                            ),
+                        ));
+                    }
+                }
+            }
+
             return Ok(Expression::Builtin(
                 *loc,
                 func.ret.to_vec(),

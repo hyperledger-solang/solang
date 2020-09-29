@@ -2546,17 +2546,21 @@ address ``msg.sender``
 ``tx`` properties
 +++++++++++++++++
 
+.. _gasprice:
+
 uint128 ``tx.gasprice``
-    The cost of one unit of gas.
+    The price of one unit of gas. This field cannot be used on Parity Substrate, the explanation
+    is in the warning box below.
 
 uint128 ``tx.gasprice(uint64 gas)``
-    The cost of `gas` units of gas.
+    The total price of `gas` units of gas.
 
-.. note::
-    On Parity Substrate, the cost of one gas unit may not be an exact whole round value. So, to
-    avoid rounding errors, use the ``tx.gasprice()`` function to get the correct pricing
-    for a total units of gas. This function is not available on the Ethereum Foundation Solidity
-    compiler.
+.. warning::
+    On Parity Substrate, the cost of one gas unit may not be an exact whole round value. In fact,
+    if the gas price is less than 1 it may round down to 0, giving the incorrect appearance gas is free.
+    Therefore, avoid the ``tx.gasprice`` member in favour of the function ``tx.gasprice(uint64 gas)``.
+
+    This function is not available on the Ethereum Foundation Solidity compiler.
 
 adddress ``tx.origin``
     The address that started this transaction. Not available on Parity Substrate
