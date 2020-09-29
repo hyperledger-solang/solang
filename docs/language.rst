@@ -2560,7 +2560,21 @@ uint128 ``tx.gasprice(uint64 gas)``
     if the gas price is less than 1 it may round down to 0, giving the incorrect appearance gas is free.
     Therefore, avoid the ``tx.gasprice`` member in favour of the function ``tx.gasprice(uint64 gas)``.
 
-    This function is not available on the Ethereum Foundation Solidity compiler.
+    To avoid rounding errors, pass the total amount of gas into ``tx.gasprice(uint64 gas)`` rather than
+    doing arithmetic on the result. As an example, **replace** this bad example:
+
+    .. code-block::
+
+        // BAD example
+        uint128 cost = num_items * tx.gasprice(gas_per_item);
+
+    with:
+
+    .. code-block::
+
+        uint128 cost = tx.gasprice(num_items * gas_per_item);
+
+    Note this function is not available on the Ethereum Foundation Solidity compiler.
 
 adddress ``tx.origin``
     The address that started this transaction. Not available on Parity Substrate
