@@ -3228,14 +3228,6 @@ pub fn call_position_args(
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    let mut resolved_args = Vec::new();
-
-    for arg in args {
-        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
-
-        resolved_args.push(expr);
-    }
-
     // is it a builtin
     if builtin::is_builtin_call(None, &id.name, ns) {
         return if func_ty == pt::FunctionTy::Modifier {
@@ -3245,7 +3237,16 @@ pub fn call_position_args(
             ));
             Err(())
         } else {
-            let expr = builtin::resolve_call(loc, id, resolved_args, ns)?;
+            let expr = builtin::resolve_call(
+                loc,
+                file_no,
+                None,
+                &id.name,
+                args,
+                contract_no,
+                ns,
+                symtable,
+            )?;
 
             if expr.tys().len() > 1 {
                 ns.diagnostics.push(Diagnostic::error(
@@ -3261,6 +3262,13 @@ pub fn call_position_args(
 
     let mut name_matches = 0;
     let mut errors = Vec::new();
+    let mut resolved_args = Vec::new();
+
+    for arg in args {
+        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
+
+        resolved_args.push(expr);
+    }
 
     // Try to resolve as a function call
     for (base_contract_no, function_no) in ns.contracts[call_contract_no].all_functions.keys() {
@@ -3581,8 +3589,8 @@ fn method_call_pos_args(
             return builtin::resolve_method_call(
                 loc,
                 file_no,
-                namespace,
-                func,
+                &namespace.name,
+                &func.name,
                 args,
                 contract_no,
                 ns,

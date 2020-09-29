@@ -659,7 +659,11 @@ impl Externals for TestRuntime {
                 Ok(None)
             }
             Some(SubstrateExternal::ext_gas_price) => {
-                self.vm.scratch = 59_541_253_813_967u128.to_le_bytes().to_vec();
+                let units: u64 = args.nth_checked(0)?;
+
+                self.vm.scratch = (59_541_253_813_967u128 * units as u128)
+                    .to_le_bytes()
+                    .to_vec();
 
                 println!("ext_gas_price: {}", hex::encode(&self.vm.scratch));
 

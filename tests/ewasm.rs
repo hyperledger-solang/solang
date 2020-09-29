@@ -1229,9 +1229,9 @@ fn array() {
         contract foo {
             function f(uint i1) public returns (int) {
                 int[8] bar = [ int(10), 20, 30, 4, 5, 6, 7, 8 ];
-        
+
                 bar[2] = 0x7_f;
-        
+
                 return bar[i1];
             }
 
@@ -1365,7 +1365,7 @@ fn array_array() {
         contract foo {
             function f(int a, uint i1, uint i2) public returns (int) {
                     int[4][2] memory bar = [ [ int(1), 2, 3, 4 ], [ 5, 6, 7, a ] ];
-    
+
                     return bar[i1][i2];
             }
         }"##,
@@ -1407,17 +1407,17 @@ fn arrays_are_refs() {
             function f2(int[4] memory foo) private {
                 foo[2] = 2;
             }
-        
+
             function f1(int[4] memory foo) private {
                 foo[1] = 2;
             }
-        
+
             function bar() public returns (int[4] memory) {
                 int[4] memory x = [ int(0), 0, 0, 0 ];
-        
+
                 f1(x);
                 f2(x);
-        
+
                 return x;
             }
         }
@@ -1446,19 +1446,19 @@ fn storage_structs() {
         r##"
         pragma solidity 0;
         pragma experimental ABIEncoderV2;
-        
+
         contract test_struct_parsing {
             struct foo {
                 bool x;
                 uint32 y;
             }
-        
+
             foo f;
-        
+
             function test() public {
                 f.x = true;
                 f.y = 64;
-        
+
                 assert(f.x == true);
                 assert(f.y == 64);
             }
@@ -1479,7 +1479,7 @@ fn struct_encode() {
                 bool x;
                 uint32 y;
             }
-        
+
             function test(foo memory f) public {
                 assert(f.x == true);
                 assert(f.y == 64);
@@ -1508,7 +1508,7 @@ fn struct_dynamic_array_encode() {
                 bool x;
                 uint32 y;
             }
-        
+
             function test() public returns (foo[]) {
                 foo[] x = new foo[](3);
 
@@ -1554,10 +1554,10 @@ fn struct_decode() {
                 bool x;
                 uint32 y;
             }
-        
+
             function test() public returns (foo) {
                 foo f;
-                
+
                 f.x = true;
                 f.y = 64;
 
@@ -1662,7 +1662,7 @@ fn struct_in_struct_encode() {
                 card card4;
                 card card5;
             }
-        
+
             function test(hand h) public {
                 assert(h.card1.s == suit.hearts);
                 assert(h.card1.v == value.two);
@@ -1984,7 +1984,7 @@ fn external_call() {
 
         contract c {
             b x;
-        
+
             constructor() public {
                 x = new b(102);
             }
@@ -2026,7 +2026,7 @@ fn try_catch() {
 
         contract c {
             b x;
-        
+
             constructor() public {
                 x = new b(102);
             }
