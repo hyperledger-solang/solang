@@ -1161,8 +1161,10 @@ pub fn emit_function_call(
                         .iter()
                         .map(|ty| Parameter {
                             name: "".to_owned(),
+                            name_loc: None,
                             loc: *loc,
                             ty: ty.clone(),
+                            ty_loc: *loc,
                             indexed: false,
                         })
                         .collect(),

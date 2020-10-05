@@ -337,9 +337,11 @@ pub fn struct_decl(
         }
 
         fields.push(Parameter {
-            loc: field.name.loc,
+            loc: field.loc,
+            name_loc: Some(field.name.loc),
             name: field.name.name.to_string(),
             ty,
+            ty_loc: field.ty.loc(),
             indexed: false,
         });
     }
@@ -403,7 +405,7 @@ pub fn event_decl(
             valid = false;
         }
 
-        let name = if let Some(name) = &field.name {
+        let (name, name_loc) = if let Some(name) = &field.name {
             if let Some(other) = fields.iter().find(|f| f.name == name.name) {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     name.loc,
@@ -417,9 +419,9 @@ pub fn event_decl(
                 valid = false;
                 continue;
             }
-            name.name.to_owned()
+            (name.name.to_owned(), Some(name.loc))
         } else {
-            String::new()
+            (String::new(), None)
         };
 
         if field.indexed {
@@ -429,7 +431,9 @@ pub fn event_decl(
         fields.push(Parameter {
             loc: field.loc,
             name,
+            name_loc,
             ty,
+            ty_loc: field.ty.loc(),
             indexed: field.indexed,
         });
     }

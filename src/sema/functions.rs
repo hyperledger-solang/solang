@@ -583,6 +583,8 @@ fn resolve_params(
             }
         };
 
+        let mut ty_loc = p.ty.loc();
+
         match ns.resolve_type(file_no, Some(contract_no), false, &p.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
@@ -597,17 +599,18 @@ fn resolve_params(
 
                     ty
                 } else if let Some(pt::StorageLocation::Storage(loc)) = p.storage {
-                    if storage_allowed {
-                        Type::StorageRef(Box::new(ty))
-                    } else {
+                    if !storage_allowed {
                         ns.diagnostics.push(Diagnostic::error(
                             loc,
                             "parameter of type ‘storage’ not allowed public or external functions"
                                 .to_string(),
                         ));
                         success = false;
-                        ty
                     }
+
+                    ty_loc.2 = loc.2;
+
+                    Type::StorageRef(Box::new(ty))
                 } else if ty.contains_mapping(ns) {
                     ns.diagnostics.push(Diagnostic::error(
                         p.ty.loc(),
@@ -625,7 +628,9 @@ fn resolve_params(
                         .name
                         .as_ref()
                         .map_or("".to_string(), |id| id.name.to_string()),
+                    name_loc: p.name.as_ref().map(|id| id.loc),
                     ty,
+                    ty_loc,
                     indexed: false,
                 });
             }
@@ -658,6 +663,8 @@ fn resolve_returns(
             }
         };
 
+        let mut ty_loc = r.ty.loc();
+
         match ns.resolve_type(file_no, Some(contract_no), false, &r.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
@@ -680,20 +687,24 @@ fn resolve_returns(
                                     .to_string(),
                             ));
                             success = false;
+
+                            ty_loc.2 = loc.2;
+
                             ty
                         }
                         Some(pt::StorageLocation::Storage(loc)) => {
-                            if storage_allowed {
-                                Type::StorageRef(Box::new(ty))
-                            } else {
+                            if !storage_allowed {
                                 ns.diagnostics.push(Diagnostic::error(
                                     loc,
                                     "return type of type ‘storage’ not allowed public or external functions"
                                         .to_string(),
                                 ));
                                 success = false;
-                                ty
                             }
+
+                            ty_loc.2 = loc.2;
+
+                            Type::StorageRef(Box::new(ty))
                         }
                         _ => {
                             if ty.contains_mapping(ns) {
@@ -716,7 +727,9 @@ fn resolve_returns(
                         .name
                         .as_ref()
                         .map_or("".to_string(), |id| id.name.to_string()),
+                    name_loc: r.name.as_ref().map(|id| id.loc),
                     ty,
+                    ty_loc,
                     indexed: false,
                 });
             }
@@ -751,13 +764,17 @@ fn signatures() {
             Parameter {
                 loc: pt::Loc(0, 0, 0),
                 name: "".to_string(),
+                name_loc: None,
                 ty: Type::Uint(8),
+                ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
             },
             Parameter {
                 loc: pt::Loc(0, 0, 0),
                 name: "".to_string(),
+                name_loc: None,
                 ty: Type::Address(false),
+                ty_loc: pt::Loc(0, 0, 0),
                 indexed: false,
             },
         ],
