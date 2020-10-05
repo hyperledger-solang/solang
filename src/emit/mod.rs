@@ -3451,7 +3451,9 @@ impl<'a> Contract<'a> {
                             &[ast::Parameter {
                                 loc: pt::Loc(0, 0, 0),
                                 name: "error".to_owned(),
+                                name_loc: None,
                                 ty: ast::Type::String,
+                                ty_loc: pt::Loc(0, 0, 0),
                                 indexed: false,
                             }],
                         );

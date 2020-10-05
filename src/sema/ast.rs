@@ -91,7 +91,10 @@ impl fmt::Display for EnumDecl {
 pub struct Parameter {
     pub loc: pt::Loc,
     pub name: String,
+    // The name can empty (e.g. in an event field or unnamed parameter/return)
+    pub name_loc: Option<pt::Loc>,
     pub ty: Type,
+    pub ty_loc: pt::Loc,
     pub indexed: bool,
 }
 
@@ -804,6 +807,7 @@ pub enum Statement {
     Emit {
         loc: pt::Loc,
         event_no: usize,
+        event_loc: pt::Loc,
         args: Vec<Expression>,
     },
     TryCatch {

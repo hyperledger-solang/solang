@@ -2422,7 +2422,9 @@ impl TargetRuntime for SubstrateTarget {
         params.push(ast::Parameter {
             loc: pt::Loc(0, 0, 0),
             ty: salt_ty,
+            ty_loc: pt::Loc(0, 0, 0),
             name: "salt".to_string(),
+            name_loc: None,
             indexed: false,
         });
 

@@ -295,7 +295,8 @@ fn statement(
 ) -> Result<bool, ()> {
     match stmt {
         pt::Statement::VariableDefinition(loc, decl, initializer) => {
-            let var_ty = resolve_var_decl_ty(&decl.ty, &decl.storage, file_no, contract_no, ns)?;
+            let (var_ty, ty_loc) =
+                resolve_var_decl_ty(&decl.ty, &decl.storage, file_no, contract_no, ns)?;
 
             let initializer = if let Some(init) = initializer {
                 let expr = expression(init, file_no, Some(contract_no), ns, symtable, false)?;
@@ -314,7 +315,9 @@ fn statement(
                     Parameter {
                         loc: decl.loc,
                         ty: var_ty,
+                        ty_loc,
                         name: decl.name.name.to_owned(),
+                        name_loc: Some(decl.name.loc),
                         indexed: false,
                     },
                     initializer,
@@ -769,6 +772,7 @@ fn emit_event(
 ) -> Result<Statement, ()> {
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
+            let event_loc = ty.loc();
             let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
 
             let mut resolved_args = Vec::new();
@@ -815,6 +819,7 @@ fn emit_event(
                     return Ok(Statement::Emit {
                         loc: *loc,
                         event_no: *event_no,
+                        event_loc,
                         args: cast_args,
                     });
                 }
@@ -830,6 +835,7 @@ fn emit_event(
             }
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
+            let event_loc = ty.loc();
             let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
 
             let mut arguments = HashMap::new();
@@ -912,6 +918,7 @@ fn emit_event(
                     return Ok(Statement::Emit {
                         loc: *loc,
                         event_no: *event_no,
+                        event_loc,
                         args: cast_args,
                     });
                 }
@@ -1066,7 +1073,7 @@ fn destructure(
                 storage,
                 name: Some(name),
             }) => {
-                let ty = resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
+                let (ty, ty_loc) = resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
 
                 // here we only CHECK if we can cast the type
                 let _ = cast(
@@ -1085,7 +1092,9 @@ fn destructure(
                         Parameter {
                             loc: *loc,
                             name: name.name.to_owned(),
+                            name_loc: Some(name.loc),
                             ty,
+                            ty_loc,
                             indexed: false,
                         },
                     ));
@@ -1104,7 +1113,8 @@ fn resolve_var_decl_ty(
     file_no: usize,
     contract_no: usize,
     ns: &mut Namespace,
-) -> Result<Type, ()> {
+) -> Result<(Type, pt::Loc), ()> {
+    let mut loc_ty = ty.loc();
     let mut var_ty = ns.resolve_type(file_no, Some(contract_no), false, &ty)?;
 
     if let Some(storage) = storage {
@@ -1119,7 +1129,8 @@ fn resolve_var_decl_ty(
             return Err(());
         }
 
-        if let pt::StorageLocation::Storage(_) = storage {
+        if let pt::StorageLocation::Storage(loc) = storage {
+            loc_ty.2 = loc.2;
             var_ty = Type::StorageRef(Box::new(var_ty));
         }
 
@@ -1143,7 +1154,7 @@ fn resolve_var_decl_ty(
         return Err(());
     }
 
-    Ok(var_ty)
+    Ok((var_ty, loc_ty))
 }
 
 /// Parse return statement with values
@@ -1427,7 +1438,8 @@ fn try_catch(
             Some(pt::Parameter {
                 ty, storage, name, ..
             }) => {
-                let ret_ty = resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
+                let (ret_ty, ty_loc) =
+                    resolve_var_decl_ty(&ty, &storage, file_no, contract_no, ns)?;
 
                 if arg_ty != ret_ty {
                     ns.diagnostics.push(Diagnostic::error(
@@ -1449,7 +1461,9 @@ fn try_catch(
                             Parameter {
                                 loc: param.0,
                                 ty: ret_ty,
+                                ty_loc,
                                 name: name.name.to_string(),
+                                name_loc: Some(name.loc),
                                 indexed: false,
                             },
                         ));
@@ -1460,8 +1474,10 @@ fn try_catch(
                         Parameter {
                             loc: param.0,
                             ty: ret_ty,
+                            ty_loc,
                             indexed: false,
                             name: "".to_string(),
+                            name_loc: None,
                         },
                     ));
                 }
@@ -1507,7 +1523,7 @@ fn try_catch(
             return Err(());
         }
 
-        let error_ty = resolve_var_decl_ty(
+        let (error_ty, ty_loc) = resolve_var_decl_ty(
             &error_stmt.1.ty,
             &error_stmt.1.storage,
             file_no,
@@ -1532,7 +1548,9 @@ fn try_catch(
         let mut error_param = Parameter {
             loc: error_stmt.0.loc,
             ty: Type::String,
+            ty_loc,
             name: "".to_string(),
+            name_loc: None,
             indexed: false,
         };
 
@@ -1542,6 +1560,7 @@ fn try_catch(
 
                 error_pos = Some(pos);
                 error_param.name = name.name.to_string();
+                error_param.name_loc = Some(name.loc);
             }
         }
 
@@ -1565,7 +1584,7 @@ fn try_catch(
         None
     };
 
-    let catch_ty = resolve_var_decl_ty(
+    let (catch_ty, ty_loc) = resolve_var_decl_ty(
         &catch_stmt.0.ty,
         &catch_stmt.0.storage,
         file_no,
@@ -1589,7 +1608,9 @@ fn try_catch(
     let mut catch_param = Parameter {
         loc: catch_stmt.0.loc,
         ty: Type::DynamicBytes,
+        ty_loc,
         name: "".to_owned(),
+        name_loc: None,
         indexed: false,
     };
     let mut catch_param_pos = None;
@@ -1600,6 +1621,7 @@ fn try_catch(
             ns.check_shadowing(file_no, Some(contract_no), &name);
             catch_param_pos = Some(pos);
             catch_param.name = name.name.to_string();
+            catch_param.name_loc = Some(name.loc);
         }
     }
 

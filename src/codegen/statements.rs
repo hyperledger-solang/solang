@@ -500,8 +500,10 @@ pub fn statement(
             for (i, arg) in args.iter().enumerate() {
                 let param = Parameter {
                     ty: arg.ty(),
+                    ty_loc: arg.loc(),
                     loc: arg.loc(),
                     name: "".to_owned(),
+                    name_loc: None,
                     indexed: false,
                 };
 
