@@ -320,7 +320,9 @@ pub struct Namespace {
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,
     pub contracts: Vec<Contract>,
+    /// address length in bytes
     pub address_length: usize,
+    /// value length in bytes
     pub value_length: usize,
     pub diagnostics: Vec<Diagnostic>,
     /// Symbol key is file_no, contract, identifier

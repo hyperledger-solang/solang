@@ -27,15 +27,16 @@ impl GenericTarget {
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, ns, filename, opt, None);
         let mut b = GenericTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
 
+        let mut c = Contract::new(context, contract, ns, filename, opt, None);
+
         // externals
         b.declare_externals(&mut c);
 
-        c.emit_functions(&mut b);
+        b.emit_functions(&mut c);
 
         b.emit_constructor(&mut c);
         b.emit_function(&mut c);
@@ -93,7 +94,7 @@ impl GenericTarget {
     }
 
     fn emit_constructor(&mut self, contract: &mut Contract) {
-        let initializer = contract.emit_initializer(self);
+        let initializer = self.emit_initializer(contract);
 
         let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = contract.context.i32_type();
@@ -146,7 +147,7 @@ impl GenericTarget {
     }
 
     // emit function dispatch
-    fn emit_function(&mut self, contract: &mut Contract) {
+    fn emit_function<'s>(&'s mut self, contract: &'s mut Contract) {
         let u8_ptr_ty = contract.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = contract.context.i32_type();
 
@@ -168,25 +169,20 @@ impl GenericTarget {
             "argsdata32",
         );
 
-        contract.emit_function_dispatch(
+        self.emit_function_dispatch(
+            contract,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
             function,
             None,
-            self,
             |_| false,
         );
     }
 }
 
-impl TargetRuntime for GenericTarget {
-    fn clear_storage<'a>(
-        &self,
-        contract: &'a Contract,
-        _function: FunctionValue,
-        slot: PointerValue<'a>,
-    ) {
+impl<'a> TargetRuntime<'a> for GenericTarget {
+    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
         contract.builder.build_call(
             contract
                 .module
@@ -197,12 +193,12 @@ impl TargetRuntime for GenericTarget {
         );
     }
 
-    fn set_storage<'a>(
+    fn set_storage(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     ) {
         // TODO: check for non-zero
         contract.builder.build_call(
@@ -235,12 +231,12 @@ impl TargetRuntime for GenericTarget {
         );
     }
 
-    fn set_storage_string<'a>(
+    fn set_storage_string(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     ) {
         let len = unsafe {
             contract.builder.build_gep(
@@ -292,7 +288,7 @@ impl TargetRuntime for GenericTarget {
         );
     }
 
-    fn get_storage_string<'a>(
+    fn get_storage_string(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -300,7 +296,7 @@ impl TargetRuntime for GenericTarget {
     ) -> PointerValue<'a> {
         unimplemented!();
     }
-    fn get_storage_bytes_subscript<'a>(
+    fn get_storage_bytes_subscript(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -309,26 +305,26 @@ impl TargetRuntime for GenericTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn set_storage_bytes_subscript<'a>(
+    fn set_storage_bytes_subscript(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _index: IntValue<'a>,
-        _val: IntValue<'a>,
+        _slot: PointerValue,
+        _index: IntValue,
+        _val: IntValue,
     ) {
         unimplemented!();
     }
-    fn storage_bytes_push<'a>(
+    fn storage_bytes_push(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _val: IntValue<'a>,
+        _slot: PointerValue,
+        _val: IntValue,
     ) {
         unimplemented!();
     }
-    fn storage_bytes_pop<'a>(
+    fn storage_bytes_pop(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -336,7 +332,7 @@ impl TargetRuntime for GenericTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn storage_string_length<'a>(
+    fn storage_string_length(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
@@ -362,7 +358,7 @@ impl TargetRuntime for GenericTarget {
             .into_int_value()
     }
 
-    fn get_storage_int<'a>(
+    fn get_storage_int(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -738,7 +734,6 @@ impl TargetRuntime for GenericTarget {
         _expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
-        _runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {
         unimplemented!();
     }
