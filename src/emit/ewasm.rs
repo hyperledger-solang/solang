@@ -31,25 +31,28 @@ impl EwasmTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         // first emit runtime code
-        let mut runtime_code = Contract::new(context, contract, ns, filename, opt, None);
         let mut b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
+        let mut runtime_code = Contract::new(context, contract, ns, filename, opt, None);
 
         // externals
         b.declare_externals(&mut runtime_code);
 
         // This also emits the constructors. We are relying on DCE to eliminate them from
         // the final code.
-        runtime_code.emit_functions(&mut b);
+        b.emit_functions(&mut runtime_code);
 
-        b.emit_function_dispatch(&runtime_code);
+        b.function_dispatch(&runtime_code);
 
         runtime_code.internalize(&["main"]);
 
         let runtime_bs = runtime_code.wasm(true).unwrap();
 
         // Now we have the runtime code, create the deployer
+        let mut b = EwasmTarget {
+            abi: ethabiencoder::EthAbiEncoder {},
+        };
         let mut deploy_code = Contract::new(
             context,
             contract,
@@ -58,9 +61,6 @@ impl EwasmTarget {
             opt,
             Some(Box::new(runtime_code)),
         );
-        let mut b = EwasmTarget {
-            abi: ethabiencoder::EthAbiEncoder {},
-        };
 
         // externals
         b.declare_externals(&mut deploy_code);
@@ -68,7 +68,7 @@ impl EwasmTarget {
         // FIXME: this emits the constructors, as well as the functions. In Ethereum Solidity,
         // no functions can be called from the constructor. We should either disallow this too
         // and not emit functions, or use lto linking to optimize any unused functions away.
-        deploy_code.emit_functions(&mut b);
+        b.emit_functions(&mut deploy_code);
 
         b.deployer_dispatch(&mut deploy_code, &runtime_bs);
 
@@ -119,7 +119,7 @@ impl EwasmTarget {
 
         // first thing to do is abort value transfers if we're not payable
         if contract.function_abort_value_transfers {
-            contract.abort_if_value_transfer(self, function);
+            self.abort_if_value_transfer(contract, function);
         }
 
         // init our heap
@@ -192,7 +192,7 @@ impl EwasmTarget {
 
         // first thing to do is abort value transfers if constructors not payable
         if contract.constructor_abort_value_transfers {
-            contract.abort_if_value_transfer(self, function);
+            self.abort_if_value_transfer(contract, function);
         }
 
         // init our heap
@@ -594,7 +594,7 @@ impl EwasmTarget {
     }
 
     fn deployer_dispatch(&mut self, contract: &mut Contract, runtime: &[u8]) {
-        let initializer = contract.emit_initializer(self);
+        let initializer = self.emit_initializer(contract);
 
         // create start function
         let ret = contract.context.void_type();
@@ -647,7 +647,7 @@ impl EwasmTarget {
         contract.builder.build_unreachable();
     }
 
-    fn emit_function_dispatch(&mut self, contract: &Contract) {
+    fn function_dispatch(&mut self, contract: &Contract) {
         // create start function
         let ret = contract.context.void_type();
         let ftype = ret.fn_type(&[], false);
@@ -655,13 +655,13 @@ impl EwasmTarget {
 
         let (argsdata, argslen) = self.runtime_prelude(contract, function);
 
-        contract.emit_function_dispatch(
+        self.emit_function_dispatch(
+            contract,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
             function,
             None,
-            self,
             |func| !contract.function_abort_value_transfers && func.nonpayable,
         );
     }
@@ -823,13 +823,8 @@ impl EwasmTarget {
     }
 }
 
-impl TargetRuntime for EwasmTarget {
-    fn clear_storage<'a>(
-        &self,
-        contract: &'a Contract,
-        _function: FunctionValue,
-        slot: PointerValue<'a>,
-    ) {
+impl<'a> TargetRuntime<'a> for EwasmTarget {
+    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
         let value = contract
             .builder
             .build_alloca(contract.context.custom_width_int_type(256), "value");
@@ -866,17 +861,17 @@ impl TargetRuntime for EwasmTarget {
         );
     }
 
-    fn set_storage_string<'a>(
+    fn set_storage_string(
         &self,
-        _contract: &'a Contract,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _dest: PointerValue<'a>,
+        _slot: PointerValue,
+        _dest: PointerValue,
     ) {
         unimplemented!();
     }
 
-    fn get_storage_string<'a>(
+    fn get_storage_string(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -884,7 +879,7 @@ impl TargetRuntime for EwasmTarget {
     ) -> PointerValue<'a> {
         unimplemented!();
     }
-    fn get_storage_bytes_subscript<'a>(
+    fn get_storage_bytes_subscript(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -893,26 +888,26 @@ impl TargetRuntime for EwasmTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn set_storage_bytes_subscript<'a>(
+    fn set_storage_bytes_subscript(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _index: IntValue<'a>,
-        _val: IntValue<'a>,
+        _slot: PointerValue,
+        _index: IntValue,
+        _val: IntValue,
     ) {
         unimplemented!();
     }
-    fn storage_bytes_push<'a>(
+    fn storage_bytes_push(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _val: IntValue<'a>,
+        _slot: PointerValue,
+        _val: IntValue,
     ) {
         unimplemented!();
     }
-    fn storage_bytes_pop<'a>(
+    fn storage_bytes_pop(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -920,7 +915,7 @@ impl TargetRuntime for EwasmTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn storage_string_length<'a>(
+    fn storage_string_length(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -929,12 +924,12 @@ impl TargetRuntime for EwasmTarget {
         unimplemented!();
     }
 
-    fn set_storage<'a>(
+    fn set_storage(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     ) {
         if dest
             .get_type()
@@ -1012,7 +1007,7 @@ impl TargetRuntime for EwasmTarget {
         }
     }
 
-    fn get_storage_int<'a>(
+    fn get_storage_int(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
@@ -1773,7 +1768,6 @@ impl TargetRuntime for EwasmTarget {
         expr: &ast::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-        runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {
         macro_rules! straight_call {
             ($name:literal, $func:literal) => {{
@@ -1847,7 +1841,7 @@ impl TargetRuntime for EwasmTarget {
                 single_value_stack!("value", "getCallValue", contract.ns.value_length as u32 * 8)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockHash, args) => {
-                let block_number = contract.expression(&args[0], vartab, function, runtime);
+                let block_number = self.expression(contract, &args[0], vartab, function);
 
                 let value = contract
                     .builder

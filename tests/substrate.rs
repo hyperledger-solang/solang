@@ -82,7 +82,8 @@ impl fmt::Display for HostCodeTerminate {
 #[derive(FromPrimitive)]
 #[allow(non_camel_case_types)]
 enum SubstrateExternal {
-    ext_scratch_size = 0,
+    ext_input = 0,
+    ext_scratch_size,
     ext_scratch_read,
     ext_scratch_write,
     ext_set_storage,
@@ -120,6 +121,7 @@ pub struct VM {
     address: Address,
     caller: Address,
     memory: MemoryRef,
+    input: Vec<u8>,
     pub scratch: Vec<u8>,
     pub value: u128,
 }
@@ -128,6 +130,7 @@ impl VM {
     fn new(address: Address, caller: Address, value: u128) -> Self {
         VM {
             memory: MemoryInstance::alloc(Pages(16), Some(Pages(16))).unwrap(),
+            input: Vec::new(),
             scratch: Vec::new(),
             address,
             caller,
@@ -154,6 +157,31 @@ impl Externals for TestRuntime {
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
         match FromPrimitive::from_usize(index) {
+            Some(SubstrateExternal::ext_input) => {
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
+
+                let len = self
+                    .vm
+                    .memory
+                    .get_value::<u32>(len_ptr)
+                    .expect("ext_input len_ptr should be valid");
+
+                if (len as usize) < self.vm.input.len() {
+                    panic!("input is {} ext_input buffer {}", self.vm.input.len(), len);
+                }
+
+                if let Err(e) = self.vm.memory.set(dest_ptr, &self.vm.input) {
+                    panic!("ext_input: {}", e);
+                }
+
+                self.vm
+                    .memory
+                    .set_value(len_ptr, self.vm.input.len() as u32)
+                    .expect("ext_input len_ptr should be valid");
+
+                Ok(None)
+            }
             Some(SubstrateExternal::ext_scratch_size) => {
                 Ok(Some(RuntimeValue::I32(self.vm.scratch.len() as i32)))
             }
@@ -478,7 +506,7 @@ impl Externals for TestRuntime {
 
                 let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-                self.vm.scratch = input;
+                self.vm.input = input;
 
                 let ret = match module.invoke_export("call", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
@@ -584,7 +612,7 @@ impl Externals for TestRuntime {
 
                 let module = self.create_module(&code.0);
 
-                self.vm.scratch = input;
+                self.vm.input = input;
                 let ret = module
                     .invoke_export("deploy", &[], self)
                     .expect("failed to call constructor");
@@ -603,9 +631,35 @@ impl Externals for TestRuntime {
                 Ok(ret)
             }
             Some(SubstrateExternal::ext_value_transferred) => {
-                self.vm.scratch = self.vm.value.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_value_transferred: {}", hex::encode(&self.vm.scratch));
+                let scratch = self.vm.value.to_le_bytes().to_vec();
+
+                println!("ext_value_transferred: {}", hex::encode(&scratch));
+
+                let len = self
+                    .vm
+                    .memory
+                    .get_value::<u32>(len_ptr)
+                    .expect("ext_value_transferred len_ptr should be valid");
+
+                if (len as usize) < scratch.len() {
+                    panic!(
+                        "input is {} ext_value_transferred buffer {}",
+                        self.vm.input.len(),
+                        len
+                    );
+                }
+
+                if let Err(e) = self.vm.memory.set(dest_ptr, &scratch) {
+                    panic!("ext_value_transferred: {}", e);
+                }
+
+                self.vm
+                    .memory
+                    .set_value(len_ptr, scratch.len() as u32)
+                    .expect("ext_value_transferred len_ptr should be valid");
 
                 Ok(None)
             }
@@ -762,6 +816,7 @@ impl Externals for TestRuntime {
 impl ModuleImportResolver for TestRuntime {
     fn resolve_func(&self, field_name: &str, signature: &Signature) -> Result<FuncRef, Error> {
         let index = match field_name {
+            "ext_input" => SubstrateExternal::ext_input,
             "ext_scratch_size" => SubstrateExternal::ext_scratch_size,
             "ext_scratch_read" => SubstrateExternal::ext_scratch_read,
             "ext_scratch_write" => SubstrateExternal::ext_scratch_write,
@@ -821,7 +876,7 @@ impl TestRuntime {
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m.selector().into_iter().chain(args).collect();
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("deploy", &[], self)
@@ -838,7 +893,7 @@ impl TestRuntime {
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m.selector().into_iter().chain(args).collect();
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("deploy", &[], self)
@@ -860,7 +915,7 @@ impl TestRuntime {
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m.selector().into_iter().chain(args).collect();
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("call", &[], self)
@@ -877,7 +932,7 @@ impl TestRuntime {
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = m.selector().into_iter().chain(args).collect();
+        self.vm.input = m.selector().into_iter().chain(args).collect();
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("call", &[], self)
@@ -897,7 +952,7 @@ impl TestRuntime {
     pub fn raw_function(&mut self, input: Vec<u8>) {
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = input;
+        self.vm.input = input;
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("call", &[], self)
@@ -912,7 +967,7 @@ impl TestRuntime {
     pub fn raw_function_return(&mut self, expect_ret: i32, input: Vec<u8>) {
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = input;
+        self.vm.input = input;
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("call", &[], self)
@@ -929,7 +984,7 @@ impl TestRuntime {
     pub fn raw_constructor(&mut self, input: Vec<u8>) {
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
-        self.vm.scratch = input;
+        self.vm.input = input;
 
         if let Some(RuntimeValue::I32(ret)) = module
             .invoke_export("deploy", &[], self)

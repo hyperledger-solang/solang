@@ -27,15 +27,15 @@ impl SabreTarget {
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, ns, filename, opt, None);
         let mut b = SabreTarget {
             abi: ethabiencoder::EthAbiEncoder {},
         };
+        let mut c = Contract::new(context, contract, ns, filename, opt, None);
 
         // externals
         b.declare_externals(&mut c);
 
-        c.emit_functions(&mut b);
+        b.emit_functions(&mut c);
 
         b.emit_entrypoint(&mut c);
 
@@ -106,7 +106,7 @@ impl SabreTarget {
     }
 
     fn emit_entrypoint(&mut self, contract: &mut Contract) {
-        let initializer = contract.emit_initializer(self);
+        let initializer = self.emit_initializer(contract);
 
         let bytes_ptr = contract.context.i32_type().ptr_type(AddressSpace::Generic);
 
@@ -206,25 +206,20 @@ impl SabreTarget {
 
         contract.builder.position_at_end(function_block);
 
-        contract.emit_function_dispatch(
+        self.emit_function_dispatch(
+            contract,
             pt::FunctionTy::Function,
             argsdata,
             argslen,
             function,
             None,
-            self,
             |_| false,
         );
     }
 }
 
-impl TargetRuntime for SabreTarget {
-    fn clear_storage<'a>(
-        &self,
-        contract: &'a Contract,
-        _function: FunctionValue,
-        slot: PointerValue<'a>,
-    ) {
+impl<'a> TargetRuntime<'a> for SabreTarget {
+    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
         let address = contract
             .builder
             .build_call(
@@ -268,12 +263,12 @@ impl TargetRuntime for SabreTarget {
         );
     }
 
-    fn set_storage<'a>(
+    fn set_storage(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     ) {
         let address = contract
             .builder
@@ -354,17 +349,17 @@ impl TargetRuntime for SabreTarget {
         );
     }
 
-    fn set_storage_string<'a>(
+    fn set_storage_string(
         &self,
-        _contract: &'a Contract,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _dest: PointerValue<'a>,
+        _slot: PointerValue,
+        _dest: PointerValue,
     ) {
         unimplemented!();
     }
 
-    fn get_storage_string<'a>(
+    fn get_storage_string(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -372,7 +367,7 @@ impl TargetRuntime for SabreTarget {
     ) -> PointerValue<'a> {
         unimplemented!();
     }
-    fn get_storage_bytes_subscript<'a>(
+    fn get_storage_bytes_subscript(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -381,26 +376,26 @@ impl TargetRuntime for SabreTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn set_storage_bytes_subscript<'a>(
+    fn set_storage_bytes_subscript(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _index: IntValue<'a>,
-        _val: IntValue<'a>,
+        _slot: PointerValue,
+        _index: IntValue,
+        _val: IntValue,
     ) {
         unimplemented!();
     }
-    fn storage_bytes_push<'a>(
+    fn storage_bytes_push(
         &self,
-        _contract: &Contract<'a>,
+        _contract: &Contract,
         _function: FunctionValue,
-        _slot: PointerValue<'a>,
-        _val: IntValue<'a>,
+        _slot: PointerValue,
+        _val: IntValue,
     ) {
         unimplemented!();
     }
-    fn storage_bytes_pop<'a>(
+    fn storage_bytes_pop(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -408,7 +403,7 @@ impl TargetRuntime for SabreTarget {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-    fn storage_string_length<'a>(
+    fn storage_string_length(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
@@ -417,7 +412,7 @@ impl TargetRuntime for SabreTarget {
         unimplemented!();
     }
 
-    fn get_storage_int<'a>(
+    fn get_storage_int(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -807,7 +802,6 @@ impl TargetRuntime for SabreTarget {
         _expr: &ast::Expression,
         _vartab: &HashMap<usize, Variable<'b>>,
         _function: FunctionValue<'b>,
-        _runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {
         unimplemented!();
     }

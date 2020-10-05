@@ -14,6 +14,9 @@ use std::collections::HashMap;
 
 use super::{Contract, TargetRuntime, Variable};
 
+// When using the seal api, we use our own scratch buffer.
+const SCRATCH_SIZE: u32 = 32 * 1024;
+
 pub struct SubstrateTarget {
     unique_strings: HashMap<usize, usize>,
 }
@@ -27,13 +30,33 @@ impl SubstrateTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         let mut c = Contract::new(context, contract, ns, filename, opt, None);
+
+        let scratch_len = c.module.add_global(
+            context.i32_type(),
+            Some(AddressSpace::Generic),
+            "scratch_len",
+        );
+        scratch_len.set_linkage(Linkage::Internal);
+        scratch_len.set_initializer(&context.i32_type().get_undef());
+
+        c.scratch_len = Some(scratch_len);
+
+        let scratch = c.module.add_global(
+            context.i8_type().array_type(SCRATCH_SIZE),
+            Some(AddressSpace::Generic),
+            "scratch",
+        );
+        scratch.set_linkage(Linkage::Internal);
+        scratch.set_initializer(&context.i8_type().array_type(SCRATCH_SIZE).get_undef());
+        c.scratch = Some(scratch);
+
         let mut b = SubstrateTarget {
             unique_strings: HashMap::new(),
         };
 
         b.declare_externals(&c);
 
-        c.emit_functions(&mut b);
+        b.emit_functions(&mut c);
 
         b.emit_deploy(&c);
         b.emit_call(&c);
@@ -41,6 +64,7 @@ impl SubstrateTarget {
         c.internalize(&[
             "deploy",
             "call",
+            "ext_input",
             "ext_scratch_size",
             "ext_scratch_read",
             "ext_scratch_write",
@@ -83,6 +107,11 @@ impl SubstrateTarget {
 
         contract.builder.position_at_end(entry);
 
+        // after copying stratch, first thing to do is abort value transfers if constructors not payable
+        if abort_value_transfers {
+            self.abort_if_value_transfer(contract, function);
+        }
+
         // init our heap
         contract.builder.build_call(
             contract.module.get_function("__init_heap").unwrap(),
@@ -90,59 +119,40 @@ impl SubstrateTarget {
             "",
         );
 
-        // copy arguments from scratch buffer
-        let args_length = contract
-            .builder
-            .build_call(
-                contract.module.get_function("ext_scratch_size").unwrap(),
-                &[],
-                "scratch_size",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap();
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
+        // copy arguments from input buffer
         contract.builder.build_store(
-            contract.calldata_len.as_pointer_value(),
-            args_length.into_int_value(),
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        let args = contract
-            .builder
-            .build_call(
-                contract.module.get_function("__malloc").unwrap(),
-                &[args_length],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        contract
-            .builder
-            .build_store(contract.calldata_data.as_pointer_value(), args);
-
         contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                args.into(),
-                contract.context.i32_type().const_zero().into(),
-                args_length,
-            ],
+            contract.module.get_function("ext_input").unwrap(),
+            &[scratch_buf.into(), scratch_len.into()],
             "",
         );
 
         let args = contract.builder.build_pointer_cast(
-            args,
+            scratch_buf,
             contract.context.i32_type().ptr_type(AddressSpace::Generic),
             "",
         );
+        let args_length = contract.builder.build_load(scratch_len, "input_len");
 
-        // after copying stratch, first thing to do is abort value transfers if constructors not payable
-        if abort_value_transfers {
-            contract.abort_if_value_transfer(self, function);
-        }
+        // store the length in case someone wants it via msg.data
+        contract.builder.build_store(
+            contract.calldata_len.as_pointer_value(),
+            args_length.into_int_value(),
+        );
 
         (args, args_length.into_int_value())
     }
@@ -154,12 +164,26 @@ impl SubstrateTarget {
             .ptr_type(AddressSpace::Generic)
             .into();
         let u32_val = contract.context.i32_type().into();
+        let u32_ptr = contract
+            .context
+            .i32_type()
+            .ptr_type(AddressSpace::Generic)
+            .into();
         let u64_val = contract.context.i64_type().into();
 
         // Access to scratch buffer
         contract.module.add_function(
             "ext_scratch_size",
             contract.context.i32_type().fn_type(&[], false),
+            Some(Linkage::External),
+        );
+
+        contract.module.add_function(
+            "ext_input",
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
@@ -404,7 +428,10 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_value_transferred",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
@@ -487,7 +514,7 @@ impl SubstrateTarget {
     }
 
     fn emit_deploy(&mut self, contract: &Contract) {
-        let initializer = contract.emit_initializer(self);
+        let initializer = self.emit_initializer(contract);
 
         // create deploy function
         let function = contract.module.add_function(
@@ -505,13 +532,13 @@ impl SubstrateTarget {
 
         let fallback_block = contract.context.append_basic_block(function, "fallback");
 
-        contract.emit_function_dispatch(
+        self.emit_function_dispatch(
+            contract,
             pt::FunctionTy::Constructor,
             deploy_args,
             deploy_args_length,
             function,
             Some(fallback_block),
-            self,
             |_| false,
         );
 
@@ -536,13 +563,13 @@ impl SubstrateTarget {
             contract.function_abort_value_transfers,
         );
 
-        contract.emit_function_dispatch(
+        self.emit_function_dispatch(
+            contract,
             pt::FunctionTy::Function,
             call_args,
             call_args_length,
             function,
             None,
-            self,
             |func| !contract.function_abort_value_transfers && func.nonpayable,
         );
     }
@@ -1018,15 +1045,15 @@ impl SubstrateTarget {
 
     /// recursively encode argument. The encoded data is written to the data pointer,
     /// and the pointer is updated point after the encoded data.
-    pub fn encode_ty<'a>(
+    pub fn encode_ty<'x>(
         &self,
-        contract: &Contract<'a>,
+        contract: &Contract<'x>,
         load: bool,
         packed: bool,
         function: FunctionValue,
         ty: &ast::Type,
-        arg: BasicValueEnum<'a>,
-        data: &mut PointerValue<'a>,
+        arg: BasicValueEnum<'x>,
+        data: &mut PointerValue<'x>,
     ) {
         match &ty {
             ast::Type::Bool
@@ -1290,15 +1317,15 @@ impl SubstrateTarget {
     /// allocating enough space to do abi encoding. The length for vectors is always
     /// assumed to be five, even when it can be encoded in less bytes. The overhead
     /// of calculating the exact size is not worth reducing the malloc by a few bytes.
-    pub fn encoded_length<'a>(
+    pub fn encoded_length<'x>(
         &self,
-        arg: BasicValueEnum<'a>,
+        arg: BasicValueEnum<'x>,
         load: bool,
         packed: bool,
         ty: &ast::Type,
         function: FunctionValue,
-        contract: &Contract<'a>,
-    ) -> IntValue<'a> {
+        contract: &Contract<'x>,
+    ) -> IntValue<'x> {
         match ty {
             ast::Type::Bool => contract.context.i32_type().const_int(1, false),
             ast::Type::Uint(n) | ast::Type::Int(n) => {
@@ -1550,11 +1577,11 @@ impl SubstrateTarget {
     }
 
     /// Create a unique salt each time this function is called.
-    fn contract_unique_salt<'a>(
+    fn contract_unique_salt<'x>(
         &mut self,
-        contract: &'a Contract,
+        contract: &'x Contract,
         contract_no: usize,
-    ) -> (PointerValue<'a>, IntValue<'a>) {
+    ) -> (PointerValue<'x>, IntValue<'x>) {
         let counter = *self.unique_strings.get(&contract_no).unwrap_or(&0);
 
         let contract_name = &contract.ns.contracts[contract_no].name;
@@ -1573,13 +1600,8 @@ impl SubstrateTarget {
     }
 }
 
-impl TargetRuntime for SubstrateTarget {
-    fn clear_storage<'a>(
-        &self,
-        contract: &'a Contract,
-        _function: FunctionValue,
-        slot: PointerValue<'a>,
-    ) {
+impl<'a> TargetRuntime<'a> for SubstrateTarget {
+    fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
         contract.builder.build_call(
             contract.module.get_function("ext_clear_storage").unwrap(),
             &[contract
@@ -1594,12 +1616,12 @@ impl TargetRuntime for SubstrateTarget {
         );
     }
 
-    fn set_storage<'a>(
+    fn set_storage(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     ) {
         // TODO: check for non-zero
         contract.builder.build_call(
@@ -1632,12 +1654,12 @@ impl TargetRuntime for SubstrateTarget {
         );
     }
 
-    fn set_storage_string<'a>(
+    fn set_storage_string(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     ) {
         let len = unsafe {
             contract.builder.build_gep(
@@ -1690,7 +1712,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Read from substrate storage
-    fn get_storage_int<'a>(
+    fn get_storage_int(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -1769,7 +1791,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Read string from substrate storage
-    fn get_storage_string<'a>(
+    fn get_storage_string(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
@@ -1799,7 +1821,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Read string from substrate storage
-    fn get_storage_bytes_subscript<'a>(
+    fn get_storage_bytes_subscript(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
@@ -1832,13 +1854,13 @@ impl TargetRuntime for SubstrateTarget {
             .into_int_value()
     }
 
-    fn set_storage_bytes_subscript<'a>(
+    fn set_storage_bytes_subscript(
         &self,
-        contract: &Contract<'a>,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        index: IntValue<'a>,
-        val: IntValue<'a>,
+        slot: PointerValue,
+        index: IntValue,
+        val: IntValue,
     ) {
         contract.builder.build_call(
             contract
@@ -1862,12 +1884,12 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Push a byte onto a bytes string in storage
-    fn storage_bytes_push<'a>(
+    fn storage_bytes_push(
         &self,
-        contract: &Contract<'a>,
+        contract: &Contract,
         _function: FunctionValue,
-        slot: PointerValue<'a>,
-        val: IntValue<'a>,
+        slot: PointerValue,
+        val: IntValue,
     ) {
         contract.builder.build_call(
             contract
@@ -1890,7 +1912,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Pop a value from a bytes string
-    fn storage_bytes_pop<'a>(
+    fn storage_bytes_pop(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
@@ -1917,7 +1939,7 @@ impl TargetRuntime for SubstrateTarget {
     }
 
     /// Calculate length of storage dynamic bytes
-    fn storage_string_length<'a>(
+    fn storage_string_length(
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
@@ -2774,43 +2796,40 @@ impl TargetRuntime for SubstrateTarget {
 
     /// Substrate value is usually 128 bits
     fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        let value = contract
-            .builder
-            .build_alloca(contract.value_type(), "value_transferred");
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(contract.ns.value_length as u64, false),
+        );
 
         contract.builder.build_call(
             contract
                 .module
                 .get_function("ext_value_transferred")
                 .unwrap(),
-            &[],
-            "value_transferred",
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        value,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(contract.ns.value_length as u64, false)
-                    .into(),
-            ],
+            &[scratch_buf.into(), scratch_len.into()],
             "value_transferred",
         );
 
         contract
             .builder
-            .build_load(value, "value_transferred")
+            .build_load(
+                contract.builder.build_pointer_cast(
+                    scratch_buf,
+                    contract.value_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                "value_transferred",
+            )
             .into_int_value()
     }
 
@@ -3091,7 +3110,6 @@ impl TargetRuntime for SubstrateTarget {
         expr: &ast::Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-        runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b> {
         macro_rules! get_seal_value {
             ($name:literal, $func:literal, $width:expr) => {{
@@ -3131,6 +3149,74 @@ impl TargetRuntime for SubstrateTarget {
         };
 
         match expr {
+            ast::Expression::Builtin(_, _, ast::Builtin::Calldata, _) => {
+                // allocate vector for input
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[
+                            contract.builder.build_load(
+                                contract.calldata_len.as_pointer_value(),
+                                "calldata_len",
+                            ),
+                            contract.context.i32_type().const_int(1, false).into(),
+                            contract
+                                .builder
+                                .build_int_to_ptr(
+                                    contract.context.i32_type().const_all_ones(),
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "no_initializer",
+                                )
+                                .into(),
+                        ],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let data = unsafe {
+                    contract.builder.build_gep(
+                        v.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "",
+                    )
+                };
+
+                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+                // copy arguments from input buffer
+                contract.builder.build_store(
+                    scratch_len,
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(SCRATCH_SIZE as u64, false),
+                );
+
+                // retrieve the data
+                contract.builder.build_call(
+                    contract.module.get_function("ext_input").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                data,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "data",
+                            )
+                            .into(),
+                        scratch_len.into(),
+                    ],
+                    "",
+                );
+
+                v
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
                 let block_number =
                     get_seal_value!("block_number", "ext_block_number", 32).into_int_value();
@@ -3167,8 +3253,7 @@ impl TargetRuntime for SubstrateTarget {
                 let gas = if expr.is_empty() {
                     contract.context.i64_type().const_int(1, false)
                 } else {
-                    contract
-                        .expression(&expr[0], vartab, function, runtime)
+                    self.expression(contract, &expr[0], vartab, function)
                         .into_int_value()
                 };
 
@@ -3211,11 +3296,9 @@ impl TargetRuntime for SubstrateTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
                 get_seal_value!("caller", "ext_caller", 256)
             }
-            ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => get_seal_value!(
-                "value",
-                "ext_value_transferred",
-                contract.ns.value_length as u32 * 8
-            ),
+            ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
+                self.value_transferred(contract).into()
+            }
             ast::Expression::Builtin(_, _, ast::Builtin::MinimumBalance, _) => get_seal_value!(
                 "minimum_balance",
                 "ext_minimum_balance",
@@ -3227,8 +3310,8 @@ impl TargetRuntime for SubstrateTarget {
                 contract.ns.value_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::Random, args) => {
-                let subject = contract
-                    .expression(&args[0], vartab, function, runtime)
+                let subject = self
+                    .expression(contract, &args[0], vartab, function)
                     .into_pointer_value();
 
                 let subject_data = unsafe {

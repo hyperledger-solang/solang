@@ -911,16 +911,16 @@ impl EthAbiEncoder {
     }
 
     /// decode a single primitive which is always encoded in 32 bytes
-    fn decode_primitive<'b>(
+    fn decode_primitive<'a>(
         &self,
-        contract: &Contract<'b>,
+        contract: &Contract<'a>,
         function: FunctionValue,
         ty: &ast::Type,
-        to: Option<PointerValue<'b>>,
-        offset: &mut IntValue<'b>,
-        data: PointerValue<'b>,
-        length: IntValue<'b>,
-    ) -> BasicValueEnum<'b> {
+        to: Option<PointerValue<'a>>,
+        offset: &mut IntValue<'a>,
+        data: PointerValue<'a>,
+        length: IntValue,
+    ) -> BasicValueEnum<'a> {
         // TODO: investigate whether we can use build_int_nuw_add() and avoid 64 bit conversions
         let new_offset = contract.builder.build_int_add(
             *offset,
@@ -1110,7 +1110,7 @@ impl EthAbiEncoder {
         to: Option<PointerValue<'b>>,
         offset: &mut IntValue<'b>,
         data: PointerValue<'b>,
-        length: IntValue<'b>,
+        length: IntValue,
     ) -> BasicValueEnum<'b> {
         match &ty {
             ast::Type::Array(_, dim) => {
@@ -1449,13 +1449,13 @@ impl EthAbiEncoder {
     }
 
     /// abi decode the encoded data into the BasicValueEnums
-    pub fn decode<'b>(
+    pub fn decode<'a>(
         &self,
-        contract: &Contract<'b>,
+        contract: &Contract<'a>,
         function: FunctionValue,
-        args: &mut Vec<BasicValueEnum<'b>>,
-        data: PointerValue<'b>,
-        datalength: IntValue<'b>,
+        args: &mut Vec<BasicValueEnum<'a>>,
+        data: PointerValue<'a>,
+        datalength: IntValue<'a>,
         spec: &[ast::Parameter],
     ) {
         let data = contract.builder.build_pointer_cast(

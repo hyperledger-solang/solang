@@ -47,7 +47,7 @@ pub struct Variable<'a> {
     value: BasicValueEnum<'a>,
 }
 
-pub trait TargetRuntime {
+pub trait TargetRuntime<'a> {
     fn abi_decode<'b>(
         &self,
         contract: &Contract<'b>,
@@ -82,21 +82,16 @@ pub trait TargetRuntime {
     ) -> PointerValue<'b>;
 
     // Access storage
-    fn clear_storage<'a>(
-        &self,
-        contract: &'a Contract,
-        function: FunctionValue,
-        slot: PointerValue<'a>,
-    );
+    fn clear_storage(&self, contract: &Contract, function: FunctionValue, slot: PointerValue);
 
-    fn set_storage<'a>(
+    fn set_storage(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     );
-    fn get_storage_int<'a>(
+    fn get_storage_int(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -105,27 +100,27 @@ pub trait TargetRuntime {
     ) -> IntValue<'a>;
 
     // Bytes and string have special storage layout
-    fn set_storage_string<'a>(
+    fn set_storage_string(
         &self,
-        contract: &'a Contract,
+        contract: &Contract,
         function: FunctionValue,
-        slot: PointerValue<'a>,
-        dest: PointerValue<'a>,
+        slot: PointerValue,
+        dest: PointerValue,
     );
-    fn get_storage_string<'a>(
+    fn get_storage_string(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a>;
-    fn get_storage_bytes_subscript<'a>(
+    fn get_storage_bytes_subscript(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         index: IntValue<'a>,
     ) -> IntValue<'a>;
-    fn set_storage_bytes_subscript<'a>(
+    fn set_storage_bytes_subscript(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -133,20 +128,20 @@ pub trait TargetRuntime {
         index: IntValue<'a>,
         value: IntValue<'a>,
     );
-    fn storage_bytes_push<'a>(
+    fn storage_bytes_push(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
         val: IntValue<'a>,
     );
-    fn storage_bytes_pop<'a>(
+    fn storage_bytes_pop(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> IntValue<'a>;
-    fn storage_string_length<'a>(
+    fn storage_string_length(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -211,7 +206,6 @@ pub trait TargetRuntime {
         expr: &Expression,
         vartab: &HashMap<usize, Variable<'b>>,
         function: FunctionValue<'b>,
-        runtime: &dyn TargetRuntime,
     ) -> BasicValueEnum<'b>;
 
     /// Return the return data from an external call (either revert error or return values)
@@ -247,6 +241,4182 @@ pub trait TargetRuntime {
         data_len: IntValue<'b>,
         topics: Vec<(PointerValue<'b>, IntValue<'b>)>,
     );
+
+    /// Helper functions which need access to the trait
+
+    /// If we receive a value transfer, and we are "payable", abort with revert
+    fn abort_if_value_transfer(&self, contract: &Contract, function: FunctionValue) {
+        let value = self.value_transferred(&contract);
+
+        let got_value = contract.builder.build_int_compare(
+            IntPredicate::NE,
+            value,
+            contract.value_type().const_zero(),
+            "is_value_transfer",
+        );
+
+        let not_value_transfer = contract
+            .context
+            .append_basic_block(function, "not_value_transfer");
+        let abort_value_transfer = contract
+            .context
+            .append_basic_block(function, "abort_value_transfer");
+
+        contract.builder.build_conditional_branch(
+            got_value,
+            abort_value_transfer,
+            not_value_transfer,
+        );
+
+        contract.builder.position_at_end(abort_value_transfer);
+
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(not_value_transfer);
+    }
+
+    /// Recursively load a type from contract storage
+    fn storage_load(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        function: FunctionValue,
+    ) -> BasicValueEnum<'a> {
+        match ty {
+            ast::Type::Ref(ty) => self.storage_load(contract, ty, slot, slot_ptr, function),
+            ast::Type::Array(_, dim) => {
+                if let Some(d) = &dim[0] {
+                    let llvm_ty = contract.llvm_type(ty.deref_any());
+                    // LLVMSizeOf() produces an i64
+                    let size = contract.builder.build_int_truncate(
+                        llvm_ty.size_of().unwrap(),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+
+                    let ty = ty.array_deref();
+                    let new = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("__malloc").unwrap(),
+                            &[size.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    let dest = contract.builder.build_pointer_cast(
+                        new,
+                        llvm_ty.ptr_type(AddressSpace::Generic),
+                        "dest",
+                    );
+
+                    contract.emit_static_loop_with_int(
+                        function,
+                        contract.context.i64_type().const_zero(),
+                        contract
+                            .context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
+                        slot,
+                        |index: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            let elem = unsafe {
+                                contract.builder.build_gep(
+                                    dest,
+                                    &[contract.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
+
+                            let val = self.storage_load(contract, &ty, slot, slot_ptr, function);
+
+                            contract.builder.build_store(elem, val);
+                        },
+                    );
+
+                    dest.into()
+                } else {
+                    // iterate over dynamic array
+                    let slot_ty = ast::Type::Uint(256);
+
+                    let size = contract.builder.build_int_truncate(
+                        self.storage_load(contract, &slot_ty, slot, slot_ptr, function)
+                            .into_int_value(),
+                        contract.context.i32_type(),
+                        "size",
+                    );
+
+                    let elem_ty = contract.llvm_type(&ty.array_elem());
+                    let elem_size = contract.builder.build_int_truncate(
+                        elem_ty.size_of().unwrap(),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+                    let init = contract.builder.build_int_to_ptr(
+                        contract.context.i32_type().const_all_ones(),
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "invalid",
+                    );
+
+                    let dest = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("vector_new").unwrap(),
+                            &[size.into(), elem_size.into(), init.into()],
+                            "",
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap()
+                        .into_pointer_value();
+
+                    // get the slot for the elements
+                    // this hashes in-place
+                    self.keccak256_hash(
+                        contract,
+                        slot_ptr,
+                        slot.get_type()
+                            .size_of()
+                            .const_cast(contract.context.i32_type(), false),
+                        slot_ptr,
+                    );
+
+                    let mut elem_slot = contract
+                        .builder
+                        .build_load(slot_ptr, "elem_slot")
+                        .into_int_value();
+
+                    contract.emit_loop_cond_first_with_int(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        size,
+                        &mut elem_slot,
+                        |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let entry = self.storage_load(
+                                contract,
+                                &ty.array_elem(),
+                                slot,
+                                slot_ptr,
+                                function,
+                            );
+
+                            let data = unsafe {
+                                contract.builder.build_gep(
+                                    dest,
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            contract.builder.build_store(
+                                contract.builder.build_pointer_cast(
+                                    data,
+                                    elem_ty.ptr_type(AddressSpace::Generic),
+                                    "entry",
+                                ),
+                                entry,
+                            );
+                        },
+                    );
+                    // load
+                    dest.into()
+                }
+            }
+            ast::Type::Struct(n) => {
+                let llvm_ty = contract.llvm_type(ty.deref_any());
+                // LLVMSizeOf() produces an i64
+                let size = contract.builder.build_int_truncate(
+                    llvm_ty.size_of().unwrap(),
+                    contract.context.i32_type(),
+                    "size_of",
+                );
+
+                let new = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[size.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let dest = contract.builder.build_pointer_cast(
+                    new,
+                    llvm_ty.ptr_type(AddressSpace::Generic),
+                    "dest",
+                );
+
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let val = self.storage_load(contract, &field.ty, slot, slot_ptr, function);
+
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            dest,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    contract.builder.build_store(elem, val);
+                }
+
+                dest.into()
+            }
+            ast::Type::String | ast::Type::DynamicBytes => {
+                contract.builder.build_store(slot_ptr, *slot);
+
+                let ret = self.get_storage_string(contract, function, slot_ptr);
+
+                *slot = contract.builder.build_int_add(
+                    *slot,
+                    contract.number_literal(256, &BigInt::one()),
+                    "string",
+                );
+
+                ret.into()
+            }
+            _ => {
+                contract.builder.build_store(slot_ptr, *slot);
+
+                let ret = self.get_storage_int(
+                    contract,
+                    function,
+                    slot_ptr,
+                    contract.llvm_type(ty.deref_any()).into_int_type(),
+                );
+
+                *slot = contract.builder.build_int_add(
+                    *slot,
+                    contract.number_literal(256, &BigInt::one()),
+                    "int",
+                );
+
+                ret.into()
+            }
+        }
+    }
+
+    /// Recursively store a type to contract storage
+    fn storage_store(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        match ty.deref_any() {
+            ast::Type::Array(_, dim) => {
+                if let Some(d) = &dim[0] {
+                    let ty = ty.array_deref();
+
+                    contract.emit_static_loop_with_int(
+                        function,
+                        contract.context.i64_type().const_zero(),
+                        contract
+                            .context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
+                        slot,
+                        |index: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            let mut elem = unsafe {
+                                contract.builder.build_gep(
+                                    dest.into_pointer_value(),
+                                    &[contract.context.i32_type().const_zero(), index],
+                                    "index_access",
+                                )
+                            };
+
+                            if ty.is_reference_type() {
+                                elem = contract.builder.build_load(elem, "").into_pointer_value();
+                            }
+
+                            self.storage_store(
+                                contract,
+                                &ty,
+                                slot,
+                                slot_ptr,
+                                elem.into(),
+                                function,
+                            );
+
+                            if !ty.is_reference_type() {
+                                *slot = contract.builder.build_int_add(
+                                    *slot,
+                                    contract.number_literal(256, &ty.storage_slots(contract.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+                } else {
+                    // get the lenght of the our in-memory array
+                    let len = contract
+                        .builder
+                        .build_load(
+                            unsafe {
+                                contract.builder.build_gep(
+                                    dest.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_zero(),
+                                    ],
+                                    "array_len",
+                                )
+                            },
+                            "array_len",
+                        )
+                        .into_int_value();
+
+                    let slot_ty = ast::Type::Uint(256);
+
+                    // details about our array elements
+                    let elem_ty = contract.llvm_type(&ty.array_elem());
+                    let elem_size = contract.builder.build_int_truncate(
+                        elem_ty.size_of().unwrap(),
+                        contract.context.i32_type(),
+                        "size_of",
+                    );
+
+                    // the previous length of the storage array
+                    // we need this to clear any elements
+                    let previous_size = contract.builder.build_int_truncate(
+                        self.storage_load(contract, &slot_ty, slot, slot_ptr, function)
+                            .into_int_value(),
+                        contract.context.i32_type(),
+                        "previous_size",
+                    );
+
+                    let new_slot = contract
+                        .builder
+                        .build_alloca(contract.llvm_type(&slot_ty).into_int_type(), "new");
+
+                    // set new length
+                    contract.builder.build_store(
+                        new_slot,
+                        contract.builder.build_int_z_extend(
+                            len,
+                            contract.llvm_type(&slot_ty).into_int_type(),
+                            "",
+                        ),
+                    );
+
+                    self.set_storage(contract, function, slot_ptr, new_slot);
+
+                    self.keccak256_hash(
+                        contract,
+                        slot_ptr,
+                        slot.get_type()
+                            .size_of()
+                            .const_cast(contract.context.i32_type(), false),
+                        new_slot,
+                    );
+
+                    let mut elem_slot = contract
+                        .builder
+                        .build_load(new_slot, "elem_slot")
+                        .into_int_value();
+
+                    let ty = ty.array_deref();
+
+                    contract.emit_loop_cond_first_with_int(
+                        function,
+                        contract.context.i32_type().const_zero(),
+                        len,
+                        &mut elem_slot,
+                        |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            let index = contract.builder.build_int_mul(elem_no, elem_size, "");
+
+                            let data = unsafe {
+                                contract.builder.build_gep(
+                                    dest.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                        index,
+                                    ],
+                                    "data",
+                                )
+                            };
+
+                            let mut elem = contract.builder.build_pointer_cast(
+                                data,
+                                elem_ty.ptr_type(AddressSpace::Generic),
+                                "entry",
+                            );
+
+                            if ty.is_reference_type() {
+                                elem = contract.builder.build_load(elem, "").into_pointer_value();
+                            }
+
+                            self.storage_store(
+                                contract,
+                                &ty,
+                                slot,
+                                slot_ptr,
+                                elem.into(),
+                                function,
+                            );
+
+                            if !ty.is_reference_type() {
+                                *slot = contract.builder.build_int_add(
+                                    *slot,
+                                    contract.number_literal(256, &ty.storage_slots(contract.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+
+                    // we've populated the array with the new values; if the new array is shorter
+                    // than the previous, clear out the trailing elements
+                    contract.emit_loop_cond_first_with_int(
+                        function,
+                        len,
+                        previous_size,
+                        &mut elem_slot,
+                        |_: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            self.storage_clear(contract, &ty, slot, slot_ptr, function);
+
+                            if !ty.is_reference_type() {
+                                *slot = contract.builder.build_int_add(
+                                    *slot,
+                                    contract.number_literal(256, &ty.storage_slots(contract.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+                }
+            }
+            ast::Type::Struct(n) => {
+                for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    let mut elem = unsafe {
+                        contract.builder.build_gep(
+                            dest.into_pointer_value(),
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            &field.name,
+                        )
+                    };
+
+                    if field.ty.is_reference_type() {
+                        elem = contract
+                            .builder
+                            .build_load(elem, &field.name)
+                            .into_pointer_value();
+                    }
+
+                    self.storage_store(contract, &field.ty, slot, slot_ptr, elem.into(), function);
+
+                    if !field.ty.is_reference_type() {
+                        *slot = contract.builder.build_int_add(
+                            *slot,
+                            contract.number_literal(256, &field.ty.storage_slots(contract.ns)),
+                            &field.name,
+                        );
+                    }
+                }
+            }
+            ast::Type::String | ast::Type::DynamicBytes => {
+                self.set_storage_string(contract, function, slot_ptr, dest.into_pointer_value());
+            }
+            _ => {
+                contract.builder.build_store(slot_ptr, *slot);
+
+                let dest = if dest.is_int_value() {
+                    let m = contract.builder.build_alloca(dest.get_type(), "");
+                    contract.builder.build_store(m, dest);
+
+                    m
+                } else {
+                    dest.into_pointer_value()
+                };
+
+                // TODO ewasm allocates 32 bytes here, even though we have just
+                // allocated test. This can be folded into one allocation, if llvm
+                // does not already fold it into one.
+                self.set_storage(contract, function, slot_ptr, dest);
+            }
+        }
+    }
+
+    /// Recursively clear contract storage
+    fn storage_clear(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        slot_ptr: PointerValue<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        match ty.deref_any() {
+            ast::Type::Array(_, dim) => {
+                let ty = ty.array_deref();
+
+                if let Some(d) = &dim[0] {
+                    contract.emit_static_loop_with_int(
+                        function,
+                        contract.context.i64_type().const_zero(),
+                        contract
+                            .context
+                            .i64_type()
+                            .const_int(d.to_u64().unwrap(), false),
+                        slot,
+                        |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            self.storage_clear(contract, &ty, slot, slot_ptr, function);
+
+                            if !ty.is_reference_type() {
+                                *slot = contract.builder.build_int_add(
+                                    *slot,
+                                    contract.number_literal(256, &ty.storage_slots(contract.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+                } else {
+                    // dynamic length array.
+                    // load length
+                    contract.builder.build_store(slot_ptr, *slot);
+
+                    let slot_ty = contract.context.custom_width_int_type(256);
+
+                    let buf = contract.builder.build_alloca(slot_ty, "buf");
+
+                    let length = self.get_storage_int(contract, function, slot_ptr, slot_ty);
+
+                    // we need to hash the length slot in order to get the slot of the first
+                    // entry of the array
+                    self.keccak256_hash(
+                        contract,
+                        slot_ptr,
+                        slot.get_type()
+                            .size_of()
+                            .const_cast(contract.context.i32_type(), false),
+                        buf,
+                    );
+
+                    let mut entry_slot = contract
+                        .builder
+                        .build_load(buf, "entry_slot")
+                        .into_int_value();
+
+                    // now loop from first slot to first slot + length
+                    contract.emit_loop_cond_first_with_int(
+                        function,
+                        length.get_type().const_zero(),
+                        length,
+                        &mut entry_slot,
+                        |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
+                            self.storage_clear(contract, &ty, slot, slot_ptr, function);
+
+                            if !ty.is_reference_type() {
+                                *slot = contract.builder.build_int_add(
+                                    *slot,
+                                    contract.number_literal(256, &ty.storage_slots(contract.ns)),
+                                    "",
+                                );
+                            }
+                        },
+                    );
+
+                    // clear length itself
+                    self.storage_clear(contract, &ast::Type::Uint(256), slot, slot_ptr, function);
+                }
+            }
+            ast::Type::Struct(n) => {
+                for (_, field) in contract.ns.structs[*n].fields.iter().enumerate() {
+                    self.storage_clear(contract, &field.ty, slot, slot_ptr, function);
+
+                    if !field.ty.is_reference_type() {
+                        *slot = contract.builder.build_int_add(
+                            *slot,
+                            contract.number_literal(256, &field.ty.storage_slots(contract.ns)),
+                            &field.name,
+                        );
+                    }
+                }
+            }
+            ast::Type::Mapping(_, _) => {
+                // nothing to do, step over it
+            }
+            _ => {
+                contract.builder.build_store(slot_ptr, *slot);
+
+                self.clear_storage(contract, function, slot_ptr);
+            }
+        }
+    }
+
+    /// The expression function recursively emits code for expressions. The BasicEnumValue it
+    /// returns depends on the context; if it is simple integer, bool or bytes32 expression, the value
+    /// is an Intvalue. For references to arrays, it is a PointerValue to the array. For references
+    /// to storage, it is the storage slot. The references types are dereferenced by the Expression::Load()
+    /// and Expression::StorageLoad() expression types.
+    fn expression(
+        &self,
+        contract: &Contract<'a>,
+        e: &Expression,
+        vartab: &HashMap<usize, Variable<'a>>,
+        function: FunctionValue<'a>,
+    ) -> BasicValueEnum<'a> {
+        match e {
+            Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
+            Expression::BoolLiteral(_, val) => contract
+                .context
+                .bool_type()
+                .const_int(*val as u64, false)
+                .into(),
+            Expression::NumberLiteral(_, ty, n) => contract
+                .number_literal(ty.bits(contract.ns) as u32, n)
+                .into(),
+            Expression::StructLiteral(_, ty, exprs) => {
+                let struct_ty = contract.llvm_type(ty);
+
+                let s = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[struct_ty
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false)
+                            .into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let s = contract.builder.build_pointer_cast(
+                    s,
+                    struct_ty.ptr_type(AddressSpace::Generic),
+                    "struct_literal",
+                );
+
+                for (i, f) in exprs.iter().enumerate() {
+                    let elem = unsafe {
+                        contract.builder.build_gep(
+                            s,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(i as u64, false),
+                            ],
+                            "struct member",
+                        )
+                    };
+
+                    contract
+                        .builder
+                        .build_store(elem, self.expression(contract, f, vartab, function));
+                }
+
+                s.into()
+            }
+            Expression::BytesLiteral(_, _, bs) => {
+                let ty = contract
+                    .context
+                    .custom_width_int_type((bs.len() * 8) as u32);
+
+                // hex"11223344" should become i32 0x11223344
+                let s = hex::encode(bs);
+
+                ty.const_int_from_string(&s, StringRadix::Hexadecimal)
+                    .unwrap()
+                    .into()
+            }
+            Expression::CodeLiteral(_, contract_no, runtime) => {
+                let codegen_contract = &contract.ns.contracts[*contract_no];
+
+                let target_contract = Contract::build(
+                    contract.context,
+                    &codegen_contract,
+                    contract.ns,
+                    "",
+                    contract.opt,
+                );
+
+                // wasm
+                let wasm = if *runtime && target_contract.runtime.is_some() {
+                    target_contract
+                        .runtime
+                        .unwrap()
+                        .wasm(true)
+                        .expect("compile should succeeed")
+                } else {
+                    target_contract.wasm(true).expect("compile should succeeed")
+                };
+
+                let size = contract
+                    .context
+                    .i32_type()
+                    .const_int(wasm.len() as u64, false);
+
+                let elem_size = contract.context.i32_type().const_int(1, false);
+
+                let init = contract.emit_global_string(
+                    &format!(
+                        "code_{}_{}",
+                        if *runtime { "runtime" } else { "deployer" },
+                        &codegen_contract.name
+                    ),
+                    &wasm,
+                    false,
+                );
+
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[size.into(), elem_size.into(), init.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        contract
+                            .module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
+            }
+            Expression::Add(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_int_add(left, right, "").into()
+            }
+            Expression::Subtract(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_int_sub(left, right, "").into()
+            }
+            Expression::Multiply(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                let bits = left.get_type().get_bit_width();
+
+                if bits > 64 {
+                    let l = contract.builder.build_alloca(left.get_type(), "");
+                    let r = contract.builder.build_alloca(left.get_type(), "");
+                    let o = contract.builder.build_alloca(left.get_type(), "");
+
+                    contract.builder.build_store(l, left);
+                    contract.builder.build_store(r, right);
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__mul32").unwrap(),
+                        &[
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    l,
+                                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                    "left",
+                                )
+                                .into(),
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    r,
+                                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                    "right",
+                                )
+                                .into(),
+                            contract
+                                .builder
+                                .build_pointer_cast(
+                                    o,
+                                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                    "output",
+                                )
+                                .into(),
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(bits as u64 / 32, false)
+                                .into(),
+                        ],
+                        "",
+                    );
+
+                    contract.builder.build_load(o, "mul")
+                } else {
+                    contract.builder.build_int_mul(left, right, "").into()
+                }
+            }
+            Expression::UDivide(_, _, l, r) => {
+                let left = self.expression(contract, l, vartab, function);
+                let right = self.expression(contract, r, vartab, function);
+
+                let bits = left.into_int_value().get_type().get_bit_width();
+
+                if bits > 64 {
+                    let f = self.udivmod(contract, bits);
+
+                    let rem = contract
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
+                    let quotient = contract
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
+
+                    let ret = contract
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    let success = contract.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        contract.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = contract.context.append_basic_block(function, "success");
+                    let bail_block = contract.context.append_basic_block(function, "bail");
+                    contract
+                        .builder
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    contract.builder.position_at_end(bail_block);
+
+                    contract.builder.build_return(Some(&ret));
+                    contract.builder.position_at_end(success_block);
+
+                    contract.builder.build_load(quotient, "quotient")
+                } else {
+                    contract
+                        .builder
+                        .build_int_unsigned_div(left.into_int_value(), right.into_int_value(), "")
+                        .into()
+                }
+            }
+            Expression::SDivide(_, _, l, r) => {
+                let left = self.expression(contract, l, vartab, function);
+                let right = self.expression(contract, r, vartab, function);
+
+                let bits = left.into_int_value().get_type().get_bit_width();
+
+                if bits > 64 {
+                    let f = self.sdivmod(contract, bits);
+
+                    let rem = contract.builder.build_alloca(left.get_type(), "");
+                    let quotient = contract.builder.build_alloca(left.get_type(), "");
+
+                    let ret = contract
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    let success = contract.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        contract.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = contract.context.append_basic_block(function, "success");
+                    let bail_block = contract.context.append_basic_block(function, "bail");
+                    contract
+                        .builder
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    contract.builder.position_at_end(bail_block);
+
+                    contract.builder.build_return(Some(&ret));
+                    contract.builder.position_at_end(success_block);
+
+                    contract.builder.build_load(quotient, "quotient")
+                } else {
+                    contract
+                        .builder
+                        .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
+                        .into()
+                }
+            }
+            Expression::UModulo(_, _, l, r) => {
+                let left = self.expression(contract, l, vartab, function);
+                let right = self.expression(contract, r, vartab, function);
+
+                let bits = left.into_int_value().get_type().get_bit_width();
+
+                if bits > 64 {
+                    let f = self.udivmod(contract, bits);
+
+                    let rem = contract
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
+                    let quotient = contract
+                        .builder
+                        .build_alloca(left.into_int_value().get_type(), "");
+
+                    let ret = contract
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    let success = contract.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        contract.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = contract.context.append_basic_block(function, "success");
+                    let bail_block = contract.context.append_basic_block(function, "bail");
+                    contract
+                        .builder
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    contract.builder.position_at_end(bail_block);
+
+                    contract.builder.build_return(Some(&ret));
+                    contract.builder.position_at_end(success_block);
+
+                    contract.builder.build_load(rem, "urem")
+                } else {
+                    contract
+                        .builder
+                        .build_int_unsigned_rem(left.into_int_value(), right.into_int_value(), "")
+                        .into()
+                }
+            }
+            Expression::SModulo(_, _, l, r) => {
+                let left = self.expression(contract, l, vartab, function);
+                let right = self.expression(contract, r, vartab, function);
+
+                let bits = left.into_int_value().get_type().get_bit_width();
+
+                if bits > 64 {
+                    let f = self.sdivmod(contract, bits);
+                    let rem = contract.builder.build_alloca(left.get_type(), "");
+                    let quotient = contract.builder.build_alloca(left.get_type(), "");
+
+                    let ret = contract
+                        .builder
+                        .build_call(f, &[left, right, rem.into(), quotient.into()], "sdiv")
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    let success = contract.builder.build_int_compare(
+                        IntPredicate::EQ,
+                        ret.into_int_value(),
+                        contract.context.i32_type().const_zero(),
+                        "success",
+                    );
+
+                    let success_block = contract.context.append_basic_block(function, "success");
+                    let bail_block = contract.context.append_basic_block(function, "bail");
+                    contract
+                        .builder
+                        .build_conditional_branch(success, success_block, bail_block);
+
+                    contract.builder.position_at_end(bail_block);
+
+                    contract.builder.build_return(Some(&ret));
+                    contract.builder.position_at_end(success_block);
+
+                    contract.builder.build_load(rem, "srem")
+                } else {
+                    contract
+                        .builder
+                        .build_int_signed_rem(left.into_int_value(), right.into_int_value(), "")
+                        .into()
+                }
+            }
+            Expression::Power(_, _, l, r) => {
+                let left = self.expression(contract, l, vartab, function);
+                let right = self.expression(contract, r, vartab, function);
+
+                let bits = left.into_int_value().get_type().get_bit_width();
+
+                let f = contract.upower(bits);
+
+                contract
+                    .builder
+                    .build_call(f, &[left, right], "power")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
+            Expression::Equal(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, left, right, "")
+                    .into()
+            }
+            Expression::NotEqual(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::NE, left, right, "")
+                    .into()
+            }
+            Expression::SMore(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::SGT, left, right, "")
+                    .into()
+            }
+            Expression::SMoreEqual(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::SGE, left, right, "")
+                    .into()
+            }
+            Expression::SLess(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::SLT, left, right, "")
+                    .into()
+            }
+            Expression::SLessEqual(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::SLE, left, right, "")
+                    .into()
+            }
+            Expression::UMore(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::UGT, left, right, "")
+                    .into()
+            }
+            Expression::UMoreEqual(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::UGE, left, right, "")
+                    .into()
+            }
+            Expression::ULess(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::ULT, left, right, "")
+                    .into()
+            }
+            Expression::ULessEqual(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::ULE, left, right, "")
+                    .into()
+            }
+            Expression::Variable(_, _, s) => vartab[s].value,
+            Expression::Load(_, _, e) => {
+                let expr = self
+                    .expression(contract, e, vartab, function)
+                    .into_pointer_value();
+
+                contract.builder.build_load(expr, "")
+            }
+            Expression::StorageLoad(_, ty, e) => {
+                // The storage slot is an i256 accessed through a pointer, so we need
+                // to store it
+                let mut slot = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                self.storage_load(contract, ty, &mut slot, slot_ptr, function)
+            }
+            Expression::ZeroExt(_, t, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+                let ty = contract.llvm_type(t);
+
+                contract
+                    .builder
+                    .build_int_z_extend(e, ty.into_int_type(), "")
+                    .into()
+            }
+            Expression::UnaryMinus(_, _, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_int_neg(e, "").into()
+            }
+            Expression::SignExt(_, t, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+                let ty = contract.llvm_type(t);
+
+                contract
+                    .builder
+                    .build_int_s_extend(e, ty.into_int_type(), "")
+                    .into()
+            }
+            Expression::Trunc(_, t, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+                let ty = contract.llvm_type(t);
+
+                contract
+                    .builder
+                    .build_int_truncate(e, ty.into_int_type(), "")
+                    .into()
+            }
+            Expression::Cast(_, _, e) => self.expression(contract, e, vartab, function),
+            Expression::BytesCast(_, ast::Type::Bytes(_), ast::Type::DynamicBytes, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+
+                let size = e.get_type().get_bit_width() / 8;
+                let size = contract.context.i32_type().const_int(size as u64, false);
+                let elem_size = contract.context.i32_type().const_int(1, false);
+
+                // Swap the byte order
+                let bytes_ptr = contract.builder.build_alloca(e.get_type(), "bytes_ptr");
+                contract.builder.build_store(bytes_ptr, e);
+                let bytes_ptr = contract.builder.build_pointer_cast(
+                    bytes_ptr,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "bytes_ptr",
+                );
+                let init = contract.builder.build_pointer_cast(
+                    contract.builder.build_alloca(e.get_type(), "init"),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "init",
+                );
+                contract.builder.build_call(
+                    contract.module.get_function("__leNtobeN").unwrap(),
+                    &[bytes_ptr.into(), init.into(), size.into()],
+                    "",
+                );
+
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[size.into(), elem_size.into(), init.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        contract
+                            .module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
+            }
+            Expression::BytesCast(_, ast::Type::DynamicBytes, ast::Type::Bytes(n), e) => {
+                let array = self
+                    .expression(contract, e, vartab, function)
+                    .into_pointer_value();
+                let len_ptr = unsafe {
+                    contract.builder.build_gep(
+                        array,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "array_len",
+                    )
+                };
+                let len = contract
+                    .builder
+                    .build_load(len_ptr, "array_len")
+                    .into_int_value();
+
+                // Check if equal to n
+                let is_equal_to_n = contract.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    len,
+                    contract.context.i32_type().const_int(*n as u64, false),
+                    "is_equal_to_n",
+                );
+                let cast = contract.context.append_basic_block(function, "cast");
+                let error = contract.context.append_basic_block(function, "error");
+                contract
+                    .builder
+                    .build_conditional_branch(is_equal_to_n, cast, error);
+
+                contract.builder.position_at_end(error);
+                self.assert_failure(
+                    &contract,
+                    contract
+                        .context
+                        .i8_type()
+                        .ptr_type(AddressSpace::Generic)
+                        .const_null(),
+                    contract.context.i32_type().const_zero(),
+                );
+
+                contract.builder.position_at_end(cast);
+                let bytes_ptr = unsafe {
+                    contract.builder.build_gep(
+                        array,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
+
+                // Switch byte order
+                let bytes_ptr = contract.builder.build_pointer_cast(
+                    bytes_ptr,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "bytes_ptr",
+                );
+
+                let ty = contract.context.custom_width_int_type(*n as u32 * 8);
+                let le_bytes_ptr = contract.builder.build_alloca(ty, "le_bytes");
+
+                contract.builder.build_call(
+                    contract.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        bytes_ptr.into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                le_bytes_ptr,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "le_bytes_ptr",
+                            )
+                            .into(),
+                        len.into(),
+                    ],
+                    "",
+                );
+                contract.builder.build_load(le_bytes_ptr, "bytes")
+            }
+            Expression::Not(_, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
+                    .into()
+            }
+            Expression::Complement(_, _, e) => {
+                let e = self
+                    .expression(contract, e, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_not(e, "").into()
+            }
+            Expression::Or(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_or(left, right, "").into()
+            }
+            Expression::And(_, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_and(left, right, "").into()
+            }
+            Expression::BitwiseOr(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_or(left, right, "").into()
+            }
+            Expression::BitwiseAnd(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_and(left, right, "").into()
+            }
+            Expression::BitwiseXor(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_xor(left, right, "").into()
+            }
+            Expression::ShiftLeft(_, _, l, r) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_left_shift(left, right, "").into()
+            }
+            Expression::ShiftRight(_, _, l, r, signed) => {
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_right_shift(left, right, *signed, "")
+                    .into()
+            }
+            Expression::ArraySubscript(_, _, a, i) => {
+                let array = self
+                    .expression(contract, a, vartab, function)
+                    .into_pointer_value();
+                let index = self
+                    .expression(contract, i, vartab, function)
+                    .into_int_value();
+
+                unsafe {
+                    contract
+                        .builder
+                        .build_gep(
+                            array,
+                            &[contract.context.i32_type().const_zero(), index],
+                            "index_access",
+                        )
+                        .into()
+                }
+            }
+            Expression::StorageBytesSubscript(_, a, i) => {
+                let index = self
+                    .expression(contract, i, vartab, function)
+                    .into_int_value();
+                let slot = self
+                    .expression(contract, a, vartab, function)
+                    .into_int_value();
+                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                contract.builder.build_store(slot_ptr, slot);
+                self.get_storage_bytes_subscript(&contract, function, slot_ptr, index)
+                    .into()
+            }
+            Expression::StorageBytesPush(_, a, v) => {
+                let val = self
+                    .expression(contract, v, vartab, function)
+                    .into_int_value();
+                let slot = self
+                    .expression(contract, a, vartab, function)
+                    .into_int_value();
+                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                contract.builder.build_store(slot_ptr, slot);
+                self.storage_bytes_push(&contract, function, slot_ptr, val);
+
+                val.into()
+            }
+            Expression::StorageBytesPop(_, a) => {
+                let slot = self
+                    .expression(contract, a, vartab, function)
+                    .into_int_value();
+                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                contract.builder.build_store(slot_ptr, slot);
+                self.storage_bytes_pop(&contract, function, slot_ptr).into()
+            }
+            Expression::StorageBytesLength(_, a) => {
+                let slot = self
+                    .expression(contract, a, vartab, function)
+                    .into_int_value();
+                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                contract.builder.build_store(slot_ptr, slot);
+                self.storage_string_length(&contract, function, slot_ptr)
+                    .into()
+            }
+            Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
+                let array = self
+                    .expression(contract, a, vartab, function)
+                    .into_pointer_value();
+
+                let ty = contract.llvm_var(elem_ty);
+                let index = contract.builder.build_int_mul(
+                    self.expression(contract, i, vartab, function)
+                        .into_int_value(),
+                    ty.into_pointer_type()
+                        .get_element_type()
+                        .size_of()
+                        .unwrap()
+                        .const_cast(contract.context.i32_type(), false),
+                    "",
+                );
+
+                let elem = unsafe {
+                    contract.builder.build_gep(
+                        array,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                            index,
+                        ],
+                        "index_access",
+                    )
+                };
+
+                contract
+                    .builder
+                    .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
+                    .into()
+            }
+            Expression::StructMember(_, _, a, i) => {
+                let array = self
+                    .expression(contract, a, vartab, function)
+                    .into_pointer_value();
+
+                unsafe {
+                    contract
+                        .builder
+                        .build_gep(
+                            array,
+                            &[
+                                contract.context.i32_type().const_zero(),
+                                contract.context.i32_type().const_int(*i as u64, false),
+                            ],
+                            "struct member",
+                        )
+                        .into()
+                }
+            }
+            Expression::Ternary(_, _, c, l, r) => {
+                let cond = self
+                    .expression(contract, c, vartab, function)
+                    .into_int_value();
+                let left = self
+                    .expression(contract, l, vartab, function)
+                    .into_int_value();
+                let right = self
+                    .expression(contract, r, vartab, function)
+                    .into_int_value();
+
+                contract.builder.build_select(cond, left, right, "")
+            }
+            Expression::ConstArrayLiteral(_, _, dims, exprs) => {
+                // For const arrays (declared with "constant" keyword, we should create a global constant
+                let mut dims = dims.iter();
+
+                let exprs = exprs
+                    .iter()
+                    .map(|e| {
+                        self.expression(contract, e, vartab, function)
+                            .into_int_value()
+                    })
+                    .collect::<Vec<IntValue>>();
+                let ty = exprs[0].get_type();
+
+                let top_size = *dims.next().unwrap();
+
+                // Create a vector of ArrayValues
+                let mut arrays = exprs
+                    .chunks(top_size as usize)
+                    .map(|a| ty.const_array(a))
+                    .collect::<Vec<ArrayValue>>();
+
+                let mut ty = ty.array_type(top_size);
+
+                // for each dimension, split the array into futher arrays
+                for d in dims {
+                    ty = ty.array_type(*d);
+
+                    arrays = arrays
+                        .chunks(*d as usize)
+                        .map(|a| ty.const_array(a))
+                        .collect::<Vec<ArrayValue>>();
+                }
+
+                // We actually end up with an array with a single entry
+
+                // now we've created the type, and the const array. Put it into a global
+                let gv = contract.module.add_global(
+                    ty,
+                    Some(AddressSpace::Generic),
+                    "const_array_literal",
+                );
+
+                gv.set_linkage(Linkage::Internal);
+
+                gv.set_initializer(&arrays[0]);
+                gv.set_constant(true);
+
+                gv.as_pointer_value().into()
+            }
+            Expression::ArrayLiteral(_, ty, dims, exprs) => {
+                // non-const array literals should alloca'ed and each element assigned
+                let ty = contract.llvm_type(ty);
+
+                let p = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[ty.size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false)
+                            .into()],
+                        "array_literal",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let array = contract.builder.build_pointer_cast(
+                    p.into_pointer_value(),
+                    ty.ptr_type(AddressSpace::Generic),
+                    "array_literal",
+                );
+
+                for (i, expr) in exprs.iter().enumerate() {
+                    let mut ind = vec![contract.context.i32_type().const_zero()];
+
+                    let mut e = i as u32;
+
+                    for d in dims {
+                        ind.insert(
+                            1,
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int((e % *d).into(), false),
+                        );
+
+                        e /= *d;
+                    }
+
+                    let elemptr = unsafe {
+                        contract
+                            .builder
+                            .build_gep(array, &ind, &format!("elemptr{}", i))
+                    };
+
+                    contract
+                        .builder
+                        .build_store(elemptr, self.expression(contract, expr, vartab, function));
+                }
+
+                array.into()
+            }
+            Expression::AllocDynamicArray(_, ty, size, init) => {
+                let elem = match ty {
+                    ast::Type::String | ast::Type::DynamicBytes => ast::Type::Bytes(1),
+                    _ => ty.array_elem(),
+                };
+
+                let size = self
+                    .expression(contract, size, vartab, function)
+                    .into_int_value();
+
+                let elem_size = contract
+                    .llvm_type(&elem)
+                    .size_of()
+                    .unwrap()
+                    .const_cast(contract.context.i32_type(), false);
+
+                let init = match init {
+                    None => contract.builder.build_int_to_ptr(
+                        contract.context.i32_type().const_all_ones(),
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "invalid",
+                    ),
+                    Some(s) => contract.emit_global_string("const_string", s, false),
+                };
+
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[size.into(), elem_size.into(), init.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        contract
+                            .module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
+            }
+            Expression::DynamicArrayLength(_, a) => {
+                let array = self
+                    .expression(contract, a, vartab, function)
+                    .into_pointer_value();
+
+                // field 0 is the length
+                let len = unsafe {
+                    contract.builder.build_gep(
+                        array,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "array_len",
+                    )
+                };
+
+                contract.builder.build_load(len, "array_len")
+            }
+            Expression::Keccak256(_, _, exprs) => {
+                let mut length = contract.context.i32_type().const_zero();
+                let mut values: Vec<(BasicValueEnum, IntValue, ast::Type)> = Vec::new();
+
+                // first we need to calculate the length of the buffer and get the types/lengths
+                for e in exprs {
+                    let v = self.expression(contract, &e, vartab, function);
+
+                    let len = match e.ty() {
+                        ast::Type::DynamicBytes | ast::Type::String => {
+                            // field 0 is the length
+                            let array_len = unsafe {
+                                contract.builder.build_gep(
+                                    v.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_zero(),
+                                    ],
+                                    "array_len",
+                                )
+                            };
+
+                            contract
+                                .builder
+                                .build_load(array_len, "array_len")
+                                .into_int_value()
+                        }
+                        _ => v
+                            .get_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false),
+                    };
+
+                    length = contract.builder.build_int_add(length, len, "");
+
+                    values.push((v, len, e.ty()));
+                }
+
+                //  now allocate a buffer
+                let src = contract.builder.build_array_alloca(
+                    contract.context.i8_type(),
+                    length,
+                    "keccak_src",
+                );
+
+                // fill in all the fields
+                let mut offset = contract.context.i32_type().const_zero();
+
+                for (v, len, ty) in values {
+                    let elem = unsafe { contract.builder.build_gep(src, &[offset], "elem") };
+
+                    offset = contract.builder.build_int_add(offset, len, "");
+
+                    match ty {
+                        ast::Type::DynamicBytes | ast::Type::String => {
+                            let data = unsafe {
+                                contract.builder.build_gep(
+                                    v.into_pointer_value(),
+                                    &[
+                                        contract.context.i32_type().const_zero(),
+                                        contract.context.i32_type().const_int(2, false),
+                                    ],
+                                    "",
+                                )
+                            };
+
+                            contract.builder.build_call(
+                                contract.module.get_function("__memcpy").unwrap(),
+                                &[
+                                    elem.into(),
+                                    contract
+                                        .builder
+                                        .build_pointer_cast(
+                                            data,
+                                            contract
+                                                .context
+                                                .i8_type()
+                                                .ptr_type(AddressSpace::Generic),
+                                            "data",
+                                        )
+                                        .into(),
+                                    len.into(),
+                                ],
+                                "",
+                            );
+                        }
+                        _ => {
+                            let elem = contract.builder.build_pointer_cast(
+                                elem,
+                                v.get_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            );
+
+                            contract.builder.build_store(elem, v);
+                        }
+                    }
+                }
+                let dst = contract
+                    .builder
+                    .build_alloca(contract.context.custom_width_int_type(256), "keccak_dst");
+
+                self.keccak256_hash(&contract, src, length, dst);
+
+                contract.builder.build_load(dst, "keccak256_hash")
+            }
+            Expression::StringCompare(_, l, r) => {
+                let (left, left_len) = self.string_location(contract, l, vartab, function);
+                let (right, right_len) = self.string_location(contract, r, vartab, function);
+
+                contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__memcmp").unwrap(),
+                        &[left.into(), left_len.into(), right.into(), right_len.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
+            Expression::StringConcat(_, _, l, r) => {
+                let (left, left_len) = self.string_location(contract, l, vartab, function);
+                let (right, right_len) = self.string_location(contract, r, vartab, function);
+
+                let v = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("concat").unwrap(),
+                        &[left.into(), left_len.into(), right.into(), right_len.into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        v.into_pointer_value(),
+                        contract
+                            .module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .ptr_type(AddressSpace::Generic),
+                        "vector",
+                    )
+                    .into()
+            }
+            Expression::ReturnData(_) => self.return_data(contract).into(),
+            Expression::GetAddress(_, _) => self.get_address(contract).into(),
+            Expression::Balance(_, _, addr) => {
+                let addr = self
+                    .expression(contract, addr, vartab, function)
+                    .into_int_value();
+
+                self.balance(contract, addr).into()
+            }
+            Expression::Builtin(_, _, Builtin::Calldata, _)
+                if contract.ns.target != crate::Target::Substrate =>
+            {
+                contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("vector_new").unwrap(),
+                        &[
+                            contract.builder.build_load(
+                                contract.calldata_len.as_pointer_value(),
+                                "calldata_len",
+                            ),
+                            contract.context.i32_type().const_int(1, false).into(),
+                            contract.builder.build_load(
+                                contract.calldata_data.as_pointer_value(),
+                                "calldata_data",
+                            ),
+                        ],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+            }
+            Expression::Builtin(_, _, Builtin::Signature, _) => {
+                // need to byte-reverse selector
+                let selector = contract
+                    .builder
+                    .build_alloca(contract.context.i32_type(), "selector");
+
+                // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
+                contract.builder.build_call(
+                    contract.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                contract.selector.as_pointer_value(),
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                selector,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        contract.context.i32_type().const_int(4, false).into(),
+                    ],
+                    "",
+                );
+
+                contract.builder.build_load(selector, "selector")
+            }
+            Expression::Builtin(_, _, Builtin::AddMod, args) => {
+                let arith_ty = contract.context.custom_width_int_type(512);
+                let res_ty = contract.context.custom_width_int_type(256);
+
+                let x = self
+                    .expression(contract, &args[0], vartab, function)
+                    .into_int_value();
+                let y = self
+                    .expression(contract, &args[1], vartab, function)
+                    .into_int_value();
+                let k = self
+                    .expression(contract, &args[2], vartab, function)
+                    .into_int_value();
+                let dividend = contract.builder.build_int_add(
+                    contract.builder.build_int_z_extend(x, arith_ty, "wide_x"),
+                    contract.builder.build_int_z_extend(y, arith_ty, "wide_y"),
+                    "x_plus_y",
+                );
+
+                let divisor = contract.builder.build_int_z_extend(k, arith_ty, "wide_k");
+
+                let rem = contract.builder.build_alloca(arith_ty, "remainder");
+                let quotient = contract.builder.build_alloca(arith_ty, "quotient");
+
+                let ret = contract
+                    .builder
+                    .build_call(
+                        self.udivmod(contract, 512),
+                        &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
+                        "quotient",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let success = contract.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    contract.context.i32_type().const_zero(),
+                    "success",
+                );
+
+                let success_block = contract.context.append_basic_block(function, "success");
+                let bail_block = contract.context.append_basic_block(function, "bail");
+                contract
+                    .builder
+                    .build_conditional_branch(success, success_block, bail_block);
+
+                contract.builder.position_at_end(bail_block);
+
+                contract.builder.build_return(Some(&ret));
+                contract.builder.position_at_end(success_block);
+
+                let quotient = contract
+                    .builder
+                    .build_load(quotient, "quotient")
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_truncate(quotient, res_ty, "quotient")
+                    .into()
+            }
+            Expression::Builtin(_, _, Builtin::MulMod, args) => {
+                let arith_ty = contract.context.custom_width_int_type(512);
+                let res_ty = contract.context.custom_width_int_type(256);
+
+                let x = self
+                    .expression(contract, &args[0], vartab, function)
+                    .into_int_value();
+                let y = self
+                    .expression(contract, &args[1], vartab, function)
+                    .into_int_value();
+                let x_m = contract.builder.build_alloca(arith_ty, "x_m");
+                let y_m = contract.builder.build_alloca(arith_ty, "x_y");
+                let x_times_y_m = contract.builder.build_alloca(arith_ty, "x_times_y_m");
+
+                contract.builder.build_store(
+                    x_m,
+                    contract.builder.build_int_z_extend(x, arith_ty, "wide_x"),
+                );
+                contract.builder.build_store(
+                    y_m,
+                    contract.builder.build_int_z_extend(y, arith_ty, "wide_y"),
+                );
+
+                contract.builder.build_call(
+                    contract.module.get_function("__mul32").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                x_m,
+                                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "left",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                y_m,
+                                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "right",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                x_times_y_m,
+                                contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                "output",
+                            )
+                            .into(),
+                        contract
+                            .context
+                            .i32_type()
+                            .const_int(512 / 32, false)
+                            .into(),
+                    ],
+                    "",
+                );
+                let k = self
+                    .expression(contract, &args[2], vartab, function)
+                    .into_int_value();
+                let dividend = contract.builder.build_load(x_times_y_m, "x_t_y");
+
+                let divisor = contract.builder.build_int_z_extend(k, arith_ty, "wide_k");
+
+                let rem = contract.builder.build_alloca(arith_ty, "remainder");
+                let quotient = contract.builder.build_alloca(arith_ty, "quotient");
+
+                let ret = contract
+                    .builder
+                    .build_call(
+                        self.udivmod(contract, 512),
+                        &[dividend, divisor.into(), rem.into(), quotient.into()],
+                        "quotient",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap();
+
+                let success = contract.builder.build_int_compare(
+                    IntPredicate::EQ,
+                    ret.into_int_value(),
+                    contract.context.i32_type().const_zero(),
+                    "success",
+                );
+
+                let success_block = contract.context.append_basic_block(function, "success");
+                let bail_block = contract.context.append_basic_block(function, "bail");
+                contract
+                    .builder
+                    .build_conditional_branch(success, success_block, bail_block);
+
+                contract.builder.position_at_end(bail_block);
+
+                contract.builder.build_return(Some(&ret));
+                contract.builder.position_at_end(success_block);
+
+                let quotient = contract
+                    .builder
+                    .build_load(quotient, "quotient")
+                    .into_int_value();
+
+                contract
+                    .builder
+                    .build_int_truncate(quotient, res_ty, "quotient")
+                    .into()
+            }
+            Expression::Builtin(_, _, _, _) => self.builtin(contract, e, vartab, function),
+            _ => panic!("{:?} not implemented", e),
+        }
+    }
+
+    /// Load a string from expression or create global
+    fn string_location(
+        &self,
+        contract: &Contract<'a>,
+        location: &StringLocation,
+        vartab: &HashMap<usize, Variable<'a>>,
+        function: FunctionValue<'a>,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        match location {
+            StringLocation::CompileTime(literal) => (
+                contract.emit_global_string("const_string", literal, false),
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(literal.len() as u64, false),
+            ),
+            StringLocation::RunTime(e) => {
+                let v = self
+                    .expression(contract, e, vartab, function)
+                    .into_pointer_value();
+
+                let data = unsafe {
+                    contract.builder.build_gep(
+                        v,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(2, false),
+                        ],
+                        "data",
+                    )
+                };
+
+                let data_len = unsafe {
+                    contract.builder.build_gep(
+                        v,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "data_len",
+                    )
+                };
+
+                (
+                    contract.builder.build_pointer_cast(
+                        data,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "data",
+                    ),
+                    contract
+                        .builder
+                        .build_load(data_len, "data_len")
+                        .into_int_value(),
+                )
+            }
+        }
+    }
+
+    #[allow(clippy::cognitive_complexity)]
+    fn emit_cfg(
+        &mut self,
+        contract: &Contract<'a>,
+        cfg: &cfg::ControlFlowGraph,
+        function: FunctionValue<'a>,
+    ) {
+        // recurse through basic blocks
+        struct BasicBlock<'a> {
+            bb: inkwell::basic_block::BasicBlock<'a>,
+            phis: HashMap<usize, PhiValue<'a>>,
+        }
+
+        struct Work<'b> {
+            bb_no: usize,
+            vars: HashMap<usize, Variable<'b>>,
+        }
+
+        let mut blocks: HashMap<usize, BasicBlock> = HashMap::new();
+
+        let create_bb = |bb_no| -> BasicBlock {
+            let cfg_bb: &cfg::BasicBlock = &cfg.bb[bb_no];
+            let mut phis = HashMap::new();
+
+            let bb = contract.context.append_basic_block(function, &cfg_bb.name);
+
+            contract.builder.position_at_end(bb);
+
+            if let Some(ref cfg_phis) = cfg_bb.phis {
+                for v in cfg_phis {
+                    let ty = contract.llvm_var(&cfg.vars[v].ty);
+
+                    phis.insert(*v, contract.builder.build_phi(ty, &cfg.vars[v].id.name));
+                }
+            }
+
+            BasicBlock { bb, phis }
+        };
+
+        let mut work = VecDeque::new();
+
+        blocks.insert(0, create_bb(0));
+
+        // Create all the stack variables
+        let mut vars = HashMap::new();
+
+        for (no, v) in &cfg.vars {
+            match v.storage {
+                cfg::Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
+                    let ty = contract.llvm_type(&v.ty);
+
+                    let p = contract
+                        .builder
+                        .build_call(
+                            contract.module.get_function("__malloc").unwrap(),
+                            &[ty.size_of()
+                                .unwrap()
+                                .const_cast(contract.context.i32_type(), false)
+                                .into()],
+                            &v.id.name,
+                        )
+                        .try_as_basic_value()
+                        .left()
+                        .unwrap();
+
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: contract
+                                .builder
+                                .build_pointer_cast(
+                                    p.into_pointer_value(),
+                                    ty.ptr_type(AddressSpace::Generic),
+                                    &v.id.name,
+                                )
+                                .into(),
+                        },
+                    );
+                }
+                cfg::Storage::Local if v.ty.is_contract_storage() => {
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: contract
+                                .context
+                                .custom_width_int_type(256)
+                                .const_zero()
+                                .into(),
+                        },
+                    );
+                }
+                cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
+                    if v.ty.is_reference_type() =>
+                {
+                    // This needs a placeholder
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: contract.context.bool_type().get_undef().into(),
+                        },
+                    );
+                }
+                cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
+                    let ty = contract.llvm_type(&v.ty);
+                    vars.insert(
+                        *no,
+                        Variable {
+                            value: if ty.is_pointer_type() {
+                                ty.into_pointer_type().const_zero().into()
+                            } else {
+                                ty.into_int_type().const_zero().into()
+                            },
+                        },
+                    );
+                }
+            }
+        }
+
+        work.push_back(Work { bb_no: 0, vars });
+
+        while let Some(mut w) = work.pop_front() {
+            let bb = blocks.get(&w.bb_no).unwrap();
+
+            contract.builder.position_at_end(bb.bb);
+
+            for (v, phi) in bb.phis.iter() {
+                w.vars.get_mut(v).unwrap().value = (*phi).as_basic_value();
+            }
+
+            for ins in &cfg.bb[w.bb_no].instr {
+                match ins {
+                    cfg::Instr::Return { value } if value.is_empty() => {
+                        contract
+                            .builder
+                            .build_return(Some(&contract.context.i32_type().const_zero()));
+                    }
+                    cfg::Instr::Return { value } => {
+                        let returns_offset = cfg.params.len();
+                        for (i, val) in value.iter().enumerate() {
+                            let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
+                            let retval = self.expression(contract, val, &w.vars, function);
+
+                            contract
+                                .builder
+                                .build_store(arg.into_pointer_value(), retval);
+                        }
+                        contract
+                            .builder
+                            .build_return(Some(&contract.context.i32_type().const_zero()));
+                    }
+                    cfg::Instr::Set { res, expr } => {
+                        let value_ref = self.expression(contract, expr, &w.vars, function);
+
+                        w.vars.get_mut(res).unwrap().value = value_ref;
+                    }
+                    cfg::Instr::Eval { expr } => {
+                        self.expression(contract, expr, &w.vars, function);
+                    }
+                    cfg::Instr::Constant { res, constant } => {
+                        let const_expr = contract.contract.variables[*constant]
+                            .initializer
+                            .as_ref()
+                            .unwrap();
+                        let value_ref = self.expression(contract, const_expr, &w.vars, function);
+
+                        w.vars.get_mut(res).unwrap().value = value_ref;
+                    }
+                    cfg::Instr::Branch { bb: dest } => {
+                        let pos = contract.builder.get_insert_block().unwrap();
+
+                        if !blocks.contains_key(&dest) {
+                            blocks.insert(*dest, create_bb(*dest));
+                            work.push_back(Work {
+                                bb_no: *dest,
+                                vars: w.vars.clone(),
+                            });
+                        }
+
+                        let bb = blocks.get(dest).unwrap();
+
+                        for (v, phi) in bb.phis.iter() {
+                            phi.add_incoming(&[(&w.vars[v].value, pos)]);
+                        }
+
+                        contract.builder.position_at_end(pos);
+                        contract.builder.build_unconditional_branch(bb.bb);
+                    }
+                    cfg::Instr::Store { dest, pos } => {
+                        let value_ref = w.vars[pos].value;
+                        let dest_ref = self
+                            .expression(contract, dest, &w.vars, function)
+                            .into_pointer_value();
+
+                        contract.builder.build_store(dest_ref, value_ref);
+                    }
+                    cfg::Instr::BranchCond {
+                        cond,
+                        true_,
+                        false_,
+                    } => {
+                        let cond = self.expression(contract, cond, &w.vars, function);
+
+                        let pos = contract.builder.get_insert_block().unwrap();
+
+                        let bb_true = {
+                            if !blocks.contains_key(&true_) {
+                                blocks.insert(*true_, create_bb(*true_));
+                                work.push_back(Work {
+                                    bb_no: *true_,
+                                    vars: w.vars.clone(),
+                                });
+                            }
+
+                            let bb = blocks.get(true_).unwrap();
+
+                            for (v, phi) in bb.phis.iter() {
+                                phi.add_incoming(&[(&w.vars[v].value, pos)]);
+                            }
+
+                            bb.bb
+                        };
+
+                        let bb_false = {
+                            if !blocks.contains_key(&false_) {
+                                blocks.insert(*false_, create_bb(*false_));
+                                work.push_back(Work {
+                                    bb_no: *false_,
+                                    vars: w.vars.clone(),
+                                });
+                            }
+
+                            let bb = blocks.get(false_).unwrap();
+
+                            for (v, phi) in bb.phis.iter() {
+                                phi.add_incoming(&[(&w.vars[v].value, pos)]);
+                            }
+
+                            bb.bb
+                        };
+
+                        contract.builder.position_at_end(pos);
+                        contract.builder.build_conditional_branch(
+                            cond.into_int_value(),
+                            bb_true,
+                            bb_false,
+                        );
+                    }
+                    cfg::Instr::ClearStorage { ty, storage } => {
+                        let mut slot = self
+                            .expression(contract, storage, &w.vars, function)
+                            .into_int_value();
+                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+
+                        self.storage_clear(contract, ty, &mut slot, slot_ptr, function);
+                    }
+                    cfg::Instr::SetStorage { ty, local, storage } => {
+                        let value = w.vars[local].value;
+
+                        let mut slot = self
+                            .expression(contract, storage, &w.vars, function)
+                            .into_int_value();
+                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+
+                        self.storage_store(contract, ty, &mut slot, slot_ptr, value, function);
+                    }
+                    cfg::Instr::SetStorageBytes {
+                        local,
+                        storage,
+                        offset,
+                    } => {
+                        let value = w.vars[local].value;
+
+                        let slot = self
+                            .expression(contract, storage, &w.vars, function)
+                            .into_int_value();
+                        let offset = self
+                            .expression(contract, offset, &w.vars, function)
+                            .into_int_value();
+                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+                        contract.builder.build_store(slot_ptr, slot);
+
+                        self.set_storage_bytes_subscript(
+                            contract,
+                            function,
+                            slot_ptr,
+                            offset,
+                            value.into_int_value(),
+                        );
+                    }
+                    cfg::Instr::PushMemory {
+                        res,
+                        ty,
+                        array,
+                        value,
+                    } => {
+                        let a = w.vars[array].value.into_pointer_value();
+                        let len = unsafe {
+                            contract.builder.build_gep(
+                                a,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "array_len",
+                            )
+                        };
+                        let a = contract.builder.build_pointer_cast(
+                            a,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "a",
+                        );
+                        let llvm_ty = contract.llvm_type(ty);
+
+                        // Calculate total size for reallocation
+                        let elem_ty = match ty {
+                            ast::Type::Array(..) => match contract.llvm_type(&ty.array_elem()) {
+                                elem @ BasicTypeEnum::StructType(_) => {
+                                    // We don't store structs directly in the array, instead we store references to structs
+                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+                                }
+                                elem => elem,
+                            },
+                            ast::Type::DynamicBytes => contract.context.i8_type().into(),
+                            _ => unreachable!(),
+                        };
+                        let elem_size = elem_ty
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false);
+                        let len = contract
+                            .builder
+                            .build_load(len, "array_len")
+                            .into_int_value();
+                        let new_len = contract.builder.build_int_add(
+                            len,
+                            contract.context.i32_type().const_int(1, false),
+                            "",
+                        );
+                        let vec_size = contract
+                            .module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false);
+                        let size = contract.builder.build_int_mul(elem_size, new_len, "");
+                        let size = contract.builder.build_int_add(size, vec_size, "");
+
+                        // Reallocate and reassign the array pointer
+                        let new = contract
+                            .builder
+                            .build_call(
+                                contract.module.get_function("__realloc").unwrap(),
+                                &[a.into(), size.into()],
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
+                        let dest = contract.builder.build_pointer_cast(
+                            new,
+                            llvm_ty.ptr_type(AddressSpace::Generic),
+                            "dest",
+                        );
+                        w.vars.get_mut(array).unwrap().value = dest.into();
+
+                        // Store the value into the last element
+                        let slot_ptr = unsafe {
+                            contract.builder.build_gep(
+                                dest,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                    contract.builder.build_int_mul(len, elem_size, ""),
+                                ],
+                                "data",
+                            )
+                        };
+                        let value = self.expression(contract, value, &w.vars, function);
+                        let elem_ptr = contract.builder.build_pointer_cast(
+                            slot_ptr,
+                            elem_ty.ptr_type(AddressSpace::Generic),
+                            "element pointer",
+                        );
+                        contract.builder.build_store(elem_ptr, value);
+                        w.vars.get_mut(res).unwrap().value = value;
+
+                        // Update the len and size field of the vector struct
+                        let len_ptr = unsafe {
+                            contract.builder.build_gep(
+                                dest,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "len",
+                            )
+                        };
+                        let len_field = contract.builder.build_pointer_cast(
+                            len_ptr,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "len field",
+                        );
+                        contract.builder.build_store(len_field, new_len);
+
+                        let size_ptr = unsafe {
+                            contract.builder.build_gep(
+                                dest,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(1, false),
+                                ],
+                                "size",
+                            )
+                        };
+                        let size_field = contract.builder.build_pointer_cast(
+                            size_ptr,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "size field",
+                        );
+                        contract.builder.build_store(size_field, new_len);
+                    }
+                    cfg::Instr::PopMemory { res, ty, array } => {
+                        let a = w.vars[array].value.into_pointer_value();
+                        let len = unsafe {
+                            contract.builder.build_gep(
+                                a,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "a_len",
+                            )
+                        };
+                        let len = contract.builder.build_load(len, "a_len").into_int_value();
+
+                        // First check if the array is empty
+                        let is_array_empty = contract.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            len,
+                            contract.context.i32_type().const_zero(),
+                            "is_array_empty",
+                        );
+                        let error = contract.context.append_basic_block(function, "error");
+                        let pop = contract.context.append_basic_block(function, "pop");
+                        contract
+                            .builder
+                            .build_conditional_branch(is_array_empty, error, pop);
+
+                        contract.builder.position_at_end(error);
+                        self.assert_failure(
+                            contract,
+                            contract
+                                .context
+                                .i8_type()
+                                .ptr_type(AddressSpace::Generic)
+                                .const_null(),
+                            contract.context.i32_type().const_zero(),
+                        );
+
+                        contract.builder.position_at_end(pop);
+                        let llvm_ty = contract.llvm_type(ty);
+
+                        // Calculate total size for reallocation
+                        let elem_ty = match ty {
+                            ast::Type::Array(..) => match contract.llvm_type(&ty.array_elem()) {
+                                elem @ BasicTypeEnum::StructType(_) => {
+                                    // We don't store structs directly in the array, instead we store references to structs
+                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
+                                }
+                                elem => elem,
+                            },
+                            ast::Type::DynamicBytes => contract.context.i8_type().into(),
+                            _ => unreachable!(),
+                        };
+                        let elem_size = elem_ty
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false);
+                        let new_len = contract.builder.build_int_sub(
+                            len,
+                            contract.context.i32_type().const_int(1, false),
+                            "",
+                        );
+                        let vec_size = contract
+                            .module
+                            .get_struct_type("struct.vector")
+                            .unwrap()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false);
+                        let size = contract.builder.build_int_mul(elem_size, new_len, "");
+                        let size = contract.builder.build_int_add(size, vec_size, "");
+
+                        // Get the pointer to the last element and return it
+                        let slot_ptr = unsafe {
+                            contract.builder.build_gep(
+                                a,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                    contract.builder.build_int_mul(new_len, elem_size, ""),
+                                ],
+                                "data",
+                            )
+                        };
+                        let slot_ptr = contract.builder.build_pointer_cast(
+                            slot_ptr,
+                            elem_ty.ptr_type(AddressSpace::Generic),
+                            "slot_ptr",
+                        );
+                        let ret_val = contract.builder.build_load(slot_ptr, "");
+                        w.vars.get_mut(res).unwrap().value = ret_val;
+
+                        // Reallocate and reassign the array pointer
+                        let a = contract.builder.build_pointer_cast(
+                            a,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "a",
+                        );
+                        let new = contract
+                            .builder
+                            .build_call(
+                                contract.module.get_function("__realloc").unwrap(),
+                                &[a.into(), size.into()],
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
+                        let dest = contract.builder.build_pointer_cast(
+                            new,
+                            llvm_ty.ptr_type(AddressSpace::Generic),
+                            "dest",
+                        );
+                        w.vars.get_mut(array).unwrap().value = dest.into();
+
+                        // Update the len and size field of the vector struct
+                        let len_ptr = unsafe {
+                            contract.builder.build_gep(
+                                dest,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "len",
+                            )
+                        };
+                        let len_field = contract.builder.build_pointer_cast(
+                            len_ptr,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "len field",
+                        );
+                        contract.builder.build_store(len_field, new_len);
+
+                        let size_ptr = unsafe {
+                            contract.builder.build_gep(
+                                dest,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(1, false),
+                                ],
+                                "size",
+                            )
+                        };
+                        let size_field = contract.builder.build_pointer_cast(
+                            size_ptr,
+                            contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                            "size field",
+                        );
+                        contract.builder.build_store(size_field, new_len);
+                    }
+                    cfg::Instr::AssertFailure { expr: None } => {
+                        self.assert_failure(
+                            contract,
+                            contract
+                                .context
+                                .i8_type()
+                                .ptr_type(AddressSpace::Generic)
+                                .const_null(),
+                            contract.context.i32_type().const_zero(),
+                        );
+                    }
+                    cfg::Instr::AssertFailure { expr: Some(expr) } => {
+                        let v = self.expression(contract, expr, &w.vars, function);
+
+                        let (data, len) = self.abi_encode(
+                            contract,
+                            Some(0x08c3_79a0),
+                            false,
+                            function,
+                            &[v],
+                            &[ast::Parameter {
+                                loc: pt::Loc(0, 0, 0),
+                                name: "error".to_owned(),
+                                name_loc: None,
+                                ty: ast::Type::String,
+                                ty_loc: pt::Loc(0, 0, 0),
+                                indexed: false,
+                            }],
+                        );
+
+                        self.assert_failure(contract, data, len);
+                    }
+                    cfg::Instr::Print { expr } => {
+                        let v = self
+                            .expression(contract, expr, &w.vars, function)
+                            .into_pointer_value();
+
+                        let data = unsafe {
+                            contract.builder.build_gep(
+                                v,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let data_len = unsafe {
+                            contract.builder.build_gep(
+                                v,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "data_len",
+                            )
+                        };
+
+                        self.print(
+                            &contract,
+                            contract.builder.build_pointer_cast(
+                                data,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "data",
+                            ),
+                            contract
+                                .builder
+                                .build_load(data_len, "data_len")
+                                .into_int_value(),
+                        );
+                    }
+                    cfg::Instr::Call { res, cfg_no, args } => {
+                        let f = &contract.contract.cfg[*cfg_no];
+
+                        let mut parms = args
+                            .iter()
+                            .map(|p| self.expression(contract, p, &w.vars, function))
+                            .collect::<Vec<BasicValueEnum>>();
+
+                        if !res.is_empty() {
+                            for v in f.returns.iter() {
+                                parms.push(
+                                    contract
+                                        .builder
+                                        .build_alloca(contract.llvm_var(&v.ty), &v.name)
+                                        .into(),
+                                );
+                            }
+                        }
+
+                        let ret = contract
+                            .builder
+                            .build_call(contract.functions[cfg_no], &parms, "")
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap();
+
+                        let success = contract.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            ret.into_int_value(),
+                            contract.context.i32_type().const_zero(),
+                            "success",
+                        );
+
+                        let success_block =
+                            contract.context.append_basic_block(function, "success");
+                        let bail_block = contract.context.append_basic_block(function, "bail");
+                        contract.builder.build_conditional_branch(
+                            success,
+                            success_block,
+                            bail_block,
+                        );
+
+                        contract.builder.position_at_end(bail_block);
+
+                        contract.builder.build_return(Some(&ret));
+                        contract.builder.position_at_end(success_block);
+
+                        if !res.is_empty() {
+                            for (i, v) in f.returns.iter().enumerate() {
+                                let val = contract.builder.build_load(
+                                    parms[f.params.len() + i].into_pointer_value(),
+                                    &v.name,
+                                );
+
+                                let dest = w.vars[&res[i]].value;
+
+                                if dest.is_pointer_value() && !v.ty.is_reference_type() {
+                                    contract.builder.build_store(dest.into_pointer_value(), val);
+                                } else {
+                                    w.vars.get_mut(&res[i]).unwrap().value = val;
+                                }
+                            }
+                        }
+                    }
+                    cfg::Instr::Constructor {
+                        success,
+                        res,
+                        contract_no,
+                        constructor_no,
+                        args,
+                        value,
+                        gas,
+                        salt,
+                    } => {
+                        let args = &args
+                            .iter()
+                            .map(|a| self.expression(contract, &a, &w.vars, function))
+                            .collect::<Vec<BasicValueEnum>>();
+
+                        let address = contract
+                            .builder
+                            .build_alloca(contract.address_type(), "address");
+
+                        let gas = self
+                            .expression(contract, gas, &w.vars, function)
+                            .into_int_value();
+                        let value = value.as_ref().map(|v| {
+                            self.expression(contract, &v, &w.vars, function)
+                                .into_int_value()
+                        });
+                        let salt = salt.as_ref().map(|v| {
+                            self.expression(contract, &v, &w.vars, function)
+                                .into_int_value()
+                        });
+
+                        let success = match success {
+                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
+                            None => None,
+                        };
+
+                        self.create_contract(
+                            &contract,
+                            function,
+                            success,
+                            *contract_no,
+                            *constructor_no,
+                            contract.builder.build_pointer_cast(
+                                address,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
+                            args,
+                            gas,
+                            value,
+                            salt,
+                        );
+
+                        w.vars.get_mut(res).unwrap().value =
+                            contract.builder.build_load(address, "address");
+                    }
+                    cfg::Instr::ExternalCall {
+                        success,
+                        address,
+                        contract_no,
+                        function_no,
+                        args,
+                        value,
+                        gas,
+                        callty,
+                    } => {
+                        let (payload, payload_len) = match contract_no {
+                            Some(contract_no) => {
+                                let dest_func =
+                                    &contract.ns.contracts[*contract_no].functions[*function_no];
+
+                                let selector = dest_func.selector();
+
+                                self.abi_encode(
+                                    contract,
+                                    Some(if contract.ns.target == crate::Target::Ewasm {
+                                        selector.to_be()
+                                    } else {
+                                        selector
+                                    }),
+                                    false,
+                                    function,
+                                    &args
+                                        .iter()
+                                        .map(|a| self.expression(contract, &a, &w.vars, function))
+                                        .collect::<Vec<BasicValueEnum>>(),
+                                    &dest_func.params,
+                                )
+                            }
+                            None if args.is_empty() => (
+                                contract
+                                    .context
+                                    .i8_type()
+                                    .ptr_type(AddressSpace::Generic)
+                                    .const_null(),
+                                contract.context.i32_type().const_zero(),
+                            ),
+                            None => {
+                                let raw = self
+                                    .expression(contract, &args[0], &w.vars, function)
+                                    .into_pointer_value();
+
+                                let data = unsafe {
+                                    contract.builder.build_gep(
+                                        raw,
+                                        &[
+                                            contract.context.i32_type().const_zero(),
+                                            contract.context.i32_type().const_int(2, false),
+                                        ],
+                                        "rawdata",
+                                    )
+                                };
+
+                                let data_len = unsafe {
+                                    contract.builder.build_gep(
+                                        raw,
+                                        &[
+                                            contract.context.i32_type().const_zero(),
+                                            contract.context.i32_type().const_zero(),
+                                        ],
+                                        "rawdata_len",
+                                    )
+                                };
+
+                                (
+                                    contract.builder.build_pointer_cast(
+                                        data,
+                                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                        "data",
+                                    ),
+                                    contract
+                                        .builder
+                                        .build_load(data_len, "data_len")
+                                        .into_int_value(),
+                                )
+                            }
+                        };
+                        let address = self
+                            .expression(contract, address, &w.vars, function)
+                            .into_int_value();
+                        let gas = self
+                            .expression(contract, gas, &w.vars, function)
+                            .into_int_value();
+                        let value = self
+                            .expression(contract, value, &w.vars, function)
+                            .into_int_value();
+
+                        let addr = contract.builder.build_array_alloca(
+                            contract.context.i8_type(),
+                            contract
+                                .context
+                                .i32_type()
+                                .const_int(contract.ns.address_length as u64, false),
+                            "address",
+                        );
+
+                        contract.builder.build_store(
+                            contract.builder.build_pointer_cast(
+                                addr,
+                                address.get_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
+                            address,
+                        );
+
+                        let ret = self.external_call(
+                            contract,
+                            payload,
+                            payload_len,
+                            addr,
+                            gas,
+                            value,
+                            callty.clone(),
+                        );
+
+                        let is_success = contract.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            ret,
+                            contract.context.i32_type().const_zero(),
+                            "success",
+                        );
+
+                        if let Some(success) = success {
+                            w.vars.get_mut(success).unwrap().value = is_success.into();
+                        } else {
+                            let success_block =
+                                contract.context.append_basic_block(function, "success");
+                            let bail_block = contract.context.append_basic_block(function, "bail");
+                            contract.builder.build_conditional_branch(
+                                is_success,
+                                success_block,
+                                bail_block,
+                            );
+                            contract.builder.position_at_end(bail_block);
+
+                            contract.builder.build_return(Some(&ret));
+
+                            contract.builder.position_at_end(success_block);
+                        }
+                    }
+                    cfg::Instr::AbiEncodeVector {
+                        res,
+                        tys,
+                        selector,
+                        packed,
+                        args,
+                    } => {
+                        w.vars.get_mut(res).unwrap().value = self
+                            .abi_encode_to_vector(
+                                contract,
+                                selector.as_ref().map(|s| {
+                                    self.expression(contract, &s, &w.vars, function)
+                                        .into_int_value()
+                                }),
+                                function,
+                                *packed,
+                                &args
+                                    .iter()
+                                    .map(|a| self.expression(contract, &a, &w.vars, function))
+                                    .collect::<Vec<BasicValueEnum>>(),
+                                tys,
+                            )
+                            .into();
+                    }
+                    cfg::Instr::AbiDecode {
+                        res,
+                        selector,
+                        exception,
+                        tys,
+                        data,
+                    } => {
+                        let v = self
+                            .expression(contract, data, &w.vars, function)
+                            .into_pointer_value();
+
+                        let mut data = unsafe {
+                            contract.builder.build_gep(
+                                v,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let mut data_len = contract
+                            .builder
+                            .build_load(
+                                unsafe {
+                                    contract.builder.build_gep(
+                                        v,
+                                        &[
+                                            contract.context.i32_type().const_zero(),
+                                            contract.context.i32_type().const_zero(),
+                                        ],
+                                        "data_len",
+                                    )
+                                },
+                                "data_len",
+                            )
+                            .into_int_value();
+
+                        if let Some(selector) = selector {
+                            let exception = exception.unwrap();
+
+                            let pos = contract.builder.get_insert_block().unwrap();
+
+                            blocks.entry(exception).or_insert({
+                                work.push_back(Work {
+                                    bb_no: exception,
+                                    vars: w.vars.clone(),
+                                });
+
+                                create_bb(exception)
+                            });
+
+                            contract.builder.position_at_end(pos);
+
+                            let exception_block = blocks.get(&exception).unwrap();
+
+                            let has_selector = contract.builder.build_int_compare(
+                                IntPredicate::UGT,
+                                data_len,
+                                contract.context.i32_type().const_int(4, false),
+                                "has_selector",
+                            );
+
+                            let ok1 = contract.context.append_basic_block(function, "ok1");
+
+                            contract.builder.build_conditional_branch(
+                                has_selector,
+                                ok1,
+                                exception_block.bb,
+                            );
+                            contract.builder.position_at_end(ok1);
+
+                            let selector_data = contract
+                                .builder
+                                .build_load(
+                                    contract.builder.build_pointer_cast(
+                                        data,
+                                        contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                                        "selector",
+                                    ),
+                                    "selector",
+                                )
+                                .into_int_value();
+
+                            // ewasm stores the selector little endian
+                            let selector = if contract.ns.target == crate::Target::Ewasm {
+                                (*selector).to_be()
+                            } else {
+                                *selector
+                            };
+
+                            let correct_selector = contract.builder.build_int_compare(
+                                IntPredicate::EQ,
+                                selector_data,
+                                contract
+                                    .context
+                                    .i32_type()
+                                    .const_int(selector as u64, false),
+                                "correct_selector",
+                            );
+
+                            let ok2 = contract.context.append_basic_block(function, "ok2");
+
+                            contract.builder.build_conditional_branch(
+                                correct_selector,
+                                ok2,
+                                exception_block.bb,
+                            );
+
+                            contract.builder.position_at_end(ok2);
+
+                            data_len = contract.builder.build_int_sub(
+                                data_len,
+                                contract.context.i32_type().const_int(4, false),
+                                "data_len",
+                            );
+
+                            data = unsafe {
+                                contract.builder.build_gep(
+                                    contract.builder.build_pointer_cast(
+                                        data,
+                                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                        "data",
+                                    ),
+                                    &[contract.context.i32_type().const_int(4, false)],
+                                    "data",
+                                )
+                            };
+                        }
+
+                        let mut returns = Vec::new();
+
+                        self.abi_decode(contract, function, &mut returns, data, data_len, &tys);
+
+                        for (i, ret) in returns.into_iter().enumerate() {
+                            w.vars.get_mut(&res[i]).unwrap().value = ret;
+                        }
+                    }
+                    cfg::Instr::Unreachable => {
+                        contract.builder.build_unreachable();
+                    }
+                    cfg::Instr::SelfDestruct { recipient } => {
+                        let recipient = self
+                            .expression(contract, recipient, &w.vars, function)
+                            .into_int_value();
+
+                        self.selfdestruct(contract, recipient);
+                    }
+                    cfg::Instr::Hash { res, hash, expr } => {
+                        let v = self
+                            .expression(contract, expr, &w.vars, function)
+                            .into_pointer_value();
+
+                        let data = unsafe {
+                            contract.builder.build_gep(
+                                v,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_int(2, false),
+                                ],
+                                "data",
+                            )
+                        };
+
+                        let data_len = unsafe {
+                            contract.builder.build_gep(
+                                v,
+                                &[
+                                    contract.context.i32_type().const_zero(),
+                                    contract.context.i32_type().const_zero(),
+                                ],
+                                "data_len",
+                            )
+                        };
+
+                        w.vars.get_mut(res).unwrap().value = self
+                            .hash(
+                                &contract,
+                                hash.clone(),
+                                contract.builder.build_pointer_cast(
+                                    data,
+                                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "data",
+                                ),
+                                contract
+                                    .builder
+                                    .build_load(data_len, "data_len")
+                                    .into_int_value(),
+                            )
+                            .into();
+                    }
+                    cfg::Instr::EmitEvent {
+                        event_no,
+                        data,
+                        data_tys,
+                        topics,
+                        topic_tys,
+                    } => {
+                        let (data_ptr, data_len) = self.abi_encode(
+                            contract,
+                            None,
+                            false,
+                            function,
+                            &data
+                                .iter()
+                                .map(|a| self.expression(contract, &a, &w.vars, function))
+                                .collect::<Vec<BasicValueEnum>>(),
+                            data_tys,
+                        );
+
+                        let mut encoded = Vec::new();
+
+                        for (i, topic) in topics.iter().enumerate() {
+                            encoded.push(self.abi_encode(
+                                contract,
+                                None,
+                                false,
+                                function,
+                                &[self.expression(contract, topic, &w.vars, function)],
+                                &[topic_tys[i].clone()],
+                            ));
+                        }
+
+                        self.send_event(contract, *event_no, data_ptr, data_len, encoded);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Create function dispatch based on abi encoded argsdata. The dispatcher loads the leading function selector,
+    /// and dispatches based on that. If no function matches this, or no selector is in the argsdata, then fallback
+    /// code is executed. This is either a fallback block provided to this function, or it automatically dispatches
+    /// to the fallback function or receive function, if any.
+    fn emit_function_dispatch<F>(
+        &self,
+        contract: &Contract<'a>,
+        function_ty: pt::FunctionTy,
+        argsdata: inkwell::values::PointerValue<'a>,
+        argslen: inkwell::values::IntValue<'a>,
+        function: inkwell::values::FunctionValue<'a>,
+        fallback: Option<inkwell::basic_block::BasicBlock>,
+        nonpayable: F,
+    ) where
+        F: Fn(&cfg::ControlFlowGraph) -> bool,
+    {
+        // create start function
+        let no_function_matched = match fallback {
+            Some(block) => block,
+            None => contract
+                .context
+                .append_basic_block(function, "no_function_matched"),
+        };
+
+        let switch_block = contract.context.append_basic_block(function, "switch");
+
+        let not_fallback = contract.builder.build_int_compare(
+            IntPredicate::UGE,
+            argslen,
+            contract.context.i32_type().const_int(4, false),
+            "",
+        );
+
+        contract
+            .builder
+            .build_conditional_branch(not_fallback, switch_block, no_function_matched);
+
+        contract.builder.position_at_end(switch_block);
+
+        let fid = contract
+            .builder
+            .build_load(argsdata, "function_selector")
+            .into_int_value();
+
+        contract
+            .builder
+            .build_store(contract.selector.as_pointer_value(), fid);
+
+        // step over the function selector
+        let argsdata = unsafe {
+            contract.builder.build_gep(
+                argsdata,
+                &[contract.context.i32_type().const_int(1, false)],
+                "argsdata",
+            )
+        };
+
+        let argslen = contract.builder.build_int_sub(
+            argslen,
+            contract.context.i32_type().const_int(4, false),
+            "argslen",
+        );
+
+        let mut cases = Vec::new();
+
+        for (cfg_no, cfg) in contract.contract.cfg.iter().enumerate() {
+            if cfg.ty != function_ty || !cfg.public {
+                continue;
+            }
+
+            self.add_dispatch_case(
+                contract,
+                cfg,
+                &mut cases,
+                argsdata,
+                argslen,
+                function,
+                contract.functions[&cfg_no],
+                &nonpayable,
+            );
+        }
+
+        contract.builder.position_at_end(switch_block);
+
+        contract
+            .builder
+            .build_switch(fid, no_function_matched, &cases);
+
+        if fallback.is_some() {
+            return; // caller will generate fallback code
+        }
+
+        // emit fallback code
+        contract.builder.position_at_end(no_function_matched);
+
+        let fallback = contract
+            .contract
+            .cfg
+            .iter()
+            .enumerate()
+            .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Fallback);
+
+        let receive = contract
+            .contract
+            .cfg
+            .iter()
+            .enumerate()
+            .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Receive);
+
+        if fallback.is_none() && receive.is_none() {
+            // no need to check value transferred; we will abort either way
+            self.return_u32(contract, contract.context.i32_type().const_int(2, false));
+
+            return;
+        }
+
+        let got_value = if contract.function_abort_value_transfers {
+            contract.context.bool_type().const_zero()
+        } else {
+            let value = self.value_transferred(contract);
+
+            contract.builder.build_int_compare(
+                IntPredicate::NE,
+                value,
+                contract.value_type().const_zero(),
+                "is_value_transfer",
+            )
+        };
+
+        let fallback_block = contract.context.append_basic_block(function, "fallback");
+        let receive_block = contract.context.append_basic_block(function, "receive");
+
+        contract
+            .builder
+            .build_conditional_branch(got_value, receive_block, fallback_block);
+
+        contract.builder.position_at_end(fallback_block);
+
+        match fallback {
+            Some((cfg_no, _)) => {
+                contract
+                    .builder
+                    .build_call(contract.functions[&cfg_no], &[], "");
+
+                self.return_empty_abi(contract);
+            }
+            None => {
+                self.return_u32(contract, contract.context.i32_type().const_int(2, false));
+            }
+        }
+
+        contract.builder.position_at_end(receive_block);
+
+        match receive {
+            Some((cfg_no, _)) => {
+                contract
+                    .builder
+                    .build_call(contract.functions[&cfg_no], &[], "");
+
+                self.return_empty_abi(contract);
+            }
+            None => {
+                self.return_u32(contract, contract.context.i32_type().const_int(2, false));
+            }
+        }
+    }
+
+    ///Add single case for emit_function_dispatch
+    fn add_dispatch_case<F>(
+        &self,
+        contract: &Contract<'a>,
+        f: &cfg::ControlFlowGraph,
+        cases: &mut Vec<(
+            inkwell::values::IntValue<'a>,
+            inkwell::basic_block::BasicBlock<'a>,
+        )>,
+        argsdata: inkwell::values::PointerValue<'a>,
+        argslen: inkwell::values::IntValue<'a>,
+        function: inkwell::values::FunctionValue<'a>,
+        dest: inkwell::values::FunctionValue<'a>,
+        nonpayable: &F,
+    ) where
+        F: Fn(&cfg::ControlFlowGraph) -> bool,
+    {
+        let bb = contract.context.append_basic_block(function, "");
+
+        contract.builder.position_at_end(bb);
+
+        if nonpayable(f) {
+            self.abort_if_value_transfer(contract, function);
+        }
+
+        let mut args = Vec::new();
+
+        // insert abi decode
+        self.abi_decode(&contract, function, &mut args, argsdata, argslen, &f.params);
+
+        // add return values as pointer arguments at the end
+        if !f.returns.is_empty() {
+            for v in f.returns.iter() {
+                args.push(if !v.ty.is_reference_type() {
+                    contract
+                        .builder
+                        .build_alloca(contract.llvm_type(&v.ty), &v.name)
+                        .into()
+                } else {
+                    contract
+                        .builder
+                        .build_alloca(
+                            contract.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
+                            &v.name,
+                        )
+                        .into()
+                });
+            }
+        }
+
+        let ret = contract
+            .builder
+            .build_call(dest, &args, "")
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+
+        contract
+            .builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        contract.builder.position_at_end(success_block);
+
+        if f.returns.is_empty() {
+            // return ABI of length 0
+            self.return_empty_abi(&contract);
+        } else {
+            let (data, length) = self.abi_encode(
+                &contract,
+                None,
+                true,
+                function,
+                &args[f.params.len()..],
+                &f.returns,
+            );
+
+            self.return_abi(&contract, data, length);
+        }
+
+        contract.builder.position_at_end(bail_block);
+
+        self.return_u32(contract, ret.into_int_value());
+
+        cases.push((
+            contract
+                .context
+                .i32_type()
+                .const_int(f.selector as u64, false),
+            bb,
+        ));
+    }
+
+    /// Emit the contract storage initializers
+    fn emit_initializer(&mut self, contract: &Contract<'a>) -> FunctionValue<'a> {
+        let function = contract.module.add_function(
+            "storage_initializers",
+            contract.context.i32_type().fn_type(&[], false),
+            Some(Linkage::Internal),
+        );
+
+        let cfg = &contract.contract.cfg[contract.contract.initializer.unwrap()];
+
+        self.emit_cfg(contract, cfg, function);
+
+        function
+    }
+
+    /// Emit all functions, constructors, fallback and receiver
+    fn emit_functions(&mut self, contract: &mut Contract<'a>) {
+        let mut defines = Vec::new();
+
+        for (cfg_no, cfg) in contract.contract.cfg.iter().enumerate() {
+            if !cfg.is_placeholder() {
+                let func_decl = contract.declare_function(cfg);
+                contract.functions.insert(cfg_no, func_decl);
+
+                defines.push((func_decl, cfg));
+            }
+        }
+
+        for (func_decl, cfg) in defines {
+            self.emit_cfg(contract, cfg, func_decl);
+        }
+    }
+
+    // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which
+    // WebAssembly does not support, i.e. anything over 64.
+    // The builder position is maintained.
+    //
+    // inspired by https://github.com/calccrypto/uint256_t/blob/master/uint256_t.cpp#L397
+    fn udivmod(&self, contract: &Contract<'a>, bit: u32) -> FunctionValue<'a> {
+        let name = format!("__udivmod{}", bit);
+        let ty = contract.context.custom_width_int_type(bit);
+
+        if let Some(f) = contract.module.get_function(&name) {
+            return f;
+        }
+
+        let pos = contract.builder.get_insert_block().unwrap();
+
+        // __udivmod256(dividend, divisor, *rem, *quotient) = error
+        let function = contract.module.add_function(
+            &name,
+            contract.context.i32_type().fn_type(
+                &[
+                    ty.into(),
+                    ty.into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
+                ],
+                false,
+            ),
+            None,
+        );
+
+        let entry = contract.context.append_basic_block(function, "entry");
+
+        contract.builder.position_at_end(entry);
+
+        let dividend = function.get_nth_param(0).unwrap().into_int_value();
+        let divisor = function.get_nth_param(1).unwrap().into_int_value();
+        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
+        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
+
+        let error = contract.context.append_basic_block(function, "error");
+        let next = contract.context.append_basic_block(function, "next");
+        let is_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            divisor,
+            ty.const_zero(),
+            "divisor_is_zero",
+        );
+        contract
+            .builder
+            .build_conditional_branch(is_zero, error, next);
+
+        contract.builder.position_at_end(error);
+        // throw division by zero error should be an assert
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(next);
+        let is_one_block = contract
+            .context
+            .append_basic_block(function, "is_one_block");
+        let next = contract.context.append_basic_block(function, "next");
+        let is_one = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            divisor,
+            ty.const_int(1, false),
+            "divisor_is_one",
+        );
+        contract
+            .builder
+            .build_conditional_branch(is_one, is_one_block, next);
+
+        // return quotient: dividend, rem: 0
+        contract.builder.position_at_end(is_one_block);
+        contract.builder.build_store(rem, ty.const_zero());
+        contract.builder.build_store(quotient_result, dividend);
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+
+        contract.builder.position_at_end(next);
+        let is_eq_block = contract.context.append_basic_block(function, "is_eq_block");
+        let next = contract.context.append_basic_block(function, "next");
+        let is_eq =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::EQ, dividend, divisor, "is_eq");
+        contract
+            .builder
+            .build_conditional_branch(is_eq, is_eq_block, next);
+
+        // return rem: 0, quotient: 1
+        contract.builder.position_at_end(is_eq_block);
+        contract.builder.build_store(rem, ty.const_zero());
+        contract.builder.build_store(rem, ty.const_zero());
+        contract
+            .builder
+            .build_store(quotient_result, ty.const_int(1, false));
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+
+        contract.builder.position_at_end(next);
+
+        let is_toobig_block = contract
+            .context
+            .append_basic_block(function, "is_toobig_block");
+        let next = contract.context.append_basic_block(function, "next");
+        let dividend_is_zero = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            dividend,
+            ty.const_zero(),
+            "dividend_is_zero",
+        );
+        let dividend_lt_divisor = contract.builder.build_int_compare(
+            IntPredicate::ULT,
+            dividend,
+            divisor,
+            "dividend_lt_divisor",
+        );
+        contract.builder.build_conditional_branch(
+            contract
+                .builder
+                .build_or(dividend_is_zero, dividend_lt_divisor, ""),
+            is_toobig_block,
+            next,
+        );
+
+        // return quotient: 0, rem: divisor
+        contract.builder.position_at_end(is_toobig_block);
+        contract.builder.build_store(rem, dividend);
+        contract
+            .builder
+            .build_store(quotient_result, ty.const_zero());
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+
+        contract.builder.position_at_end(next);
+
+        let ctlz = contract.llvm_ctlz(bit);
+
+        let dividend_bits = contract.builder.build_int_sub(
+            ty.const_int(bit as u64 - 1, false),
+            contract
+                .builder
+                .build_call(
+                    ctlz,
+                    &[
+                        dividend.into(),
+                        contract.context.bool_type().const_int(1, false).into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            "dividend_bits",
+        );
+
+        let divisor_bits = contract.builder.build_int_sub(
+            ty.const_int(bit as u64 - 1, false),
+            contract
+                .builder
+                .build_call(
+                    ctlz,
+                    &[
+                        divisor.into(),
+                        contract.context.bool_type().const_int(1, false).into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value(),
+            "dividend_bits",
+        );
+
+        let copyd1 = contract.builder.build_left_shift(
+            divisor,
+            contract
+                .builder
+                .build_int_sub(dividend_bits, divisor_bits, ""),
+            "copyd",
+        );
+
+        let adder1 = contract.builder.build_left_shift(
+            ty.const_int(1, false),
+            contract
+                .builder
+                .build_int_sub(dividend_bits, divisor_bits, ""),
+            "adder",
+        );
+
+        let true_block = contract.context.append_basic_block(function, "true");
+        let while_cond_block = contract.context.append_basic_block(function, "while_cond");
+
+        let comp = contract
+            .builder
+            .build_int_compare(IntPredicate::UGT, copyd1, dividend, "");
+
+        contract
+            .builder
+            .build_conditional_branch(comp, true_block, while_cond_block);
+
+        contract.builder.position_at_end(true_block);
+
+        let copyd2 = contract
+            .builder
+            .build_right_shift(copyd1, ty.const_int(1, false), false, "");
+        let adder2 = contract
+            .builder
+            .build_right_shift(adder1, ty.const_int(1, false), false, "");
+        contract
+            .builder
+            .build_unconditional_branch(while_cond_block);
+
+        let while_body_block = contract.context.append_basic_block(function, "while_body");
+        let while_end_block = contract.context.append_basic_block(function, "while_post");
+
+        contract.builder.position_at_end(while_cond_block);
+
+        let quotient = contract.builder.build_phi(ty, "quotient");
+        quotient.add_incoming(&[(&ty.const_zero(), next)]);
+        quotient.add_incoming(&[(&ty.const_zero(), true_block)]);
+
+        let remainder = contract.builder.build_phi(ty, "remainder");
+        remainder.add_incoming(&[(&dividend, next)]);
+        remainder.add_incoming(&[(&dividend, true_block)]);
+
+        let copyd = contract.builder.build_phi(ty, "copyd");
+        copyd.add_incoming(&[(&copyd1, next), (&copyd2, true_block)]);
+        let adder = contract.builder.build_phi(ty, "adder");
+        adder.add_incoming(&[(&adder1, next), (&adder2, true_block)]);
+
+        let loop_cond = contract.builder.build_int_compare(
+            IntPredicate::UGE,
+            remainder.as_basic_value().into_int_value(),
+            divisor,
+            "loop_cond",
+        );
+        contract
+            .builder
+            .build_conditional_branch(loop_cond, while_body_block, while_end_block);
+
+        contract.builder.position_at_end(while_body_block);
+
+        let if_true_block = contract
+            .context
+            .append_basic_block(function, "if_true_block");
+        let post_if_block = contract
+            .context
+            .append_basic_block(function, "post_if_block");
+
+        contract.builder.build_conditional_branch(
+            contract.builder.build_int_compare(
+                IntPredicate::UGE,
+                remainder.as_basic_value().into_int_value(),
+                copyd.as_basic_value().into_int_value(),
+                "",
+            ),
+            if_true_block,
+            post_if_block,
+        );
+
+        contract.builder.position_at_end(if_true_block);
+
+        let remainder2 = contract.builder.build_int_sub(
+            remainder.as_basic_value().into_int_value(),
+            copyd.as_basic_value().into_int_value(),
+            "remainder",
+        );
+        let quotient2 = contract.builder.build_or(
+            quotient.as_basic_value().into_int_value(),
+            adder.as_basic_value().into_int_value(),
+            "quotient",
+        );
+
+        contract.builder.build_unconditional_branch(post_if_block);
+
+        contract.builder.position_at_end(post_if_block);
+
+        let quotient3 = contract.builder.build_phi(ty, "quotient3");
+        let remainder3 = contract.builder.build_phi(ty, "remainder");
+
+        let copyd3 = contract.builder.build_right_shift(
+            copyd.as_basic_value().into_int_value(),
+            ty.const_int(1, false),
+            false,
+            "copyd",
+        );
+        let adder3 = contract.builder.build_right_shift(
+            adder.as_basic_value().into_int_value(),
+            ty.const_int(1, false),
+            false,
+            "adder",
+        );
+        copyd.add_incoming(&[(&copyd3, post_if_block)]);
+        adder.add_incoming(&[(&adder3, post_if_block)]);
+
+        quotient3.add_incoming(&[
+            (&quotient2, if_true_block),
+            (&quotient.as_basic_value(), while_body_block),
+        ]);
+        remainder3.add_incoming(&[
+            (&remainder2, if_true_block),
+            (&remainder.as_basic_value(), while_body_block),
+        ]);
+
+        quotient.add_incoming(&[(&quotient3.as_basic_value(), post_if_block)]);
+        remainder.add_incoming(&[(&remainder3.as_basic_value(), post_if_block)]);
+
+        contract
+            .builder
+            .build_unconditional_branch(while_cond_block);
+
+        contract.builder.position_at_end(while_end_block);
+
+        contract
+            .builder
+            .build_store(rem, remainder.as_basic_value().into_int_value());
+        contract
+            .builder
+            .build_store(quotient_result, quotient.as_basic_value().into_int_value());
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+
+        contract.builder.position_at_end(pos);
+
+        function
+    }
+
+    fn sdivmod(&self, contract: &Contract<'a>, bit: u32) -> FunctionValue<'a> {
+        let name = format!("__sdivmod{}", bit);
+        let ty = contract.context.custom_width_int_type(bit);
+
+        if let Some(f) = contract.module.get_function(&name) {
+            return f;
+        }
+
+        let pos = contract.builder.get_insert_block().unwrap();
+
+        // __sdivmod256(dividend, divisor, *rem, *quotient) -> error
+        let function = contract.module.add_function(
+            &name,
+            contract.context.i32_type().fn_type(
+                &[
+                    ty.into(),
+                    ty.into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
+                    ty.ptr_type(AddressSpace::Generic).into(),
+                ],
+                false,
+            ),
+            None,
+        );
+
+        let entry = contract.context.append_basic_block(function, "entry");
+
+        contract.builder.position_at_end(entry);
+
+        let dividend = function.get_nth_param(0).unwrap().into_int_value();
+        let divisor = function.get_nth_param(1).unwrap().into_int_value();
+        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
+        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
+
+        let dividend_negative = contract.builder.build_int_compare(
+            IntPredicate::SLT,
+            dividend,
+            ty.const_zero(),
+            "dividend_negative",
+        );
+        let divisor_negative = contract.builder.build_int_compare(
+            IntPredicate::SLT,
+            divisor,
+            ty.const_zero(),
+            "divisor_negative",
+        );
+
+        let dividend_abs = contract.builder.build_select(
+            dividend_negative,
+            contract.builder.build_int_neg(dividend, "dividen_neg"),
+            dividend,
+            "dividend_abs",
+        );
+
+        let divisor_abs = contract.builder.build_select(
+            divisor_negative,
+            contract.builder.build_int_neg(divisor, "divisor_neg"),
+            divisor,
+            "divisor_abs",
+        );
+
+        let ret = contract
+            .builder
+            .build_call(
+                self.udivmod(contract, bit),
+                &[
+                    dividend_abs,
+                    divisor_abs,
+                    rem.into(),
+                    quotient_result.into(),
+                ],
+                "quotient",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
+        contract
+            .builder
+            .build_conditional_branch(success, success_block, bail_block);
+
+        contract.builder.position_at_end(bail_block);
+
+        contract.builder.build_return(Some(&ret));
+        contract.builder.position_at_end(success_block);
+
+        let quotient = contract
+            .builder
+            .build_load(quotient_result, "quotient")
+            .into_int_value();
+
+        let quotient = contract.builder.build_select(
+            contract.builder.build_int_compare(
+                IntPredicate::NE,
+                dividend_negative,
+                divisor_negative,
+                "two_negatives",
+            ),
+            contract.builder.build_int_neg(quotient, "quotient_neg"),
+            quotient,
+            "quotient",
+        );
+
+        let negrem = contract
+            .context
+            .append_basic_block(function, "negative_rem");
+        let posrem = contract
+            .context
+            .append_basic_block(function, "positive_rem");
+
+        contract
+            .builder
+            .build_conditional_branch(dividend_negative, negrem, posrem);
+
+        contract.builder.position_at_end(posrem);
+
+        contract.builder.build_store(quotient_result, quotient);
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+
+        contract.builder.position_at_end(negrem);
+
+        let remainder = contract
+            .builder
+            .build_load(rem, "remainder")
+            .into_int_value();
+
+        contract.builder.build_store(
+            rem,
+            contract
+                .builder
+                .build_int_neg(remainder, "negative_remainder"),
+        );
+
+        contract.builder.build_store(quotient_result, quotient);
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_zero()));
+
+        contract.builder.position_at_end(pos);
+
+        function
+    }
 }
 
 pub struct Contract<'a> {
@@ -267,6 +4437,8 @@ pub struct Contract<'a> {
     selector: GlobalValue<'a>,
     calldata_data: GlobalValue<'a>,
     calldata_len: GlobalValue<'a>,
+    scratch_len: Option<GlobalValue<'a>>,
+    scratch: Option<GlobalValue<'a>>,
 }
 
 impl<'a> Contract<'a> {
@@ -472,6 +4644,8 @@ impl<'a> Contract<'a> {
             selector,
             calldata_data,
             calldata_len,
+            scratch: None,
+            scratch_len: None,
         }
     }
 
@@ -485,41 +4659,6 @@ impl<'a> Contract<'a> {
     fn address_type(&self) -> IntType<'a> {
         self.context
             .custom_width_int_type(self.ns.address_length as u32 * 8)
-    }
-
-    /// If we receive a value transfer, and we are "payable", abort with revert
-    fn abort_if_value_transfer(&self, runtime: &dyn TargetRuntime, function: FunctionValue) {
-        let value = runtime.value_transferred(&self);
-
-        let got_value = self.builder.build_int_compare(
-            IntPredicate::NE,
-            value,
-            self.value_type().const_zero(),
-            "is_value_transfer",
-        );
-
-        let not_value_transfer = self
-            .context
-            .append_basic_block(function, "not_value_transfer");
-        let abort_value_transfer = self
-            .context
-            .append_basic_block(function, "abort_value_transfer");
-
-        self.builder
-            .build_conditional_branch(got_value, abort_value_transfer, not_value_transfer);
-
-        self.builder.position_at_end(abort_value_transfer);
-
-        runtime.assert_failure(
-            self,
-            self.context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            self.context.i32_type().const_zero(),
-        );
-
-        self.builder.position_at_end(not_value_transfer);
     }
 
     /// Creates global string in the llvm module with initializer
@@ -742,2104 +4881,12 @@ impl<'a> Contract<'a> {
         *data_ref = data_phi.as_basic_value().into_pointer_value();
     }
 
-    /// Emit all functions, constructors, fallback and receiver
-    fn emit_functions(&mut self, runtime: &mut dyn TargetRuntime) {
-        let mut defines = Vec::new();
-
-        for (cfg_no, cfg) in self.contract.cfg.iter().enumerate() {
-            if !cfg.is_placeholder() {
-                let func_decl = self.declare_function(cfg);
-                self.functions.insert(cfg_no, func_decl);
-
-                defines.push((func_decl, cfg));
-            }
-        }
-
-        for (func_decl, cfg) in defines {
-            self.emit_cfg(cfg, func_decl, runtime);
-        }
-    }
-
-    /// The expression function recursively emits code for expressions. The BasicEnumValue it
-    /// returns depends on the context; if it is simple integer, bool or bytes32 expression, the value
-    /// is an Intvalue. For references to arrays, it is a PointerValue to the array. For references
-    /// to storage, it is the storage slot. The references types are dereferenced by the Expression::Load()
-    /// and Expression::StorageLoad() expression types.
-    fn expression(
-        &self,
-        e: &Expression,
-        vartab: &HashMap<usize, Variable<'a>>,
-        function: FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
-    ) -> BasicValueEnum<'a> {
-        match e {
-            Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
-            Expression::BoolLiteral(_, val) => self
-                .context
-                .bool_type()
-                .const_int(*val as u64, false)
-                .into(),
-            Expression::NumberLiteral(_, ty, n) => {
-                self.number_literal(ty.bits(self.ns) as u32, n).into()
-            }
-            Expression::StructLiteral(_, ty, exprs) => {
-                let struct_ty = self.llvm_type(ty);
-
-                let s = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("__malloc").unwrap(),
-                        &[struct_ty
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false)
-                            .into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
-
-                let s = self.builder.build_pointer_cast(
-                    s,
-                    struct_ty.ptr_type(AddressSpace::Generic),
-                    "struct_literal",
-                );
-
-                for (i, f) in exprs.iter().enumerate() {
-                    let elem = unsafe {
-                        self.builder.build_gep(
-                            s,
-                            &[
-                                self.context.i32_type().const_zero(),
-                                self.context.i32_type().const_int(i as u64, false),
-                            ],
-                            "struct member",
-                        )
-                    };
-
-                    self.builder
-                        .build_store(elem, self.expression(f, vartab, function, runtime));
-                }
-
-                s.into()
-            }
-            Expression::BytesLiteral(_, _, bs) => {
-                let ty = self.context.custom_width_int_type((bs.len() * 8) as u32);
-
-                // hex"11223344" should become i32 0x11223344
-                let s = hex::encode(bs);
-
-                ty.const_int_from_string(&s, StringRadix::Hexadecimal)
-                    .unwrap()
-                    .into()
-            }
-            Expression::CodeLiteral(_, contract_no, runtime) => {
-                let codegen_contract = &self.ns.contracts[*contract_no];
-
-                let target_contract =
-                    Contract::build(self.context, &codegen_contract, self.ns, "", self.opt);
-
-                // wasm
-                let wasm = if *runtime && target_contract.runtime.is_some() {
-                    target_contract
-                        .runtime
-                        .unwrap()
-                        .wasm(true)
-                        .expect("compile should succeeed")
-                } else {
-                    target_contract.wasm(true).expect("compile should succeeed")
-                };
-
-                let size = self.context.i32_type().const_int(wasm.len() as u64, false);
-
-                let elem_size = self.context.i32_type().const_int(1, false);
-
-                let init = self.emit_global_string(
-                    &format!(
-                        "code_{}_{}",
-                        if *runtime { "runtime" } else { "deployer" },
-                        &codegen_contract.name
-                    ),
-                    &wasm,
-                    false,
-                );
-
-                let v = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("vector_new").unwrap(),
-                        &[size.into(), elem_size.into(), init.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                self.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        self.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
-            }
-            Expression::Add(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_int_add(left, right, "").into()
-            }
-            Expression::Subtract(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_int_sub(left, right, "").into()
-            }
-            Expression::Multiply(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                let bits = left.get_type().get_bit_width();
-
-                if bits > 64 {
-                    let l = self.builder.build_alloca(left.get_type(), "");
-                    let r = self.builder.build_alloca(left.get_type(), "");
-                    let o = self.builder.build_alloca(left.get_type(), "");
-
-                    self.builder.build_store(l, left);
-                    self.builder.build_store(r, right);
-
-                    self.builder.build_call(
-                        self.module.get_function("__mul32").unwrap(),
-                        &[
-                            self.builder
-                                .build_pointer_cast(
-                                    l,
-                                    self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                    "left",
-                                )
-                                .into(),
-                            self.builder
-                                .build_pointer_cast(
-                                    r,
-                                    self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                    "right",
-                                )
-                                .into(),
-                            self.builder
-                                .build_pointer_cast(
-                                    o,
-                                    self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                    "output",
-                                )
-                                .into(),
-                            self.context
-                                .i32_type()
-                                .const_int(bits as u64 / 32, false)
-                                .into(),
-                        ],
-                        "",
-                    );
-
-                    self.builder.build_load(o, "mul")
-                } else {
-                    self.builder.build_int_mul(left, right, "").into()
-                }
-            }
-            Expression::UDivide(_, _, l, r) => {
-                let left = self.expression(l, vartab, function, runtime);
-                let right = self.expression(r, vartab, function, runtime);
-
-                let bits = left.into_int_value().get_type().get_bit_width();
-
-                if bits > 64 {
-                    let f = self.udivmod(bits, runtime);
-
-                    let rem = self
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
-                    let quotient = self
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
-
-                    let ret = self
-                        .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap();
-
-                    let success = self.builder.build_int_compare(
-                        IntPredicate::EQ,
-                        ret.into_int_value(),
-                        self.context.i32_type().const_zero(),
-                        "success",
-                    );
-
-                    let success_block = self.context.append_basic_block(function, "success");
-                    let bail_block = self.context.append_basic_block(function, "bail");
-                    self.builder
-                        .build_conditional_branch(success, success_block, bail_block);
-
-                    self.builder.position_at_end(bail_block);
-
-                    self.builder.build_return(Some(&ret));
-                    self.builder.position_at_end(success_block);
-
-                    self.builder.build_load(quotient, "quotient")
-                } else {
-                    self.builder
-                        .build_int_unsigned_div(left.into_int_value(), right.into_int_value(), "")
-                        .into()
-                }
-            }
-            Expression::SDivide(_, _, l, r) => {
-                let left = self.expression(l, vartab, function, runtime);
-                let right = self.expression(r, vartab, function, runtime);
-
-                let bits = left.into_int_value().get_type().get_bit_width();
-
-                if bits > 64 {
-                    let f = self.sdivmod(bits, runtime);
-
-                    let rem = self.builder.build_alloca(left.get_type(), "");
-                    let quotient = self.builder.build_alloca(left.get_type(), "");
-
-                    let ret = self
-                        .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap();
-
-                    let success = self.builder.build_int_compare(
-                        IntPredicate::EQ,
-                        ret.into_int_value(),
-                        self.context.i32_type().const_zero(),
-                        "success",
-                    );
-
-                    let success_block = self.context.append_basic_block(function, "success");
-                    let bail_block = self.context.append_basic_block(function, "bail");
-                    self.builder
-                        .build_conditional_branch(success, success_block, bail_block);
-
-                    self.builder.position_at_end(bail_block);
-
-                    self.builder.build_return(Some(&ret));
-                    self.builder.position_at_end(success_block);
-
-                    self.builder.build_load(quotient, "quotient")
-                } else {
-                    self.builder
-                        .build_int_signed_div(left.into_int_value(), right.into_int_value(), "")
-                        .into()
-                }
-            }
-            Expression::UModulo(_, _, l, r) => {
-                let left = self.expression(l, vartab, function, runtime);
-                let right = self.expression(r, vartab, function, runtime);
-
-                let bits = left.into_int_value().get_type().get_bit_width();
-
-                if bits > 64 {
-                    let f = self.udivmod(bits, runtime);
-
-                    let rem = self
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
-                    let quotient = self
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
-
-                    let ret = self
-                        .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "udiv")
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap();
-
-                    let success = self.builder.build_int_compare(
-                        IntPredicate::EQ,
-                        ret.into_int_value(),
-                        self.context.i32_type().const_zero(),
-                        "success",
-                    );
-
-                    let success_block = self.context.append_basic_block(function, "success");
-                    let bail_block = self.context.append_basic_block(function, "bail");
-                    self.builder
-                        .build_conditional_branch(success, success_block, bail_block);
-
-                    self.builder.position_at_end(bail_block);
-
-                    self.builder.build_return(Some(&ret));
-                    self.builder.position_at_end(success_block);
-
-                    self.builder.build_load(rem, "urem")
-                } else {
-                    self.builder
-                        .build_int_unsigned_rem(left.into_int_value(), right.into_int_value(), "")
-                        .into()
-                }
-            }
-            Expression::SModulo(_, _, l, r) => {
-                let left = self.expression(l, vartab, function, runtime);
-                let right = self.expression(r, vartab, function, runtime);
-
-                let bits = left.into_int_value().get_type().get_bit_width();
-
-                if bits > 64 {
-                    let f = self.sdivmod(bits, runtime);
-                    let rem = self.builder.build_alloca(left.get_type(), "");
-                    let quotient = self.builder.build_alloca(left.get_type(), "");
-
-                    let ret = self
-                        .builder
-                        .build_call(f, &[left, right, rem.into(), quotient.into()], "sdiv")
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap();
-
-                    let success = self.builder.build_int_compare(
-                        IntPredicate::EQ,
-                        ret.into_int_value(),
-                        self.context.i32_type().const_zero(),
-                        "success",
-                    );
-
-                    let success_block = self.context.append_basic_block(function, "success");
-                    let bail_block = self.context.append_basic_block(function, "bail");
-                    self.builder
-                        .build_conditional_branch(success, success_block, bail_block);
-
-                    self.builder.position_at_end(bail_block);
-
-                    self.builder.build_return(Some(&ret));
-                    self.builder.position_at_end(success_block);
-
-                    self.builder.build_load(rem, "srem")
-                } else {
-                    self.builder
-                        .build_int_signed_rem(left.into_int_value(), right.into_int_value(), "")
-                        .into()
-                }
-            }
-            Expression::Power(_, _, l, r) => {
-                let left = self.expression(l, vartab, function, runtime);
-                let right = self.expression(r, vartab, function, runtime);
-
-                let bits = left.into_int_value().get_type().get_bit_width();
-
-                let f = self.upower(bits);
-
-                self.builder
-                    .build_call(f, &[left, right], "power")
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-            }
-            Expression::Equal(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::EQ, left, right, "")
-                    .into()
-            }
-            Expression::NotEqual(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::NE, left, right, "")
-                    .into()
-            }
-            Expression::SMore(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::SGT, left, right, "")
-                    .into()
-            }
-            Expression::SMoreEqual(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::SGE, left, right, "")
-                    .into()
-            }
-            Expression::SLess(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::SLT, left, right, "")
-                    .into()
-            }
-            Expression::SLessEqual(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::SLE, left, right, "")
-                    .into()
-            }
-            Expression::UMore(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::UGT, left, right, "")
-                    .into()
-            }
-            Expression::UMoreEqual(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::UGE, left, right, "")
-                    .into()
-            }
-            Expression::ULess(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::ULT, left, right, "")
-                    .into()
-            }
-            Expression::ULessEqual(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::ULE, left, right, "")
-                    .into()
-            }
-            Expression::Variable(_, _, s) => vartab[s].value,
-            Expression::Load(_, _, e) => {
-                let expr = self
-                    .expression(e, vartab, function, runtime)
-                    .into_pointer_value();
-
-                self.builder.build_load(expr, "")
-            }
-            Expression::StorageLoad(_, ty, e) => {
-                // The storage slot is an i256 accessed through a pointer, so we need
-                // to store it
-                let mut slot = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.storage_load(ty, &mut slot, slot_ptr, function, runtime)
-            }
-            Expression::ZeroExt(_, t, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-                let ty = self.llvm_type(t);
-
-                self.builder
-                    .build_int_z_extend(e, ty.into_int_type(), "")
-                    .into()
-            }
-            Expression::UnaryMinus(_, _, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_int_neg(e, "").into()
-            }
-            Expression::SignExt(_, t, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-                let ty = self.llvm_type(t);
-
-                self.builder
-                    .build_int_s_extend(e, ty.into_int_type(), "")
-                    .into()
-            }
-            Expression::Trunc(_, t, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-                let ty = self.llvm_type(t);
-
-                self.builder
-                    .build_int_truncate(e, ty.into_int_type(), "")
-                    .into()
-            }
-            Expression::Cast(_, _, e) => self.expression(e, vartab, function, runtime),
-            Expression::BytesCast(_, ast::Type::Bytes(_), ast::Type::DynamicBytes, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-
-                let size = e.get_type().get_bit_width() / 8;
-                let size = self.context.i32_type().const_int(size as u64, false);
-                let elem_size = self.context.i32_type().const_int(1, false);
-
-                // Swap the byte order
-                let bytes_ptr = self.builder.build_alloca(e.get_type(), "bytes_ptr");
-                self.builder.build_store(bytes_ptr, e);
-                let bytes_ptr = self.builder.build_pointer_cast(
-                    bytes_ptr,
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "bytes_ptr",
-                );
-                let init = self.builder.build_pointer_cast(
-                    self.builder.build_alloca(e.get_type(), "init"),
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "init",
-                );
-                self.builder.build_call(
-                    self.module.get_function("__leNtobeN").unwrap(),
-                    &[bytes_ptr.into(), init.into(), size.into()],
-                    "",
-                );
-
-                let v = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("vector_new").unwrap(),
-                        &[size.into(), elem_size.into(), init.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-                self.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        self.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
-            }
-            Expression::BytesCast(_, ast::Type::DynamicBytes, ast::Type::Bytes(n), e) => {
-                let array = self
-                    .expression(e, vartab, function, runtime)
-                    .into_pointer_value();
-                let len_ptr = unsafe {
-                    self.builder.build_gep(
-                        array,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_zero(),
-                        ],
-                        "array_len",
-                    )
-                };
-                let len = self
-                    .builder
-                    .build_load(len_ptr, "array_len")
-                    .into_int_value();
-
-                // Check if equal to n
-                let is_equal_to_n = self.builder.build_int_compare(
-                    IntPredicate::EQ,
-                    len,
-                    self.context.i32_type().const_int(*n as u64, false),
-                    "is_equal_to_n",
-                );
-                let cast = self.context.append_basic_block(function, "cast");
-                let error = self.context.append_basic_block(function, "error");
-                self.builder
-                    .build_conditional_branch(is_equal_to_n, cast, error);
-
-                self.builder.position_at_end(error);
-                runtime.assert_failure(
-                    self,
-                    self.context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .const_null(),
-                    self.context.i32_type().const_zero(),
-                );
-
-                self.builder.position_at_end(cast);
-                let bytes_ptr = unsafe {
-                    self.builder.build_gep(
-                        array,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_int(2, false),
-                        ],
-                        "data",
-                    )
-                };
-
-                // Switch byte order
-                let bytes_ptr = self.builder.build_pointer_cast(
-                    bytes_ptr,
-                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "bytes_ptr",
-                );
-
-                let ty = self.context.custom_width_int_type(*n as u32 * 8);
-                let le_bytes_ptr = self.builder.build_alloca(ty, "le_bytes");
-
-                self.builder.build_call(
-                    self.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        bytes_ptr.into(),
-                        self.builder
-                            .build_pointer_cast(
-                                le_bytes_ptr,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "le_bytes_ptr",
-                            )
-                            .into(),
-                        len.into(),
-                    ],
-                    "",
-                );
-                self.builder.build_load(le_bytes_ptr, "bytes")
-            }
-            Expression::Not(_, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_int_compare(IntPredicate::EQ, e, e.get_type().const_zero(), "")
-                    .into()
-            }
-            Expression::Complement(_, _, e) => {
-                let e = self
-                    .expression(e, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_not(e, "").into()
-            }
-            Expression::Or(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_or(left, right, "").into()
-            }
-            Expression::And(_, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_and(left, right, "").into()
-            }
-            Expression::BitwiseOr(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_or(left, right, "").into()
-            }
-            Expression::BitwiseAnd(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_and(left, right, "").into()
-            }
-            Expression::BitwiseXor(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_xor(left, right, "").into()
-            }
-            Expression::ShiftLeft(_, _, l, r) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_left_shift(left, right, "").into()
-            }
-            Expression::ShiftRight(_, _, l, r, signed) => {
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder
-                    .build_right_shift(left, right, *signed, "")
-                    .into()
-            }
-            Expression::ArraySubscript(_, _, a, i) => {
-                let array = self
-                    .expression(a, vartab, function, runtime)
-                    .into_pointer_value();
-                let index = self
-                    .expression(i, vartab, function, runtime)
-                    .into_int_value();
-
-                unsafe {
-                    self.builder
-                        .build_gep(
-                            array,
-                            &[self.context.i32_type().const_zero(), index],
-                            "index_access",
-                        )
-                        .into()
-                }
-            }
-            Expression::StorageBytesSubscript(_, a, i) => {
-                let index = self
-                    .expression(i, vartab, function, runtime)
-                    .into_int_value();
-                let slot = self
-                    .expression(a, vartab, function, runtime)
-                    .into_int_value();
-                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.builder.build_store(slot_ptr, slot);
-                runtime
-                    .get_storage_bytes_subscript(&self, function, slot_ptr, index)
-                    .into()
-            }
-            Expression::StorageBytesPush(_, a, v) => {
-                let val = self
-                    .expression(v, vartab, function, runtime)
-                    .into_int_value();
-                let slot = self
-                    .expression(a, vartab, function, runtime)
-                    .into_int_value();
-                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.builder.build_store(slot_ptr, slot);
-                runtime.storage_bytes_push(&self, function, slot_ptr, val);
-
-                val.into()
-            }
-            Expression::StorageBytesPop(_, a) => {
-                let slot = self
-                    .expression(a, vartab, function, runtime)
-                    .into_int_value();
-                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.builder.build_store(slot_ptr, slot);
-                runtime.storage_bytes_pop(&self, function, slot_ptr).into()
-            }
-            Expression::StorageBytesLength(_, a) => {
-                let slot = self
-                    .expression(a, vartab, function, runtime)
-                    .into_int_value();
-                let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                self.builder.build_store(slot_ptr, slot);
-                runtime
-                    .storage_string_length(&self, function, slot_ptr)
-                    .into()
-            }
-            Expression::DynamicArraySubscript(_, elem_ty, a, i) => {
-                let array = self
-                    .expression(a, vartab, function, runtime)
-                    .into_pointer_value();
-
-                let ty = self.llvm_var(elem_ty);
-                let index = self.builder.build_int_mul(
-                    self.expression(i, vartab, function, runtime)
-                        .into_int_value(),
-                    ty.into_pointer_type()
-                        .get_element_type()
-                        .size_of()
-                        .unwrap()
-                        .const_cast(self.context.i32_type(), false),
-                    "",
-                );
-
-                let elem = unsafe {
-                    self.builder.build_gep(
-                        array,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_int(2, false),
-                            index,
-                        ],
-                        "index_access",
-                    )
-                };
-
-                self.builder
-                    .build_pointer_cast(elem, ty.into_pointer_type(), "elem")
-                    .into()
-            }
-            Expression::StructMember(_, _, a, i) => {
-                let array = self
-                    .expression(a, vartab, function, runtime)
-                    .into_pointer_value();
-
-                unsafe {
-                    self.builder
-                        .build_gep(
-                            array,
-                            &[
-                                self.context.i32_type().const_zero(),
-                                self.context.i32_type().const_int(*i as u64, false),
-                            ],
-                            "struct member",
-                        )
-                        .into()
-                }
-            }
-            Expression::Ternary(_, _, c, l, r) => {
-                let cond = self
-                    .expression(c, vartab, function, runtime)
-                    .into_int_value();
-                let left = self
-                    .expression(l, vartab, function, runtime)
-                    .into_int_value();
-                let right = self
-                    .expression(r, vartab, function, runtime)
-                    .into_int_value();
-
-                self.builder.build_select(cond, left, right, "")
-            }
-            Expression::ConstArrayLiteral(_, _, dims, exprs) => {
-                // For const arrays (declared with "constant" keyword, we should create a global constant
-                let mut dims = dims.iter();
-
-                let exprs = exprs
-                    .iter()
-                    .map(|e| {
-                        self.expression(e, vartab, function, runtime)
-                            .into_int_value()
-                    })
-                    .collect::<Vec<IntValue>>();
-                let ty = exprs[0].get_type();
-
-                let top_size = *dims.next().unwrap();
-
-                // Create a vector of ArrayValues
-                let mut arrays = exprs
-                    .chunks(top_size as usize)
-                    .map(|a| ty.const_array(a))
-                    .collect::<Vec<ArrayValue>>();
-
-                let mut ty = ty.array_type(top_size);
-
-                // for each dimension, split the array into futher arrays
-                for d in dims {
-                    ty = ty.array_type(*d);
-
-                    arrays = arrays
-                        .chunks(*d as usize)
-                        .map(|a| ty.const_array(a))
-                        .collect::<Vec<ArrayValue>>();
-                }
-
-                // We actually end up with an array with a single entry
-
-                // now we've created the type, and the const array. Put it into a global
-                let gv =
-                    self.module
-                        .add_global(ty, Some(AddressSpace::Generic), "const_array_literal");
-
-                gv.set_linkage(Linkage::Internal);
-
-                gv.set_initializer(&arrays[0]);
-                gv.set_constant(true);
-
-                gv.as_pointer_value().into()
-            }
-            Expression::ArrayLiteral(_, ty, dims, exprs) => {
-                // non-const array literals should alloca'ed and each element assigned
-                let ty = self.llvm_type(ty);
-
-                let p = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("__malloc").unwrap(),
-                        &[ty.size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false)
-                            .into()],
-                        "array_literal",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                let array = self.builder.build_pointer_cast(
-                    p.into_pointer_value(),
-                    ty.ptr_type(AddressSpace::Generic),
-                    "array_literal",
-                );
-
-                for (i, expr) in exprs.iter().enumerate() {
-                    let mut ind = vec![self.context.i32_type().const_zero()];
-
-                    let mut e = i as u32;
-
-                    for d in dims {
-                        ind.insert(1, self.context.i32_type().const_int((e % *d).into(), false));
-
-                        e /= *d;
-                    }
-
-                    let elemptr = unsafe {
-                        self.builder
-                            .build_gep(array, &ind, &format!("elemptr{}", i))
-                    };
-
-                    self.builder
-                        .build_store(elemptr, self.expression(expr, vartab, function, runtime));
-                }
-
-                array.into()
-            }
-            Expression::AllocDynamicArray(_, ty, size, init) => {
-                let elem = match ty {
-                    ast::Type::String | ast::Type::DynamicBytes => ast::Type::Bytes(1),
-                    _ => ty.array_elem(),
-                };
-
-                let size = self
-                    .expression(size, vartab, function, runtime)
-                    .into_int_value();
-
-                let elem_size = self
-                    .llvm_type(&elem)
-                    .size_of()
-                    .unwrap()
-                    .const_cast(self.context.i32_type(), false);
-
-                let init = match init {
-                    None => self.builder.build_int_to_ptr(
-                        self.context.i32_type().const_all_ones(),
-                        self.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "invalid",
-                    ),
-                    Some(s) => self.emit_global_string("const_string", s, false),
-                };
-
-                let v = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("vector_new").unwrap(),
-                        &[size.into(), elem_size.into(), init.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                self.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        self.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
-            }
-            Expression::DynamicArrayLength(_, a) => {
-                let array = self
-                    .expression(a, vartab, function, runtime)
-                    .into_pointer_value();
-
-                // field 0 is the length
-                let len = unsafe {
-                    self.builder.build_gep(
-                        array,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_zero(),
-                        ],
-                        "array_len",
-                    )
-                };
-
-                self.builder.build_load(len, "array_len")
-            }
-            Expression::Keccak256(_, _, exprs) => {
-                let mut length = self.context.i32_type().const_zero();
-                let mut values: Vec<(BasicValueEnum, IntValue, ast::Type)> = Vec::new();
-
-                // first we need to calculate the length of the buffer and get the types/lengths
-                for e in exprs {
-                    let v = self.expression(&e, vartab, function, runtime);
-
-                    let len = match e.ty() {
-                        ast::Type::DynamicBytes | ast::Type::String => {
-                            // field 0 is the length
-                            let array_len = unsafe {
-                                self.builder.build_gep(
-                                    v.into_pointer_value(),
-                                    &[
-                                        self.context.i32_type().const_zero(),
-                                        self.context.i32_type().const_zero(),
-                                    ],
-                                    "array_len",
-                                )
-                            };
-
-                            self.builder
-                                .build_load(array_len, "array_len")
-                                .into_int_value()
-                        }
-                        _ => v
-                            .get_type()
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false),
-                    };
-
-                    length = self.builder.build_int_add(length, len, "");
-
-                    values.push((v, len, e.ty()));
-                }
-
-                //  now allocate a buffer
-                let src =
-                    self.builder
-                        .build_array_alloca(self.context.i8_type(), length, "keccak_src");
-
-                // fill in all the fields
-                let mut offset = self.context.i32_type().const_zero();
-
-                for (v, len, ty) in values {
-                    let elem = unsafe { self.builder.build_gep(src, &[offset], "elem") };
-
-                    offset = self.builder.build_int_add(offset, len, "");
-
-                    match ty {
-                        ast::Type::DynamicBytes | ast::Type::String => {
-                            let data = unsafe {
-                                self.builder.build_gep(
-                                    v.into_pointer_value(),
-                                    &[
-                                        self.context.i32_type().const_zero(),
-                                        self.context.i32_type().const_int(2, false),
-                                    ],
-                                    "",
-                                )
-                            };
-
-                            self.builder.build_call(
-                                self.module.get_function("__memcpy").unwrap(),
-                                &[
-                                    elem.into(),
-                                    self.builder
-                                        .build_pointer_cast(
-                                            data,
-                                            self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                            "data",
-                                        )
-                                        .into(),
-                                    len.into(),
-                                ],
-                                "",
-                            );
-                        }
-                        _ => {
-                            let elem = self.builder.build_pointer_cast(
-                                elem,
-                                v.get_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            );
-
-                            self.builder.build_store(elem, v);
-                        }
-                    }
-                }
-                let dst = self
-                    .builder
-                    .build_alloca(self.context.custom_width_int_type(256), "keccak_dst");
-
-                runtime.keccak256_hash(&self, src, length, dst);
-
-                self.builder.build_load(dst, "keccak256_hash")
-            }
-            Expression::StringCompare(_, l, r) => {
-                let (left, left_len) = self.string_location(l, vartab, function, runtime);
-                let (right, right_len) = self.string_location(r, vartab, function, runtime);
-
-                self.builder
-                    .build_call(
-                        self.module.get_function("__memcmp").unwrap(),
-                        &[left.into(), left_len.into(), right.into(), right_len.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-            }
-            Expression::StringConcat(_, _, l, r) => {
-                let (left, left_len) = self.string_location(l, vartab, function, runtime);
-                let (right, right_len) = self.string_location(r, vartab, function, runtime);
-
-                let v = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("concat").unwrap(),
-                        &[left.into(), left_len.into(), right.into(), right_len.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                self.builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        self.module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
-            }
-            Expression::ReturnData(_) => runtime.return_data(self).into(),
-            Expression::GetAddress(_, _) => runtime.get_address(self).into(),
-            Expression::Balance(_, _, addr) => {
-                let addr = self
-                    .expression(addr, vartab, function, runtime)
-                    .into_int_value();
-
-                runtime.balance(self, addr).into()
-            }
-            Expression::Builtin(_, _, Builtin::Calldata, _) => self
-                .builder
-                .build_call(
-                    self.module.get_function("vector_new").unwrap(),
-                    &[
-                        self.builder
-                            .build_load(self.calldata_len.as_pointer_value(), "calldata_len"),
-                        self.context.i32_type().const_int(1, false).into(),
-                        self.builder
-                            .build_load(self.calldata_data.as_pointer_value(), "calldata_data"),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap(),
-            Expression::Builtin(_, _, Builtin::Signature, _) => {
-                // need to byte-reverse selector
-                let selector = self
-                    .builder
-                    .build_alloca(self.context.i32_type(), "selector");
-
-                // byte order needs to be reversed. e.g. hex"11223344" should be 0x10 0x11 0x22 0x33 0x44
-                self.builder.build_call(
-                    self.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        self.builder
-                            .build_pointer_cast(
-                                self.selector.as_pointer_value(),
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        self.builder
-                            .build_pointer_cast(
-                                selector,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        self.context.i32_type().const_int(4, false).into(),
-                    ],
-                    "",
-                );
-
-                self.builder.build_load(selector, "selector")
-            }
-            Expression::Builtin(_, _, Builtin::AddMod, args) => {
-                let arith_ty = self.context.custom_width_int_type(512);
-                let res_ty = self.context.custom_width_int_type(256);
-
-                let x = self
-                    .expression(&args[0], vartab, function, runtime)
-                    .into_int_value();
-                let y = self
-                    .expression(&args[1], vartab, function, runtime)
-                    .into_int_value();
-                let k = self
-                    .expression(&args[2], vartab, function, runtime)
-                    .into_int_value();
-                let dividend = self.builder.build_int_add(
-                    self.builder.build_int_z_extend(x, arith_ty, "wide_x"),
-                    self.builder.build_int_z_extend(y, arith_ty, "wide_y"),
-                    "x_plus_y",
-                );
-
-                let divisor = self.builder.build_int_z_extend(k, arith_ty, "wide_k");
-
-                let rem = self.builder.build_alloca(arith_ty, "remainder");
-                let quotient = self.builder.build_alloca(arith_ty, "quotient");
-
-                let ret = self
-                    .builder
-                    .build_call(
-                        self.udivmod(512, runtime),
-                        &[dividend.into(), divisor.into(), rem.into(), quotient.into()],
-                        "quotient",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                let success = self.builder.build_int_compare(
-                    IntPredicate::EQ,
-                    ret.into_int_value(),
-                    self.context.i32_type().const_zero(),
-                    "success",
-                );
-
-                let success_block = self.context.append_basic_block(function, "success");
-                let bail_block = self.context.append_basic_block(function, "bail");
-                self.builder
-                    .build_conditional_branch(success, success_block, bail_block);
-
-                self.builder.position_at_end(bail_block);
-
-                self.builder.build_return(Some(&ret));
-                self.builder.position_at_end(success_block);
-
-                let quotient = self
-                    .builder
-                    .build_load(quotient, "quotient")
-                    .into_int_value();
-
-                self.builder
-                    .build_int_truncate(quotient, res_ty, "quotient")
-                    .into()
-            }
-            Expression::Builtin(_, _, Builtin::MulMod, args) => {
-                let arith_ty = self.context.custom_width_int_type(512);
-                let res_ty = self.context.custom_width_int_type(256);
-
-                let x = self
-                    .expression(&args[0], vartab, function, runtime)
-                    .into_int_value();
-                let y = self
-                    .expression(&args[1], vartab, function, runtime)
-                    .into_int_value();
-                let x_m = self.builder.build_alloca(arith_ty, "x_m");
-                let y_m = self.builder.build_alloca(arith_ty, "x_y");
-                let x_times_y_m = self.builder.build_alloca(arith_ty, "x_times_y_m");
-
-                self.builder
-                    .build_store(x_m, self.builder.build_int_z_extend(x, arith_ty, "wide_x"));
-                self.builder
-                    .build_store(y_m, self.builder.build_int_z_extend(y, arith_ty, "wide_y"));
-
-                self.builder.build_call(
-                    self.module.get_function("__mul32").unwrap(),
-                    &[
-                        self.builder
-                            .build_pointer_cast(
-                                x_m,
-                                self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                "left",
-                            )
-                            .into(),
-                        self.builder
-                            .build_pointer_cast(
-                                y_m,
-                                self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                "right",
-                            )
-                            .into(),
-                        self.builder
-                            .build_pointer_cast(
-                                x_times_y_m,
-                                self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                "output",
-                            )
-                            .into(),
-                        self.context.i32_type().const_int(512 / 32, false).into(),
-                    ],
-                    "",
-                );
-                let k = self
-                    .expression(&args[2], vartab, function, runtime)
-                    .into_int_value();
-                let dividend = self.builder.build_load(x_times_y_m, "x_t_y");
-
-                let divisor = self.builder.build_int_z_extend(k, arith_ty, "wide_k");
-
-                let rem = self.builder.build_alloca(arith_ty, "remainder");
-                let quotient = self.builder.build_alloca(arith_ty, "quotient");
-
-                let ret = self
-                    .builder
-                    .build_call(
-                        self.udivmod(512, runtime),
-                        &[dividend, divisor.into(), rem.into(), quotient.into()],
-                        "quotient",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                let success = self.builder.build_int_compare(
-                    IntPredicate::EQ,
-                    ret.into_int_value(),
-                    self.context.i32_type().const_zero(),
-                    "success",
-                );
-
-                let success_block = self.context.append_basic_block(function, "success");
-                let bail_block = self.context.append_basic_block(function, "bail");
-                self.builder
-                    .build_conditional_branch(success, success_block, bail_block);
-
-                self.builder.position_at_end(bail_block);
-
-                self.builder.build_return(Some(&ret));
-                self.builder.position_at_end(success_block);
-
-                let quotient = self
-                    .builder
-                    .build_load(quotient, "quotient")
-                    .into_int_value();
-
-                self.builder
-                    .build_int_truncate(quotient, res_ty, "quotient")
-                    .into()
-            }
-            Expression::Builtin(_, _, _, _) => runtime.builtin(self, e, vartab, function, runtime),
-            _ => panic!("{:?} not implemented", e),
-        }
-    }
-
-    /// Load a string from expression or create global
-    fn string_location(
-        &self,
-        location: &StringLocation,
-        vartab: &HashMap<usize, Variable<'a>>,
-        function: FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
-    ) -> (PointerValue<'a>, IntValue<'a>) {
-        match location {
-            StringLocation::CompileTime(literal) => (
-                self.emit_global_string("const_string", literal, false),
-                self.context
-                    .i32_type()
-                    .const_int(literal.len() as u64, false),
-            ),
-            StringLocation::RunTime(e) => {
-                let v = self
-                    .expression(e, vartab, function, runtime)
-                    .into_pointer_value();
-
-                let data = unsafe {
-                    self.builder.build_gep(
-                        v,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_int(2, false),
-                        ],
-                        "data",
-                    )
-                };
-
-                let data_len = unsafe {
-                    self.builder.build_gep(
-                        v,
-                        &[
-                            self.context.i32_type().const_zero(),
-                            self.context.i32_type().const_zero(),
-                        ],
-                        "data_len",
-                    )
-                };
-
-                (
-                    self.builder.build_pointer_cast(
-                        data,
-                        self.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "data",
-                    ),
-                    self.builder
-                        .build_load(data_len, "data_len")
-                        .into_int_value(),
-                )
-            }
-        }
-    }
-
     /// Convert a BigInt number to llvm const value
     fn number_literal(&self, bits: u32, n: &BigInt) -> IntValue<'a> {
         let ty = self.context.custom_width_int_type(bits);
         let s = n.to_string();
 
         ty.const_int_from_string(&s, StringRadix::Decimal).unwrap()
-    }
-
-    /// Recursively load a type from contract storage
-    fn storage_load(
-        &self,
-        ty: &ast::Type,
-        slot: &mut IntValue<'a>,
-        slot_ptr: PointerValue<'a>,
-        function: FunctionValue,
-        runtime: &dyn TargetRuntime,
-    ) -> BasicValueEnum<'a> {
-        match ty {
-            ast::Type::Ref(ty) => self.storage_load(ty, slot, slot_ptr, function, runtime),
-            ast::Type::Array(_, dim) => {
-                if let Some(d) = &dim[0] {
-                    let llvm_ty = self.llvm_type(ty.deref_any());
-                    // LLVMSizeOf() produces an i64
-                    let size = self.builder.build_int_truncate(
-                        llvm_ty.size_of().unwrap(),
-                        self.context.i32_type(),
-                        "size_of",
-                    );
-
-                    let ty = ty.array_deref();
-
-                    let new = self
-                        .builder
-                        .build_call(
-                            self.module.get_function("__malloc").unwrap(),
-                            &[size.into()],
-                            "",
-                        )
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap()
-                        .into_pointer_value();
-
-                    let dest = self.builder.build_pointer_cast(
-                        new,
-                        llvm_ty.ptr_type(AddressSpace::Generic),
-                        "dest",
-                    );
-
-                    self.emit_static_loop_with_int(
-                        function,
-                        self.context.i64_type().const_zero(),
-                        self.context
-                            .i64_type()
-                            .const_int(d.to_u64().unwrap(), false),
-                        slot,
-                        |index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            let elem = unsafe {
-                                self.builder.build_gep(
-                                    dest,
-                                    &[self.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
-                            };
-
-                            let val = self.storage_load(&ty, slot, slot_ptr, function, runtime);
-
-                            self.builder.build_store(elem, val);
-                        },
-                    );
-
-                    dest.into()
-                } else {
-                    // iterate over dynamic array
-                    let slot_ty = ast::Type::Uint(256);
-
-                    let size = self.builder.build_int_truncate(
-                        self.storage_load(&slot_ty, slot, slot_ptr, function, runtime)
-                            .into_int_value(),
-                        self.context.i32_type(),
-                        "size",
-                    );
-
-                    let elem_ty = self.llvm_type(&ty.array_elem());
-                    let elem_size = self.builder.build_int_truncate(
-                        elem_ty.size_of().unwrap(),
-                        self.context.i32_type(),
-                        "size_of",
-                    );
-                    let init = self.builder.build_int_to_ptr(
-                        self.context.i32_type().const_all_ones(),
-                        self.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "invalid",
-                    );
-
-                    let dest = self
-                        .builder
-                        .build_call(
-                            self.module.get_function("vector_new").unwrap(),
-                            &[size.into(), elem_size.into(), init.into()],
-                            "",
-                        )
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap()
-                        .into_pointer_value();
-
-                    // get the slot for the elements
-                    // this hashes in-place
-                    runtime.keccak256_hash(
-                        &self,
-                        slot_ptr,
-                        slot.get_type()
-                            .size_of()
-                            .const_cast(self.context.i32_type(), false),
-                        slot_ptr,
-                    );
-
-                    let mut elem_slot = self
-                        .builder
-                        .build_load(slot_ptr, "elem_slot")
-                        .into_int_value();
-
-                    self.emit_loop_cond_first_with_int(
-                        function,
-                        self.context.i32_type().const_zero(),
-                        size,
-                        &mut elem_slot,
-                        |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            let index = self.builder.build_int_mul(elem_no, elem_size, "");
-
-                            let entry = self.storage_load(
-                                &ty.array_elem(),
-                                slot,
-                                slot_ptr,
-                                function,
-                                runtime,
-                            );
-
-                            let data = unsafe {
-                                self.builder.build_gep(
-                                    dest,
-                                    &[
-                                        self.context.i32_type().const_zero(),
-                                        self.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "data",
-                                )
-                            };
-
-                            self.builder.build_store(
-                                self.builder.build_pointer_cast(
-                                    data,
-                                    elem_ty.ptr_type(AddressSpace::Generic),
-                                    "entry",
-                                ),
-                                entry,
-                            );
-                        },
-                    );
-                    // load
-                    dest.into()
-                }
-            }
-            ast::Type::Struct(n) => {
-                let llvm_ty = self.llvm_type(ty.deref_any());
-                // LLVMSizeOf() produces an i64
-                let size = self.builder.build_int_truncate(
-                    llvm_ty.size_of().unwrap(),
-                    self.context.i32_type(),
-                    "size_of",
-                );
-
-                let new = self
-                    .builder
-                    .build_call(
-                        self.module.get_function("__malloc").unwrap(),
-                        &[size.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_pointer_value();
-
-                let dest = self.builder.build_pointer_cast(
-                    new,
-                    llvm_ty.ptr_type(AddressSpace::Generic),
-                    "dest",
-                );
-
-                for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
-                    let val = self.storage_load(&field.ty, slot, slot_ptr, function, runtime);
-
-                    let elem = unsafe {
-                        self.builder.build_gep(
-                            dest,
-                            &[
-                                self.context.i32_type().const_zero(),
-                                self.context.i32_type().const_int(i as u64, false),
-                            ],
-                            &field.name,
-                        )
-                    };
-
-                    self.builder.build_store(elem, val);
-                }
-
-                dest.into()
-            }
-            ast::Type::String | ast::Type::DynamicBytes => {
-                self.builder.build_store(slot_ptr, *slot);
-
-                let ret = runtime.get_storage_string(&self, function, slot_ptr);
-
-                *slot = self.builder.build_int_add(
-                    *slot,
-                    self.number_literal(256, &BigInt::one()),
-                    "string",
-                );
-
-                ret.into()
-            }
-            _ => {
-                self.builder.build_store(slot_ptr, *slot);
-
-                let ret = runtime.get_storage_int(
-                    &self,
-                    function,
-                    slot_ptr,
-                    self.llvm_type(ty.deref_any()).into_int_type(),
-                );
-
-                *slot = self.builder.build_int_add(
-                    *slot,
-                    self.number_literal(256, &BigInt::one()),
-                    "int",
-                );
-
-                ret.into()
-            }
-        }
-    }
-
-    /// Recursively store a type to contract storage
-    fn storage_store(
-        &self,
-        ty: &ast::Type,
-        slot: &mut IntValue<'a>,
-        slot_ptr: PointerValue<'a>,
-        dest: BasicValueEnum<'a>,
-        function: FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
-    ) {
-        match ty.deref_any() {
-            ast::Type::Array(_, dim) => {
-                if let Some(d) = &dim[0] {
-                    let ty = ty.array_deref();
-
-                    self.emit_static_loop_with_int(
-                        function,
-                        self.context.i64_type().const_zero(),
-                        self.context
-                            .i64_type()
-                            .const_int(d.to_u64().unwrap(), false),
-                        slot,
-                        |index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            let mut elem = unsafe {
-                                self.builder.build_gep(
-                                    dest.into_pointer_value(),
-                                    &[self.context.i32_type().const_zero(), index],
-                                    "index_access",
-                                )
-                            };
-
-                            if ty.is_reference_type() {
-                                elem = self.builder.build_load(elem, "").into_pointer_value();
-                            }
-
-                            self.storage_store(&ty, slot, slot_ptr, elem.into(), function, runtime);
-
-                            if !ty.is_reference_type() {
-                                *slot = self.builder.build_int_add(
-                                    *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.ns)),
-                                    "",
-                                );
-                            }
-                        },
-                    );
-                } else {
-                    // get the lenght of the our in-memory array
-                    let len = self
-                        .builder
-                        .build_load(
-                            unsafe {
-                                self.builder.build_gep(
-                                    dest.into_pointer_value(),
-                                    &[
-                                        self.context.i32_type().const_zero(),
-                                        self.context.i32_type().const_zero(),
-                                    ],
-                                    "array_len",
-                                )
-                            },
-                            "array_len",
-                        )
-                        .into_int_value();
-
-                    let slot_ty = ast::Type::Uint(256);
-
-                    // details about our array elements
-                    let elem_ty = self.llvm_type(&ty.array_elem());
-                    let elem_size = self.builder.build_int_truncate(
-                        elem_ty.size_of().unwrap(),
-                        self.context.i32_type(),
-                        "size_of",
-                    );
-
-                    // the previous length of the storage array
-                    // we need this to clear any elements
-                    let previous_size = self.builder.build_int_truncate(
-                        self.storage_load(&slot_ty, slot, slot_ptr, function, runtime)
-                            .into_int_value(),
-                        self.context.i32_type(),
-                        "previous_size",
-                    );
-
-                    let new_slot = self
-                        .builder
-                        .build_alloca(self.llvm_type(&slot_ty).into_int_type(), "new");
-
-                    // set new length
-                    self.builder.build_store(
-                        new_slot,
-                        self.builder.build_int_z_extend(
-                            len,
-                            self.llvm_type(&slot_ty).into_int_type(),
-                            "",
-                        ),
-                    );
-
-                    runtime.set_storage(self, function, slot_ptr, new_slot);
-
-                    runtime.keccak256_hash(
-                        &self,
-                        slot_ptr,
-                        slot.get_type()
-                            .size_of()
-                            .const_cast(self.context.i32_type(), false),
-                        new_slot,
-                    );
-
-                    let mut elem_slot = self
-                        .builder
-                        .build_load(new_slot, "elem_slot")
-                        .into_int_value();
-
-                    let ty = ty.array_deref();
-
-                    self.emit_loop_cond_first_with_int(
-                        function,
-                        self.context.i32_type().const_zero(),
-                        len,
-                        &mut elem_slot,
-                        |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            let index = self.builder.build_int_mul(elem_no, elem_size, "");
-
-                            let data = unsafe {
-                                self.builder.build_gep(
-                                    dest.into_pointer_value(),
-                                    &[
-                                        self.context.i32_type().const_zero(),
-                                        self.context.i32_type().const_int(2, false),
-                                        index,
-                                    ],
-                                    "data",
-                                )
-                            };
-
-                            let mut elem = self.builder.build_pointer_cast(
-                                data,
-                                elem_ty.ptr_type(AddressSpace::Generic),
-                                "entry",
-                            );
-
-                            if ty.is_reference_type() {
-                                elem = self.builder.build_load(elem, "").into_pointer_value();
-                            }
-
-                            self.storage_store(&ty, slot, slot_ptr, elem.into(), function, runtime);
-
-                            if !ty.is_reference_type() {
-                                *slot = self.builder.build_int_add(
-                                    *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.ns)),
-                                    "",
-                                );
-                            }
-                        },
-                    );
-
-                    // we've populated the array with the new values; if the new array is shorter
-                    // than the previous, clear out the trailing elements
-                    self.emit_loop_cond_first_with_int(
-                        function,
-                        len,
-                        previous_size,
-                        &mut elem_slot,
-                        |_: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_clear(&ty, slot, slot_ptr, function, runtime);
-
-                            if !ty.is_reference_type() {
-                                *slot = self.builder.build_int_add(
-                                    *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.ns)),
-                                    "",
-                                );
-                            }
-                        },
-                    );
-                }
-            }
-            ast::Type::Struct(n) => {
-                for (i, field) in self.ns.structs[*n].fields.iter().enumerate() {
-                    let mut elem = unsafe {
-                        self.builder.build_gep(
-                            dest.into_pointer_value(),
-                            &[
-                                self.context.i32_type().const_zero(),
-                                self.context.i32_type().const_int(i as u64, false),
-                            ],
-                            &field.name,
-                        )
-                    };
-
-                    if field.ty.is_reference_type() {
-                        elem = self
-                            .builder
-                            .build_load(elem, &field.name)
-                            .into_pointer_value();
-                    }
-
-                    self.storage_store(&field.ty, slot, slot_ptr, elem.into(), function, runtime);
-
-                    if !field.ty.is_reference_type() {
-                        *slot = self.builder.build_int_add(
-                            *slot,
-                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                            &field.name,
-                        );
-                    }
-                }
-            }
-            ast::Type::String | ast::Type::DynamicBytes => {
-                runtime.set_storage_string(&self, function, slot_ptr, dest.into_pointer_value());
-            }
-            _ => {
-                self.builder.build_store(slot_ptr, *slot);
-
-                let dest = if dest.is_int_value() {
-                    let m = self.builder.build_alloca(dest.get_type(), "");
-                    self.builder.build_store(m, dest);
-
-                    m
-                } else {
-                    dest.into_pointer_value()
-                };
-
-                // TODO ewasm allocates 32 bytes here, even though we have just
-                // allocated test. This can be folded into one allocation, if llvm
-                // does not already fold it into one.
-                runtime.set_storage(&self, function, slot_ptr, dest);
-            }
-        }
-    }
-
-    /// Recursively clear contract storage
-    fn storage_clear(
-        &self,
-        ty: &ast::Type,
-        slot: &mut IntValue<'a>,
-        slot_ptr: PointerValue<'a>,
-        function: FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
-    ) {
-        match ty.deref_any() {
-            ast::Type::Array(_, dim) => {
-                let ty = ty.array_deref();
-
-                if let Some(d) = &dim[0] {
-                    self.emit_static_loop_with_int(
-                        function,
-                        self.context.i64_type().const_zero(),
-                        self.context
-                            .i64_type()
-                            .const_int(d.to_u64().unwrap(), false),
-                        slot,
-                        |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_clear(&ty, slot, slot_ptr, function, runtime);
-
-                            if !ty.is_reference_type() {
-                                *slot = self.builder.build_int_add(
-                                    *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.ns)),
-                                    "",
-                                );
-                            }
-                        },
-                    );
-                } else {
-                    // dynamic length array.
-                    // load length
-                    self.builder.build_store(slot_ptr, *slot);
-
-                    let slot_ty = self.context.custom_width_int_type(256);
-
-                    let buf = self.builder.build_alloca(slot_ty, "buf");
-
-                    let length = runtime.get_storage_int(self, function, slot_ptr, slot_ty);
-
-                    // we need to hash the length slot in order to get the slot of the first
-                    // entry of the array
-                    runtime.keccak256_hash(
-                        &self,
-                        slot_ptr,
-                        slot.get_type()
-                            .size_of()
-                            .const_cast(self.context.i32_type(), false),
-                        buf,
-                    );
-
-                    let mut entry_slot =
-                        self.builder.build_load(buf, "entry_slot").into_int_value();
-
-                    // now loop from first slot to first slot + length
-                    self.emit_loop_cond_first_with_int(
-                        function,
-                        length.get_type().const_zero(),
-                        length,
-                        &mut entry_slot,
-                        |_index: IntValue<'a>, slot: &mut IntValue<'a>| {
-                            self.storage_clear(&ty, slot, slot_ptr, function, runtime);
-
-                            if !ty.is_reference_type() {
-                                *slot = self.builder.build_int_add(
-                                    *slot,
-                                    self.number_literal(256, &ty.storage_slots(self.ns)),
-                                    "",
-                                );
-                            }
-                        },
-                    );
-
-                    // clear length itself
-                    self.storage_clear(&ast::Type::Uint(256), slot, slot_ptr, function, runtime);
-                }
-            }
-            ast::Type::Struct(n) => {
-                for (_, field) in self.ns.structs[*n].fields.iter().enumerate() {
-                    self.storage_clear(&field.ty, slot, slot_ptr, function, runtime);
-
-                    if !field.ty.is_reference_type() {
-                        *slot = self.builder.build_int_add(
-                            *slot,
-                            self.number_literal(256, &field.ty.storage_slots(self.ns)),
-                            &field.name,
-                        );
-                    }
-                }
-            }
-            ast::Type::Mapping(_, _) => {
-                // nothing to do, step over it
-            }
-            _ => {
-                self.builder.build_store(slot_ptr, *slot);
-
-                runtime.clear_storage(&self, function, slot_ptr);
-            }
-        }
-    }
-
-    /// Emit the contract storage initializers
-    fn emit_initializer(&self, runtime: &mut dyn TargetRuntime) -> FunctionValue<'a> {
-        let function = self.module.add_function(
-            "storage_initializers",
-            self.context.i32_type().fn_type(&[], false),
-            Some(Linkage::Internal),
-        );
-
-        let cfg = &self.contract.cfg[self.contract.initializer.unwrap()];
-
-        self.emit_cfg(cfg, function, runtime);
-
-        function
     }
 
     /// Emit function prototype
@@ -2866,1842 +4913,6 @@ impl<'a> Contract<'a> {
 
         self.module
             .add_function(&cfg.name, ftype, Some(Linkage::Internal))
-    }
-
-    #[allow(clippy::cognitive_complexity)]
-    fn emit_cfg(
-        &self,
-        cfg: &cfg::ControlFlowGraph,
-        function: FunctionValue<'a>,
-        runtime: &mut dyn TargetRuntime,
-    ) {
-        // recurse through basic blocks
-        struct BasicBlock<'a> {
-            bb: inkwell::basic_block::BasicBlock<'a>,
-            phis: HashMap<usize, PhiValue<'a>>,
-        }
-
-        struct Work<'b> {
-            bb_no: usize,
-            vars: HashMap<usize, Variable<'b>>,
-        }
-
-        let mut blocks: HashMap<usize, BasicBlock> = HashMap::new();
-
-        let create_bb = |bb_no| -> BasicBlock {
-            let cfg_bb: &cfg::BasicBlock = &cfg.bb[bb_no];
-            let mut phis = HashMap::new();
-
-            let bb = self.context.append_basic_block(function, &cfg_bb.name);
-
-            self.builder.position_at_end(bb);
-
-            if let Some(ref cfg_phis) = cfg_bb.phis {
-                for v in cfg_phis {
-                    let ty = self.llvm_var(&cfg.vars[v].ty);
-
-                    phis.insert(*v, self.builder.build_phi(ty, &cfg.vars[v].id.name));
-                }
-            }
-
-            BasicBlock { bb, phis }
-        };
-
-        let mut work = VecDeque::new();
-
-        blocks.insert(0, create_bb(0));
-
-        // Create all the stack variables
-        let mut vars = HashMap::new();
-
-        for (no, v) in &cfg.vars {
-            match v.storage {
-                cfg::Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
-                    let ty = self.llvm_type(&v.ty);
-
-                    let p = self
-                        .builder
-                        .build_call(
-                            self.module.get_function("__malloc").unwrap(),
-                            &[ty.size_of()
-                                .unwrap()
-                                .const_cast(self.context.i32_type(), false)
-                                .into()],
-                            &v.id.name,
-                        )
-                        .try_as_basic_value()
-                        .left()
-                        .unwrap();
-
-                    vars.insert(
-                        *no,
-                        Variable {
-                            value: self
-                                .builder
-                                .build_pointer_cast(
-                                    p.into_pointer_value(),
-                                    ty.ptr_type(AddressSpace::Generic),
-                                    &v.id.name,
-                                )
-                                .into(),
-                        },
-                    );
-                }
-                cfg::Storage::Local if v.ty.is_contract_storage() => {
-                    vars.insert(
-                        *no,
-                        Variable {
-                            value: self.context.custom_width_int_type(256).const_zero().into(),
-                        },
-                    );
-                }
-                cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
-                    if v.ty.is_reference_type() =>
-                {
-                    // This needs a placeholder
-                    vars.insert(
-                        *no,
-                        Variable {
-                            value: self.context.bool_type().get_undef().into(),
-                        },
-                    );
-                }
-                cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
-                    let ty = self.llvm_type(&v.ty);
-                    vars.insert(
-                        *no,
-                        Variable {
-                            value: if ty.is_pointer_type() {
-                                ty.into_pointer_type().const_zero().into()
-                            } else {
-                                ty.into_int_type().const_zero().into()
-                            },
-                        },
-                    );
-                }
-            }
-        }
-
-        work.push_back(Work { bb_no: 0, vars });
-
-        while let Some(mut w) = work.pop_front() {
-            let bb = blocks.get(&w.bb_no).unwrap();
-
-            self.builder.position_at_end(bb.bb);
-
-            for (v, phi) in bb.phis.iter() {
-                w.vars.get_mut(v).unwrap().value = (*phi).as_basic_value();
-            }
-
-            for ins in &cfg.bb[w.bb_no].instr {
-                match ins {
-                    cfg::Instr::Return { value } if value.is_empty() => {
-                        self.builder
-                            .build_return(Some(&self.context.i32_type().const_zero()));
-                    }
-                    cfg::Instr::Return { value } => {
-                        let returns_offset = cfg.params.len();
-                        for (i, val) in value.iter().enumerate() {
-                            let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
-                            let retval = self.expression(val, &w.vars, function, runtime);
-
-                            self.builder.build_store(arg.into_pointer_value(), retval);
-                        }
-                        self.builder
-                            .build_return(Some(&self.context.i32_type().const_zero()));
-                    }
-                    cfg::Instr::Set { res, expr } => {
-                        let value_ref = self.expression(expr, &w.vars, function, runtime);
-
-                        w.vars.get_mut(res).unwrap().value = value_ref;
-                    }
-                    cfg::Instr::Eval { expr } => {
-                        self.expression(expr, &w.vars, function, runtime);
-                    }
-                    cfg::Instr::Constant { res, constant } => {
-                        let const_expr = self.contract.variables[*constant]
-                            .initializer
-                            .as_ref()
-                            .unwrap();
-                        let value_ref = self.expression(const_expr, &w.vars, function, runtime);
-
-                        w.vars.get_mut(res).unwrap().value = value_ref;
-                    }
-                    cfg::Instr::Branch { bb: dest } => {
-                        let pos = self.builder.get_insert_block().unwrap();
-
-                        if !blocks.contains_key(&dest) {
-                            blocks.insert(*dest, create_bb(*dest));
-                            work.push_back(Work {
-                                bb_no: *dest,
-                                vars: w.vars.clone(),
-                            });
-                        }
-
-                        let bb = blocks.get(dest).unwrap();
-
-                        for (v, phi) in bb.phis.iter() {
-                            phi.add_incoming(&[(&w.vars[v].value, pos)]);
-                        }
-
-                        self.builder.position_at_end(pos);
-                        self.builder.build_unconditional_branch(bb.bb);
-                    }
-                    cfg::Instr::Store { dest, pos } => {
-                        let value_ref = w.vars[pos].value;
-                        let dest_ref = self
-                            .expression(dest, &w.vars, function, runtime)
-                            .into_pointer_value();
-
-                        self.builder.build_store(dest_ref, value_ref);
-                    }
-                    cfg::Instr::BranchCond {
-                        cond,
-                        true_,
-                        false_,
-                    } => {
-                        let cond = self.expression(cond, &w.vars, function, runtime);
-
-                        let pos = self.builder.get_insert_block().unwrap();
-
-                        let bb_true = {
-                            if !blocks.contains_key(&true_) {
-                                blocks.insert(*true_, create_bb(*true_));
-                                work.push_back(Work {
-                                    bb_no: *true_,
-                                    vars: w.vars.clone(),
-                                });
-                            }
-
-                            let bb = blocks.get(true_).unwrap();
-
-                            for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[(&w.vars[v].value, pos)]);
-                            }
-
-                            bb.bb
-                        };
-
-                        let bb_false = {
-                            if !blocks.contains_key(&false_) {
-                                blocks.insert(*false_, create_bb(*false_));
-                                work.push_back(Work {
-                                    bb_no: *false_,
-                                    vars: w.vars.clone(),
-                                });
-                            }
-
-                            let bb = blocks.get(false_).unwrap();
-
-                            for (v, phi) in bb.phis.iter() {
-                                phi.add_incoming(&[(&w.vars[v].value, pos)]);
-                            }
-
-                            bb.bb
-                        };
-
-                        self.builder.position_at_end(pos);
-                        self.builder.build_conditional_branch(
-                            cond.into_int_value(),
-                            bb_true,
-                            bb_false,
-                        );
-                    }
-                    cfg::Instr::ClearStorage { ty, storage } => {
-                        let mut slot = self
-                            .expression(storage, &w.vars, function, runtime)
-                            .into_int_value();
-                        let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-
-                        self.storage_clear(ty, &mut slot, slot_ptr, function, runtime);
-                    }
-                    cfg::Instr::SetStorage { ty, local, storage } => {
-                        let value = w.vars[local].value;
-
-                        let mut slot = self
-                            .expression(storage, &w.vars, function, runtime)
-                            .into_int_value();
-                        let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-
-                        self.storage_store(ty, &mut slot, slot_ptr, value, function, runtime);
-                    }
-                    cfg::Instr::SetStorageBytes {
-                        local,
-                        storage,
-                        offset,
-                    } => {
-                        let value = w.vars[local].value;
-
-                        let slot = self
-                            .expression(storage, &w.vars, function, runtime)
-                            .into_int_value();
-                        let offset = self
-                            .expression(offset, &w.vars, function, runtime)
-                            .into_int_value();
-                        let slot_ptr = self.builder.build_alloca(slot.get_type(), "slot");
-                        self.builder.build_store(slot_ptr, slot);
-
-                        runtime.set_storage_bytes_subscript(
-                            self,
-                            function,
-                            slot_ptr,
-                            offset,
-                            value.into_int_value(),
-                        );
-                    }
-                    cfg::Instr::PushMemory {
-                        res,
-                        ty,
-                        array,
-                        value,
-                    } => {
-                        let a = w.vars[array].value.into_pointer_value();
-                        let len = unsafe {
-                            self.builder.build_gep(
-                                a,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
-                                "array_len",
-                            )
-                        };
-                        let a = self.builder.build_pointer_cast(
-                            a,
-                            self.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "a",
-                        );
-                        let llvm_ty = self.llvm_type(ty);
-
-                        // Calculate total size for reallocation
-                        let elem_ty = match ty {
-                            ast::Type::Array(..) => match self.llvm_type(&ty.array_elem()) {
-                                elem @ BasicTypeEnum::StructType(_) => {
-                                    // We don't store structs directly in the array, instead we store references to structs
-                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-                                }
-                                elem => elem,
-                            },
-                            ast::Type::DynamicBytes => self.context.i8_type().into(),
-                            _ => unreachable!(),
-                        };
-                        let elem_size = elem_ty
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false);
-                        let len = self.builder.build_load(len, "array_len").into_int_value();
-                        let new_len = self.builder.build_int_add(
-                            len,
-                            self.context.i32_type().const_int(1, false),
-                            "",
-                        );
-                        let vec_size = self
-                            .module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false);
-                        let size = self.builder.build_int_mul(elem_size, new_len, "");
-                        let size = self.builder.build_int_add(size, vec_size, "");
-
-                        // Reallocate and reassign the array pointer
-                        let new = self
-                            .builder
-                            .build_call(
-                                self.module.get_function("__realloc").unwrap(),
-                                &[a.into(), size.into()],
-                                "",
-                            )
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap()
-                            .into_pointer_value();
-                        let dest = self.builder.build_pointer_cast(
-                            new,
-                            llvm_ty.ptr_type(AddressSpace::Generic),
-                            "dest",
-                        );
-                        w.vars.get_mut(array).unwrap().value = dest.into();
-
-                        // Store the value into the last element
-                        let slot_ptr = unsafe {
-                            self.builder.build_gep(
-                                dest,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(2, false),
-                                    self.builder.build_int_mul(len, elem_size, ""),
-                                ],
-                                "data",
-                            )
-                        };
-                        let value = self.expression(value, &w.vars, function, runtime);
-                        let elem_ptr = self.builder.build_pointer_cast(
-                            slot_ptr,
-                            elem_ty.ptr_type(AddressSpace::Generic),
-                            "element pointer",
-                        );
-                        self.builder.build_store(elem_ptr, value);
-                        w.vars.get_mut(res).unwrap().value = value;
-
-                        // Update the len and size field of the vector struct
-                        let len_ptr = unsafe {
-                            self.builder.build_gep(
-                                dest,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
-                                "len",
-                            )
-                        };
-                        let len_field = self.builder.build_pointer_cast(
-                            len_ptr,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "len field",
-                        );
-                        self.builder.build_store(len_field, new_len);
-
-                        let size_ptr = unsafe {
-                            self.builder.build_gep(
-                                dest,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(1, false),
-                                ],
-                                "size",
-                            )
-                        };
-                        let size_field = self.builder.build_pointer_cast(
-                            size_ptr,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "size field",
-                        );
-                        self.builder.build_store(size_field, new_len);
-                    }
-                    cfg::Instr::PopMemory { res, ty, array } => {
-                        let a = w.vars[array].value.into_pointer_value();
-                        let len = unsafe {
-                            self.builder.build_gep(
-                                a,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
-                                "a_len",
-                            )
-                        };
-                        let len = self.builder.build_load(len, "a_len").into_int_value();
-
-                        // First check if the array is empty
-                        let is_array_empty = self.builder.build_int_compare(
-                            IntPredicate::EQ,
-                            len,
-                            self.context.i32_type().const_zero(),
-                            "is_array_empty",
-                        );
-                        let error = self.context.append_basic_block(function, "error");
-                        let pop = self.context.append_basic_block(function, "pop");
-                        self.builder
-                            .build_conditional_branch(is_array_empty, error, pop);
-
-                        self.builder.position_at_end(error);
-                        runtime.assert_failure(
-                            self,
-                            self.context
-                                .i8_type()
-                                .ptr_type(AddressSpace::Generic)
-                                .const_null(),
-                            self.context.i32_type().const_zero(),
-                        );
-
-                        self.builder.position_at_end(pop);
-                        let llvm_ty = self.llvm_type(ty);
-
-                        // Calculate total size for reallocation
-                        let elem_ty = match ty {
-                            ast::Type::Array(..) => match self.llvm_type(&ty.array_elem()) {
-                                elem @ BasicTypeEnum::StructType(_) => {
-                                    // We don't store structs directly in the array, instead we store references to structs
-                                    elem.ptr_type(AddressSpace::Generic).as_basic_type_enum()
-                                }
-                                elem => elem,
-                            },
-                            ast::Type::DynamicBytes => self.context.i8_type().into(),
-                            _ => unreachable!(),
-                        };
-                        let elem_size = elem_ty
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false);
-                        let new_len = self.builder.build_int_sub(
-                            len,
-                            self.context.i32_type().const_int(1, false),
-                            "",
-                        );
-                        let vec_size = self
-                            .module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .size_of()
-                            .unwrap()
-                            .const_cast(self.context.i32_type(), false);
-                        let size = self.builder.build_int_mul(elem_size, new_len, "");
-                        let size = self.builder.build_int_add(size, vec_size, "");
-
-                        // Get the pointer to the last element and return it
-                        let slot_ptr = unsafe {
-                            self.builder.build_gep(
-                                a,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(2, false),
-                                    self.builder.build_int_mul(new_len, elem_size, ""),
-                                ],
-                                "data",
-                            )
-                        };
-                        let slot_ptr = self.builder.build_pointer_cast(
-                            slot_ptr,
-                            elem_ty.ptr_type(AddressSpace::Generic),
-                            "slot_ptr",
-                        );
-                        let ret_val = self.builder.build_load(slot_ptr, "");
-                        w.vars.get_mut(res).unwrap().value = ret_val;
-
-                        // Reallocate and reassign the array pointer
-                        let a = self.builder.build_pointer_cast(
-                            a,
-                            self.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "a",
-                        );
-                        let new = self
-                            .builder
-                            .build_call(
-                                self.module.get_function("__realloc").unwrap(),
-                                &[a.into(), size.into()],
-                                "",
-                            )
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap()
-                            .into_pointer_value();
-                        let dest = self.builder.build_pointer_cast(
-                            new,
-                            llvm_ty.ptr_type(AddressSpace::Generic),
-                            "dest",
-                        );
-                        w.vars.get_mut(array).unwrap().value = dest.into();
-
-                        // Update the len and size field of the vector struct
-                        let len_ptr = unsafe {
-                            self.builder.build_gep(
-                                dest,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
-                                "len",
-                            )
-                        };
-                        let len_field = self.builder.build_pointer_cast(
-                            len_ptr,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "len field",
-                        );
-                        self.builder.build_store(len_field, new_len);
-
-                        let size_ptr = unsafe {
-                            self.builder.build_gep(
-                                dest,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(1, false),
-                                ],
-                                "size",
-                            )
-                        };
-                        let size_field = self.builder.build_pointer_cast(
-                            size_ptr,
-                            self.context.i32_type().ptr_type(AddressSpace::Generic),
-                            "size field",
-                        );
-                        self.builder.build_store(size_field, new_len);
-                    }
-                    cfg::Instr::AssertFailure { expr: None } => {
-                        runtime.assert_failure(
-                            self,
-                            self.context
-                                .i8_type()
-                                .ptr_type(AddressSpace::Generic)
-                                .const_null(),
-                            self.context.i32_type().const_zero(),
-                        );
-                    }
-                    cfg::Instr::AssertFailure { expr: Some(expr) } => {
-                        let v = self.expression(expr, &w.vars, function, runtime);
-
-                        let (data, len) = runtime.abi_encode(
-                            self,
-                            Some(0x08c3_79a0),
-                            false,
-                            function,
-                            &[v],
-                            &[ast::Parameter {
-                                loc: pt::Loc(0, 0, 0),
-                                name: "error".to_owned(),
-                                name_loc: None,
-                                ty: ast::Type::String,
-                                ty_loc: pt::Loc(0, 0, 0),
-                                indexed: false,
-                            }],
-                        );
-
-                        runtime.assert_failure(self, data, len);
-                    }
-                    cfg::Instr::Print { expr } => {
-                        let v = self
-                            .expression(expr, &w.vars, function, runtime)
-                            .into_pointer_value();
-
-                        let data = unsafe {
-                            self.builder.build_gep(
-                                v,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(2, false),
-                                ],
-                                "data",
-                            )
-                        };
-
-                        let data_len = unsafe {
-                            self.builder.build_gep(
-                                v,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
-                                "data_len",
-                            )
-                        };
-
-                        runtime.print(
-                            &self,
-                            self.builder.build_pointer_cast(
-                                data,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "data",
-                            ),
-                            self.builder
-                                .build_load(data_len, "data_len")
-                                .into_int_value(),
-                        );
-                    }
-                    cfg::Instr::Call { res, cfg_no, args } => {
-                        let f = &self.contract.cfg[*cfg_no];
-
-                        let mut parms = args
-                            .iter()
-                            .map(|p| self.expression(p, &w.vars, function, runtime))
-                            .collect::<Vec<BasicValueEnum>>();
-
-                        if !res.is_empty() {
-                            for v in f.returns.iter() {
-                                parms.push(
-                                    self.builder
-                                        .build_alloca(self.llvm_var(&v.ty), &v.name)
-                                        .into(),
-                                );
-                            }
-                        }
-
-                        let ret = self
-                            .builder
-                            .build_call(self.functions[cfg_no], &parms, "")
-                            .try_as_basic_value()
-                            .left()
-                            .unwrap();
-
-                        let success = self.builder.build_int_compare(
-                            IntPredicate::EQ,
-                            ret.into_int_value(),
-                            self.context.i32_type().const_zero(),
-                            "success",
-                        );
-
-                        let success_block = self.context.append_basic_block(function, "success");
-                        let bail_block = self.context.append_basic_block(function, "bail");
-                        self.builder
-                            .build_conditional_branch(success, success_block, bail_block);
-
-                        self.builder.position_at_end(bail_block);
-
-                        self.builder.build_return(Some(&ret));
-                        self.builder.position_at_end(success_block);
-
-                        if !res.is_empty() {
-                            for (i, v) in f.returns.iter().enumerate() {
-                                let val = self.builder.build_load(
-                                    parms[f.params.len() + i].into_pointer_value(),
-                                    &v.name,
-                                );
-
-                                let dest = w.vars[&res[i]].value;
-
-                                if dest.is_pointer_value() && !v.ty.is_reference_type() {
-                                    self.builder.build_store(dest.into_pointer_value(), val);
-                                } else {
-                                    w.vars.get_mut(&res[i]).unwrap().value = val;
-                                }
-                            }
-                        }
-                    }
-                    cfg::Instr::Constructor {
-                        success,
-                        res,
-                        contract_no,
-                        constructor_no,
-                        args,
-                        value,
-                        gas,
-                        salt,
-                    } => {
-                        let args = &args
-                            .iter()
-                            .map(|a| self.expression(&a, &w.vars, function, runtime))
-                            .collect::<Vec<BasicValueEnum>>();
-
-                        let address = self.builder.build_alloca(self.address_type(), "address");
-
-                        let gas = self
-                            .expression(gas, &w.vars, function, runtime)
-                            .into_int_value();
-                        let value = value.as_ref().map(|v| {
-                            self.expression(&v, &w.vars, function, runtime)
-                                .into_int_value()
-                        });
-                        let salt = salt.as_ref().map(|v| {
-                            self.expression(&v, &w.vars, function, runtime)
-                                .into_int_value()
-                        });
-
-                        let success = match success {
-                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
-                            None => None,
-                        };
-
-                        runtime.create_contract(
-                            &self,
-                            function,
-                            success,
-                            *contract_no,
-                            *constructor_no,
-                            self.builder.build_pointer_cast(
-                                address,
-                                self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            ),
-                            args,
-                            gas,
-                            value,
-                            salt,
-                        );
-
-                        w.vars.get_mut(res).unwrap().value =
-                            self.builder.build_load(address, "address");
-                    }
-                    cfg::Instr::ExternalCall {
-                        success,
-                        address,
-                        contract_no,
-                        function_no,
-                        args,
-                        value,
-                        gas,
-                        callty,
-                    } => {
-                        let (payload, payload_len) = match contract_no {
-                            Some(contract_no) => {
-                                let dest_func =
-                                    &self.ns.contracts[*contract_no].functions[*function_no];
-
-                                let selector = dest_func.selector();
-
-                                runtime.abi_encode(
-                                    self,
-                                    Some(if self.ns.target == crate::Target::Ewasm {
-                                        selector.to_be()
-                                    } else {
-                                        selector
-                                    }),
-                                    false,
-                                    function,
-                                    &args
-                                        .iter()
-                                        .map(|a| self.expression(&a, &w.vars, function, runtime))
-                                        .collect::<Vec<BasicValueEnum>>(),
-                                    &dest_func.params,
-                                )
-                            }
-                            None if args.is_empty() => (
-                                self.context
-                                    .i8_type()
-                                    .ptr_type(AddressSpace::Generic)
-                                    .const_null(),
-                                self.context.i32_type().const_zero(),
-                            ),
-                            None => {
-                                let raw = self
-                                    .expression(&args[0], &w.vars, function, runtime)
-                                    .into_pointer_value();
-
-                                let data = unsafe {
-                                    self.builder.build_gep(
-                                        raw,
-                                        &[
-                                            self.context.i32_type().const_zero(),
-                                            self.context.i32_type().const_int(2, false),
-                                        ],
-                                        "rawdata",
-                                    )
-                                };
-
-                                let data_len = unsafe {
-                                    self.builder.build_gep(
-                                        raw,
-                                        &[
-                                            self.context.i32_type().const_zero(),
-                                            self.context.i32_type().const_zero(),
-                                        ],
-                                        "rawdata_len",
-                                    )
-                                };
-
-                                (
-                                    self.builder.build_pointer_cast(
-                                        data,
-                                        self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                        "data",
-                                    ),
-                                    self.builder
-                                        .build_load(data_len, "data_len")
-                                        .into_int_value(),
-                                )
-                            }
-                        };
-                        let address = self
-                            .expression(address, &w.vars, function, runtime)
-                            .into_int_value();
-                        let gas = self
-                            .expression(gas, &w.vars, function, runtime)
-                            .into_int_value();
-                        let value = self
-                            .expression(value, &w.vars, function, runtime)
-                            .into_int_value();
-
-                        let addr = self.builder.build_array_alloca(
-                            self.context.i8_type(),
-                            self.context
-                                .i32_type()
-                                .const_int(self.ns.address_length as u64, false),
-                            "address",
-                        );
-
-                        self.builder.build_store(
-                            self.builder.build_pointer_cast(
-                                addr,
-                                address.get_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            ),
-                            address,
-                        );
-
-                        let ret = runtime.external_call(
-                            self,
-                            payload,
-                            payload_len,
-                            addr,
-                            gas,
-                            value,
-                            callty.clone(),
-                        );
-
-                        let is_success = self.builder.build_int_compare(
-                            IntPredicate::EQ,
-                            ret,
-                            self.context.i32_type().const_zero(),
-                            "success",
-                        );
-
-                        if let Some(success) = success {
-                            w.vars.get_mut(success).unwrap().value = is_success.into();
-                        } else {
-                            let success_block =
-                                self.context.append_basic_block(function, "success");
-                            let bail_block = self.context.append_basic_block(function, "bail");
-                            self.builder.build_conditional_branch(
-                                is_success,
-                                success_block,
-                                bail_block,
-                            );
-                            self.builder.position_at_end(bail_block);
-
-                            self.builder.build_return(Some(&ret));
-
-                            self.builder.position_at_end(success_block);
-                        }
-                    }
-                    cfg::Instr::AbiEncodeVector {
-                        res,
-                        tys,
-                        selector,
-                        packed,
-                        args,
-                    } => {
-                        w.vars.get_mut(res).unwrap().value = runtime
-                            .abi_encode_to_vector(
-                                self,
-                                selector.as_ref().map(|s| {
-                                    self.expression(&s, &w.vars, function, runtime)
-                                        .into_int_value()
-                                }),
-                                function,
-                                *packed,
-                                &args
-                                    .iter()
-                                    .map(|a| self.expression(&a, &w.vars, function, runtime))
-                                    .collect::<Vec<BasicValueEnum>>(),
-                                tys,
-                            )
-                            .into();
-                    }
-                    cfg::Instr::AbiDecode {
-                        res,
-                        selector,
-                        exception,
-                        tys,
-                        data,
-                    } => {
-                        let v = self
-                            .expression(data, &w.vars, function, runtime)
-                            .into_pointer_value();
-
-                        let mut data = unsafe {
-                            self.builder.build_gep(
-                                v,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(2, false),
-                                ],
-                                "data",
-                            )
-                        };
-
-                        let mut data_len = self
-                            .builder
-                            .build_load(
-                                unsafe {
-                                    self.builder.build_gep(
-                                        v,
-                                        &[
-                                            self.context.i32_type().const_zero(),
-                                            self.context.i32_type().const_zero(),
-                                        ],
-                                        "data_len",
-                                    )
-                                },
-                                "data_len",
-                            )
-                            .into_int_value();
-
-                        if let Some(selector) = selector {
-                            let exception = exception.unwrap();
-
-                            let pos = self.builder.get_insert_block().unwrap();
-
-                            blocks.entry(exception).or_insert({
-                                work.push_back(Work {
-                                    bb_no: exception,
-                                    vars: w.vars.clone(),
-                                });
-
-                                create_bb(exception)
-                            });
-
-                            self.builder.position_at_end(pos);
-
-                            let exception_block = blocks.get(&exception).unwrap();
-
-                            let has_selector = self.builder.build_int_compare(
-                                IntPredicate::UGT,
-                                data_len,
-                                self.context.i32_type().const_int(4, false),
-                                "has_selector",
-                            );
-
-                            let ok1 = self.context.append_basic_block(function, "ok1");
-
-                            self.builder.build_conditional_branch(
-                                has_selector,
-                                ok1,
-                                exception_block.bb,
-                            );
-                            self.builder.position_at_end(ok1);
-
-                            let selector_data = self
-                                .builder
-                                .build_load(
-                                    self.builder.build_pointer_cast(
-                                        data,
-                                        self.context.i32_type().ptr_type(AddressSpace::Generic),
-                                        "selector",
-                                    ),
-                                    "selector",
-                                )
-                                .into_int_value();
-
-                            // ewasm stores the selector little endian
-                            let selector = if self.ns.target == crate::Target::Ewasm {
-                                (*selector).to_be()
-                            } else {
-                                *selector
-                            };
-
-                            let correct_selector = self.builder.build_int_compare(
-                                IntPredicate::EQ,
-                                selector_data,
-                                self.context.i32_type().const_int(selector as u64, false),
-                                "correct_selector",
-                            );
-
-                            let ok2 = self.context.append_basic_block(function, "ok2");
-
-                            self.builder.build_conditional_branch(
-                                correct_selector,
-                                ok2,
-                                exception_block.bb,
-                            );
-
-                            self.builder.position_at_end(ok2);
-
-                            data_len = self.builder.build_int_sub(
-                                data_len,
-                                self.context.i32_type().const_int(4, false),
-                                "data_len",
-                            );
-
-                            data = unsafe {
-                                self.builder.build_gep(
-                                    self.builder.build_pointer_cast(
-                                        data,
-                                        self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                        "data",
-                                    ),
-                                    &[self.context.i32_type().const_int(4, false)],
-                                    "data",
-                                )
-                            };
-                        }
-
-                        let mut returns = Vec::new();
-
-                        runtime.abi_decode(self, function, &mut returns, data, data_len, &tys);
-
-                        for (i, ret) in returns.into_iter().enumerate() {
-                            w.vars.get_mut(&res[i]).unwrap().value = ret;
-                        }
-                    }
-                    cfg::Instr::Unreachable => {
-                        self.builder.build_unreachable();
-                    }
-                    cfg::Instr::SelfDestruct { recipient } => {
-                        let recipient = self
-                            .expression(recipient, &w.vars, function, runtime)
-                            .into_int_value();
-
-                        runtime.selfdestruct(self, recipient);
-                    }
-                    cfg::Instr::Hash { res, hash, expr } => {
-                        let v = self
-                            .expression(expr, &w.vars, function, runtime)
-                            .into_pointer_value();
-
-                        let data = unsafe {
-                            self.builder.build_gep(
-                                v,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_int(2, false),
-                                ],
-                                "data",
-                            )
-                        };
-
-                        let data_len = unsafe {
-                            self.builder.build_gep(
-                                v,
-                                &[
-                                    self.context.i32_type().const_zero(),
-                                    self.context.i32_type().const_zero(),
-                                ],
-                                "data_len",
-                            )
-                        };
-
-                        w.vars.get_mut(res).unwrap().value = runtime
-                            .hash(
-                                &self,
-                                hash.clone(),
-                                self.builder.build_pointer_cast(
-                                    data,
-                                    self.context.i8_type().ptr_type(AddressSpace::Generic),
-                                    "data",
-                                ),
-                                self.builder
-                                    .build_load(data_len, "data_len")
-                                    .into_int_value(),
-                            )
-                            .into();
-                    }
-                    cfg::Instr::EmitEvent {
-                        event_no,
-                        data,
-                        data_tys,
-                        topics,
-                        topic_tys,
-                    } => {
-                        let (data_ptr, data_len) = runtime.abi_encode(
-                            self,
-                            None,
-                            false,
-                            function,
-                            &data
-                                .iter()
-                                .map(|a| self.expression(&a, &w.vars, function, runtime))
-                                .collect::<Vec<BasicValueEnum>>(),
-                            data_tys,
-                        );
-
-                        let mut encoded = Vec::new();
-
-                        for (i, topic) in topics.iter().enumerate() {
-                            encoded.push(runtime.abi_encode(
-                                self,
-                                None,
-                                false,
-                                function,
-                                &[self.expression(topic, &w.vars, function, runtime)],
-                                &[topic_tys[i].clone()],
-                            ));
-                        }
-
-                        runtime.send_event(self, *event_no, data_ptr, data_len, encoded);
-                    }
-                }
-            }
-        }
-    }
-
-    /// Create function dispatch based on abi encoded argsdata. The dispatcher loads the leading function selector,
-    /// and dispatches based on that. If no function matches this, or no selector is in the argsdata, then fallback
-    /// code is executed. This is either a fallback block provided to this function, or it automatically dispatches
-    /// to the fallback function or receive function, if any.
-    pub fn emit_function_dispatch<F>(
-        &self,
-        function_ty: pt::FunctionTy,
-        argsdata: inkwell::values::PointerValue<'a>,
-        argslen: inkwell::values::IntValue<'a>,
-        function: inkwell::values::FunctionValue<'a>,
-        fallback: Option<inkwell::basic_block::BasicBlock>,
-        runtime: &mut dyn TargetRuntime,
-        nonpayable: F,
-    ) where
-        F: Fn(&cfg::ControlFlowGraph) -> bool,
-    {
-        // create start function
-        let no_function_matched = match fallback {
-            Some(block) => block,
-            None => self
-                .context
-                .append_basic_block(function, "no_function_matched"),
-        };
-
-        let switch_block = self.context.append_basic_block(function, "switch");
-
-        let not_fallback = self.builder.build_int_compare(
-            IntPredicate::UGE,
-            argslen,
-            self.context.i32_type().const_int(4, false),
-            "",
-        );
-
-        self.builder
-            .build_conditional_branch(not_fallback, switch_block, no_function_matched);
-
-        self.builder.position_at_end(switch_block);
-
-        let fid = self
-            .builder
-            .build_load(argsdata, "function_selector")
-            .into_int_value();
-
-        self.builder
-            .build_store(self.selector.as_pointer_value(), fid);
-
-        // step over the function selector
-        let argsdata = unsafe {
-            self.builder.build_gep(
-                argsdata,
-                &[self.context.i32_type().const_int(1, false)],
-                "argsdata",
-            )
-        };
-
-        let argslen = self.builder.build_int_sub(
-            argslen,
-            self.context.i32_type().const_int(4, false),
-            "argslen",
-        );
-
-        let mut cases = Vec::new();
-
-        for (cfg_no, cfg) in self.contract.cfg.iter().enumerate() {
-            if cfg.ty != function_ty || !cfg.public {
-                continue;
-            }
-
-            self.add_dispatch_case(
-                cfg,
-                &mut cases,
-                argsdata,
-                argslen,
-                function,
-                self.functions[&cfg_no],
-                runtime,
-                &nonpayable,
-            );
-        }
-
-        self.builder.position_at_end(switch_block);
-
-        self.builder.build_switch(fid, no_function_matched, &cases);
-
-        if fallback.is_some() {
-            return; // caller will generate fallback code
-        }
-
-        // emit fallback code
-        self.builder.position_at_end(no_function_matched);
-
-        let fallback = self
-            .contract
-            .cfg
-            .iter()
-            .enumerate()
-            .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Fallback);
-
-        let receive = self
-            .contract
-            .cfg
-            .iter()
-            .enumerate()
-            .find(|(_, cfg)| cfg.public && cfg.ty == pt::FunctionTy::Receive);
-
-        if fallback.is_none() && receive.is_none() {
-            // no need to check value transferred; we will abort either way
-            runtime.return_u32(self, self.context.i32_type().const_int(2, false));
-
-            return;
-        }
-
-        let got_value = if self.function_abort_value_transfers {
-            self.context.bool_type().const_zero()
-        } else {
-            let value = runtime.value_transferred(self);
-
-            self.builder.build_int_compare(
-                IntPredicate::NE,
-                value,
-                self.value_type().const_zero(),
-                "is_value_transfer",
-            )
-        };
-
-        let fallback_block = self.context.append_basic_block(function, "fallback");
-        let receive_block = self.context.append_basic_block(function, "receive");
-
-        self.builder
-            .build_conditional_branch(got_value, receive_block, fallback_block);
-
-        self.builder.position_at_end(fallback_block);
-
-        match fallback {
-            Some((cfg_no, _)) => {
-                self.builder.build_call(self.functions[&cfg_no], &[], "");
-
-                runtime.return_empty_abi(self);
-            }
-            None => {
-                runtime.return_u32(self, self.context.i32_type().const_int(2, false));
-            }
-        }
-
-        self.builder.position_at_end(receive_block);
-
-        match receive {
-            Some((cfg_no, _)) => {
-                self.builder.build_call(self.functions[&cfg_no], &[], "");
-
-                runtime.return_empty_abi(self);
-            }
-            None => {
-                runtime.return_u32(self, self.context.i32_type().const_int(2, false));
-            }
-        }
-    }
-
-    ///Add single case for emit_function_dispatch
-    fn add_dispatch_case<F>(
-        &self,
-        f: &cfg::ControlFlowGraph,
-        cases: &mut Vec<(
-            inkwell::values::IntValue<'a>,
-            inkwell::basic_block::BasicBlock<'a>,
-        )>,
-        argsdata: inkwell::values::PointerValue<'a>,
-        argslen: inkwell::values::IntValue<'a>,
-        function: inkwell::values::FunctionValue<'a>,
-        dest: inkwell::values::FunctionValue<'a>,
-        runtime: &dyn TargetRuntime,
-        nonpayable: &F,
-    ) where
-        F: Fn(&cfg::ControlFlowGraph) -> bool,
-    {
-        let bb = self.context.append_basic_block(function, "");
-
-        self.builder.position_at_end(bb);
-
-        if nonpayable(f) {
-            self.abort_if_value_transfer(runtime, function);
-        }
-
-        let mut args = Vec::new();
-
-        // insert abi decode
-        runtime.abi_decode(&self, function, &mut args, argsdata, argslen, &f.params);
-
-        // add return values as pointer arguments at the end
-        if !f.returns.is_empty() {
-            for v in f.returns.iter() {
-                args.push(if !v.ty.is_reference_type() {
-                    self.builder
-                        .build_alloca(self.llvm_type(&v.ty), &v.name)
-                        .into()
-                } else {
-                    self.builder
-                        .build_alloca(
-                            self.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
-                            &v.name,
-                        )
-                        .into()
-                });
-            }
-        }
-
-        let ret = self
-            .builder
-            .build_call(dest, &args, "")
-            .try_as_basic_value()
-            .left()
-            .unwrap();
-
-        let success = self.builder.build_int_compare(
-            IntPredicate::EQ,
-            ret.into_int_value(),
-            self.context.i32_type().const_zero(),
-            "success",
-        );
-
-        let success_block = self.context.append_basic_block(function, "success");
-        let bail_block = self.context.append_basic_block(function, "bail");
-
-        self.builder
-            .build_conditional_branch(success, success_block, bail_block);
-
-        self.builder.position_at_end(success_block);
-
-        if f.returns.is_empty() {
-            // return ABI of length 0
-            runtime.return_empty_abi(&self);
-        } else {
-            let (data, length) = runtime.abi_encode(
-                &self,
-                None,
-                true,
-                function,
-                &args[f.params.len()..],
-                &f.returns,
-            );
-
-            runtime.return_abi(&self, data, length);
-        }
-
-        self.builder.position_at_end(bail_block);
-
-        runtime.return_u32(self, ret.into_int_value());
-
-        cases.push((
-            self.context.i32_type().const_int(f.selector as u64, false),
-            bb,
-        ));
-    }
-
-    // Generate an unsigned divmod function for the given bitwidth. This is for int sizes which
-    // WebAssembly does not support, i.e. anything over 64.
-    // The builder position is maintained.
-    //
-    // inspired by https://github.com/calccrypto/uint256_t/blob/master/uint256_t.cpp#L397
-    pub fn udivmod(&self, bit: u32, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
-        let name = format!("__udivmod{}", bit);
-        let ty = self.context.custom_width_int_type(bit);
-
-        if let Some(f) = self.module.get_function(&name) {
-            return f;
-        }
-
-        let pos = self.builder.get_insert_block().unwrap();
-
-        // __udivmod256(dividend, divisor, *rem, *quotient) = error
-        let function = self.module.add_function(
-            &name,
-            self.context.i32_type().fn_type(
-                &[
-                    ty.into(),
-                    ty.into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                ],
-                false,
-            ),
-            None,
-        );
-
-        let entry = self.context.append_basic_block(function, "entry");
-
-        self.builder.position_at_end(entry);
-
-        let dividend = function.get_nth_param(0).unwrap().into_int_value();
-        let divisor = function.get_nth_param(1).unwrap().into_int_value();
-        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
-        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
-
-        let error = self.context.append_basic_block(function, "error");
-        let next = self.context.append_basic_block(function, "next");
-        let is_zero = self.builder.build_int_compare(
-            IntPredicate::EQ,
-            divisor,
-            ty.const_zero(),
-            "divisor_is_zero",
-        );
-        self.builder.build_conditional_branch(is_zero, error, next);
-
-        self.builder.position_at_end(error);
-        // throw division by zero error should be an assert
-        runtime.assert_failure(
-            self,
-            self.context
-                .i8_type()
-                .ptr_type(AddressSpace::Generic)
-                .const_null(),
-            self.context.i32_type().const_zero(),
-        );
-
-        self.builder.position_at_end(next);
-        let is_one_block = self.context.append_basic_block(function, "is_one_block");
-        let next = self.context.append_basic_block(function, "next");
-        let is_one = self.builder.build_int_compare(
-            IntPredicate::EQ,
-            divisor,
-            ty.const_int(1, false),
-            "divisor_is_one",
-        );
-        self.builder
-            .build_conditional_branch(is_one, is_one_block, next);
-
-        // return quotient: dividend, rem: 0
-        self.builder.position_at_end(is_one_block);
-        self.builder.build_store(rem, ty.const_zero());
-        self.builder.build_store(quotient_result, dividend);
-        self.builder
-            .build_return(Some(&self.context.i32_type().const_zero()));
-
-        self.builder.position_at_end(next);
-        let is_eq_block = self.context.append_basic_block(function, "is_eq_block");
-        let next = self.context.append_basic_block(function, "next");
-        let is_eq = self
-            .builder
-            .build_int_compare(IntPredicate::EQ, dividend, divisor, "is_eq");
-        self.builder
-            .build_conditional_branch(is_eq, is_eq_block, next);
-
-        // return rem: 0, quotient: 1
-        self.builder.position_at_end(is_eq_block);
-        self.builder.build_store(rem, ty.const_zero());
-        self.builder.build_store(rem, ty.const_zero());
-        self.builder
-            .build_store(quotient_result, ty.const_int(1, false));
-        self.builder
-            .build_return(Some(&self.context.i32_type().const_zero()));
-
-        self.builder.position_at_end(next);
-
-        let is_toobig_block = self.context.append_basic_block(function, "is_toobig_block");
-        let next = self.context.append_basic_block(function, "next");
-        let dividend_is_zero = self.builder.build_int_compare(
-            IntPredicate::EQ,
-            dividend,
-            ty.const_zero(),
-            "dividend_is_zero",
-        );
-        let dividend_lt_divisor = self.builder.build_int_compare(
-            IntPredicate::ULT,
-            dividend,
-            divisor,
-            "dividend_lt_divisor",
-        );
-        self.builder.build_conditional_branch(
-            self.builder
-                .build_or(dividend_is_zero, dividend_lt_divisor, ""),
-            is_toobig_block,
-            next,
-        );
-
-        // return quotient: 0, rem: divisor
-        self.builder.position_at_end(is_toobig_block);
-        self.builder.build_store(rem, dividend);
-        self.builder.build_store(quotient_result, ty.const_zero());
-        self.builder
-            .build_return(Some(&self.context.i32_type().const_zero()));
-
-        self.builder.position_at_end(next);
-
-        let ctlz = self.llvm_ctlz(bit);
-
-        let dividend_bits = self.builder.build_int_sub(
-            ty.const_int(bit as u64 - 1, false),
-            self.builder
-                .build_call(
-                    ctlz,
-                    &[
-                        dividend.into(),
-                        self.context.bool_type().const_int(1, false).into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value(),
-            "dividend_bits",
-        );
-
-        let divisor_bits = self.builder.build_int_sub(
-            ty.const_int(bit as u64 - 1, false),
-            self.builder
-                .build_call(
-                    ctlz,
-                    &[
-                        divisor.into(),
-                        self.context.bool_type().const_int(1, false).into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value(),
-            "dividend_bits",
-        );
-
-        let copyd1 = self.builder.build_left_shift(
-            divisor,
-            self.builder.build_int_sub(dividend_bits, divisor_bits, ""),
-            "copyd",
-        );
-
-        let adder1 = self.builder.build_left_shift(
-            ty.const_int(1, false),
-            self.builder.build_int_sub(dividend_bits, divisor_bits, ""),
-            "adder",
-        );
-
-        let true_block = self.context.append_basic_block(function, "true");
-        let while_cond_block = self.context.append_basic_block(function, "while_cond");
-
-        let comp = self
-            .builder
-            .build_int_compare(IntPredicate::UGT, copyd1, dividend, "");
-
-        self.builder
-            .build_conditional_branch(comp, true_block, while_cond_block);
-
-        self.builder.position_at_end(true_block);
-
-        let copyd2 = self
-            .builder
-            .build_right_shift(copyd1, ty.const_int(1, false), false, "");
-        let adder2 = self
-            .builder
-            .build_right_shift(adder1, ty.const_int(1, false), false, "");
-        self.builder.build_unconditional_branch(while_cond_block);
-
-        let while_body_block = self.context.append_basic_block(function, "while_body");
-        let while_end_block = self.context.append_basic_block(function, "while_post");
-
-        self.builder.position_at_end(while_cond_block);
-
-        let quotient = self.builder.build_phi(ty, "quotient");
-        quotient.add_incoming(&[(&ty.const_zero(), next)]);
-        quotient.add_incoming(&[(&ty.const_zero(), true_block)]);
-
-        let remainder = self.builder.build_phi(ty, "remainder");
-        remainder.add_incoming(&[(&dividend, next)]);
-        remainder.add_incoming(&[(&dividend, true_block)]);
-
-        let copyd = self.builder.build_phi(ty, "copyd");
-        copyd.add_incoming(&[(&copyd1, next), (&copyd2, true_block)]);
-        let adder = self.builder.build_phi(ty, "adder");
-        adder.add_incoming(&[(&adder1, next), (&adder2, true_block)]);
-
-        let loop_cond = self.builder.build_int_compare(
-            IntPredicate::UGE,
-            remainder.as_basic_value().into_int_value(),
-            divisor,
-            "loop_cond",
-        );
-        self.builder
-            .build_conditional_branch(loop_cond, while_body_block, while_end_block);
-
-        self.builder.position_at_end(while_body_block);
-
-        let if_true_block = self.context.append_basic_block(function, "if_true_block");
-        let post_if_block = self.context.append_basic_block(function, "post_if_block");
-
-        self.builder.build_conditional_branch(
-            self.builder.build_int_compare(
-                IntPredicate::UGE,
-                remainder.as_basic_value().into_int_value(),
-                copyd.as_basic_value().into_int_value(),
-                "",
-            ),
-            if_true_block,
-            post_if_block,
-        );
-
-        self.builder.position_at_end(if_true_block);
-
-        let remainder2 = self.builder.build_int_sub(
-            remainder.as_basic_value().into_int_value(),
-            copyd.as_basic_value().into_int_value(),
-            "remainder",
-        );
-        let quotient2 = self.builder.build_or(
-            quotient.as_basic_value().into_int_value(),
-            adder.as_basic_value().into_int_value(),
-            "quotient",
-        );
-
-        self.builder.build_unconditional_branch(post_if_block);
-
-        self.builder.position_at_end(post_if_block);
-
-        let quotient3 = self.builder.build_phi(ty, "quotient3");
-        let remainder3 = self.builder.build_phi(ty, "remainder");
-
-        let copyd3 = self.builder.build_right_shift(
-            copyd.as_basic_value().into_int_value(),
-            ty.const_int(1, false),
-            false,
-            "copyd",
-        );
-        let adder3 = self.builder.build_right_shift(
-            adder.as_basic_value().into_int_value(),
-            ty.const_int(1, false),
-            false,
-            "adder",
-        );
-        copyd.add_incoming(&[(&copyd3, post_if_block)]);
-        adder.add_incoming(&[(&adder3, post_if_block)]);
-
-        quotient3.add_incoming(&[
-            (&quotient2, if_true_block),
-            (&quotient.as_basic_value(), while_body_block),
-        ]);
-        remainder3.add_incoming(&[
-            (&remainder2, if_true_block),
-            (&remainder.as_basic_value(), while_body_block),
-        ]);
-
-        quotient.add_incoming(&[(&quotient3.as_basic_value(), post_if_block)]);
-        remainder.add_incoming(&[(&remainder3.as_basic_value(), post_if_block)]);
-
-        self.builder.build_unconditional_branch(while_cond_block);
-
-        self.builder.position_at_end(while_end_block);
-
-        self.builder
-            .build_store(rem, remainder.as_basic_value().into_int_value());
-        self.builder
-            .build_store(quotient_result, quotient.as_basic_value().into_int_value());
-        self.builder
-            .build_return(Some(&self.context.i32_type().const_zero()));
-
-        self.builder.position_at_end(pos);
-
-        function
-    }
-
-    pub fn sdivmod(&self, bit: u32, runtime: &dyn TargetRuntime) -> FunctionValue<'a> {
-        let name = format!("__sdivmod{}", bit);
-        let ty = self.context.custom_width_int_type(bit);
-
-        if let Some(f) = self.module.get_function(&name) {
-            return f;
-        }
-
-        let pos = self.builder.get_insert_block().unwrap();
-
-        // __sdivmod256(dividend, divisor, *rem, *quotient) -> error
-        let function = self.module.add_function(
-            &name,
-            self.context.i32_type().fn_type(
-                &[
-                    ty.into(),
-                    ty.into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                    ty.ptr_type(AddressSpace::Generic).into(),
-                ],
-                false,
-            ),
-            None,
-        );
-
-        let entry = self.context.append_basic_block(function, "entry");
-
-        self.builder.position_at_end(entry);
-
-        let dividend = function.get_nth_param(0).unwrap().into_int_value();
-        let divisor = function.get_nth_param(1).unwrap().into_int_value();
-        let rem = function.get_nth_param(2).unwrap().into_pointer_value();
-        let quotient_result = function.get_nth_param(3).unwrap().into_pointer_value();
-
-        let dividend_negative = self.builder.build_int_compare(
-            IntPredicate::SLT,
-            dividend,
-            ty.const_zero(),
-            "dividend_negative",
-        );
-        let divisor_negative = self.builder.build_int_compare(
-            IntPredicate::SLT,
-            divisor,
-            ty.const_zero(),
-            "divisor_negative",
-        );
-
-        let dividend_abs = self.builder.build_select(
-            dividend_negative,
-            self.builder.build_int_neg(dividend, "dividen_neg"),
-            dividend,
-            "dividend_abs",
-        );
-
-        let divisor_abs = self.builder.build_select(
-            divisor_negative,
-            self.builder.build_int_neg(divisor, "divisor_neg"),
-            divisor,
-            "divisor_abs",
-        );
-
-        let ret = self
-            .builder
-            .build_call(
-                self.udivmod(bit, runtime),
-                &[
-                    dividend_abs,
-                    divisor_abs,
-                    rem.into(),
-                    quotient_result.into(),
-                ],
-                "quotient",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap();
-
-        let success = self.builder.build_int_compare(
-            IntPredicate::EQ,
-            ret.into_int_value(),
-            self.context.i32_type().const_zero(),
-            "success",
-        );
-
-        let success_block = self.context.append_basic_block(function, "success");
-        let bail_block = self.context.append_basic_block(function, "bail");
-        self.builder
-            .build_conditional_branch(success, success_block, bail_block);
-
-        self.builder.position_at_end(bail_block);
-
-        self.builder.build_return(Some(&ret));
-        self.builder.position_at_end(success_block);
-
-        let quotient = self
-            .builder
-            .build_load(quotient_result, "quotient")
-            .into_int_value();
-
-        let quotient = self.builder.build_select(
-            self.builder.build_int_compare(
-                IntPredicate::NE,
-                dividend_negative,
-                divisor_negative,
-                "two_negatives",
-            ),
-            self.builder.build_int_neg(quotient, "quotient_neg"),
-            quotient,
-            "quotient",
-        );
-
-        let negrem = self.context.append_basic_block(function, "negative_rem");
-        let posrem = self.context.append_basic_block(function, "positive_rem");
-
-        self.builder
-            .build_conditional_branch(dividend_negative, negrem, posrem);
-
-        self.builder.position_at_end(posrem);
-
-        self.builder.build_store(quotient_result, quotient);
-        self.builder
-            .build_return(Some(&self.context.i32_type().const_zero()));
-
-        self.builder.position_at_end(negrem);
-
-        let remainder = self.builder.build_load(rem, "remainder").into_int_value();
-
-        self.builder.build_store(
-            rem,
-            self.builder.build_int_neg(remainder, "negative_remainder"),
-        );
-
-        self.builder.build_store(quotient_result, quotient);
-        self.builder
-            .build_return(Some(&self.context.i32_type().const_zero()));
-
-        self.builder.position_at_end(pos);
-
-        function
     }
 
     pub fn upower(&self, bit: u32) -> FunctionValue<'a> {
