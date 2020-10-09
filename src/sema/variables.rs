@@ -12,10 +12,8 @@ pub fn contract_variables(
 ) -> bool {
     let mut broken = false;
     let mut symtable = Symtable::new();
-    let may_have_state = match def.ty {
-        pt::ContractTy::Interface(_) | pt::ContractTy::Library(_) => false,
-        _ => true,
-    };
+    let may_have_state = !matches!(def.ty,
+        pt::ContractTy::Interface(_) | pt::ContractTy::Library(_));
 
     for parts in &def.parts {
         if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {

@@ -173,27 +173,18 @@ impl Function {
 
     /// Does this function have the payable state
     pub fn is_payable(&self) -> bool {
-        if let Some(pt::StateMutability::Payable(_)) = self.mutability {
-            true
-        } else {
-            false
-        }
+        matches!(self.mutability, Some(pt::StateMutability::Payable(_)))
     }
 
     /// Is this function accessable externally
     pub fn is_public(&self) -> bool {
-        match self.visibility {
-            pt::Visibility::Public(_) | pt::Visibility::External(_) => true,
-            _ => false,
-        }
+        matches!(self.visibility,
+            pt::Visibility::Public(_) | pt::Visibility::External(_))
     }
 
     /// Is this function accessable only from same contract
     pub fn is_private(&self) -> bool {
-        match self.visibility {
-            pt::Visibility::Private(_) => true,
-            _ => false,
-        }
+        matches!(self.visibility, pt::Visibility::Private(_))
     }
 
     /// Return a unique string for this function which is a valid llvm symbol
@@ -292,11 +283,7 @@ pub struct ContractVariable {
 
 impl ContractVariable {
     pub fn is_storage(&self) -> bool {
-        if let ContractVariableType::Storage = self.var {
-            true
-        } else {
-            false
-        }
+        matches!(self.var, ContractVariableType::Storage)
     }
 }
 
@@ -380,29 +367,17 @@ pub struct Contract {
 impl Contract {
     // Is this a concrete contract, which can be instantiated
     pub fn is_concrete(&self) -> bool {
-        if let pt::ContractTy::Contract(_) = self.ty {
-            true
-        } else {
-            false
-        }
+        matches!(self.ty, pt::ContractTy::Contract(_))
     }
 
     // Is this an interface
     pub fn is_interface(&self) -> bool {
-        if let pt::ContractTy::Interface(_) = self.ty {
-            true
-        } else {
-            false
-        }
+        matches!(self.ty, pt::ContractTy::Interface(_))
     }
 
     // Is this an library
     pub fn is_library(&self) -> bool {
-        if let pt::ContractTy::Library(_) = self.ty {
-            true
-        } else {
-            false
-        }
+        matches!(self.ty, pt::ContractTy::Library(_))
     }
 
     /// Get the storage slot for a variable, possibly from base contract
@@ -897,11 +872,7 @@ impl Statement {
 
     /// Shorthand for checking underscore
     pub fn is_underscore(&self) -> bool {
-        if let Statement::Underscore(_) = &self {
-            true
-        } else {
-            false
-        }
+        matches!(&self, Statement::Underscore(_))
     }
 
     pub fn reachable(&self) -> bool {

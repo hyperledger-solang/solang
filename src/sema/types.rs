@@ -866,22 +866,17 @@ impl Type {
     /// compatible with ethereum solidity. Opinions on whether other types should be
     /// allowed be storage are welcome.
     pub fn can_have_data_location(&self) -> bool {
-        match self {
+        matches!(self,
             Type::Array(_, _)
             | Type::Struct(_)
             | Type::Mapping(_, _)
             | Type::String
-            | Type::DynamicBytes => true,
-            _ => false,
-        }
+            | Type::DynamicBytes)
     }
 
     /// Is this a reference to contract storage?
     pub fn is_contract_storage(&self) -> bool {
-        match self {
-            Type::StorageRef(_) => true,
-            _ => false,
-        }
+        matches!(self, Type::StorageRef(_))
     }
 
     /// Is this a storage bytes string

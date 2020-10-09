@@ -71,9 +71,9 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
     ns.contracts[contract_no]
         .functions
         .iter()
-        .filter(|f| match f.visibility {
-            pt::Visibility::Public(_) | pt::Visibility::External(_) => true,
-            _ => false,
+        .filter(|f| {
+            matches!(f.visibility,
+            pt::Visibility::Public(_) | pt::Visibility::External(_))
         })
         .map(|f| ABI {
             name: f.name.to_owned(),
