@@ -1151,11 +1151,7 @@ impl ast::Symbol {
             ast::Symbol::Variable(_, contract_no, var_no) => {
                 let visibility = &ns.contracts[*contract_no].variables[*var_no].visibility;
 
-                if let pt::Visibility::Private(_) = visibility {
-                    true
-                } else {
-                    false
-                }
+                matches!(visibility, pt::Visibility::Private(_))
             }
             _ => false,
         }
