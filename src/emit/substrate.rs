@@ -374,16 +374,10 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_get_storage",
-            contract.context.i32_type().fn_type(
-                &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // key_ptr
-                ],
-                false,
-            ),
+            contract
+                .context
+                .i32_type()
+                .fn_type(&[u8_ptr, u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
@@ -1719,18 +1713,31 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        let ty_len = ty.size_of().const_cast(contract.context.i32_type(), false);
+        contract.builder.build_store(scratch_len, ty_len);
+
         let exists = contract
             .builder
             .build_call(
                 contract.module.get_function("ext_get_storage").unwrap(),
-                &[contract
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into()],
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
                 "",
             )
             .try_as_basic_value()
@@ -1756,25 +1763,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         contract.builder.position_at_end(retrieve_block);
 
-        let dest = contract.builder.build_alloca(ty, "int");
-
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        dest,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-                ty.size_of()
-                    .const_cast(contract.context.i32_type(), false)
-                    .into(),
-            ],
-            "",
+        let dest = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            ty.ptr_type(AddressSpace::Generic),
+            "scratch_ty_buf",
         );
 
         let loaded_int = contract.builder.build_load(dest, "int");
@@ -1797,21 +1789,66 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
+        let exists = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_get_storage").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        let length = contract.builder.build_select(
+            exists,
+            contract.builder.build_load(scratch_len, "string_len"),
+            contract.context.i32_type().const_zero().into(),
+            "string_length",
+        );
+
         contract
             .builder
             .build_call(
-                contract
-                    .module
-                    .get_function("substrate_get_string")
-                    .unwrap(),
-                &[contract
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into()],
+                contract.module.get_function("vector_new").unwrap(),
+                &[
+                    length,
+                    contract.context.i32_type().const_int(1, false).into(),
+                    scratch_buf.into(),
+                ],
                 "",
             )
             .try_as_basic_value()
@@ -1824,17 +1861,29 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn get_storage_bytes_subscript(
         &self,
         contract: &Contract<'a>,
-        _function: FunctionValue,
+        function: FunctionValue,
         slot: PointerValue<'a>,
         index: IntValue<'a>,
     ) -> IntValue<'a> {
-        contract
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
+        let exists = contract
             .builder
             .build_call(
-                contract
-                    .module
-                    .get_function("substrate_get_string_subscript")
-                    .unwrap(),
+                contract.module.get_function("ext_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -1844,29 +1893,173 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                             "",
                         )
                         .into(),
-                    index.into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
                 ],
                 "",
             )
             .try_as_basic_value()
             .left()
-            .unwrap()
+            .unwrap();
+
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        let length = contract
+            .builder
+            .build_select(
+                exists,
+                contract.builder.build_load(scratch_len, "string_len"),
+                contract.context.i32_type().const_zero().into(),
+                "string_length",
+            )
+            .into_int_value();
+
+        // do bounds check on index
+        let in_range =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::ULT, index, length, "index_in_range");
+
+        let retrieve_block = contract.context.append_basic_block(function, "in_range");
+        let bang_block = contract.context.append_basic_block(function, "bang_block");
+
+        contract
+            .builder
+            .build_conditional_branch(in_range, retrieve_block, bang_block);
+
+        contract.builder.position_at_end(bang_block);
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(retrieve_block);
+
+        let offset = unsafe {
+            contract.builder.build_gep(
+                contract.scratch.unwrap().as_pointer_value(),
+                &[contract.context.i32_type().const_zero(), index],
+                "data_offset",
+            )
+        };
+
+        contract
+            .builder
+            .build_load(offset, "value")
             .into_int_value()
     }
 
     fn set_storage_bytes_subscript(
         &self,
         contract: &Contract,
-        _function: FunctionValue,
+        function: FunctionValue,
         slot: PointerValue,
         index: IntValue,
         val: IntValue,
     ) {
-        contract.builder.build_call(
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
             contract
-                .module
-                .get_function("substrate_set_string_subscript")
-                .unwrap(),
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
+        let exists = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_get_storage").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        let length = contract
+            .builder
+            .build_select(
+                exists,
+                contract.builder.build_load(scratch_len, "string_len"),
+                contract.context.i32_type().const_zero().into(),
+                "string_length",
+            )
+            .into_int_value();
+
+        // do bounds check on index
+        let in_range =
+            contract
+                .builder
+                .build_int_compare(IntPredicate::ULT, index, length, "index_in_range");
+
+        let retrieve_block = contract.context.append_basic_block(function, "in_range");
+        let bang_block = contract.context.append_basic_block(function, "bang_block");
+
+        contract
+            .builder
+            .build_conditional_branch(in_range, retrieve_block, bang_block);
+
+        contract.builder.position_at_end(bang_block);
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(retrieve_block);
+
+        let offset = unsafe {
+            contract.builder.build_gep(
+                contract.scratch.unwrap().as_pointer_value(),
+                &[contract.context.i32_type().const_zero(), index],
+                "data_offset",
+            )
+        };
+
+        // set the result
+        contract.builder.build_store(offset, val);
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -1876,8 +2069,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
-                index.into(),
-                val.into(),
+                scratch_buf.into(),
+                length.into(),
             ],
             "",
         );
@@ -1891,11 +2084,82 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         slot: PointerValue,
         val: IntValue,
     ) {
-        contract.builder.build_call(
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        // Since we are going to add one byte, we set the buffer length to one less. This will
+        // trap for us if it does not fit, so we don't have to code this ourselves
+        contract.builder.build_store(
+            scratch_len,
             contract
-                .module
-                .get_function("substrate_bytes_push")
-                .unwrap(),
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64 - 1, false),
+        );
+
+        let exists = contract
+            .builder
+            .build_call(
+                contract.module.get_function("ext_get_storage").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        let length = contract
+            .builder
+            .build_select(
+                exists,
+                contract.builder.build_load(scratch_len, "string_len"),
+                contract.context.i32_type().const_zero().into(),
+                "string_length",
+            )
+            .into_int_value();
+
+        // set the result
+        let offset = unsafe {
+            contract.builder.build_gep(
+                contract.scratch.unwrap().as_pointer_value(),
+                &[contract.context.i32_type().const_zero(), length],
+                "data_offset",
+            )
+        };
+
+        contract.builder.build_store(offset, val);
+
+        // Set the new length
+        let length = contract.builder.build_int_add(
+            length,
+            contract.context.i32_type().const_int(1, false),
+            "new_length",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -1905,7 +2169,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
-                val.into(),
+                scratch_buf.into(),
+                length.into(),
             ],
             "",
         );
@@ -1915,27 +2180,126 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn storage_bytes_pop(
         &self,
         contract: &Contract<'a>,
-        _function: FunctionValue,
+        function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> IntValue<'a> {
-        contract
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
+        let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("substrate_bytes_pop").unwrap(),
-                &[contract
+                contract.module.get_function("ext_get_storage").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        let length = contract
+            .builder
+            .build_select(
+                exists,
+                contract.builder.build_load(scratch_len, "string_len"),
+                contract.context.i32_type().const_zero().into(),
+                "string_length",
+            )
+            .into_int_value();
+
+        // do bounds check on index
+        let in_range = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            contract.context.i32_type().const_zero(),
+            length,
+            "index_in_range",
+        );
+
+        let retrieve_block = contract.context.append_basic_block(function, "in_range");
+        let bang_block = contract.context.append_basic_block(function, "bang_block");
+
+        contract
+            .builder
+            .build_conditional_branch(in_range, retrieve_block, bang_block);
+
+        contract.builder.position_at_end(bang_block);
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
+
+        contract.builder.position_at_end(retrieve_block);
+
+        let offset = unsafe {
+            contract.builder.build_gep(
+                contract.scratch.unwrap().as_pointer_value(),
+                &[contract.context.i32_type().const_zero(), length],
+                "data_offset",
+            )
+        };
+
+        let val = contract.builder.build_load(offset, "popped_value");
+
+        // Set the new length
+        let new_length = contract.builder.build_int_sub(
+            length,
+            contract.context.i32_type().const_int(1, false),
+            "new_length",
+        );
+
+        contract.builder.build_call(
+            contract.module.get_function("ext_set_storage").unwrap(),
+            &[
+                contract
                     .builder
                     .build_pointer_cast(
                         slot,
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "",
                     )
-                    .into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value()
+                    .into(),
+                scratch_buf.into(),
+                new_length.into(),
+            ],
+            "",
+        );
+
+        val.into_int_value()
     }
 
     /// Calculate length of storage dynamic bytes
@@ -1945,26 +2309,58 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         _function: FunctionValue,
         slot: PointerValue<'a>,
     ) -> IntValue<'a> {
-        contract
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
+        let exists = contract
             .builder
             .build_call(
-                contract
-                    .module
-                    .get_function("substrate_string_length")
-                    .unwrap(),
-                &[contract
-                    .builder
-                    .build_pointer_cast(
-                        slot,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into()],
+                contract.module.get_function("ext_get_storage").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
                 "",
             )
             .try_as_basic_value()
             .left()
-            .unwrap()
+            .unwrap();
+
+        let exists = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            contract.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        contract
+            .builder
+            .build_select(
+                exists,
+                contract.builder.build_load(scratch_len, "string_len"),
+                contract.context.i32_type().const_zero().into(),
+                "string_length",
+            )
             .into_int_value()
     }
 

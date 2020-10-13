@@ -227,9 +227,11 @@ impl Externals for TestRuntime {
                 Ok(None)
             }
             Some(SubstrateExternal::ext_get_storage) => {
-                assert_eq!(args.len(), 1);
+                assert_eq!(args.len(), 3);
 
                 let key_ptr: u32 = args.nth_checked(0)?;
+                let dest_ptr: u32 = args.nth_checked(1)?;
+                let len_ptr: u32 = args.nth_checked(2)?;
 
                 let mut key: StorageKey = [0; 32];
 
@@ -238,8 +240,27 @@ impl Externals for TestRuntime {
                 }
 
                 if let Some(value) = self.store.get(&(self.vm.address, key)) {
-                    self.vm.scratch = value.clone();
-                    println!("ext_get_storage: {:?} = {:?}", key, self.vm.scratch);
+                    println!("ext_get_storage: {:?} = {:?}", key, value);
+
+                    let len = self
+                        .vm
+                        .memory
+                        .get_value::<u32>(len_ptr)
+                        .expect("ext_get_storage len_ptr should be valid");
+
+                    if (len as usize) < value.len() {
+                        panic!("ext_get_storage buffer is too small");
+                    }
+
+                    if let Err(e) = self.vm.memory.set(dest_ptr, &value) {
+                        panic!("ext_get_storage: {}", e);
+                    }
+
+                    self.vm
+                        .memory
+                        .set_value(len_ptr, value.len() as u32)
+                        .expect("ext_get_storage len_ptr should be valid");
+
                     Ok(Some(RuntimeValue::I32(0)))
                 } else {
                     self.vm.scratch.clear();
