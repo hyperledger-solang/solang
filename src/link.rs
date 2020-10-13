@@ -105,6 +105,20 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
         }
     }
 
+    // remove empty initializers
+    if let Some(data_section) = module.data_section_mut() {
+        let entries = data_section.entries_mut();
+        let mut index = 0;
+
+        while index < entries.len() {
+            if entries[index].value().iter().all(|b| *b == 0) {
+                entries.remove(index);
+            } else {
+                index += 1;
+            }
+        }
+    }
+
     module.clear_custom_section("linking");
 
     let mut linked = builder::module().with_module(module);

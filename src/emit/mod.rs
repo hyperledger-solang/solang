@@ -990,7 +990,7 @@ pub trait TargetRuntime<'a> {
                         &codegen_contract.name
                     ),
                     &wasm,
-                    false,
+                    true,
                 );
 
                 let v = contract
@@ -4676,6 +4676,7 @@ impl<'a> Contract<'a> {
 
         if constant {
             gv.set_constant(true);
+            gv.set_unnamed_addr(true);
         }
 
         self.builder.build_pointer_cast(
