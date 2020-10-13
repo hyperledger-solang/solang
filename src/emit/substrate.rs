@@ -424,55 +424,82 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_address",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_balance",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_minimum_balance",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_block_number",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_now",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_tombstone_deposit",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
-            "ext_gas_price",
-            contract.context.void_type().fn_type(&[u64_val], false),
+            "ext_weight_to_fee",
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u64_val, u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_gas_left",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
         contract.module.add_function(
             "ext_caller",
-            contract.context.void_type().fn_type(&[], false),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
@@ -2860,14 +2887,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         if let Some(value) = value {
             contract.builder.build_store(value_ptr, value);
         } else {
-            contract.builder.build_call(
-                contract.module.get_function("ext_minimum_balance").unwrap(),
-                &[],
-                "minimum_balance",
+            let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+            contract.builder.build_store(
+                scratch_len,
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.value_length as u64, false),
             );
 
             contract.builder.build_call(
-                contract.module.get_function("ext_scratch_read").unwrap(),
+                contract.module.get_function("ext_minimum_balance").unwrap(),
                 &[
                     contract
                         .builder
@@ -2877,12 +2908,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                             "",
                         )
                         .into(),
-                    contract.context.i32_type().const_zero().into(),
-                    contract
-                        .context
-                        .i32_type()
-                        .const_int(contract.ns.value_length as u64, false)
-                        .into(),
+                    scratch_len.into(),
                 ],
                 "minimum_balance",
             );
@@ -3227,79 +3253,73 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     /// Substrate value is usually 128 bits
     fn balance<'b>(&self, contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
-        let value = contract
-            .builder
-            .build_alloca(contract.value_type(), "balance");
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(contract.ns.value_length as u64, false),
+        );
 
         contract.builder.build_call(
             contract.module.get_function("ext_balance").unwrap(),
-            &[],
-            "balance",
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        value,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(contract.ns.value_length as u64, false)
-                    .into(),
-            ],
+            &[scratch_buf.into(), scratch_len.into()],
             "balance",
         );
 
         contract
             .builder
-            .build_load(value, "balance")
+            .build_load(
+                contract.builder.build_pointer_cast(
+                    scratch_buf,
+                    contract.value_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                "balance",
+            )
             .into_int_value()
     }
 
-    /// Substrate value is usually 128 bits
+    /// Substrate address is usually 256 bits
     fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        let value = contract
-            .builder
-            .build_alloca(contract.address_type(), "self_address");
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
-        contract.builder.build_call(
-            contract.module.get_function("ext_address").unwrap(),
-            &[],
-            "self_address",
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(contract.ns.address_length as u64, false),
         );
 
         contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        value,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(contract.ns.address_length as u64, false)
-                    .into(),
-            ],
-            "self_address",
+            contract.module.get_function("ext_address").unwrap(),
+            &[scratch_buf.into(), scratch_len.into()],
+            "address",
         );
 
         contract
             .builder
-            .build_load(value, "self_address")
+            .build_load(
+                contract.builder.build_pointer_cast(
+                    scratch_buf,
+                    contract.address_type().ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                "self_address",
+            )
             .into_int_value()
     }
 
@@ -3505,38 +3525,38 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) -> BasicValueEnum<'b> {
         macro_rules! get_seal_value {
             ($name:literal, $func:literal, $width:expr) => {{
-                let value = contract
-                    .builder
-                    .build_alloca(contract.context.custom_width_int_type($width), $name);
+                let scratch_buf = contract.builder.build_pointer_cast(
+                    contract.scratch.unwrap().as_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+                contract.builder.build_store(
+                    scratch_len,
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int($width as u64 / 8, false),
+                );
 
                 contract.builder.build_call(
                     contract.module.get_function($func).unwrap(),
-                    &[],
+                    &[scratch_buf.into(), scratch_len.into()],
                     $name,
                 );
 
-                contract.builder.build_call(
-                    contract.module.get_function("ext_scratch_read").unwrap(),
-                    &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                value,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        contract.context.i32_type().const_zero().into(),
+                contract.builder.build_load(
+                    contract.builder.build_pointer_cast(
+                        scratch_buf,
                         contract
                             .context
-                            .i32_type()
-                            .const_int($width as u64 / 8, false)
-                            .into(),
-                    ],
+                            .custom_width_int_type($width)
+                            .ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
                     $name,
-                );
-
-                contract.builder.build_load(value, $name)
+                )
             }};
         };
 
@@ -3649,41 +3669,38 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         .into_int_value()
                 };
 
-                let value_length = contract.ns.value_length as u32 * 8;
+                let scratch_buf = contract.builder.build_pointer_cast(
+                    contract.scratch.unwrap().as_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
-                let value = contract.builder.build_alloca(
-                    contract.context.custom_width_int_type(value_length),
-                    "price",
+                contract.builder.build_store(
+                    scratch_len,
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.value_length as u64, false),
                 );
 
                 contract.builder.build_call(
-                    contract.module.get_function("ext_gas_price").unwrap(),
-                    &[gas.into()],
+                    contract.module.get_function("ext_weight_to_fee").unwrap(),
+                    &[gas.into(), scratch_buf.into(), scratch_len.into()],
                     "gas_price",
                 );
 
-                contract.builder.build_call(
-                    contract.module.get_function("ext_scratch_read").unwrap(),
-                    &[
-                        contract
-                            .builder
-                            .build_pointer_cast(
-                                value,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        contract.context.i32_type().const_zero().into(),
+                contract.builder.build_load(
+                    contract.builder.build_pointer_cast(
+                        scratch_buf,
                         contract
                             .context
-                            .i32_type()
-                            .const_int(value_length as u64 / 8, false)
-                            .into(),
-                    ],
+                            .custom_width_int_type(contract.ns.value_length as u32 * 8)
+                            .ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
                     "price",
-                );
-
-                contract.builder.build_load(value, "price")
+                )
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
                 get_seal_value!("caller", "ext_caller", 256)
