@@ -263,7 +263,6 @@ impl Externals for TestRuntime {
 
                     Ok(Some(RuntimeValue::I32(0)))
                 } else {
-                    self.vm.scratch.clear();
                     println!("ext_get_storage: {:?} = nil", key);
                     Ok(Some(RuntimeValue::I32(1)))
                 }
@@ -454,6 +453,8 @@ impl Externals for TestRuntime {
             Some(SubstrateExternal::ext_random) => {
                 let data_ptr: u32 = args.nth_checked(0)?;
                 let len: u32 = args.nth_checked(1)?;
+                let dest_ptr: u32 = args.nth_checked(2)?;
+                let len_ptr: u32 = args.nth_checked(3)?;
 
                 let mut buf = Vec::new();
                 buf.resize(len as usize, 0u8);
@@ -466,9 +467,26 @@ impl Externals for TestRuntime {
 
                 hash.copy_from_slice(blake2_rfc::blake2b::blake2b(32, &[], &buf).as_bytes());
 
-                println!("ext_random: {}", hex::encode(&hash));
+                println!("ext_random: {} {}", hex::encode(buf), hex::encode(&hash));
 
-                self.vm.scratch = hash.to_vec();
+                let len = self
+                    .vm
+                    .memory
+                    .get_value::<u32>(len_ptr)
+                    .expect("ext_random len_ptr should be valid");
+
+                if (len as usize) < hash.len() {
+                    panic!("ext_random dest buffer is too small");
+                }
+
+                if let Err(e) = self.vm.memory.set(dest_ptr, &hash) {
+                    panic!("ext_random: {}", e);
+                }
+
+                self.vm
+                    .memory
+                    .set_value(len_ptr, hash.len() as u32)
+                    .expect("ext_random len_ptr should be valid");
 
                 Ok(None)
             }

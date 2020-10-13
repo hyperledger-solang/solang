@@ -306,17 +306,10 @@ impl SubstrateTarget {
 
         contract.module.add_function(
             "ext_random",
-            contract.context.void_type().fn_type(
-                &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // subject_ptr
-                    contract.context.i32_type().into(), // subject_len
-                ],
-                false,
-            ),
+            contract
+                .context
+                .void_type()
+                .fn_type(&[u8_ptr, u32_val, u8_ptr, u32_ptr], false),
             Some(Linkage::External),
         );
 
@@ -2805,36 +2798,39 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         if let Some(salt) = salt {
             args.push(salt.into());
         } else {
-            let salt = contract
-                .builder
-                .build_alloca(contract.llvm_type(&salt_ty), "salt");
-
             let (ptr, len) = self.contract_unique_salt(contract, contract_no);
 
-            contract.builder.build_call(
-                contract.module.get_function("ext_random").unwrap(),
-                &[ptr.into(), len.into()],
-                "random",
+            let scratch_buf = contract.builder.build_pointer_cast(
+                contract.scratch.unwrap().as_pointer_value(),
+                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                "scratch_buf",
+            );
+            let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+            contract.builder.build_store(
+                scratch_len,
+                contract.context.i32_type().const_int(32, false),
             );
 
             contract.builder.build_call(
-                contract.module.get_function("ext_scratch_read").unwrap(),
+                contract.module.get_function("ext_random").unwrap(),
                 &[
-                    contract
-                        .builder
-                        .build_pointer_cast(
-                            salt,
-                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into(),
-                    contract.context.i32_type().const_zero().into(),
-                    contract.context.i32_type().const_int(32, false).into(),
+                    ptr.into(),
+                    len.into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
                 ],
                 "random",
             );
 
-            args.push(contract.builder.build_load(salt, "salt"));
+            args.push(contract.builder.build_load(
+                contract.builder.build_pointer_cast(
+                    scratch_buf,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "salt_buf",
+                ),
+                "salt",
+            ));
         }
 
         params.push(ast::Parameter {
@@ -3732,6 +3728,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     )
                 };
 
+                let scratch_buf = contract.builder.build_pointer_cast(
+                    contract.scratch.unwrap().as_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+                contract.builder.build_store(
+                    scratch_len,
+                    contract.context.i32_type().const_int(32, false),
+                );
+
                 contract.builder.build_call(
                     contract.module.get_function("ext_random").unwrap(),
                     &[
@@ -3744,32 +3752,23 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                             )
                             .into(),
                         contract.builder.build_load(subject_len, "subject_len"),
+                        scratch_buf.into(),
+                        scratch_len.into(),
                     ],
                     "random",
                 );
 
-                let hash = contract
-                    .builder
-                    .build_alloca(contract.context.custom_width_int_type(256), "hash");
-
-                contract.builder.build_call(
-                    contract.module.get_function("ext_scratch_read").unwrap(),
-                    &[
+                contract.builder.build_load(
+                    contract.builder.build_pointer_cast(
+                        scratch_buf,
                         contract
-                            .builder
-                            .build_pointer_cast(
-                                hash,
-                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        contract.context.i32_type().const_zero().into(),
-                        contract.context.i32_type().const_int(32, false).into(),
-                    ],
-                    "random",
-                );
-
-                contract.builder.build_load(hash, "hash")
+                            .context
+                            .custom_width_int_type(256)
+                            .ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "hash",
+                )
             }
             _ => unimplemented!(),
         }
