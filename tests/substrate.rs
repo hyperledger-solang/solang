@@ -105,7 +105,7 @@ enum SubstrateExternal {
     ext_hash_blake2_256,
     ext_block_number,
     ext_now,
-    ext_gas_price,
+    ext_weight_to_fee,
     ext_gas_left,
     ext_caller,
     ext_tombstone_deposit,
@@ -156,6 +156,31 @@ impl Externals for TestRuntime {
         index: usize,
         args: RuntimeArgs,
     ) -> Result<Option<RuntimeValue>, Trap> {
+        macro_rules! set_seal_value {
+            ($name:literal, $dest_ptr:expr, $len_ptr:expr, $buf:expr) => {{
+                println!("{}: {}", $name, hex::encode($buf));
+
+                let len = self
+                    .vm
+                    .memory
+                    .get_value::<u32>($len_ptr)
+                    .expect(&format!("{} len_ptr should be valid", $name));
+
+                if (len as usize) < $buf.len() {
+                    panic!("{} input is {} buffer is {}", $name, $buf.len(), len);
+                }
+
+                if let Err(e) = self.vm.memory.set($dest_ptr, $buf) {
+                    panic!("{}: {}", $name, e);
+                }
+
+                self.vm
+                    .memory
+                    .set_value($len_ptr, $buf.len() as u32)
+                    .expect(&format!("{} len_ptr should be valid", $name));
+            }};
+        }
+
         match FromPrimitive::from_usize(index) {
             Some(SubstrateExternal::ext_input) => {
                 let dest_ptr: u32 = args.nth_checked(0)?;
@@ -675,97 +700,100 @@ impl Externals for TestRuntime {
 
                 let scratch = self.vm.value.to_le_bytes().to_vec();
 
-                println!("ext_value_transferred: {}", hex::encode(&scratch));
-
-                let len = self
-                    .vm
-                    .memory
-                    .get_value::<u32>(len_ptr)
-                    .expect("ext_value_transferred len_ptr should be valid");
-
-                if (len as usize) < scratch.len() {
-                    panic!(
-                        "input is {} ext_value_transferred buffer {}",
-                        self.vm.input.len(),
-                        len
-                    );
-                }
-
-                if let Err(e) = self.vm.memory.set(dest_ptr, &scratch) {
-                    panic!("ext_value_transferred: {}", e);
-                }
-
-                self.vm
-                    .memory
-                    .set_value(len_ptr, scratch.len() as u32)
-                    .expect("ext_value_transferred len_ptr should be valid");
+                set_seal_value!("ext_value_transferred", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_address) => {
-                self.vm.scratch = self.vm.address.to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_address: {}", hex::encode(&self.vm.scratch));
+                let scratch = self.vm.address.to_vec();
+
+                set_seal_value!("ext_address", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_caller) => {
-                self.vm.scratch = self.vm.caller.to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_caller: {}", hex::encode(&self.vm.scratch));
+                let scratch = self.vm.caller.to_vec();
+
+                set_seal_value!("ext_caller", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_balance) => {
-                self.vm.scratch = self.accounts[&self.vm.address].1.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_balance: {}", hex::encode(&self.vm.scratch));
+                let scratch = self.accounts[&self.vm.address].1.to_le_bytes().to_vec();
+
+                set_seal_value!("ext_balance", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_minimum_balance) => {
-                self.vm.scratch = 500u128.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_minimum_balance: {}", hex::encode(&self.vm.scratch));
+                let scratch = 500u128.to_le_bytes().to_vec();
+
+                set_seal_value!("ext_minimum_balance", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_block_number) => {
-                self.vm.scratch = 950_119_597u32.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_block_number: {}", hex::encode(&self.vm.scratch));
+                let scratch = 950_119_597u32.to_le_bytes().to_vec();
+
+                set_seal_value!("ext_block_number", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_now) => {
-                self.vm.scratch = 1594035638000u64.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_now: {}", hex::encode(&self.vm.scratch));
+                let scratch = 1594035638000u64.to_le_bytes().to_vec();
+
+                set_seal_value!("ext_now", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_gas_left) => {
-                self.vm.scratch = 2_224_097_461u64.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_gas_left: {}", hex::encode(&self.vm.scratch));
+                let scratch = 2_224_097_461u64.to_le_bytes().to_vec();
+
+                set_seal_value!("ext_gas_left", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
-            Some(SubstrateExternal::ext_gas_price) => {
+            Some(SubstrateExternal::ext_weight_to_fee) => {
                 let units: u64 = args.nth_checked(0)?;
+                let dest_ptr: u32 = args.nth_checked(1)?;
+                let len_ptr: u32 = args.nth_checked(2)?;
 
-                self.vm.scratch = (59_541_253_813_967u128 * units as u128)
+                let scratch = (59_541_253_813_967u128 * units as u128)
                     .to_le_bytes()
                     .to_vec();
 
-                println!("ext_gas_price: {}", hex::encode(&self.vm.scratch));
+                set_seal_value!("ext_weight_to_fee", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
             Some(SubstrateExternal::ext_tombstone_deposit) => {
-                self.vm.scratch = 93_603_701_976_053u128.to_le_bytes().to_vec();
+                let dest_ptr: u32 = args.nth_checked(0)?;
+                let len_ptr: u32 = args.nth_checked(1)?;
 
-                println!("ext_tombstone_deposit: {}", hex::encode(&self.vm.scratch));
+                let scratch = 93_603_701_976_053u128.to_le_bytes().to_vec();
+
+                set_seal_value!("ext_tombstone_deposit", dest_ptr, len_ptr, &scratch);
 
                 Ok(None)
             }
@@ -878,7 +906,7 @@ impl ModuleImportResolver for TestRuntime {
             "ext_terminate" => SubstrateExternal::ext_terminate,
             "ext_block_number" => SubstrateExternal::ext_block_number,
             "ext_now" => SubstrateExternal::ext_now,
-            "ext_gas_price" => SubstrateExternal::ext_gas_price,
+            "ext_weight_to_fee" => SubstrateExternal::ext_weight_to_fee,
             "ext_gas_left" => SubstrateExternal::ext_gas_left,
             "ext_caller" => SubstrateExternal::ext_caller,
             "ext_tombstone_deposit" => SubstrateExternal::ext_tombstone_deposit,
