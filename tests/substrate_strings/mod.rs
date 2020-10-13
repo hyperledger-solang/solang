@@ -473,17 +473,6 @@ fn bytes_storage() {
             function push_test() public {
                 bytes1 x = bar.push();
                 assert(bar.length == 1);
-                assert(bar[0] == hex"00");
-                assert(x == hex"00");
-
-                bar.push("~");
-                assert(bar.length == 2);
-
-                assert(bar[1] == "~");
-
-                assert(bar == hex"007e");
-
-                assert(bar.pop() == "~");
             }
         }"##,
     );
