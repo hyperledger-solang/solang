@@ -30,11 +30,11 @@ fn celcius_and_fahrenheit() {
 
     runtime.function("celcius2fahrenheit", Val(10).encode());
 
-    assert_eq!(runtime.vm.scratch, Val(50).encode());
+    assert_eq!(runtime.vm.output, Val(50).encode());
 
     runtime.function("fahrenheit2celcius", Val(50).encode());
 
-    assert_eq!(runtime.vm.scratch, Val(10).encode());
+    assert_eq!(runtime.vm.output, Val(10).encode());
 }
 
 #[test]
@@ -75,11 +75,11 @@ fn digits() {
 
     runtime.function("digitslen", Val64(1234567).encode());
 
-    assert_eq!(runtime.vm.scratch, Val32(7).encode());
+    assert_eq!(runtime.vm.output, Val32(7).encode());
 
     runtime.function("sumdigits", Val64(123456789).encode());
 
-    assert_eq!(runtime.vm.scratch, Val32(45).encode());
+    assert_eq!(runtime.vm.output, Val32(45).encode());
 }
 
 #[test]
@@ -123,7 +123,7 @@ fn large_loops() {
     let mut rets = Val64(7000000000).encode();
     rets.resize(32, 0);
 
-    assert_eq!(runtime.vm.scratch, rets);
+    assert_eq!(runtime.vm.output, rets);
 }
 
 #[test]
@@ -226,15 +226,15 @@ fn expressions() {
 
     runtime.function("add_100", Val16(0xffc0).encode());
 
-    assert_eq!(runtime.vm.scratch, Val16(36).encode());
+    assert_eq!(runtime.vm.output, Val16(36).encode());
 
     runtime.function("clear_digit", Val8(25).encode());
 
-    assert_eq!(runtime.vm.scratch, Val8(20).encode());
+    assert_eq!(runtime.vm.output, Val8(20).encode());
 
     runtime.function("low_digit", Val8(25).encode());
 
-    assert_eq!(runtime.vm.scratch, Val8(5).encode());
+    assert_eq!(runtime.vm.output, Val8(5).encode());
 
     runtime.function("test_comparisons", Vec::new());
 
@@ -482,7 +482,7 @@ fn divisions128() {
 
     runtime.function("return_neg", Vec::new());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.output[..]) {
         assert_eq!(r, -100);
     } else {
         panic!();
@@ -490,7 +490,7 @@ fn divisions128() {
 
     runtime.function("return_pos", Vec::new());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.output[..]) {
         assert_eq!(r, 255);
     } else {
         panic!();
@@ -498,7 +498,7 @@ fn divisions128() {
 
     runtime.function("do_div", Args(-9900, -100).encode());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.output[..]) {
         assert_eq!(r, 99);
     } else {
         panic!();
@@ -506,7 +506,7 @@ fn divisions128() {
 
     runtime.function("do_div", Args(-101213131318098987, -100000).encode());
 
-    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.scratch[..]) {
+    if let Ok(Rets(r)) = Rets::decode(&mut &runtime.vm.output[..]) {
         assert_eq!(r, 1012131313180);
     } else {
         panic!();
@@ -572,7 +572,7 @@ fn complement() {
 
     runtime.function("do_complement", args);
 
-    let ret = runtime.vm.scratch;
+    let ret = runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.into_iter().filter(|x| *x == 255).count() == 32);
@@ -618,7 +618,7 @@ fn bitwise() {
 
     runtime.function("do_xor", args);
 
-    let ret = &runtime.vm.scratch;
+    let ret = &runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -629,7 +629,7 @@ fn bitwise() {
 
     runtime.function("do_or", args);
 
-    let ret = &runtime.vm.scratch;
+    let ret = &runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -640,7 +640,7 @@ fn bitwise() {
 
     runtime.function("do_and", args);
 
-    let ret = &runtime.vm.scratch;
+    let ret = &runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
@@ -725,7 +725,7 @@ fn assign_bitwise() {
 
     runtime.function("do_xor", args);
 
-    let ret = &runtime.vm.scratch;
+    let ret = &runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -736,7 +736,7 @@ fn assign_bitwise() {
 
     runtime.function("do_or", args);
 
-    let ret = &runtime.vm.scratch;
+    let ret = &runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 255).count() == 32);
@@ -747,7 +747,7 @@ fn assign_bitwise() {
 
     runtime.function("do_and", args);
 
-    let ret = &runtime.vm.scratch;
+    let ret = &runtime.vm.output;
 
     assert!(ret.len() == 32);
     assert!(ret.iter().filter(|x| **x == 0).count() == 32);
@@ -917,7 +917,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(1024).encode());
+    assert_eq!(runtime.vm.output, Val(1024).encode());
 
     // n ** 1 = n
     let args = Val(2345)
@@ -928,7 +928,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(2345).encode());
+    assert_eq!(runtime.vm.output, Val(2345).encode());
 
     // n ** 0 = 0
     let args = Val(0xdead_beef)
@@ -939,7 +939,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.output, Val(1).encode());
 
     // 0 ** n = 0
     let args = Val(0)
@@ -950,7 +950,7 @@ fn power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(0).encode());
+    assert_eq!(runtime.vm.output, Val(0).encode());
 
     let ns = parse_and_resolve(
         "contract test {
@@ -1019,7 +1019,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(1024).encode());
+    assert_eq!(runtime.vm.output, Val(1024).encode());
 
     // n ** 1 = n
     let args = Val(2345)
@@ -1030,7 +1030,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(2345).encode());
+    assert_eq!(runtime.vm.output, Val(2345).encode());
 
     // n ** 0 = 0
     let args = Val(0xdeadbeef)
@@ -1041,7 +1041,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.output, Val(1).encode());
 
     // 0 ** n = 0
     let args = Val(0)
@@ -1052,7 +1052,7 @@ fn large_power() {
 
     runtime.function("power", args);
 
-    assert_eq!(runtime.vm.scratch, Val(0).encode());
+    assert_eq!(runtime.vm.output, Val(0).encode());
 
     // 10 ** 36 = 1000000000000000000000000000000000000
     let args = Val(10)
@@ -1064,7 +1064,7 @@ fn large_power() {
     runtime.function("power", args);
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Val(1000000000000000000000000000000000000).encode()
     );
 }
@@ -1106,9 +1106,9 @@ fn multiply() {
             a_data.into_iter().chain(b_data.into_iter()).collect(),
         );
 
-        println!("out: res:{:?}", runtime.vm.scratch);
+        println!("out: res:{:?}", runtime.vm.output);
 
-        let res = BigInt::from_bytes_le(Sign::Plus, &runtime.vm.scratch);
+        let res = BigInt::from_bytes_le(Sign::Plus, &runtime.vm.output);
 
         println!("{} = {} * {}", res, a, b);
 
@@ -1117,7 +1117,7 @@ fn multiply() {
         let (_, mut res) = (a * b).to_bytes_le();
         res.resize(size, 0);
 
-        assert_eq!(res, runtime.vm.scratch);
+        assert_eq!(res, runtime.vm.output);
     }
 }
 
@@ -1185,18 +1185,18 @@ fn bytes_bitwise() {
     runtime.function("or", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes5([0x81, 0x81, 0x81, 0x81, 0x01]).encode()
     );
 
     runtime.function("and", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
-    assert_eq!(runtime.vm.scratch, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
+    assert_eq!(runtime.vm.output, Bytes5([0x01, 0x01, 0, 0, 0]).encode());
 
     runtime.function("xor", Bytes5([0x01, 0x01, 0x01, 0x01, 0x01]).encode());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes5([0xfe, 0x01, 0x01, 0x01, 0x01]).encode()
     );
 
@@ -1204,14 +1204,14 @@ fn bytes_bitwise() {
     runtime.function("shift_left", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
     );
 
     runtime.function("shift_right", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
     );
 
@@ -1219,14 +1219,14 @@ fn bytes_bitwise() {
     runtime.function("shift_left2", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes5([0x7d, 0x03, 0x00, 0x00, 0x00]).encode()
     );
 
     runtime.function("shift_right2", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes5([0x00, 0xf3, 0x7d, 0x03, 0x00]).encode()
     );
 
@@ -1236,14 +1236,14 @@ fn bytes_bitwise() {
     // complement
     runtime.function("complement", Bytes3([0xf3, 0x7d, 0x03]).encode());
 
-    assert_eq!(runtime.vm.scratch, Bytes3([0x0c, 0x82, 0xfc]).encode());
+    assert_eq!(runtime.vm.output, Bytes3([0x0c, 0x82, 0xfc]).encode());
 
     // array access
     let bytes7 = *b"NAWABRA";
     for i in 0..6 {
         runtime.function("bytes_array", BytesArray(bytes7, i).encode());
 
-        assert_eq!(runtime.vm.scratch, [bytes7[i as usize]]);
+        assert_eq!(runtime.vm.output, [bytes7[i as usize]]);
     }
 }
 
@@ -1423,25 +1423,25 @@ fn destructure() {
             function test() public {
                 int a;
                 int b;
-        
+
                 // test one
                 (a, b) = (102, 3);
-        
+
                 assert(b == 3 && a == 102);
 
                 // test missing one
                 (a, , b) = (1, 2, 3);
-                
+
                 assert(a == 1 && b == 3);
 
                 // test single one
                 (a) = 5;
-        
+
                 assert(a == 5);
-        
+
                 // or like so
                 (a) = (105);
-        
+
                 assert(a == 105);
             }
 
@@ -1451,10 +1451,10 @@ fn destructure() {
 
                 // test one
                 (a, b) = (102, 3);
-        
+
                 // test swap
                 (b, a) = (a, b);
-        
+
                 assert(a == 3 && b == 102);
             }
         }"#,
@@ -1471,22 +1471,22 @@ fn destructure() {
             function test() public {
                 // test one
                 (int32 a, int32 b) = (102, 3);
-        
+
                 assert(b == 3 && a == 102);
 
                 // test missing one
                 (a, , b) = (1, 2, 3);
-                
+
                 assert(a == 1 && b == 3);
 
                 // test single one
                 (a) = 5;
-        
+
                 assert(a == 5);
-        
+
                 // or like so
                 (a) = (105);
-        
+
                 assert(a == 105);
             }
         }"#,

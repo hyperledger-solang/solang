@@ -23,7 +23,7 @@ fn various_constants() {
 
     runtime.function("foo", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, FooReturn(2).encode());
+    assert_eq!(runtime.vm.output, FooReturn(2).encode());
 
     // parse
     let mut runtime = build_solidity(
@@ -37,7 +37,7 @@ fn various_constants() {
 
     runtime.function("foo", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, FooReturn(0xdead_cafe).encode());
+    assert_eq!(runtime.vm.output, FooReturn(0xdead_cafe).encode());
 
     // parse
     let mut runtime = build_solidity(
@@ -51,7 +51,7 @@ fn various_constants() {
 
     runtime.function("foo", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, FooReturn(1000).encode());
+    assert_eq!(runtime.vm.output, FooReturn(1000).encode());
 
     // parse
     let mut runtime = build_solidity(
@@ -65,7 +65,7 @@ fn various_constants() {
 
     runtime.function("foo", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Foo64Return(-7000).encode());
+    assert_eq!(runtime.vm.output, Foo64Return(-7000).encode());
 
     // parse
     let mut runtime = build_solidity(
@@ -80,7 +80,7 @@ fn various_constants() {
     runtime.function("foo", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Foo64Return(-0x7afe_dead_deed_cafe).encode()
     );
 }
@@ -229,16 +229,16 @@ fn bytes() {
 
     runtime.function("const3", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Bytes3([0x11, 0x22, 0x33]).encode());
+    assert_eq!(runtime.vm.output, Bytes3([0x11, 0x22, 0x33]).encode());
 
     runtime.function("const4", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Bytes4(*b"ABCD").encode());
+    assert_eq!(runtime.vm.output, Bytes4(*b"ABCD").encode());
 
     runtime.function("const32", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes32(*b"The quick brown fox jumped over ").encode()
     );
 
@@ -248,16 +248,16 @@ fn bytes() {
     // Casting to larger bytesN should insert stuff on the right
     runtime.function("test7", Bytes7(*b"1234567").encode());
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bytes32(*b"1234567\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").encode()
     );
 
     runtime.function("test3", Bytes3(*b"XYZ").encode());
-    assert_eq!(runtime.vm.scratch, Bytes7(*b"XYZ\0\0\0\0").encode());
+    assert_eq!(runtime.vm.output, Bytes7(*b"XYZ\0\0\0\0").encode());
 
     // truncating should drop values on the right
     runtime.function("test7trunc", Bytes7(*b"XYWOLEH").encode());
-    assert_eq!(runtime.vm.scratch, Bytes3(*b"XYW").encode());
+    assert_eq!(runtime.vm.output, Bytes3(*b"XYW").encode());
 }
 
 #[test]
@@ -363,7 +363,7 @@ fn address() {
     runtime.function("check_return", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Address([
             0x20, 0xb3, 0x42, 0x67, 0xbc, 0x91, 0x37, 0x1c, 0x5C, 0x33, 0xb8, 0x58, 0xD0, 0x77,
             0x3F, 0x45, 0x25, 0xe0, 0xd2, 0xa7, 0x43, 0x76, 0x25, 0x8c, 0x33, 0xda, 0xca, 0x4A,

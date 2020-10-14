@@ -64,31 +64,31 @@ impl SubstrateTarget {
         c.internalize(&[
             "deploy",
             "call",
-            "ext_input",
-            "ext_set_storage",
-            "ext_get_storage",
-            "ext_clear_storage",
-            "ext_hash_keccak_256",
-            "ext_hash_sha2_256",
-            "ext_hash_blake2_128",
-            "ext_hash_blake2_256",
-            "ext_return",
-            "ext_println",
-            "ext_instantiate",
-            "ext_call",
-            "ext_value_transferred",
-            "ext_minimum_balance",
-            "ext_random",
-            "ext_address",
-            "ext_balance",
-            "ext_block_number",
-            "ext_now",
-            "ext_gas_price",
-            "ext_gas_left",
-            "ext_caller",
-            "ext_tombstone_deposit",
-            "ext_terminate",
-            "ext_deposit_event",
+            "seal_input",
+            "seal_set_storage",
+            "seal_get_storage",
+            "seal_clear_storage",
+            "seal_hash_keccak_256",
+            "seal_hash_sha2_256",
+            "seal_hash_blake2_128",
+            "seal_hash_blake2_256",
+            "seal_return",
+            "seal_println",
+            "seal_instantiate",
+            "seal_call",
+            "seal_value_transferred",
+            "seal_minimum_balance",
+            "seal_random",
+            "seal_address",
+            "seal_balance",
+            "seal_block_number",
+            "seal_now",
+            "seal_gas_price",
+            "seal_gas_left",
+            "seal_caller",
+            "seal_tombstone_deposit",
+            "seal_terminate",
+            "seal_deposit_event",
         ]);
 
         c
@@ -133,7 +133,7 @@ impl SubstrateTarget {
         );
 
         contract.builder.build_call(
-            contract.module.get_function("ext_input").unwrap(),
+            contract.module.get_function("seal_input").unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "",
         );
@@ -169,7 +169,7 @@ impl SubstrateTarget {
         let u64_val = contract.context.i64_type().into();
 
         contract.module.add_function(
-            "ext_input",
+            "seal_input",
             contract
                 .context
                 .void_type()
@@ -178,7 +178,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_hash_keccak_256",
+            "seal_hash_keccak_256",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -199,7 +199,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_hash_sha2_256",
+            "seal_hash_sha2_256",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -220,7 +220,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_hash_blake2_128",
+            "seal_hash_blake2_128",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -241,7 +241,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_hash_blake2_256",
+            "seal_hash_blake2_256",
             contract.context.void_type().fn_type(
                 &[
                     contract
@@ -262,7 +262,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_random",
+            "seal_random",
             contract
                 .context
                 .void_type()
@@ -271,7 +271,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_set_storage",
+            "seal_set_storage",
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr,  // key_ptr
@@ -284,7 +284,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_println",
+            "seal_println",
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr,  // string_ptr
@@ -296,7 +296,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_clear_storage",
+            "seal_clear_storage",
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr, // key_ptr
@@ -307,7 +307,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_get_storage",
+            "seal_get_storage",
             contract
                 .context
                 .i32_type()
@@ -316,7 +316,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_return",
+            "seal_return",
             contract.context.void_type().fn_type(
                 &[
                     u32_val, u8_ptr, u32_val, // flags, data ptr, and len
@@ -327,7 +327,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_instantiate",
+            "seal_instantiate",
             contract.context.i32_type().fn_type(
                 &[
                     u8_ptr, u32_val, // code hash ptr and len
@@ -343,7 +343,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_call",
+            "seal_call",
             contract.context.i32_type().fn_type(
                 &[
                     u8_ptr, u32_val, // address ptr and len
@@ -358,7 +358,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_value_transferred",
+            "seal_value_transferred",
             contract
                 .context
                 .void_type()
@@ -367,7 +367,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_address",
+            "seal_address",
             contract
                 .context
                 .void_type()
@@ -376,7 +376,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_balance",
+            "seal_balance",
             contract
                 .context
                 .void_type()
@@ -385,7 +385,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_minimum_balance",
+            "seal_minimum_balance",
             contract
                 .context
                 .void_type()
@@ -394,7 +394,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_block_number",
+            "seal_block_number",
             contract
                 .context
                 .void_type()
@@ -403,7 +403,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_now",
+            "seal_now",
             contract
                 .context
                 .void_type()
@@ -412,7 +412,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_tombstone_deposit",
+            "seal_tombstone_deposit",
             contract
                 .context
                 .void_type()
@@ -421,7 +421,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_weight_to_fee",
+            "seal_weight_to_fee",
             contract
                 .context
                 .void_type()
@@ -430,7 +430,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_gas_left",
+            "seal_gas_left",
             contract
                 .context
                 .void_type()
@@ -439,7 +439,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_caller",
+            "seal_caller",
             contract
                 .context
                 .void_type()
@@ -448,7 +448,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_terminate",
+            "seal_terminate",
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr, u32_val, // address ptr and len
@@ -459,7 +459,7 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_deposit_event",
+            "seal_deposit_event",
             contract.context.void_type().fn_type(
                 &[
                     u8_ptr, u32_val, // topic ptr and len
@@ -1574,7 +1574,7 @@ impl SubstrateTarget {
 impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn clear_storage(&self, contract: &Contract, _function: FunctionValue, slot: PointerValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_clear_storage").unwrap(),
+            contract.module.get_function("seal_clear_storage").unwrap(),
             &[contract
                 .builder
                 .build_pointer_cast(
@@ -1596,7 +1596,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     ) {
         // TODO: check for non-zero
         contract.builder.build_call(
-            contract.module.get_function("ext_set_storage").unwrap(),
+            contract.module.get_function("seal_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -1658,7 +1658,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         // TODO: check for non-zero
         contract.builder.build_call(
-            contract.module.get_function("ext_set_storage").unwrap(),
+            contract.module.get_function("seal_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -1702,7 +1702,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -1784,7 +1784,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -1860,7 +1860,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -1962,7 +1962,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -2036,7 +2036,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         contract.builder.build_store(offset, val);
 
         contract.builder.build_call(
-            contract.module.get_function("ext_set_storage").unwrap(),
+            contract.module.get_function("seal_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -2081,7 +2081,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -2136,7 +2136,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         contract.builder.build_call(
-            contract.module.get_function("ext_set_storage").unwrap(),
+            contract.module.get_function("seal_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -2178,7 +2178,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -2260,7 +2260,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         contract.builder.build_call(
-            contract.module.get_function("ext_set_storage").unwrap(),
+            contract.module.get_function("seal_set_storage").unwrap(),
             &[
                 contract
                     .builder
@@ -2304,7 +2304,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let exists = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_get_storage").unwrap(),
+                contract.module.get_function("seal_get_storage").unwrap(),
                 &[
                     contract
                         .builder
@@ -2343,7 +2343,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn return_empty_abi(&self, contract: &Contract) {
         contract.builder.build_call(
-            contract.module.get_function("ext_return").unwrap(),
+            contract.module.get_function("seal_return").unwrap(),
             &[
                 contract.context.i32_type().const_zero().into(),
                 contract
@@ -2382,7 +2382,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         dest: PointerValue,
     ) {
         contract.builder.build_call(
-            contract.module.get_function("ext_hash_keccak_256").unwrap(),
+            contract
+                .module
+                .get_function("seal_hash_keccak_256")
+                .unwrap(),
             &[
                 contract
                     .builder
@@ -2408,7 +2411,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_return").unwrap(),
+            contract.module.get_function("seal_return").unwrap(),
             &[
                 contract.context.i32_type().const_zero().into(),
                 data.into(),
@@ -2422,7 +2425,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_return").unwrap(),
+            contract.module.get_function("seal_return").unwrap(),
             &[
                 contract.context.i32_type().const_int(1, false).into(),
                 data.into(),
@@ -2758,7 +2761,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_println").unwrap(),
+            contract.module.get_function("seal_println").unwrap(),
             &[string_ptr.into(), string_len.into()],
             "",
         );
@@ -2807,7 +2810,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
 
             contract.builder.build_call(
-                contract.module.get_function("ext_random").unwrap(),
+                contract.module.get_function("seal_random").unwrap(),
                 &[
                     ptr.into(),
                     len.into(),
@@ -2870,7 +2873,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
 
             contract.builder.build_call(
-                contract.module.get_function("ext_minimum_balance").unwrap(),
+                contract
+                    .module
+                    .get_function("seal_minimum_balance")
+                    .unwrap(),
                 &[
                     contract
                         .builder
@@ -2924,14 +2930,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 .const_int(SCRATCH_SIZE as u64, false),
         );
 
-        // ext_instantiate returns 0x0100 if the contract cannot be instantiated
+        // seal_instantiate returns 0x0100 if the contract cannot be instantiated
         // due to insufficient funds, etc. If the return value is < 0x100, then
         // this is return value from the constructor (or deploy function) of
         // the contract
         let ret = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_instantiate").unwrap(),
+                contract.module.get_function("seal_instantiate").unwrap(),
                 &[
                     codehash.into(),
                     contract.context.i32_type().const_int(32, false).into(),
@@ -3040,7 +3046,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let ret = contract
             .builder
             .build_call(
-                contract.module.get_function("ext_call").unwrap(),
+                contract.module.get_function("seal_call").unwrap(),
                 &[
                     address.into(),
                     contract
@@ -3164,7 +3170,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         contract.builder.build_call(
             contract
                 .module
-                .get_function("ext_value_transferred")
+                .get_function("seal_value_transferred")
                 .unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "value_transferred",
@@ -3201,7 +3207,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         contract.builder.build_call(
-            contract.module.get_function("ext_balance").unwrap(),
+            contract.module.get_function("seal_balance").unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "balance",
         );
@@ -3237,7 +3243,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         contract.builder.build_call(
-            contract.module.get_function("ext_address").unwrap(),
+            contract.module.get_function("seal_address").unwrap(),
             &[scratch_buf.into(), scratch_len.into()],
             "address",
         );
@@ -3264,7 +3270,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         contract.builder.build_store(address, addr);
 
         contract.builder.build_call(
-            contract.module.get_function("ext_terminate").unwrap(),
+            contract.module.get_function("seal_terminate").unwrap(),
             &[
                 contract
                     .builder
@@ -3293,11 +3299,11 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         input_len: IntValue<'b>,
     ) -> IntValue<'b> {
         let (fname, hashlen) = match hash {
-            HashTy::Keccak256 => ("ext_hash_keccak_256", 32),
+            HashTy::Keccak256 => ("seal_hash_keccak_256", 32),
             HashTy::Ripemd160 => ("ripemd160", 20),
-            HashTy::Sha256 => ("ext_hash_sha2_256", 32),
-            HashTy::Blake2_128 => ("ext_hash_blake2_128", 16),
-            HashTy::Blake2_256 => ("ext_hash_blake2_256", 32),
+            HashTy::Sha256 => ("seal_hash_sha2_256", 32),
+            HashTy::Blake2_128 => ("seal_hash_blake2_128", 16),
+            HashTy::Blake2_256 => ("seal_hash_blake2_256", 32),
         };
 
         let res = contract.builder.build_array_alloca(
@@ -3412,7 +3418,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
             for (ptr, len) in topics {
                 contract.builder.build_call(
-                    contract.module.get_function("ext_hash_blake2_256").unwrap(),
+                    contract
+                        .module
+                        .get_function("seal_hash_blake2_256")
+                        .unwrap(),
                     &[ptr.into(), len.into(), dest.into()],
                     "hash",
                 );
@@ -3436,7 +3445,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         };
 
         contract.builder.build_call(
-            contract.module.get_function("ext_deposit_event").unwrap(),
+            contract.module.get_function("seal_deposit_event").unwrap(),
             &[
                 topic_buf.into(),
                 topic_size.into(),
@@ -3544,7 +3553,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
                 // retrieve the data
                 contract.builder.build_call(
-                    contract.module.get_function("ext_input").unwrap(),
+                    contract.module.get_function("seal_input").unwrap(),
                     &[
                         contract
                             .builder
@@ -3563,7 +3572,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             }
             ast::Expression::Builtin(_, _, ast::Builtin::BlockNumber, _) => {
                 let block_number =
-                    get_seal_value!("block_number", "ext_block_number", 32).into_int_value();
+                    get_seal_value!("block_number", "seal_block_number", 32).into_int_value();
 
                 // Cast to 64 bit
                 contract
@@ -3576,7 +3585,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Timestamp, _) => {
-                let milliseconds = get_seal_value!("timestamp", "ext_now", 64).into_int_value();
+                let milliseconds = get_seal_value!("timestamp", "seal_now", 64).into_int_value();
 
                 // Solidity expects the timestamp in seconds, not milliseconds
                 contract
@@ -3589,7 +3598,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     .into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Gasleft, _) => {
-                get_seal_value!("gas_left", "ext_gas_left", 64)
+                get_seal_value!("gas_left", "seal_gas_left", 64)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Gasprice, expr) => {
                 // gasprice is available as "tx.gasprice" which will give you the price for one unit
@@ -3617,7 +3626,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 contract.builder.build_call(
-                    contract.module.get_function("ext_weight_to_fee").unwrap(),
+                    contract.module.get_function("seal_weight_to_fee").unwrap(),
                     &[gas.into(), scratch_buf.into(), scratch_len.into()],
                     "gas_price",
                 );
@@ -3635,19 +3644,19 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                get_seal_value!("caller", "ext_caller", 256)
+                get_seal_value!("caller", "seal_caller", 256)
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
                 self.value_transferred(contract).into()
             }
             ast::Expression::Builtin(_, _, ast::Builtin::MinimumBalance, _) => get_seal_value!(
                 "minimum_balance",
-                "ext_minimum_balance",
+                "seal_minimum_balance",
                 contract.ns.value_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::TombstoneDeposit, _) => get_seal_value!(
                 "tombstone_deposit",
-                "ext_tombstone_deposit",
+                "seal_tombstone_deposit",
                 contract.ns.value_length as u32 * 8
             ),
             ast::Expression::Builtin(_, _, ast::Builtin::Random, args) => {
@@ -3690,7 +3699,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 );
 
                 contract.builder.build_call(
-                    contract.module.get_function("ext_random").unwrap(),
+                    contract.module.get_function("seal_random").unwrap(),
                     &[
                         contract
                             .builder

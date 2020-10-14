@@ -63,7 +63,7 @@ fn const_array_array() {
 
     runtime.function("f", Val32(1).encode());
 
-    assert_eq!(runtime.vm.scratch, Val8(2).encode());
+    assert_eq!(runtime.vm.output, Val8(2).encode());
 }
 
 #[test]
@@ -78,13 +78,13 @@ fn votes() {
             function f(bool[11] votes) public pure returns (bool) {
                     uint32 i;
                     uint32 ayes = 0;
-    
+
                     for (i=0; i<votes.length; i++) {
                             if (votes[i]) {
                                     ayes += 1;
                             }
                     }
-    
+
                     return ayes > votes.length / 2;
             }
         }"##,
@@ -98,7 +98,7 @@ fn votes() {
         .encode(),
     );
 
-    assert_eq!(runtime.vm.scratch, true.encode());
+    assert_eq!(runtime.vm.output, true.encode());
 
     runtime.function(
         "f",
@@ -108,7 +108,7 @@ fn votes() {
         .encode(),
     );
 
-    assert_eq!(runtime.vm.scratch, false.encode());
+    assert_eq!(runtime.vm.output, false.encode());
 }
 
 #[test]
@@ -127,7 +127,7 @@ fn return_array() {
 
     runtime.function("array", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Res([4, 84564, 31213, 1312]).encode());
+    assert_eq!(runtime.vm.output, Res([4, 84564, 31213, 1312]).encode());
 }
 
 #[test]
@@ -170,7 +170,7 @@ fn storage_arrays() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.output, Val(val.1).encode());
     }
 }
 
@@ -185,17 +185,17 @@ fn enum_arrays() {
         r##"
         contract enum_array {
             enum Foo { Bar1, Bar2, Bar3, Bar4 }
-            
+
             function count_bar2(Foo[100] calldata foos) public returns (uint32) {
                 uint32 count = 0;
                 uint32 i;
-        
+
                 for (i = 0; i < foos.length; i++) {
                     if (foos[i] == Foo.Bar2) {
                         count++;
                     }
                 }
-        
+
                 return count;
             }
         }"##,
@@ -215,7 +215,7 @@ fn enum_arrays() {
     }
 
     runtime.function("count_bar2", Arg(a).encode());
-    assert_eq!(runtime.vm.scratch, Ret(count).encode());
+    assert_eq!(runtime.vm.output, Ret(count).encode());
 }
 
 #[test]
@@ -361,15 +361,15 @@ fn storage_ref_arg() {
         contract storage_refs {
             int32[10] a;
             int32[10] b;
-        
+
             function set(int32[10] storage array, uint8 index, int32 val) private {
                 array[index] = val;
             }
-        
+
             function test() public {
                 set(a, 2, 5);
                 set(b, 2, 102);
-        
+
                 assert(a[2] == 5);
                 assert(b[2] == 102);
             }
@@ -386,20 +386,20 @@ fn storage_ref_var() {
         contract storage_refs {
             int32[10] a;
             int32[10] b;
-        
+
             function set(int32[10] storage array, uint8 index, int32 val) private {
                 array[index] = val;
             }
-        
+
             function test() public {
                 int32[10] storage ref = a;
-        
+
                 set(ref, 2, 5);
-        
+
                 ref = b;
-        
+
                 set(ref, 2, 102);
-        
+
                 assert(a[2] == 5);
                 assert(b[2] == 102);
             }
@@ -416,28 +416,28 @@ fn storage_ref_returns() {
         contract storage_refs {
             int32[10] a;
             int32[10] b;
-        
+
             function a_or_b(bool want_a) private returns (int32[10] storage) {
                 if (want_a) {
                     return a;
                 }
-        
+
                 return b;
             }
-        
+
             function set(int32[10] storage array, uint8 index, int32 val) private {
                 array[index] = val;
             }
-        
+
             function test() public {
                 int32[10] storage ref = a_or_b(true);
-        
+
                 set(ref, 2, 5);
-        
+
                 ref = a_or_b(false);
-        
+
                 set(ref, 2, 102);
-        
+
                 assert(a[2] == 5);
                 assert(b[2] == 102);
             }
@@ -456,7 +456,7 @@ fn storage_to_memory() {
         r##"
         contract storage_refs {
             uint32[10] a;
-        
+
             function test() public returns (uint32[10]) {
                 for (uint32 i  = 0; i < 10; ) {
                     uint32 index = i;
@@ -472,7 +472,7 @@ fn storage_to_memory() {
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(runtime.vm.scratch, val.encode());
+    assert_eq!(runtime.vm.output, val.encode());
 }
 
 #[test]
@@ -484,7 +484,7 @@ fn memory_to_storage() {
         r##"
         contract storage_refs {
             int32[10] a;
-        
+
             function test() public returns (int32[10]) {
                 int32[10] b = [ int32(7), 14, 21, 28, 35, 42, 49, 56, 63, 70 ];
 
@@ -499,7 +499,7 @@ fn memory_to_storage() {
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(runtime.vm.scratch, val.encode());
+    assert_eq!(runtime.vm.output, val.encode());
 }
 
 #[test]
@@ -548,7 +548,7 @@ fn array_dimensions() {
     let ns = parse_and_resolve(
         r#"
         contract foo {
-            struct bar { 
+            struct bar {
                 int32 x;
             }
             bar[1 % 0] x;
@@ -562,7 +562,7 @@ fn array_dimensions() {
         r##"
         contract storage_refs {
             int32[2**16] a;
-        
+
             function test() public {
                 assert(a.length == 65536);
             }
@@ -583,7 +583,7 @@ fn array_in_struct() {
             struct foo {
                 int32[10] f1;
             }
-        
+
             function test() public returns (int32[10]) {
                 foo a = foo({f1: [ int32(7), 14, 21, 28, 35, 42, 49, 56, 63, 0 ]});
                 assert(a.f1[1] == 14);
@@ -597,7 +597,7 @@ fn array_in_struct() {
 
     let val = Ret([7, 14, 21, 28, 35, 42, 49, 56, 63, 70]);
 
-    assert_eq!(runtime.vm.scratch, val.encode());
+    assert_eq!(runtime.vm.output, val.encode());
 }
 
 #[test]
@@ -608,16 +608,16 @@ fn struct_array_struct() {
             struct bool_struct {
                 bool foo_bool;
             }
-        
+
             struct struct_bool_struct_array {
                 bool_struct[1] foo_struct_array;
             }
-    
+
             function get_memory() public pure returns (bool) {
                 bool_struct memory foo = bool_struct({foo_bool: true});
                 bool_struct[1] memory foo_array = [foo];
                 struct_bool_struct_array memory foo_struct = struct_bool_struct_array({foo_struct_array: foo_array});
-        
+
                 /* return foo_array[0].foo_bool; */
                 return foo_struct.foo_struct_array[0].foo_bool;
             }
@@ -626,7 +626,7 @@ fn struct_array_struct() {
 
     runtime.function("get_memory", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, true.encode());
+    assert_eq!(runtime.vm.output, true.encode());
 }
 
 #[test]
@@ -649,29 +649,29 @@ fn struct_array_struct_abi() {
                 int32 f1;
                 bool f2;
             }
-        
+
             struct bar  {
                 foo[10] bars;
             }
 
             bar s;
-    
+
             function get_bar() public returns (bar) {
                 bar memory a = bar({ bars: [
-                    foo({ f1: 1, f2: true}), 
-                    foo({ f1: 2, f2: true}), 
-                    foo({ f1: 3, f2: true}), 
-                    foo({ f1: 4, f2: true}), 
-                    foo({ f1: 5, f2: true}), 
-                    foo({ f1: 6, f2: true}), 
-                    foo({ f1: 7, f2: false}), 
-                    foo({ f1: 8, f2: true}), 
-                    foo({ f1: 9, f2: true}), 
+                    foo({ f1: 1, f2: true}),
+                    foo({ f1: 2, f2: true}),
+                    foo({ f1: 3, f2: true}),
+                    foo({ f1: 4, f2: true}),
+                    foo({ f1: 5, f2: true}),
+                    foo({ f1: 6, f2: true}),
+                    foo({ f1: 7, f2: false}),
+                    foo({ f1: 8, f2: true}),
+                    foo({ f1: 9, f2: true}),
                     foo({ f1: 10, f2: true})
                 ]});
 
                 s = a;
-                
+
                 return a;
             }
 
@@ -703,7 +703,7 @@ fn struct_array_struct_abi() {
 
     runtime.function("get_bar", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, b.encode());
+    assert_eq!(runtime.vm.output, b.encode());
 
     runtime.function("set_bar", b.encode());
 }
@@ -1653,18 +1653,18 @@ fn storage_dynamic_copy() {
         r#"
         contract c {
             int32[] foo;
-        
+
             constructor() public {
                 for (int32 i = 0; i <11; i++) {
                     foo.push(i * 3);
                 }
             }
-        
+
             function storage_to_memory() view public {
                 int32[] memory bar = foo;
-        
+
                 assert(bar.length == 11);
-        
+
                 for (int32 i = 0; i <11; i++) {
                     assert(bar[uint32(i)] == i * 3);
                 }
@@ -1672,11 +1672,11 @@ fn storage_dynamic_copy() {
 
             function memory_to_storage() public {
                 int32[] memory bar = new int32[](5);
-        
+
                 for (int32 i = 0; i < 5; i++) {
                     bar[uint32(i)] = 5 * (i + 7);
                 }
-        
+
                 foo = bar;
 
                 assert(foo.length == 5);
@@ -1706,7 +1706,7 @@ fn abi_encode_dynamic_array() {
         contract c {
             function encode() pure public returns (int32[]) {
                 int32[] memory bar = new int32[](11);
-        
+
                 for (int32 i = 0; i <11; i++) {
                     bar[uint32(i)] = i * 3;
                 }
@@ -1721,7 +1721,7 @@ fn abi_encode_dynamic_array() {
     runtime.function("encode", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Int32Array(vec!(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30)).encode()
     );
 }
@@ -1770,7 +1770,7 @@ fn abi_encode_dynamic_array2() {
                 bool x;
                 uint32 y;
             }
-        
+
             function test() public returns (foo[]) {
                 foo[] x = new foo[](3);
 
@@ -1788,7 +1788,7 @@ fn abi_encode_dynamic_array2() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Array(vec!((true, 64), (false, 102), (true, 0x800))).encode()
     );
 }
@@ -1806,7 +1806,7 @@ fn abi_encode_dynamic_array3() {
                 uint32 y;
                 string z;
             }
-        
+
             function test() public returns (foo[]) {
                 foo[] x = new foo[](3);
 
@@ -1824,7 +1824,7 @@ fn abi_encode_dynamic_array3() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Array(vec!(
             (true, 64, "abc".to_owned()),
             (false, 102, "a".to_owned()),
@@ -1847,7 +1847,7 @@ fn abi_encode_dynamic_array4() {
                 uint32 y;
                 string z;
             }
-        
+
             function test() public returns (foo[3]) {
                 foo[3] x;
                 x[0] = foo({x: true, y: 64, z: "abc"});
@@ -1864,7 +1864,7 @@ fn abi_encode_dynamic_array4() {
     runtime.heap_verify();
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Array([
             (true, 64, "abc".to_owned()),
             (false, 102, "a".to_owned()),

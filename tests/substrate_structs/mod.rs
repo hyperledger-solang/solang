@@ -125,16 +125,16 @@ fn parse_structs() {
         contract c {
             s z;
         }
-        
+
         struct s {
             bool f1;
             int32 f2;
             s2 f3;
         }
-        
+
         struct s2 {
             bytes4 selector;
-            s foo;	
+            s foo;
         }"#,
         Target::Substrate,
     );
@@ -295,7 +295,7 @@ fn structs_as_ref_args() {
                 bool x;
                 uint32 y;
             }
-        
+
             function func(foo f) private {
                 // assigning to f members dereferences f
                 f.x = true;
@@ -308,12 +308,12 @@ fn structs_as_ref_args() {
                 f.x = false;
                 f.y = 98123;
             }
-        
+
             function test() public {
                 foo f;
-        
+
                 func(f);
-        
+
                 assert(f.x == true);
                 assert(f.y == 64);
             }
@@ -338,7 +338,7 @@ fn structs_encode() {
                 bytes3 f1;
                 bool f2;
             }
-                
+
             function test(foo f) public {
                 assert(f.f1 == "ABC");
                 assert(f.f2 == true);
@@ -371,7 +371,7 @@ fn structs_decode() {
                 bytes3 f1;
                 int32 f2;
             }
-                
+
             function test() public returns (foo) {
                 foo f;
 
@@ -386,7 +386,7 @@ fn structs_decode() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Foo {
             f1: [0xf3, 0x3e, 0xc3],
             f2: 0xfd7f,
@@ -411,16 +411,16 @@ fn struct_in_struct() {
                 bytes7 b;
                 foo c;
             }
-        
+
             function test() public pure {
                 bar memory f = bar({ a: address(0), b: hex"fe", c: foo({ x: true, y: 102 }) });
-        
+
                 foo memory m = foo(false, 50);
-        
+
                 f.c = m;
-        
+
                 f.c.y = 300;
-        
+
                 assert(m.y == 300);
             }
         }"##,
@@ -456,7 +456,7 @@ fn structs_in_structs_decode() {
                 foo b;
                 foo c;
             }
-                
+
             function test() public returns (bar) {
                 bar f = bar({ a: true, b: foo({ f1: hex"c30000", f2: 0xff7f}), c: foo({ f1: hex"f7f6f5", f2: 0x4002 })});
 
@@ -468,7 +468,7 @@ fn structs_in_structs_decode() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Bar {
             a: true,
             b: Foo {
@@ -601,7 +601,7 @@ fn return_from_struct_storage() {
     runtime.function("test", Vec::new());
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Foo {
             f1: [0x70, 0x6e, 0x67],
             f2: 0x89ab_cdef,
