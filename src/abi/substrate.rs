@@ -1,62 +1,62 @@
-// Parity Substrate style ABIs/metadata
+// Parity Substrate style ABIs/Abi
+use contract_metadata::*;
 use num_traits::ToPrimitive;
 use parser::pt;
 use sema::ast;
 use sema::tags::render;
+use semver::Version;
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use std::convert::TryInto;
 
-/// Substrate contracts abi consists of a a registry of strings and types, the contract itself
 #[derive(Deserialize, Serialize)]
-pub struct Metadata {
-    pub registry: Registry,
+pub struct Abi {
     storage: Storage,
-    pub contract: Contract,
+    types: Vec<Type>,
+    pub spec: Spec,
 }
 
-impl Metadata {
+impl Abi {
     pub fn get_function(&self, name: &str) -> Option<&Message> {
-        self.contract
-            .messages
-            .iter()
-            .find(|m| name == self.registry.get_str(m.name))
+        self.spec.messages.iter().find(|m| name == m.name)
     }
 }
 
-/// The registry holds strings and types. Presumably this is to avoid duplication
 #[derive(Deserialize, Serialize)]
-pub struct Registry {
-    strings: Vec<String>,
-    types: Vec<Type>,
+pub struct ArrayDef {
+    array: Array,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct Array {
-    #[serde(rename = "array.len")]
     len: usize,
-    #[serde(rename = "array.type")]
+    #[serde(rename = "type")]
     ty: usize,
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct Slice {
-    #[serde(rename = "slice.type")]
+pub struct SequenceDef {
+    sequence: Sequence,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Sequence {
+    #[serde(rename = "type")]
     ty: usize,
 }
 
 #[derive(Deserialize, Serialize)]
 #[serde(untagged)]
 enum Type {
-    Builtin { id: String, def: String },
-    BuiltinArray { id: Array, def: String },
-    BuiltinSlice { id: Slice, def: String },
-    StructSimpleId { id: String, def: StructDef },
-    Struct { id: CustomID, def: StructDef },
-    Enum { id: CustomID, def: EnumDef },
+    Builtin { def: PrimitiveDef },
+    BuiltinArray { def: ArrayDef },
+    BuiltinSequence { def: SequenceDef },
+    Struct { path: Vec<String>, def: Composite },
+    Enum { path: Vec<String>, def: EnumDef },
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct Contract {
-    pub name: usize,
+pub struct Spec {
     pub constructors: Vec<Constructor>,
     pub messages: Vec<Message>,
     pub events: Vec<Event>,
@@ -70,42 +70,45 @@ struct BuiltinType {
 
 #[derive(Deserialize, Serialize)]
 struct EnumVariant {
-    name: usize,
+    name: String,
     discriminant: usize,
 }
 
 #[derive(Deserialize, Serialize)]
 struct EnumDef {
-    #[serde(rename = "clike_enum.variants")]
+    variant: Enum,
+}
+
+#[derive(Deserialize, Serialize)]
+struct Enum {
     variants: Vec<EnumVariant>,
 }
 
 #[derive(Deserialize, Serialize)]
-struct CustomID {
-    #[serde(rename = "custom.name")]
-    name: usize,
-    #[serde(rename = "custom.namespace")]
-    namespace: Vec<usize>,
-    #[serde(rename = "custom.params")]
-    params: Vec<usize>,
+struct Composite {
+    composite: StructFields,
 }
 
 #[derive(Deserialize, Serialize)]
-struct StructDef {
-    #[serde(rename = "struct.fields")]
+struct StructFields {
     fields: Vec<StructField>,
 }
 
 #[derive(Deserialize, Serialize)]
+struct PrimitiveDef {
+    primitive: String,
+}
+
+#[derive(Deserialize, Serialize)]
 struct StructField {
-    name: usize,
+    name: String,
     #[serde(rename = "type")]
     ty: usize,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct Constructor {
-    pub name: usize,
+    pub name: String,
     pub selector: String,
     pub docs: Vec<String>,
     args: Vec<Param>,
@@ -120,7 +123,7 @@ impl Constructor {
 
 #[derive(Deserialize, Serialize)]
 pub struct Message {
-    pub name: usize,
+    pub name: String,
     pub selector: String,
     pub docs: Vec<String>,
     mutates: bool,
@@ -138,13 +141,13 @@ impl Message {
 #[derive(Deserialize, Serialize)]
 pub struct Event {
     docs: Vec<String>,
-    name: usize,
+    name: String,
     args: Vec<ParamIndexed>,
 }
 
 #[derive(Deserialize, Serialize)]
 struct Param {
-    name: usize,
+    name: String,
     #[serde(rename = "type")]
     ty: ParamType,
 }
@@ -158,76 +161,49 @@ struct ParamIndexed {
 
 #[derive(Deserialize, Serialize)]
 struct ParamType {
+    #[serde(rename = "type")]
     ty: usize,
-    display_name: Vec<usize>,
+    display_name: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize)]
 struct Storage {
-    #[serde(rename = "struct.type")]
-    ty: usize,
-    #[serde(rename = "struct.fields")]
+    #[serde(rename = "struct")]
+    structs: StorageStruct,
+}
+
+#[derive(Deserialize, Serialize)]
+struct StorageStruct {
     fields: Vec<StorageLayout>,
 }
 
 #[derive(Deserialize, Serialize)]
-struct LayoutField {
-    #[serde(rename = "range.offset")]
-    offset: String,
-    #[serde(rename = "range.len")]
-    len: String,
-    #[serde(rename = "range.elem_type")]
-    ty: usize,
-}
-
-#[derive(Deserialize, Serialize)]
 struct StorageLayout {
-    name: usize,
-    layout: StorageFieldLayout,
+    name: String,
+    layout: LayoutField,
 }
 
 #[derive(Deserialize, Serialize)]
-#[serde(untagged)]
-enum StorageFieldLayout {
-    Field(LayoutField),
-    Storage(Box<Storage>),
+struct LayoutField {
+    cell: LayoutFieldCell,
+}
+
+#[derive(Deserialize, Serialize)]
+struct LayoutFieldCell {
+    key: String,
+    ty: usize,
 }
 
 /// Create a new registry and create new entries. Note that the registry is
 /// accessed by number, and the first entry is 1, not 0.
-impl Registry {
-    fn new() -> Self {
-        Registry {
-            strings: Vec::new(),
-            types: Vec::new(),
-        }
-    }
-
-    /// Returns index to string in registry. String is added if not already present
-    fn string(&mut self, name: &str) -> usize {
-        for (i, s) in self.strings.iter().enumerate() {
-            if s == name {
-                return i + 1;
-            }
-        }
-
-        let length = self.strings.len();
-
-        self.strings.push(name.to_owned());
-
-        length + 1
-    }
-
-    /// Returns the string at the specified index
-    pub fn get_str(&self, index: usize) -> &str {
-        &self.strings[index - 1]
-    }
-
+impl Abi {
     /// Returns index to builtin type in registry. Type is added if not already present
     fn builtin_type(&mut self, ty: &str) -> usize {
         for (i, s) in self.types.iter().enumerate() {
             match s {
-                Type::Builtin { id, .. } if id == ty => {
+                Type::Builtin {
+                    def: PrimitiveDef { primitive },
+                } if primitive == ty => {
                     return i + 1;
                 }
                 _ => (),
@@ -237,8 +213,9 @@ impl Registry {
         let length = self.types.len();
 
         self.types.push(Type::Builtin {
-            id: ty.to_owned(),
-            def: "builtin".to_owned(),
+            def: PrimitiveDef {
+                primitive: ty.to_owned(),
+            },
         });
 
         length + 1
@@ -249,8 +226,10 @@ impl Registry {
         for (i, s) in self.types.iter().enumerate() {
             match s {
                 Type::BuiltinArray {
-                    id: Array { len, ty },
-                    ..
+                    def:
+                        ArrayDef {
+                            array: Array { len, ty },
+                        },
                 } if *len == array_len && *ty == elem => {
                     return i + 1;
                 }
@@ -261,11 +240,12 @@ impl Registry {
         let length = self.types.len();
 
         self.types.push(Type::BuiltinArray {
-            id: Array {
-                len: array_len,
-                ty: elem,
+            def: ArrayDef {
+                array: Array {
+                    len: array_len,
+                    ty: elem,
+                },
             },
-            def: "builtin".to_owned(),
         });
 
         length + 1
@@ -275,8 +255,11 @@ impl Registry {
     fn builtin_slice_type(&mut self, elem: usize) -> usize {
         for (i, s) in self.types.iter().enumerate() {
             match s {
-                Type::BuiltinSlice {
-                    id: Slice { ty }, ..
+                Type::BuiltinSequence {
+                    def:
+                        SequenceDef {
+                            sequence: Sequence { ty },
+                        },
                 } if *ty == elem => {
                     return i + 1;
                 }
@@ -286,9 +269,10 @@ impl Registry {
 
         let length = self.types.len();
 
-        self.types.push(Type::BuiltinSlice {
-            id: Slice { ty: elem },
-            def: "builtin".to_owned(),
+        self.types.push(Type::BuiltinSequence {
+            def: SequenceDef {
+                sequence: Sequence { ty: elem },
+            },
         });
 
         length + 1
@@ -299,36 +283,32 @@ impl Registry {
         let ty_u8 = self.builtin_type("u8");
 
         let elem_ty = self.builtin_slice_type(ty_u8);
-        let name = self.string("elems");
+        let name = String::from("elems");
 
         let elem_ty = self.struct_type("Vec", vec![StructField { name, ty: elem_ty }]);
 
-        let name = self.string("vec");
+        let name = String::from("vec");
 
-        self.struct_simpleid_type("str".to_owned(), vec![StructField { name, ty: elem_ty }])
+        self.struct_type("str", vec![StructField { name, ty: elem_ty }])
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
-    #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
         let length = self.types.len();
-        let name = self.string(&e.name);
 
         let t = Type::Enum {
-            id: CustomID {
-                name,
-                namespace: Vec::new(),
-                params: Vec::new(),
-            },
+            path: vec![e.name.to_owned()],
             def: EnumDef {
-                variants: e
-                    .values
-                    .iter()
-                    .map(|(key, val)| EnumVariant {
-                        name: self.string(key),
-                        discriminant: val.1,
-                    })
-                    .collect(),
+                variant: Enum {
+                    variants: e
+                        .values
+                        .iter()
+                        .map(|(key, val)| EnumVariant {
+                            name: key.to_owned(),
+                            discriminant: val.1,
+                        })
+                        .collect(),
+                },
             },
         };
         self.types.push(t);
@@ -339,51 +319,106 @@ impl Registry {
     /// Adds struct type to registry. Does not check for duplication (yet)
     fn struct_type(&mut self, name: &str, fields: Vec<StructField>) -> usize {
         let length = self.types.len();
-        let name = self.string(name);
+        let name = name.to_owned();
 
         self.types.push(Type::Struct {
-            id: CustomID {
-                name,
-                namespace: Vec::new(),
-                params: Vec::new(),
+            path: vec![name],
+            def: Composite {
+                composite: StructFields { fields },
             },
-            def: StructDef { fields },
-        });
-
-        length + 1
-    }
-
-    /// Adds struct type to registry. Does not check for duplication (yet)
-    fn struct_simpleid_type(&mut self, name: String, fields: Vec<StructField>) -> usize {
-        let length = self.types.len();
-
-        self.types.push(Type::StructSimpleId {
-            id: name,
-            def: StructDef { fields },
         });
 
         length + 1
     }
 }
 
-pub fn load(bs: &str) -> Result<Metadata, serde_json::error::Error> {
+pub fn load(bs: &str) -> Result<Abi, serde_json::error::Error> {
     serde_json::from_str(bs)
 }
 
-pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
-    let mut registry = Registry::new();
-
-    let fields = ns.contracts[contract_no]
-        .variables
+fn tags(contract_no: usize, tagname: &str, ns: &ast::Namespace) -> Vec<String> {
+    ns.contracts[contract_no]
+        .tags
         .iter()
-        .filter(|v| !v.is_storage())
-        .map(|v| StructField {
-            name: registry.string(&v.name),
-            ty: ty_to_abi(&v.ty, ns, &mut registry).ty,
+        .filter_map(|tag| {
+            if tag.tag == tagname {
+                Some(tag.value.to_owned())
+            } else {
+                None
+            }
         })
-        .collect();
+        .collect()
+}
 
-    let storagety = registry.struct_type("storage", fields);
+/// Generate the metadata for Substrate 2.0
+pub fn metadata(contract_no: usize, code: &[u8], ns: &ast::Namespace) -> Value {
+    let hash = blake2_rfc::blake2b::blake2b(32, &[], &code);
+    let version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+    let language = SourceLanguage::new(Language::Solidity, version.clone());
+    let compiler = SourceCompiler::new(Compiler::Solang, version);
+    let source = Source::new(hash.as_bytes().try_into().unwrap(), language, compiler);
+    let mut builder = Contract::builder();
+
+    // Add our name and tags
+    builder.name(ns.contracts[contract_no].name.to_string());
+
+    let mut description = tags(contract_no, "title", ns);
+
+    description.extend(tags(contract_no, "notice", ns));
+
+    if !description.is_empty() {
+        builder.description(description.join("\n"));
+    };
+
+    let authors = tags(contract_no, "author", ns);
+
+    if !authors.is_empty() {
+        builder.authors(authors);
+    } else {
+        builder.authors(vec!["unknown"]);
+    }
+
+    // FIXME: contract-metadata wants us to provide a version number, but there is no version in the solidity source
+    // code. Since we must provide a valid semver version, we just provide a bogus value.Abi
+    builder.version(Version::new(0, 0, 1));
+
+    let contract = builder.build().unwrap();
+
+    // generate the abi for our contract
+    let abi = gen_abi(contract_no, ns);
+
+    let mut abi_json: Map<String, Value> = Map::new();
+    abi_json.insert(
+        String::from("types"),
+        serde_json::to_value(&abi.types).unwrap(),
+    );
+    abi_json.insert(
+        String::from("spec"),
+        serde_json::to_value(&abi.spec).unwrap(),
+    );
+    abi_json.insert(
+        String::from("storage"),
+        serde_json::to_value(&abi.storage).unwrap(),
+    );
+
+    let metadata = ContractMetadata::new(source, contract, None, abi_json);
+
+    // serialize to json
+    serde_json::to_value(&metadata).unwrap()
+}
+
+fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
+    let mut abi = Abi {
+        types: Vec::new(),
+        storage: Storage {
+            structs: StorageStruct { fields: Vec::new() },
+        },
+        spec: Spec {
+            constructors: Vec::new(),
+            messages: Vec::new(),
+            events: Vec::new(),
+        },
+    };
 
     let fields = ns.contracts[contract_no]
         .layout
@@ -393,12 +428,13 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
 
             if !var.ty.is_mapping() {
                 Some(StorageLayout {
-                    name: registry.string(&var.name),
-                    layout: StorageFieldLayout::Field(LayoutField {
-                        offset: format!("0x{:064X}", layout.slot),
-                        len: var.ty.storage_slots(ns).to_string(),
-                        ty: ty_to_abi(&var.ty, ns, &mut registry).ty,
-                    }),
+                    name: var.name.to_string(),
+                    layout: LayoutField {
+                        cell: LayoutFieldCell {
+                            key: format!("0x{:064X}", layout.slot),
+                            ty: ty_to_abi(&var.ty, ns, &mut abi).ty,
+                        },
+                    },
                 })
             } else {
                 None
@@ -406,28 +442,19 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
         })
         .collect();
 
-    let storage = Storage {
-        ty: storagety,
-        fields: vec![StorageLayout {
-            name: registry.string("Storage"),
-            layout: StorageFieldLayout::Storage(Box::new(Storage {
-                ty: storagety,
-                fields,
-            })),
-        }],
-    };
+    abi.storage.structs.fields = fields;
 
     let mut constructors = ns.contracts[contract_no]
         .functions
         .iter()
         .filter(|f| f.is_constructor())
         .map(|f| Constructor {
-            name: registry.string("new"),
+            name: String::from("new"),
             selector: render_selector(f),
             args: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(p, ns, &mut registry))
+                .map(|p| parameter_to_abi(p, ns, &mut abi))
                 .collect(),
             docs: vec![render(&f.tags)],
         })
@@ -435,12 +462,12 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
 
     if let Some((f, _)) = &ns.contracts[contract_no].default_constructor {
         constructors.push(Constructor {
-            name: registry.string("new"),
+            name: String::from("new"),
             selector: render_selector(f),
             args: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(p, ns, &mut registry))
+                .map(|p| parameter_to_abi(p, ns, &mut abi))
                 .collect(),
             docs: vec![render(&f.tags)],
         });
@@ -463,23 +490,23 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
             _ => false,
         })
         .map(|f| Message {
-            name: registry.string(&f.name),
+            name: f.name.to_owned(),
             mutates: f.mutability.is_none(),
             return_type: match f.returns.len() {
                 0 => None,
-                1 => Some(ty_to_abi(&f.returns[0].ty, ns, &mut registry)),
+                1 => Some(ty_to_abi(&f.returns[0].ty, ns, &mut abi)),
                 _ => {
                     let fields = f
                         .returns
                         .iter()
                         .map(|f| StructField {
-                            name: registry.string(&f.name),
-                            ty: ty_to_abi(&f.ty, ns, &mut registry).ty,
+                            name: f.name.to_string(),
+                            ty: ty_to_abi(&f.ty, ns, &mut abi).ty,
                         })
                         .collect();
 
                     Some(ParamType {
-                        ty: registry.struct_type("", fields),
+                        ty: abi.struct_type("", fields),
                         display_name: vec![],
                     })
                 }
@@ -488,7 +515,7 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
             args: f
                 .params
                 .iter()
-                .map(|p| parameter_to_abi(p, ns, &mut registry))
+                .map(|p| parameter_to_abi(p, ns, &mut abi))
                 .collect(),
             docs: vec![render(&f.tags)],
         })
@@ -500,12 +527,12 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
         .map(|event_no| {
             let event = &ns.events[*event_no];
 
-            let name = registry.string(&event.name);
+            let name = event.name.to_owned();
             let args = event
                 .fields
                 .iter()
                 .map(|p| ParamIndexed {
-                    param: parameter_to_abi(p, ns, &mut registry),
+                    param: parameter_to_abi(p, ns, &mut abi),
                     indexed: p.indexed,
                 })
                 .collect();
@@ -515,31 +542,20 @@ pub fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Metadata {
         })
         .collect();
 
-    let contract = Contract {
-        name: registry.string(&ns.contracts[contract_no].name),
+    abi.spec = Spec {
         constructors,
         messages,
         events,
     };
 
-    Metadata {
-        registry,
-        storage,
-        contract,
-    }
+    abi
 }
 
-fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Registry) -> ParamType {
+fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamType {
     match ty {
-        /* clike_enums are broken in polkadot. Use u8 for now.
         ast::Type::Enum(n) => ParamType {
-            ty: registry.builtin_enum_type(&contract.enums[*n]),
-            display_name: vec![registry.string(&contract.enums[*n].name)],
-        },
-        */
-        ast::Type::Enum(_) => ParamType {
-            ty: registry.builtin_type("u8"),
-            display_name: vec![registry.string("u8")],
+            ty: registry.builtin_enum_type(&ns.enums[*n]),
+            display_name: vec![ns.enums[*n].name.to_owned()],
         },
         ast::Type::Bytes(n) => {
             let elem = registry.builtin_type("u8");
@@ -579,7 +595,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Registry) -> Pa
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
-                display_name: vec![registry.string(&scalety)],
+                display_name: vec![scalety.to_string()],
             }
         }
         ast::Type::Struct(n) => {
@@ -588,7 +604,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Registry) -> Pa
                 .fields
                 .iter()
                 .map(|f| StructField {
-                    name: registry.string(&f.name),
+                    name: f.name.to_string(),
                     ty: ty_to_abi(&f.ty, ns, registry).ty,
                 })
                 .collect();
@@ -602,12 +618,12 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Registry) -> Pa
 
             ParamType {
                 ty: registry.builtin_slice_type(elem),
-                display_name: vec![registry.string("Vec")],
+                display_name: vec![String::from("Vec")],
             }
         }
         ast::Type::String => ParamType {
             ty: registry.string_type(),
-            display_name: vec![registry.string("str")],
+            display_name: vec![String::from("str")],
         },
         _ => unreachable!(),
     }
@@ -625,31 +641,20 @@ fn primitive_to_string(ty: ast::Type) -> String {
     }
 }
 
-fn parameter_to_abi(param: &ast::Parameter, ns: &ast::Namespace, registry: &mut Registry) -> Param {
+fn parameter_to_abi(param: &ast::Parameter, ns: &ast::Namespace, registry: &mut Abi) -> Param {
     Param {
-        name: registry.string(&param.name),
+        name: param.name.to_string(),
         ty: ty_to_abi(&param.ty, ns, registry),
     }
 }
 
-/// Given an u32 selector, generate a byte string like: "[\"0xF8\",\"0x1E\",\"0x7E\",\"0x1A\"]"
+/// Given an u32 selector, generate a byte string like: 0xF81E7E1A
 fn render_selector(f: &ast::Function) -> String {
-    format!(
-        "[{}]",
-        f.selector()
-            .to_le_bytes()
-            .iter()
-            .map(|b| format!("\"0x{:02X}\"", *b))
-            .collect::<Vec<String>>()
-            .join(",")
-    )
+    format!("0x{}", hex::encode(f.selector().to_le_bytes()))
 }
 
-/// Given a selector like "[\"0xF8\",\"0x1E\",\"0x7E\",\"0x1A\"]", parse the bytes. This function
+/// Given a selector like "0xF81E7E1A", parse the bytes. This function
 /// does not validate the input.
 fn parse_selector(selector: &str) -> Vec<u8> {
-    selector[1..selector.len() - 2]
-        .split(',')
-        .map(|b_str| u8::from_str_radix(&b_str[3..5], 16).unwrap())
-        .collect()
+    hex::decode(&selector[2..]).unwrap()
 }

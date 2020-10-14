@@ -31,6 +31,8 @@ blake2-rfc = "0.2.18"
 phf = { version = "0.8", features = ["macros"] }
 unicode-xid = "0.2.0"
 handlebars = "3.4"
+contract-metadata = "0.1.0"
+semver = { version = "0.10.0", features = ["serde"] }
 
 [dev-dependencies]
 parity-scale-codec-derive = "1.2"

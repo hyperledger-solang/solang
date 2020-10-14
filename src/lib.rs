@@ -1,5 +1,6 @@
 extern crate blake2_rfc;
 extern crate clap;
+extern crate contract_metadata;
 extern crate hex;
 extern crate inkwell;
 extern crate lalrpop_util;
@@ -9,8 +10,10 @@ extern crate num_derive;
 extern crate num_traits;
 extern crate parity_wasm;
 extern crate phf;
+extern crate semver;
 extern crate serde;
 extern crate serde_derive;
+extern crate serde_json;
 extern crate tiny_keccak;
 extern crate unicode_xid;
 
@@ -81,12 +84,12 @@ pub fn compile(
     let results = (0..ns.contracts.len())
         .filter(|c| ns.contracts[*c].is_concrete())
         .map(|c| {
-            let (abistr, _) = abi::generate_abi(c, &ns, false);
-
             // codegen
             let contract = emit::Contract::build(&ctx, &ns.contracts[c], &ns, filename, opt);
 
             let bc = contract.wasm(true).expect("llvm wasm emit should work");
+
+            let (abistr, _) = abi::generate_abi(c, &ns, &bc, false);
 
             (bc, abistr)
         })
