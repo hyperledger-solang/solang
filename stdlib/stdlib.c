@@ -405,10 +405,10 @@ struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 
 	if ((int)initial != -1)
 	{
-		do
+		while (size_array--)
 		{
 			*data++ = *initial++;
-		} while (--size_array);
+		}
 	}
 	else
 	{

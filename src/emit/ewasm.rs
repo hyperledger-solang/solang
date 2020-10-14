@@ -1312,13 +1312,15 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     fn external_call<'b>(
         &self,
         contract: &Contract<'b>,
+        function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         callty: ast::CallTy,
-    ) -> IntValue<'b> {
+    ) {
         // value is a u128
         let value_ptr = contract
             .builder
@@ -1326,7 +1328,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         contract.builder.build_store(value_ptr, value);
 
         // call create
-        contract
+        let ret = contract
             .builder
             .build_call(
                 contract
@@ -1356,7 +1358,38 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_int_value()
+            .into_int_value();
+
+        let is_success = contract.builder.build_int_compare(
+            IntPredicate::EQ,
+            ret,
+            contract.context.i32_type().const_zero(),
+            "success",
+        );
+
+        if let Some(success) = success {
+            *success = is_success.into();
+        } else {
+            let success_block = contract.context.append_basic_block(function, "success");
+            let bail_block = contract.context.append_basic_block(function, "bail");
+            contract
+                .builder
+                .build_conditional_branch(is_success, success_block, bail_block);
+
+            contract.builder.position_at_end(bail_block);
+
+            self.assert_failure(
+                contract,
+                contract
+                    .context
+                    .i8_type()
+                    .ptr_type(AddressSpace::Generic)
+                    .const_null(),
+                contract.context.i32_type().const_zero(),
+            );
+
+            contract.builder.position_at_end(success_block);
+        }
     }
 
     fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {

@@ -215,7 +215,7 @@ fn input_wrong_size() {
         }"##,
     );
 
-    runtime.function_expect_return("test", b"A".to_vec(), 3);
+    runtime.function_expect_return("test", b"A".to_vec(), 1);
 
     // the decoder does not check if there is too much data
     runtime.function_expect_return("test", b"ABCDE".to_vec(), 0);
@@ -232,7 +232,7 @@ fn external_call_not_exist() {
                 o.test();
             }
         }
-        
+
         contract other {
             function test() public {
 
@@ -240,7 +240,7 @@ fn external_call_not_exist() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 4);
+    runtime.function_expect_return("test", Vec::new(), 1);
 }
 
 #[test]
@@ -254,7 +254,7 @@ fn contract_already_exists() {
                 other t = new other{salt: 0}();
             }
         }
-        
+
         contract other {
             function test() public {
 
@@ -262,7 +262,7 @@ fn contract_already_exists() {
         }"##,
     );
 
-    runtime.function_expect_return("test", Vec::new(), 4);
+    runtime.function_expect_return("test", Vec::new(), 1);
 
     let mut runtime = build_solidity(
         r##"
@@ -273,7 +273,7 @@ fn contract_already_exists() {
                 other t = new other();
             }
         }
-        
+
         contract other {
             function test() public {
 
@@ -300,7 +300,7 @@ fn try_catch_external_calls() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -329,7 +329,7 @@ fn try_catch_external_calls() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -358,7 +358,7 @@ fn try_catch_external_calls() {
                 assert(x == 102);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -384,7 +384,7 @@ fn try_catch_external_calls() {
                 assert(x == 2);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 revert("foo");
@@ -409,7 +409,7 @@ fn try_catch_external_calls() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -438,7 +438,7 @@ fn try_catch_external_calls() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -466,7 +466,7 @@ fn try_catch_external_calls() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -551,7 +551,7 @@ fn try_catch_external_calls() {
                 }
             }
         }
-        
+
         contract other {
             function test(int x) public {
                 if (x == 1) {
@@ -575,15 +575,15 @@ fn try_catch_external_calls() {
         r##"
         contract dominator {
             child c;
-        
+
             function create_child() public {
                 c = new child();
             }
-        
+
             function call_child() public view returns (int64) {
                 return c.get_a();
             }
-        
+
             function test() public pure returns (int32) {
                 try c.go_bang() returns (int32 l) {
                     print("try call success");
@@ -598,7 +598,7 @@ fn try_catch_external_calls() {
                     print("try catch path");
                     return 2000;
                 }
-        
+
             }
         }
 
@@ -607,15 +607,15 @@ fn try_catch_external_calls() {
             constructor() public {
                 a = 102;
             }
-        
+
             function get_a() public view returns (int64) {
                 return a;
             }
-        
+
             function set_a(int64 l) public {
                 a = l;
             }
-        
+
             function go_bang() public pure returns (int32) {
                 revert("gone bang in child");
             }
@@ -643,7 +643,7 @@ fn try_catch_constructor() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -670,7 +670,7 @@ fn try_catch_constructor() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -698,7 +698,7 @@ fn try_catch_constructor() {
                 assert(x == 102);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -722,7 +722,7 @@ fn try_catch_constructor() {
                 assert(x == 102);
             }
         }
-        
+
         contract other {
             constructor(bool foo) public {
                 //
@@ -751,7 +751,7 @@ fn try_catch_constructor() {
                 assert(x == 2);
             }
         }
-        
+
         contract other {
             constructor(bool foo) public {
                 revert("foo");
@@ -774,7 +774,7 @@ fn try_catch_constructor() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public returns (int32, bool) {
                 return (102, true);
@@ -808,14 +808,14 @@ fn try_catch_constructor() {
         r##"
         contract c {
             function test() public {
-                try new other() 
+                try new other()
                 catch (string) {
                     x = 2;
                 }
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public  {
             }
@@ -844,7 +844,7 @@ fn try_catch_constructor() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public  {
             }
@@ -870,7 +870,7 @@ fn try_catch_constructor() {
                 assert(x == 1);
             }
         }
-        
+
         contract other {
             function test() public  {
             }
@@ -1054,7 +1054,7 @@ fn payable_functions() {
     assert_eq!(runtime.vm.scratch, Ret(3).encode());
 
     runtime.vm.value = 0;
-    runtime.raw_function_return(2, b"abde".to_vec());
+    runtime.raw_function_return(1, b"abde".to_vec());
     let mut runtime = build_solidity(
         r##"
         contract c {
@@ -1076,7 +1076,7 @@ fn payable_functions() {
 
     runtime.constructor(0, Vec::new());
     runtime.vm.value = 1;
-    runtime.raw_function_return(2, b"abde".to_vec());
+    runtime.raw_function_return(1, b"abde".to_vec());
 
     runtime.vm.value = 0;
     runtime.raw_function(b"abde".to_vec());
@@ -1156,7 +1156,7 @@ fn hash_tests() {
         contract tester {
             function test() public {
                 bytes32 hash = keccak256("Hello, World!");
-            
+
                 assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
             }
         }"##,
@@ -1170,7 +1170,7 @@ fn hash_tests() {
             function test() public {
                 bytes memory s = "Hello, World!";
                 bytes32 hash = keccak256(s);
-            
+
                 assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
             }
         }"##,
@@ -1185,7 +1185,7 @@ fn hash_tests() {
 
             function test() public {
                 bytes32 hash = keccak256(s);
-            
+
                 assert(hash == hex"acaf3289d7b601cbd114fb36c4d29c85bbfd5e133f14cb355c3fd8d99367964f");
             }
         }"##,
@@ -1199,7 +1199,7 @@ fn hash_tests() {
         contract tester {
             function test() public {
                 bytes32 hash = sha256("Hello, World!");
-            
+
                 assert(hash == hex"dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f");
             }
         }"##,
@@ -1212,7 +1212,7 @@ fn hash_tests() {
         contract tester {
             function test() public {
                 bytes32 hash = blake2_256("Hello, World!");
-            
+
                 assert(hash == hex"511bc81dde11180838c562c82bb35f3223f46061ebde4a955c27b3f489cf1e03");
             }
         }"##,
@@ -1225,7 +1225,7 @@ fn hash_tests() {
         contract tester {
             function test() public {
                 bytes16 hash = blake2_128("Hello, World!");
-            
+
                 assert(hash == hex"3895c59e4aeb0903396b5be3fbec69fe");
             }
         }"##,
@@ -1238,7 +1238,7 @@ fn hash_tests() {
         contract tester {
             function test() public {
                 bytes20 hash = ripemd160("Hello, World!");
-            
+
                 assert(hash == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
             }
         }"##,
