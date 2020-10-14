@@ -65,9 +65,6 @@ impl SubstrateTarget {
             "deploy",
             "call",
             "ext_input",
-            "ext_scratch_size",
-            "ext_scratch_read",
-            "ext_scratch_write",
             "ext_set_storage",
             "ext_get_storage",
             "ext_clear_storage",
@@ -171,36 +168,12 @@ impl SubstrateTarget {
             .into();
         let u64_val = contract.context.i64_type().into();
 
-        // Access to scratch buffer
-        contract.module.add_function(
-            "ext_scratch_size",
-            contract.context.i32_type().fn_type(&[], false),
-            Some(Linkage::External),
-        );
-
         contract.module.add_function(
             "ext_input",
             contract
                 .context
                 .void_type()
                 .fn_type(&[u8_ptr, u32_ptr], false),
-            Some(Linkage::External),
-        );
-
-        contract.module.add_function(
-            "ext_scratch_read",
-            contract.context.void_type().fn_type(
-                &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // dest_ptr
-                    contract.context.i32_type().into(), // offset
-                    contract.context.i32_type().into(), // len
-                ],
-                false,
-            ),
             Some(Linkage::External),
         );
 
@@ -289,22 +262,6 @@ impl SubstrateTarget {
         );
 
         contract.module.add_function(
-            "ext_scratch_write",
-            contract.context.void_type().fn_type(
-                &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // dest_ptr
-                    contract.context.i32_type().into(), // len
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        contract.module.add_function(
             "ext_random",
             contract
                 .context
@@ -317,17 +274,9 @@ impl SubstrateTarget {
             "ext_set_storage",
             contract.context.void_type().fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // key_ptr
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // value_ptr
-                    contract.context.i32_type().into(), // value_len
+                    u8_ptr,  // key_ptr
+                    u8_ptr,  // value_ptr
+                    u32_val, // value_len
                 ],
                 false,
             ),
@@ -338,12 +287,8 @@ impl SubstrateTarget {
             "ext_println",
             contract.context.void_type().fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // string_ptr
-                    contract.context.i32_type().into(), // string_len
+                    u8_ptr,  // string_ptr
+                    u32_val, // string_len
                 ],
                 false,
             ),
@@ -354,11 +299,7 @@ impl SubstrateTarget {
             "ext_clear_storage",
             contract.context.void_type().fn_type(
                 &[
-                    contract
-                        .context
-                        .i8_type()
-                        .ptr_type(AddressSpace::Generic)
-                        .into(), // key_ptr
+                    u8_ptr, // key_ptr
                 ],
                 false,
             ),
@@ -378,7 +319,7 @@ impl SubstrateTarget {
             "ext_return",
             contract.context.void_type().fn_type(
                 &[
-                    u8_ptr, u32_val, // data ptr and len
+                    u32_val, u8_ptr, u32_val, // flags, data ptr, and len
                 ],
                 false,
             ),
@@ -393,6 +334,8 @@ impl SubstrateTarget {
                     u64_val, // gas
                     u8_ptr, u32_val, // value ptr and len
                     u8_ptr, u32_val, // input ptr and len
+                    u8_ptr, u32_ptr, // address ptr and len
+                    u8_ptr, u32_ptr, // output ptr and len
                 ],
                 false,
             ),
@@ -407,6 +350,7 @@ impl SubstrateTarget {
                     u64_val, // gas
                     u8_ptr, u32_val, // value ptr and len
                     u8_ptr, u32_val, // input ptr and len
+                    u8_ptr, u32_ptr, // output ptr and len
                 ],
                 false,
             ),
@@ -533,7 +477,7 @@ impl SubstrateTarget {
         // create deploy function
         let function = contract.module.add_function(
             "deploy",
-            contract.context.i32_type().fn_type(&[], false),
+            contract.context.void_type().fn_type(&[], false),
             None,
         );
 
@@ -558,16 +502,23 @@ impl SubstrateTarget {
 
         // emit fallback code
         contract.builder.position_at_end(fallback_block);
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(2, false)));
+
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
     }
 
     fn emit_call(&mut self, contract: &Contract) {
         // create call function
         let function = contract.module.add_function(
             "call",
-            contract.context.i32_type().fn_type(&[], false),
+            contract.context.void_type().fn_type(&[], false),
             None,
         );
 
@@ -696,9 +647,15 @@ impl SubstrateTarget {
 
         contract.builder.position_at_end(bail_block);
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(3, false)));
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
 
         contract.builder.position_at_end(success_block);
     }
@@ -2385,10 +2342,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
-        // This will clear the scratch buffer
         contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
+            contract.module.get_function("ext_return").unwrap(),
             &[
+                contract.context.i32_type().const_zero().into(),
                 contract
                     .context
                     .i8_type()
@@ -2400,13 +2357,20 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             "",
         );
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
+        contract.builder.build_unreachable();
     }
 
-    fn return_u32<'b>(&self, contract: &'b Contract, ret: IntValue<'b>) {
-        contract.builder.build_return(Some(&ret));
+    fn return_u32<'b>(&self, contract: &'b Contract, _ret: IntValue<'b>) {
+        // we can't return specific errors
+        self.assert_failure(
+            contract,
+            contract
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::Generic)
+                .const_null(),
+            contract.context.i32_type().const_zero(),
+        );
     }
 
     /// Call the  keccak256 host function
@@ -2444,26 +2408,30 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
     fn return_abi<'b>(&self, contract: &'b Contract, data: PointerValue<'b>, length: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
-            &[data.into(), length.into()],
+            contract.module.get_function("ext_return").unwrap(),
+            &[
+                contract.context.i32_type().const_zero().into(),
+                data.into(),
+                length.into(),
+            ],
             "",
         );
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_zero()));
+        contract.builder.build_unreachable();
     }
 
     fn assert_failure<'b>(&self, contract: &'b Contract, data: PointerValue, length: IntValue) {
         contract.builder.build_call(
-            contract.module.get_function("ext_scratch_write").unwrap(),
-            &[data.into(), length.into()],
+            contract.module.get_function("ext_return").unwrap(),
+            &[
+                contract.context.i32_type().const_int(1, false).into(),
+                data.into(),
+                length.into(),
+            ],
             "",
         );
 
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(1, false)));
+        contract.builder.build_unreachable();
     }
 
     fn abi_decode<'b>(
@@ -2818,6 +2786,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         let mut args = args.to_vec();
         let mut params = constructor.params.to_vec();
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
         // salt
         let salt_ty = ast::Type::Uint(256);
@@ -2826,13 +2800,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             args.push(salt.into());
         } else {
             let (ptr, len) = self.contract_unique_salt(contract, contract_no);
-
-            let scratch_buf = contract.builder.build_pointer_cast(
-                contract.scratch.unwrap().as_pointer_value(),
-                contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                "scratch_buf",
-            );
-            let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
             contract.builder.build_store(
                 scratch_len,
@@ -2850,14 +2817,19 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 "random",
             );
 
-            args.push(contract.builder.build_load(
-                contract.builder.build_pointer_cast(
-                    scratch_buf,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "salt_buf",
+            args.push(
+                contract.builder.build_load(
+                    contract.builder.build_pointer_cast(
+                        scratch_buf,
+                        contract
+                            .context
+                            .custom_width_int_type(256)
+                            .ptr_type(AddressSpace::Generic),
+                        "salt_buf",
+                    ),
+                    "salt",
                 ),
-                "salt",
-            ));
+            );
         }
 
         params.push(ast::Parameter {
@@ -2932,6 +2904,26 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             true,
         );
 
+        let address_len_ptr = contract
+            .builder
+            .build_alloca(contract.context.i32_type(), "address_len_ptr");
+
+        contract.builder.build_store(
+            address_len_ptr,
+            contract
+                .context
+                .i32_type()
+                .const_int(contract.ns.address_length as u64, false),
+        );
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
+
         // ext_instantiate returns 0x0100 if the contract cannot be instantiated
         // due to insufficient funds, etc. If the return value is < 0x100, then
         // this is return value from the constructor (or deploy function) of
@@ -2955,6 +2947,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     contract.context.i32_type().const_int(16, false).into(),
                     input.into(),
                     input_len.into(),
+                    address.into(),
+                    address_len_ptr.into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
                 ],
                 "",
             )
@@ -2978,21 +2974,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
 
         contract.builder.position_at_end(success_block);
 
-        // scratch buffer contains address
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                address.into(),
-                contract.context.i32_type().const_zero().into(),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(contract.ns.address_length as u64, false)
-                    .into(),
-            ],
-            "",
-        );
-
         if let Some(success) = success {
             // we're in the try path. This means:
             // return success or not in success variable
@@ -3008,29 +2989,14 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         } else {
             contract.builder.position_at_end(bail_block);
 
-            // if ext_instantiate returned 0x100, we cannot return that here. This is because
-            // only the lower 8 bits of our return value are taken.
-
-            // ext_call can return 0x100 if the call cannot be made. We cannot return this value
-            // from the smart contract, so replace it with 4.
-            let call_not_made = contract.builder.build_int_compare(
-                IntPredicate::EQ,
-                ret,
-                contract.context.i32_type().const_int(0x100, false),
-                "success",
+            self.assert_failure(
+                contract,
+                scratch_buf,
+                contract
+                    .builder
+                    .build_load(scratch_len, "string_len")
+                    .into_int_value(),
             );
-
-            let ret = contract
-                .builder
-                .build_select(
-                    call_not_made,
-                    contract.context.i32_type().const_int(4, false),
-                    ret,
-                    "return_value",
-                )
-                .into_int_value();
-
-            contract.builder.build_return(Some(&ret));
 
             contract.builder.position_at_end(success_block);
         }
@@ -3040,18 +3006,35 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn external_call<'b>(
         &self,
         contract: &Contract<'b>,
+        function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         _ty: ast::CallTy,
-    ) -> IntValue<'b> {
+    ) {
         // balance is a u128
         let value_ptr = contract
             .builder
             .build_alloca(contract.value_type(), "balance");
         contract.builder.build_store(value_ptr, value);
+
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+        contract.builder.build_store(
+            scratch_len,
+            contract
+                .context
+                .i32_type()
+                .const_int(SCRATCH_SIZE as u64, false),
+        );
 
         // do the actual call
         let ret = contract
@@ -3081,6 +3064,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         .into(),
                     payload.into(),
                     payload_len.into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
                 ],
                 "",
             )
@@ -3088,128 +3073,75 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .left()
             .unwrap()
             .into_int_value();
-        // ext_call can return 0x100 if the call cannot be made. We cannot return this value
-        // from the smart contract, so replace it with 4.
-        let call_not_made = contract.builder.build_int_compare(
+
+        let is_success = contract.builder.build_int_compare(
             IntPredicate::EQ,
             ret,
-            contract.context.i32_type().const_int(0x100, false),
+            contract.context.i32_type().const_zero(),
             "success",
         );
 
+        let success_block = contract.context.append_basic_block(function, "success");
+        let bail_block = contract.context.append_basic_block(function, "bail");
         contract
             .builder
-            .build_select(
-                call_not_made,
-                contract.context.i32_type().const_int(4, false),
-                ret,
-                "return_value",
-            )
-            .into_int_value()
+            .build_conditional_branch(is_success, success_block, bail_block);
+
+        contract.builder.position_at_end(success_block);
+
+        if let Some(success) = success {
+            // we're in the try path. This means:
+            // return success or not in success variable
+            // do not abort execution
+            //
+            *success = is_success.into();
+
+            let done_block = contract.context.append_basic_block(function, "done");
+            contract.builder.build_unconditional_branch(done_block);
+            contract.builder.position_at_end(bail_block);
+            contract.builder.build_unconditional_branch(done_block);
+            contract.builder.position_at_end(done_block);
+        } else {
+            contract.builder.position_at_end(bail_block);
+
+            self.assert_failure(
+                contract,
+                scratch_buf,
+                contract
+                    .builder
+                    .build_load(scratch_len, "string_len")
+                    .into_int_value(),
+            );
+
+            contract.builder.position_at_end(success_block);
+        }
     }
 
     fn return_data<'b>(&self, contract: &Contract<'b>) -> PointerValue<'b> {
-        let length = contract
-            .builder
-            .build_call(
-                contract.module.get_function("ext_scratch_size").unwrap(),
-                &[],
-                "returndatasize",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
-
-        let malloc_length = contract.builder.build_int_add(
-            length,
-            contract
-                .module
-                .get_struct_type("struct.vector")
-                .unwrap()
-                .size_of()
-                .unwrap()
-                .const_cast(contract.context.i32_type(), false),
-            "size",
+        let scratch_buf = contract.builder.build_pointer_cast(
+            contract.scratch.unwrap().as_pointer_value(),
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
         );
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
 
-        let p = contract
+        let length = contract.builder.build_load(scratch_len, "string_len");
+
+        contract
             .builder
             .build_call(
-                contract.module.get_function("__malloc").unwrap(),
-                &[malloc_length.into()],
+                contract.module.get_function("vector_new").unwrap(),
+                &[
+                    length,
+                    contract.context.i32_type().const_int(1, false).into(),
+                    scratch_buf.into(),
+                ],
                 "",
             )
             .try_as_basic_value()
             .left()
             .unwrap()
-            .into_pointer_value();
-
-        let v = contract.builder.build_pointer_cast(
-            p,
-            contract
-                .module
-                .get_struct_type("struct.vector")
-                .unwrap()
-                .ptr_type(AddressSpace::Generic),
-            "string",
-        );
-
-        let data_len = unsafe {
-            contract.builder.build_gep(
-                v,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_zero(),
-                ],
-                "data_len",
-            )
-        };
-
-        contract.builder.build_store(data_len, length);
-
-        let data_size = unsafe {
-            contract.builder.build_gep(
-                v,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(1, false),
-                ],
-                "data_size",
-            )
-        };
-
-        contract.builder.build_store(data_size, length);
-
-        let data = unsafe {
-            contract.builder.build_gep(
-                v,
-                &[
-                    contract.context.i32_type().const_zero(),
-                    contract.context.i32_type().const_int(2, false),
-                ],
-                "data",
-            )
-        };
-
-        contract.builder.build_call(
-            contract.module.get_function("ext_scratch_read").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        data,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract.context.i32_type().const_zero().into(),
-                length.into(),
-            ],
-            "",
-        );
-
-        v
+            .into_pointer_value()
     }
 
     /// Substrate value is usually 128 bits

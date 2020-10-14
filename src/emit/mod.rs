@@ -191,13 +191,15 @@ pub trait TargetRuntime<'a> {
     fn external_call<'b>(
         &self,
         contract: &Contract<'b>,
+        function: FunctionValue,
+        success: Option<&mut BasicValueEnum<'b>>,
         payload: PointerValue<'b>,
         payload_len: IntValue<'b>,
         address: PointerValue<'b>,
         gas: IntValue<'b>,
         value: IntValue<'b>,
         ty: ast::CallTy,
-    ) -> IntValue<'b>;
+    );
 
     /// builtin expressions
     fn builtin<'b>(
@@ -3331,8 +3333,15 @@ pub trait TargetRuntime<'a> {
                             address,
                         );
 
-                        let ret = self.external_call(
+                        let success = match success {
+                            Some(n) => Some(&mut w.vars.get_mut(n).unwrap().value),
+                            None => None,
+                        };
+
+                        self.external_call(
                             contract,
+                            function,
+                            success,
                             payload,
                             payload_len,
                             addr,
@@ -3340,31 +3349,6 @@ pub trait TargetRuntime<'a> {
                             value,
                             callty.clone(),
                         );
-
-                        let is_success = contract.builder.build_int_compare(
-                            IntPredicate::EQ,
-                            ret,
-                            contract.context.i32_type().const_zero(),
-                            "success",
-                        );
-
-                        if let Some(success) = success {
-                            w.vars.get_mut(success).unwrap().value = is_success.into();
-                        } else {
-                            let success_block =
-                                contract.context.append_basic_block(function, "success");
-                            let bail_block = contract.context.append_basic_block(function, "bail");
-                            contract.builder.build_conditional_branch(
-                                is_success,
-                                success_block,
-                                bail_block,
-                            );
-                            contract.builder.position_at_end(bail_block);
-
-                            contract.builder.build_return(Some(&ret));
-
-                            contract.builder.position_at_end(success_block);
-                        }
                     }
                     cfg::Instr::AbiEncodeVector {
                         res,

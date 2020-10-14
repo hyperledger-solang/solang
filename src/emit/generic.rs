@@ -676,13 +676,15 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
     fn external_call<'b>(
         &self,
         _contract: &Contract<'b>,
+        _function: FunctionValue,
+        _success: Option<&mut BasicValueEnum<'b>>,
         _payload: PointerValue<'b>,
         _payload_len: IntValue<'b>,
         _address: PointerValue<'b>,
         _gas: IntValue<'b>,
         _value: IntValue<'b>,
         _ty: ast::CallTy,
-    ) -> IntValue<'b> {
+    ) {
         panic!("generic cannot call other contracts");
     }
 
