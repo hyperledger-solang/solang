@@ -43,11 +43,11 @@ fn weekdays() {
 
     runtime.function("is_weekend", Val(4).encode());
 
-    assert_eq!(runtime.vm.scratch, Val(0).encode());
+    assert_eq!(runtime.vm.output, Val(0).encode());
 
     runtime.function("is_weekend", Val(5).encode());
 
-    assert_eq!(runtime.vm.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.output, Val(1).encode());
 
     runtime.function("test_values", Vec::new());
 }
@@ -62,7 +62,7 @@ fn enums_other_contracts() {
         "
         contract a {
             c.foo bar;
-        
+
             constructor() public {
                 bar = c.foo.bar;
             }
@@ -72,7 +72,7 @@ fn enums_other_contracts() {
                 assert(c.foo.bar2 != c.foo.bar3);
             }
         }
-        
+
         contract c {
             enum foo { bar, bar2, bar3 }
         }

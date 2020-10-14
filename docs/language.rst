@@ -2192,7 +2192,7 @@ Here is an example:
     }
 
 .. note::
-    This uses the ``ext_call()`` mechanism rather than ``ext_transfer()``, since
+    This uses the ``seal_call()`` mechanism rather than ``seal_transfer()``, since
     Solidity expects the ``receive()`` function to be called on receipt.
 
 Statements

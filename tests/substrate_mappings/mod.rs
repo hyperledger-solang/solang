@@ -15,10 +15,10 @@ fn bad_mapping_declares() {
                 uint32 x;
             mapping(uint => address) data;
             }
-        
+
             function test() public {
                 s memory x;
-        
+
                 x.data[1] = address(1);
             }
         }"#,
@@ -169,10 +169,10 @@ fn basic() {
         r##"
         contract c {
             mapping(uint => bytes4) data;
-        
+
             function test() public {
                 data[1] = hex"cafedead";
-        
+
                 assert(data[1] == hex"cafedead");
             }
         }
@@ -222,7 +222,7 @@ fn test_uint64() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.output, Val(val.1).encode());
     }
 }
 
@@ -267,7 +267,7 @@ fn test_enum() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.output, Val(val.1).encode());
     }
 }
 
@@ -314,7 +314,7 @@ fn test_string() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.scratch, Val(val.1).encode());
+        assert_eq!(runtime.vm.output, Val(val.1).encode());
     }
 }
 
@@ -335,22 +335,22 @@ fn test_user() {
                 address addr;
             }
             mapping(string => user) users;
-        
+
             function add(string name, address addr) public {
                 // assigning to a storage variable creates a reference
                 user storage s = users[name];
-        
+
                 s.exists = true;
                 s.addr = addr;
             }
-        
+
             function get(string name) public view returns (bool, address) {
                 // assigning to a memory variable creates a copy
                 user s = users[name];
-        
+
                 return (s.exists, s.addr);
             }
-        
+
             function rm(string name) public {
                 delete users[name];
             }
@@ -377,7 +377,7 @@ fn test_user() {
     for val in &vals {
         runtime.function("get", GetArg(val.0.clone()).encode());
 
-        assert_eq!(runtime.vm.scratch, GetRet(true, *val.1).encode());
+        assert_eq!(runtime.vm.output, GetRet(true, *val.1).encode());
     }
 
     // now delete them
@@ -389,6 +389,6 @@ fn test_user() {
     for val in vals {
         runtime.function("get", GetArg(val.0).encode());
 
-        assert_eq!(runtime.vm.scratch, GetRet(false, [0u8; 32]).encode());
+        assert_eq!(runtime.vm.output, GetRet(false, [0u8; 32]).encode());
     }
 }

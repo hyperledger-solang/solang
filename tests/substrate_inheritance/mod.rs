@@ -671,7 +671,7 @@ fn call_inherited_function() {
     runtime.constructor(0, Vec::new());
     runtime.function("bar", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val(105).encode());
+    assert_eq!(runtime.vm.output, Val(105).encode());
 
     let ns = parse_and_resolve(
         r#"
@@ -759,7 +759,7 @@ fn call_inherited_function() {
     runtime.constructor(0, Vec::new());
     runtime.function("bar", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val(36).encode());
+    assert_eq!(runtime.vm.output, Val(36).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -791,7 +791,7 @@ fn call_inherited_function() {
     runtime.constructor(0, Vec::new());
     runtime.function("bar", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val(161720).encode());
+    assert_eq!(runtime.vm.output, Val(161720).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -816,13 +816,13 @@ fn call_inherited_function() {
 
     runtime.constructor(0, Vec::new());
     runtime.raw_function([0xC2, 0x98, 0x55, 0x78].to_vec());
-    assert_eq!(runtime.vm.scratch, Val(1).encode());
+    assert_eq!(runtime.vm.output, Val(1).encode());
 
     runtime.raw_function([0x45, 0x55, 0x75, 0x78, 1].to_vec());
-    assert_eq!(runtime.vm.scratch, Val(2).encode());
+    assert_eq!(runtime.vm.output, Val(2).encode());
 
     runtime.raw_function([0x36, 0x8E, 0x4A, 0x7F, 1, 2, 3, 4, 5, 6, 7, 8].to_vec());
-    assert_eq!(runtime.vm.scratch, Val(3).encode());
+    assert_eq!(runtime.vm.output, Val(3).encode());
 }
 
 #[test]
@@ -1376,7 +1376,7 @@ fn base_contract() {
     runtime.constructor(0, Vec::new());
     runtime.function("f", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val(102).encode());
+    assert_eq!(runtime.vm.output, Val(102).encode());
 }
 
 #[test]
@@ -1520,7 +1520,7 @@ fn base_contract_on_constructor() {
     runtime.constructor(0, Val64(0xbffe).encode());
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val(102).encode());
+    assert_eq!(runtime.vm.output, Val(102).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -1554,7 +1554,7 @@ fn base_contract_on_constructor() {
     runtime.constructor(0, Val64(0xbffe).encode());
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val(104).encode());
+    assert_eq!(runtime.vm.output, Val(104).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -1576,7 +1576,7 @@ fn base_contract_on_constructor() {
     runtime.constructor(0, Val64(7).encode());
     runtime.function("get_foo", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val64(12).encode());
+    assert_eq!(runtime.vm.output, Val64(12).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -1598,7 +1598,7 @@ fn base_contract_on_constructor() {
     runtime.constructor(0, Val64(7).encode());
     runtime.function("get_foo", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val64(12).encode());
+    assert_eq!(runtime.vm.output, Val64(12).encode());
 
     let ns = parse_and_resolve(
         r##"
@@ -1698,7 +1698,7 @@ fn call_base_function_via_basename() {
     runtime.constructor(0, Vec::new());
     runtime.function("bar", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val64(1).encode());
+    assert_eq!(runtime.vm.output, Val64(1).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -1727,5 +1727,5 @@ fn call_base_function_via_basename() {
     runtime.constructor(0, Vec::new());
     runtime.function("bar", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Val64(101).encode());
+    assert_eq!(runtime.vm.output, Val64(101).encode());
 }

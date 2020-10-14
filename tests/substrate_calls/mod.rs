@@ -37,14 +37,14 @@ fn revert() {
     runtime.function_expect_return("test", Vec::new(), 1);
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         RevertReturn(0x08c3_79a0, "yo!".to_string()).encode()
     );
 
     runtime.function_expect_return("a", Vec::new(), 1);
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         RevertReturn(
             0x08c3_79a0,
             "revert value has to be passed down the stack".to_string()
@@ -63,7 +63,7 @@ fn revert() {
 
     runtime.function_expect_return("test", Vec::new(), 1);
 
-    assert_eq!(runtime.vm.scratch.len(), 0);
+    assert_eq!(runtime.vm.output.len(), 0);
 }
 
 #[test]
@@ -84,13 +84,13 @@ fn require() {
     runtime.function_expect_return("test1", Vec::new(), 1);
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         RevertReturn(0x08c3_79a0, "Program testing can be used to show the presence of bugs, but never to show their absence!".to_string()).encode()
     );
 
     runtime.function("test2", Vec::new());
 
-    assert_eq!(runtime.vm.scratch.len(), 0);
+    assert_eq!(runtime.vm.output.len(), 0);
 }
 
 #[test]
@@ -626,7 +626,7 @@ fn try_catch_external_calls() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(4000).encode());
+    assert_eq!(runtime.vm.output, Ret(4000).encode());
 }
 
 #[test]
@@ -1018,13 +1018,13 @@ fn payable_functions() {
     runtime.vm.value = 0;
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(3).encode());
+    assert_eq!(runtime.vm.output, Ret(3).encode());
 
     runtime.vm.value = 0;
     runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(2).encode());
+    assert_eq!(runtime.vm.output, Ret(2).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -1051,7 +1051,7 @@ fn payable_functions() {
     runtime.vm.value = 0;
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(3).encode());
+    assert_eq!(runtime.vm.output, Ret(3).encode());
 
     runtime.vm.value = 0;
     runtime.raw_function_return(1, b"abde".to_vec());
@@ -1082,7 +1082,7 @@ fn payable_functions() {
     runtime.raw_function(b"abde".to_vec());
     runtime.function("get_x", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(2).encode());
+    assert_eq!(runtime.vm.output, Ret(2).encode());
 
     let ns = parse_and_resolve(
         r##"

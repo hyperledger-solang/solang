@@ -105,7 +105,7 @@ fn contract_name() {
                 b y = new b();
             }
         }
-        
+
         contract b {
             function x() public {
                 a y = new a();
@@ -127,7 +127,7 @@ fn contract_name() {
                 b y = new b();
             }
         }
-        
+
         contract b {
             function x() public {
                 c y = new c();
@@ -366,7 +366,7 @@ fn external_call() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(1020).encode());
+    assert_eq!(runtime.vm.output, Ret(1020).encode());
 }
 
 #[test]
@@ -399,7 +399,7 @@ fn revert_external_call() {
     runtime.function_expect_return("test", Vec::new(), 1);
 
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         RevertReturn(0x08c3_79a0, "The reason why".to_string()).encode()
     );
 }
@@ -439,11 +439,11 @@ fn revert_constructor() {
 
     println!(
         "{} == {}",
-        hex::encode(&runtime.vm.scratch),
+        hex::encode(&runtime.vm.output),
         hex::encode(&expected)
     );
 
-    assert_eq!(runtime.vm.scratch, expected);
+    assert_eq!(runtime.vm.output, expected);
 }
 
 #[test]
@@ -495,7 +495,7 @@ fn external_datatypes() {
 
     runtime.function("test", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(1020).encode());
+    assert_eq!(runtime.vm.output, Ret(1020).encode());
 }
 
 #[test]
@@ -507,10 +507,10 @@ fn creation_code() {
                     bytes code = type(b).creationCode;
             }
         }
-        
+
         contract b {
                 int x;
-        
+
                 function test() public {
                         a f = new a();
                 }
@@ -544,7 +544,7 @@ fn creation_code() {
         contract c {
             function test() public returns (bytes) {
                 bytes runtime = type(b).runtimeCode;
-             
+
                 assert(runtime[0] == 0);
                 assert(runtime[1] == 0x61); // a
                 assert(runtime[2] == 0x73); // s
@@ -576,7 +576,7 @@ fn creation_code() {
 
     // return value should be the code for the second contract
     assert_eq!(
-        runtime.vm.scratch,
+        runtime.vm.output,
         Ret(runtime.contracts[1].0.clone()).encode()
     );
 }

@@ -16,7 +16,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -39,7 +39,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -62,7 +62,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -85,7 +85,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -108,7 +108,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -131,7 +131,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -154,7 +154,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test(int32 l) public {
                 a f = new a();
             }
@@ -173,7 +173,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test() public {
                 a f = new a();
                 f.test{value: 1023}(501);
@@ -196,7 +196,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test() public {
                 a f = new a();
                 f.test{value: 1023}({l: 501});
@@ -219,7 +219,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test() public {
                 a f = new a();
                 f.test{value: 2-2}({l: 501});
@@ -239,7 +239,7 @@ fn external_call_value() {
 
         contract b {
             int x;
-    
+
             function test() public {
                 a f = new a();
                 f.test{value: 0*10}(501);
@@ -254,7 +254,7 @@ fn external_call_value() {
         r##"
         contract b {
             a f;
-    
+
             function step1() public {
                 f = new a();
             }
@@ -289,7 +289,7 @@ fn external_call_value() {
             function step1() public {
                 a f = new a();
                 try f.test{value: 1023}(501) {
-                    // 
+                    //
                 }
                 catch (bytes) {
                     //
@@ -570,7 +570,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, runtime.vm.address);
+    assert_eq!(runtime.vm.output, runtime.vm.address);
 
     let mut runtime = build_solidity(
         r##"
@@ -585,7 +585,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, runtime.vm.address);
+    assert_eq!(runtime.vm.output, runtime.vm.address);
 
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Ret(u32);
@@ -610,7 +610,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, Ret(102).encode());
+    assert_eq!(runtime.vm.output, Ret(102).encode());
 
     let mut runtime = build_solidity(
         r##"
@@ -625,7 +625,7 @@ fn this_address() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, runtime.vm.address);
+    assert_eq!(runtime.vm.output, runtime.vm.address);
 
     let ns = parse_and_resolve(
         r##"
@@ -747,11 +747,11 @@ fn balance() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, 315u128.to_le_bytes());
+    assert_eq!(runtime.vm.output, 315u128.to_le_bytes());
 
     runtime.function("step2", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, 500u128.to_le_bytes());
+    assert_eq!(runtime.vm.output, 500u128.to_le_bytes());
 }
 
 #[test]
@@ -813,7 +813,7 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, false.encode());
+    assert_eq!(runtime.vm.output, false.encode());
 
     for (address, account) in runtime.accounts {
         if address == runtime.vm.address {
@@ -847,7 +847,7 @@ fn send_and_transfer() {
 
     runtime.function("step1", Vec::new());
 
-    assert_eq!(runtime.vm.scratch, true.encode());
+    assert_eq!(runtime.vm.output, true.encode());
 
     for (address, account) in runtime.accounts {
         if address == runtime.vm.address {
