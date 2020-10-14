@@ -396,7 +396,7 @@ fn process_filename(
             let mut file = File::create(wasm_filename).unwrap();
             file.write_all(&wasm).unwrap();
 
-            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, verbose);
+            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &wasm, verbose);
             let abi_filename = output_file(&contract.name, abi_ext);
 
             if verbose {

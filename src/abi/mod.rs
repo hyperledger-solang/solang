@@ -4,7 +4,12 @@ use Target;
 pub mod ethereum;
 pub mod substrate;
 
-pub fn generate_abi(contract_no: usize, ns: &Namespace, verbose: bool) -> (String, &'static str) {
+pub fn generate_abi(
+    contract_no: usize,
+    ns: &Namespace,
+    code: &[u8],
+    verbose: bool,
+) -> (String, &'static str) {
     match ns.target {
         Target::Substrate => {
             if verbose {
@@ -14,7 +19,7 @@ pub fn generate_abi(contract_no: usize, ns: &Namespace, verbose: bool) -> (Strin
                 );
             }
 
-            let abi = substrate::gen_abi(contract_no, ns);
+            let abi = substrate::metadata(contract_no, code, ns);
 
             (serde_json::to_string_pretty(&abi).unwrap(), "json")
         }

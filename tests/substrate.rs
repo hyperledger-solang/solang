@@ -152,7 +152,7 @@ pub struct TestRuntime {
     pub contracts: Vec<(Vec<u8>, String)>,
     pub printbuf: String,
     pub accounts: HashMap<Address, (Vec<u8>, u128)>,
-    pub abi: abi::substrate::Metadata,
+    pub abi: abi::substrate::Abi,
     pub vm: VM,
     pub events: Vec<Event>,
 }
@@ -950,7 +950,7 @@ impl TestRuntime {
     }
 
     pub fn constructor(&mut self, index: usize, args: Vec<u8>) {
-        let m = &self.abi.contract.constructors[index];
+        let m = &self.abi.spec.constructors[index];
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
@@ -966,7 +966,7 @@ impl TestRuntime {
     }
 
     pub fn constructor_expect_return(&mut self, index: usize, expected_ret: i32, args: Vec<u8>) {
-        let m = &self.abi.contract.constructors[index];
+        let m = &self.abi.spec.constructors[index];
 
         let module = self.create_module(&self.accounts.get(&self.vm.address).unwrap().0);
 
