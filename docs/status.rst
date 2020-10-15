@@ -49,9 +49,7 @@ Target Status
 Parity Substrate
 ________________
 
-This target is the most mature and has received the most testing so far. Solang has
-been tested with Parity Substrate has been tested on 2.0-rc4. 2.0-rc5 and later
-are known not to work, due to changes in the contracts host interface.
+Solang works with Parity Substrate 2.0. This target is the most mature and has received the most testing so far.
 
 ewasm
 _____
