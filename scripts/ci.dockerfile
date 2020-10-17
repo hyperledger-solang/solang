@@ -19,7 +19,7 @@ FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
-RUN apt-get install -y libz-dev pkg-config libssl-dev git libffi-dev libstdc++-9-dev curl gcc
+RUN apt-get install -y zlib1g-dev pkg-config libssl-dev git libffi-dev curl gcc
 RUN apt-get clean
 RUN apt-get autoclean
 
