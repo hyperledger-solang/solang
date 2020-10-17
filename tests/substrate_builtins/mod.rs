@@ -511,8 +511,6 @@ fn block() {
                 uint64 b = block.timestamp;
 
                 assert(b == 1594035638);
-
-                assert(now == 1594035638);
             }
         }"##,
     );

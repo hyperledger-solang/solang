@@ -2588,9 +2588,8 @@ Some block properties are always available:
 uint64 ``block.number``
     The current block number.
 
-uint64 ``block.timestamp`` or ``now``
-    The time in unix epoch, i.e. seconds since the beginning of 1970. This field
-    has an alias ``now``.
+uint64 ``block.timestamp``
+    The time in unix epoch, i.e. seconds since the beginning of 1970.
 
 Do not use either of these two fields as a source of randomness unless you know what
 you are doing.

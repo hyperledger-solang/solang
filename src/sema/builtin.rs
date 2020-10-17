@@ -14,6 +14,7 @@ struct Prototype {
     pub args: &'static [Type],
     pub ret: &'static [Type],
     pub target: Option<Target>,
+    pub doc: &'static str,
 }
 
 // A list of all Solidity builtins functions
@@ -25,6 +26,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Bool],
         ret: &[Type::Void],
         target: None,
+        doc: "Abort execution if argument evaluates to false",
     },
     Prototype {
         builtin: Builtin::Print,
@@ -33,6 +35,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::String],
         ret: &[Type::Void],
         target: None,
+        doc: "log string for debugging purposes. Runs on development chain only",
     },
     Prototype {
         builtin: Builtin::Require,
@@ -41,6 +44,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Bool],
         ret: &[Type::Void],
         target: None,
+        doc: "Abort execution if argument evaulates to false",
     },
     Prototype {
         builtin: Builtin::Require,
@@ -49,6 +53,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Bool, Type::String],
         ret: &[Type::Void],
         target: None,
+        doc: "Abort execution if argument evaulates to false. Report string when aborting",
     },
     Prototype {
         builtin: Builtin::Revert,
@@ -57,6 +62,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[],
         ret: &[Type::Unreachable],
         target: None,
+        doc: "Revert execution",
     },
     Prototype {
         builtin: Builtin::Revert,
@@ -65,6 +71,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::String],
         ret: &[Type::Unreachable],
         target: None,
+        doc: "Revert execution and report string",
     },
     Prototype {
         builtin: Builtin::SelfDestruct,
@@ -73,6 +80,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Address(true)],
         ret: &[Type::Unreachable],
         target: None,
+        doc: "Destroys current account and deposits any remaining balance to address",
     },
     Prototype {
         builtin: Builtin::Keccak256,
@@ -81,6 +89,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: None,
+        doc: "Calculates keccak256 hash",
     },
     Prototype {
         builtin: Builtin::Ripemd160,
@@ -89,6 +98,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(20)],
         target: None,
+        doc: "Calculates ripemd hash",
     },
     Prototype {
         builtin: Builtin::Sha256,
@@ -97,6 +107,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: None,
+        doc: "Calculates sha256 hash",
     },
     Prototype {
         builtin: Builtin::Blake2_128,
@@ -105,6 +116,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(16)],
         target: Some(Target::Substrate),
+        doc: "Calculates blake2-128 hash",
     },
     Prototype {
         builtin: Builtin::Blake2_256,
@@ -113,6 +125,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: Some(Target::Substrate),
+        doc: "Calculates blake2-256 hash",
     },
     Prototype {
         builtin: Builtin::Gasleft,
@@ -121,6 +134,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[],
         ret: &[Type::Uint(64)],
         target: None,
+        doc: "Return remaing gas left in current call",
     },
     Prototype {
         builtin: Builtin::BlockHash,
@@ -129,6 +143,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Uint(64)],
         ret: &[Type::Bytes(32)],
         target: Some(Target::Ewasm),
+        doc: "Returns the block hash for given block number",
     },
     Prototype {
         builtin: Builtin::Random,
@@ -137,6 +152,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[Type::Bytes(32)],
         target: Some(Target::Substrate),
+        doc: "Returns deterministic random bytes",
     },
     Prototype {
         builtin: Builtin::AbiDecode,
@@ -145,6 +161,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::DynamicBytes],
         ret: &[],
         target: None,
+        doc: "Abi decode byte array with the given types",
     },
     Prototype {
         builtin: Builtin::AbiEncode,
@@ -153,6 +170,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[],
         ret: &[],
         target: None,
+        doc: "Abi encode given arguments",
     },
     Prototype {
         builtin: Builtin::AbiEncodePacked,
@@ -161,6 +179,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[],
         ret: &[],
         target: None,
+        doc: "Abi encode given arguments using packed encoding",
     },
     Prototype {
         builtin: Builtin::AbiEncodeWithSelector,
@@ -169,6 +188,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Bytes(4)],
         ret: &[],
         target: None,
+        doc: "Abi encode given arguments with selector",
     },
     Prototype {
         builtin: Builtin::AbiEncodeWithSignature,
@@ -177,6 +197,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::String],
         ret: &[],
         target: None,
+        doc: "Abi encode given arguments with function signature",
     },
     Prototype {
         builtin: Builtin::Gasprice,
@@ -185,6 +206,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Uint(64)],
         ret: &[Type::Uint(128)],
         target: None,
+        doc: "Calculate price of given gas units",
     },
     Prototype {
         builtin: Builtin::MulMod,
@@ -193,6 +215,7 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Uint(256), Type::Uint(256), Type::Uint(256)],
         ret: &[Type::Uint(256)],
         target: None,
+        doc: "Multiply first two arguments, and the modulo last argument. Does not overflow",
     },
     Prototype {
         builtin: Builtin::AddMod,
@@ -201,11 +224,12 @@ static BUILTIN_FUNCTIONS: [Prototype; 23] = [
         args: &[Type::Uint(256), Type::Uint(256), Type::Uint(256)],
         ret: &[Type::Uint(256)],
         target: None,
+        doc: "Add first two arguments, and the modulo last argument. Does not overflow",
     },
 ];
 
 // A list of all Solidity builtins variables
-static BUILTIN_VARIABLE: [Prototype; 14] = [
+static BUILTIN_VARIABLE: [Prototype; 13] = [
     Prototype {
         builtin: Builtin::BlockCoinbase,
         namespace: Some("block"),
@@ -213,6 +237,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Address(true)],
         target: Some(Target::Ewasm),
+        doc: "The address of the current block miner",
     },
     Prototype {
         builtin: Builtin::BlockDifficulty,
@@ -221,6 +246,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(256)],
         target: Some(Target::Ewasm),
+        doc: "The difficulty for current block",
     },
     Prototype {
         builtin: Builtin::GasLimit,
@@ -229,6 +255,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(64)],
         target: Some(Target::Ewasm),
+        doc: "The gas limit",
     },
     Prototype {
         builtin: Builtin::BlockNumber,
@@ -237,6 +264,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(64)],
         target: None,
+        doc: "Current block number",
     },
     Prototype {
         builtin: Builtin::Timestamp,
@@ -245,6 +273,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(64)],
         target: None,
+        doc: "Current timestamp in unix epoch (seconds since 1970)",
     },
     Prototype {
         builtin: Builtin::TombstoneDeposit,
@@ -253,6 +282,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(128)],
         target: Some(Target::Substrate),
+        doc: "Deposit required for a tombstone",
     },
     Prototype {
         builtin: Builtin::MinimumBalance,
@@ -261,6 +291,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(128)],
         target: Some(Target::Substrate),
+        doc: "Minimum balance required for an account",
     },
     Prototype {
         builtin: Builtin::Calldata,
@@ -269,6 +300,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::DynamicBytes],
         target: None,
+        doc: "Raw input bytes to current call",
     },
     Prototype {
         builtin: Builtin::Sender,
@@ -277,6 +309,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Address(true)],
         target: None,
+        doc: "Address of caller",
     },
     Prototype {
         builtin: Builtin::Signature,
@@ -285,6 +318,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Bytes(4)],
         target: None,
+        doc: "Function selector for current call",
     },
     Prototype {
         builtin: Builtin::Value,
@@ -293,14 +327,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(128)],
         target: None,
-    },
-    Prototype {
-        builtin: Builtin::Timestamp,
-        namespace: None,
-        name: "now",
-        args: &[],
-        ret: &[Type::Uint(64)],
-        target: None,
+        doc: "Value sent with current call",
     },
     Prototype {
         builtin: Builtin::Gasprice,
@@ -309,6 +336,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Uint(128)],
         target: None,
+        doc: "gas price for one gas unit",
     },
     Prototype {
         builtin: Builtin::Origin,
@@ -317,6 +345,7 @@ static BUILTIN_VARIABLE: [Prototype; 14] = [
         args: &[],
         ret: &[Type::Address(true)],
         target: Some(Target::Ewasm),
+        doc: "Original address of sender current transaction",
     },
 ];
 
