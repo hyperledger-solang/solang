@@ -14,7 +14,7 @@ RUN clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall
 
 RUN cargo install --path /src
 
-FROM ubuntu:20.04
+FROM ubuntu:18.04
 COPY --from=builder /root/.cargo/bin/solang /usr/bin/solang
 
 ENTRYPOINT ["/usr/bin/solang"]
