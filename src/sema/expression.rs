@@ -363,6 +363,13 @@ fn coerce(
         return Ok(l.clone());
     }
 
+    // Address payable is implicitly convertible to address, so we can compare these
+    if *l == Type::Address(false) && *r == Type::Address(true)
+        || *l == Type::Address(true) && *r == Type::Address(false)
+    {
+        return Ok(Type::Address(false));
+    }
+
     coerce_int(l, l_loc, r, r_loc, true, ns)
 }
 

@@ -396,11 +396,29 @@ fn address() {
 
 #[test]
 fn address_payable_type() {
+    // address payable is implicitly convertible to address
     let ns = parse_and_resolve(
         r##"
         contract c {
             function test(address payable a) public {
                 address b = a;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    // So you can compare them too
+    let ns = parse_and_resolve(
+        r##"
+        contract c {
+            function test1(address payable a, address b) public returns (bool) {
+                return a == b;
+            }
+
+            function test2(address payable a, address b) public returns (bool) {
+                return b == a;
             }
         }"##,
         Target::Substrate,
