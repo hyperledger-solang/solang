@@ -108,6 +108,41 @@ fn enum_import() {
         first_error(ns.diagnostics),
         "import ‘b.sol’ does not export ‘enum_c’"
     );
+
+    // from has special handling to avoid making it a keyword
+    let mut cache = FileCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+        import { enum_c } frum "b.sol";
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘frum’ found where ‘from’ expected"
+    );
+
+    let mut cache = FileCache::new();
+
+    cache.set_file_contents(
+        "a.sol".to_string(),
+        r#"
+        import * as foo frum "b.sol";
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "‘frum’ found where ‘from’ expected"
+    );
 }
 
 #[test]

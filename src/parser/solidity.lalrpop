@@ -5,6 +5,7 @@ use num_traits::Pow;
 use parser::pt::*;
 use std::ops::Mul;
 use parser::box_option;
+use lalrpop_util::ParseError;
 use super::lexer::{Token, LexicalError, CommentType};
 use super::doc::tags;
 
@@ -26,9 +27,19 @@ SourceUnitPart: SourceUnitPart = {
 ImportDirective: Import = {
     "import" <s:StringLiteral> ";" => Import::Plain(s),
     "import" <s:StringLiteral> "as" <id:Identifier> ";" => Import::GlobalSymbol(s, id),
-    "import" "*" "as" <id:Identifier> "from" <s:StringLiteral> ";" => Import::GlobalSymbol(s, id),
-    "import" "{" <rename:CommaOne<ImportRename>> "}" "from" <s:StringLiteral> ";" => {
-        Import::Rename(s, rename)
+    "import" "*" "as" <id:Identifier> <from:Identifier> <s:StringLiteral> ";" =>? {
+        if from.name != "from" {
+            Err(ParseError::User { error: LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
+        } else {
+            Ok(Import::GlobalSymbol(s, id))
+        }
+    },
+    "import" "{" <rename:CommaOne<ImportRename>> "}" <from:Identifier> <s:StringLiteral> ";" =>? {
+        if from.name != "from" {
+            Err(ParseError::User { error:LexicalError::ExpectedFrom(from.loc.0, from.loc.1, from.name)})
+        } else {
+            Ok(Import::Rename(s, rename))
+        }
     }
 }
 
@@ -696,7 +707,6 @@ extern {
         "ether" => Token::Ether,
         "this" => Token::This,
         "as" => Token::As,
-        "from" => Token::From,
         "is" => Token::Is,
         "abstract" => Token::Abstract,
         "virtual" => Token::Virtual,
