@@ -36,7 +36,7 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
         Target::Ewasm => name == "main",
         Target::Substrate => name == "deploy" || name == "call",
         Target::Sabre => name == "entrypoint",
-        Target::Generic => unreachable!(),
+        _ => unreachable!(),
     };
 
     for c in module.custom_sections() {

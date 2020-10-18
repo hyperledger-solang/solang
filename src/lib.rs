@@ -14,6 +14,7 @@ extern crate semver;
 extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
+extern crate tempfile;
 extern crate tiny_keccak;
 extern crate unicode_xid;
 
@@ -21,7 +22,7 @@ pub mod abi;
 pub mod codegen;
 mod emit;
 pub mod file_cache;
-pub mod link;
+pub mod linker;
 pub mod parser;
 pub mod sema;
 
@@ -42,6 +43,8 @@ pub enum Target {
     Sabre,
     /// Generate a generic object file for linking
     Generic,
+    /// Solana, see https://solana.com/
+    Solana,
 }
 
 impl fmt::Display for Target {
@@ -51,6 +54,7 @@ impl fmt::Display for Target {
             Target::Ewasm => write!(f, "ewasm"),
             Target::Sabre => write!(f, "Sawtooth Sabre"),
             Target::Generic => write!(f, "generic"),
+            Target::Solana => write!(f, "solana"),
         }
     }
 }
@@ -111,8 +115,13 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
             Target::Substrate => 32,
             Target::Sabre => 0,    // Sabre has no address type
             Target::Generic => 20, // Same as ethereum
+            Target::Solana => 32,
         },
-        16,
+        if target == Target::Solana {
+            8 // lamports is u64
+        } else {
+            16 // value is 128 bits
+        },
     );
 
     if let Err(message) = cache.populate_cache(filename) {
