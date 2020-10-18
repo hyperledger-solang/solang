@@ -4,8 +4,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python
 
-RUN git clone --branch release/10.x --single-branch \
-    git://github.com/llvm/llvm-project
+RUN git clone --branch bpf --single-branch \
+    git://github.com/seanyoung/llvm-project.git
 
 WORKDIR /llvm-project
 
