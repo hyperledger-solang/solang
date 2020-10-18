@@ -18,7 +18,7 @@ use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
 use inkwell::module::{Linkage, Module};
 use inkwell::passes::PassManager;
-use inkwell::targets::{CodeModel, FileType, RelocMode, Target, TargetTriple};
+use inkwell::targets::{CodeModel, FileType, RelocMode, TargetTriple};
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::{BasicType, IntType, StringRadix};
 use inkwell::values::{
@@ -27,19 +27,21 @@ use inkwell::values::{
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
+use Target;
 
 mod ethabiencoder;
 mod ewasm;
 mod generic;
 mod sabre;
+mod solana;
 mod substrate;
 
-use link::link;
+use linker::link;
 
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
-        Target::initialize_webassembly(&Default::default());
-        Target::initialize_bpf(&Default::default());
+        inkwell::targets::Target::initialize_webassembly(&Default::default());
+        inkwell::targets::Target::initialize_bpf(&Default::default());
     };
 }
 
@@ -1964,7 +1966,7 @@ pub trait TargetRuntime<'a> {
                         contract.context.i8_type().ptr_type(AddressSpace::Generic),
                         "invalid",
                     ),
-                    Some(s) => contract.emit_global_string("const_string", s, false),
+                    Some(s) => contract.emit_global_string("const_string", s, true),
                 };
 
                 let v = contract
@@ -2169,7 +2171,7 @@ pub trait TargetRuntime<'a> {
                 self.balance(contract, addr).into()
             }
             Expression::Builtin(_, _, Builtin::Calldata, _)
-                if contract.ns.target != crate::Target::Substrate =>
+                if contract.ns.target != Target::Substrate =>
             {
                 contract
                     .builder
@@ -2410,7 +2412,7 @@ pub trait TargetRuntime<'a> {
     ) -> (PointerValue<'a>, IntValue<'a>) {
         match location {
             StringLocation::CompileTime(literal) => (
-                contract.emit_global_string("const_string", literal, false),
+                contract.emit_global_string("const_string", literal, true),
                 contract
                     .context
                     .i32_type()
@@ -3243,7 +3245,7 @@ pub trait TargetRuntime<'a> {
 
                                 self.abi_encode(
                                     contract,
-                                    Some(if contract.ns.target == crate::Target::Ewasm {
+                                    Some(if contract.ns.target == Target::Ewasm {
                                         selector.to_be()
                                     } else {
                                         selector
@@ -3460,7 +3462,7 @@ pub trait TargetRuntime<'a> {
                                 .into_int_value();
 
                             // ewasm stores the selector little endian
-                            let selector = if contract.ns.target == crate::Target::Ewasm {
+                            let selector = if contract.ns.target == Target::Ewasm {
                                 (*selector).to_be()
                             } else {
                                 *selector
@@ -3649,9 +3651,12 @@ pub trait TargetRuntime<'a> {
             .build_load(argsdata, "function_selector")
             .into_int_value();
 
-        contract
-            .builder
-            .build_store(contract.selector.as_pointer_value(), fid);
+        if contract.ns.target != Target::Solana {
+            // TODO: solana does not support bss, so different solution is needed
+            contract
+                .builder
+                .build_store(contract.selector.as_pointer_value(), fid);
+        }
 
         // step over the function selector
         let argsdata = unsafe {
@@ -4435,32 +4440,26 @@ impl<'a> Contract<'a> {
         opt: OptimizationLevel,
     ) -> Self {
         match ns.target {
-            super::Target::Substrate => {
+            Target::Substrate => {
                 substrate::SubstrateTarget::build(context, contract, ns, filename, opt)
             }
-            super::Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
-            super::Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename, opt),
-            super::Target::Generic => {
-                generic::GenericTarget::build(context, contract, ns, filename, opt)
-            }
+            Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
+            Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename, opt),
+            Target::Generic => generic::GenericTarget::build(context, contract, ns, filename, opt),
+            Target::Solana => solana::SolanaTarget::build(context, contract, ns, filename, opt),
         }
     }
 
     /// Compile the contract and return the code as bytes. The result is
     /// cached, since this function can be called multiple times (e.g. one for
     /// each time a contract of this type is created).
-    pub fn code(&self, linking: bool) -> Result<Vec<u8>, String> {
-        let wasm = self.code.borrow();
-
-        if wasm.is_empty() {
-            self.compile(linking)
-        } else {
-            Ok(wasm.clone())
-        }
-    }
-
     /// Pass our module to llvm for optimization and compilation
-    fn compile(&self, linking: bool) -> Result<Vec<u8>, String> {
+    pub fn code(&self, linking: bool) -> Result<Vec<u8>, String> {
+        // return cached result if available
+        if !self.code.borrow().is_empty() {
+            return Ok(self.code.borrow().clone());
+        }
+
         match self.opt {
             OptimizationLevel::Default | OptimizationLevel::Aggressive => {
                 let pass_manager = PassManager::create(());
@@ -4475,7 +4474,8 @@ impl<'a> Contract<'a> {
             _ => {}
         }
 
-        let target = Target::from_name(self.ns.target.llvm_target_name()).unwrap();
+        let target =
+            inkwell::targets::Target::from_name(self.ns.target.llvm_target_name()).unwrap();
 
         let target_machine = target
             .create_target_machine(
@@ -4500,7 +4500,7 @@ impl<'a> Contract<'a> {
                     let slice = out.as_slice();
 
                     if linking {
-                        let bs = link(slice, self.ns.target);
+                        let bs = link(slice, &self.contract.name, self.ns.target);
 
                         if !self.patch_code_size(bs.len() as u64) {
                             self.code.replace(bs.to_vec());
@@ -5224,15 +5224,24 @@ static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/stdlib.bc");
 static SHA3_IR: &[u8] = include_bytes!("../../stdlib/sha3.bc");
 static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/ripemd160.bc");
 static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/substrate.bc");
+static SOLANA_IR: &[u8] = include_bytes!("../../stdlib/solana.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
 /// the solang library
-fn load_stdlib<'a>(context: &'a Context, target: &crate::Target) -> Module<'a> {
+fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
+    if *target == Target::Solana {
+        let memory = MemoryBuffer::create_from_memory_range(SOLANA_IR, "solana");
+
+        let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
+
+        return module;
+    }
+
     let memory = MemoryBuffer::create_from_memory_range(STDLIB_IR, "stdlib");
 
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
-    if let super::Target::Substrate = target {
+    if Target::Substrate == *target {
         let memory = MemoryBuffer::create_from_memory_range(SUBSTRATE_IR, "substrate");
 
         module
@@ -5257,14 +5266,34 @@ fn load_stdlib<'a>(context: &'a Context, target: &crate::Target) -> Module<'a> {
     module
 }
 
-impl crate::Target {
-    // LLVM Targett name
+impl Target {
+    /// LLVM Target name
     fn llvm_target_name(&self) -> &'static str {
-        "wasm32"
+        if *self == Target::Solana {
+            "bpfel"
+        } else {
+            "wasm32"
+        }
     }
 
-    // LLVM Target triple
+    /// LLVM Target triple
     fn llvm_target_triple(&self) -> &'static str {
-        "wasm32-unknown-unknown-wasm"
+        if *self == Target::Solana {
+            "bpfel-unknown-unknown"
+        } else {
+            "wasm32-unknown-unknown-wasm"
+        }
+    }
+
+    /// File extension
+    pub fn file_extension(&self) -> &'static str {
+        match self {
+            // Solana uses ELF dynamic shared object (BPF)
+            Target::Solana => "so",
+            // Generic target produces object file for linking
+            Target::Generic => "o",
+            // Everything else generates webassembly
+            _ => "wasm",
+        }
     }
 }

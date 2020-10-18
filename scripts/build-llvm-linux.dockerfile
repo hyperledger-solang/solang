@@ -9,10 +9,9 @@ RUN git clone --branch bpf --single-branch \
 
 WORKDIR /llvm-project
 
-RUN git checkout -b release_10.x origin/release/10.x
-
-RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang  \
-    -DLLVM_ENABLE_TERMINFO=Off -DLLVM_TARGETS_TO_BUILD=WebAssembly \
+RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off \
+    -DLLVM_ENABLE_PROJECTS=clang\;lld  \
+    -DLLVM_TARGETS_TO_BUILD=WebAssembly\;BPF \
     -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=/llvm10.0 llvm
 
 RUN cmake --build . --target install

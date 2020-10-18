@@ -10,11 +10,15 @@ FROM hyperledgerlabs/solang:ci as builder
 
 COPY . src
 WORKDIR /src/stdlib/
-RUN clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
+RUN make
 
-RUN cargo install --path /src
+WORKDIR /src
+RUN cargo build --release
 
 FROM ubuntu:18.04
-COPY --from=builder /root/.cargo/bin/solang /usr/bin/solang
+COPY --from=builder /src/target/release/solang /usr/bin/solang
+COPY --from=builder /llvm10.0 /llvm10.0/
+
+ENV PATH="/llvm10.0/bin:${PATH}"
 
 ENTRYPOINT ["/usr/bin/solang"]

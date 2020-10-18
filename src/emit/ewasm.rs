@@ -608,18 +608,18 @@ impl EwasmTarget {
         contract.builder.build_call(initializer, &[], "");
 
         // ewasm only allows one constructor, hence find()
-        if let Some((cfg_no, con)) = contract
+        if let Some((cfg_no, cfg)) = contract
             .contract
             .cfg
             .iter()
             .enumerate()
-            .find(|(_, f)| f.ty == pt::FunctionTy::Constructor && f.public)
+            .find(|(_, cfg)| cfg.ty == pt::FunctionTy::Constructor)
         {
             let mut args = Vec::new();
 
             // insert abi decode
             self.abi
-                .decode(contract, function, &mut args, argsdata, length, &con.params);
+                .decode(contract, function, &mut args, argsdata, length, &cfg.params);
 
             contract
                 .builder

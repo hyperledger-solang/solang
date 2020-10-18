@@ -65,7 +65,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .possible_values(&["substrate", "ewasm", "sabre", "generic"])
+                .possible_values(&["substrate", "ewasm", "sabre", "generic", "solana"])
                 .default_value("substrate"),
         )
         .arg(
@@ -111,6 +111,7 @@ fn main() {
         Some("ewasm") => solang::Target::Ewasm,
         Some("sabre") => solang::Target::Sabre,
         Some("generic") => solang::Target::Generic,
+        Some("solana") => solang::Target::Solana,
         _ => unreachable!(),
     };
 
@@ -383,17 +384,17 @@ fn process_filename(
                 },
             );
         } else {
-            let wasm_filename = output_file(&contract.name, "wasm");
+            let bin_filename = output_file(&contract.name, target.file_extension());
 
             if verbose {
                 eprintln!(
-                    "info: Saving WebAssembly {} for contract {}",
-                    wasm_filename.display(),
+                    "info: Saving binary {} for contract {}",
+                    bin_filename.display(),
                     contract.name
                 );
             }
 
-            let mut file = File::create(wasm_filename).unwrap();
+            let mut file = File::create(bin_filename).unwrap();
             file.write_all(&code).unwrap();
 
             let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);

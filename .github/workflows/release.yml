@@ -16,7 +16,7 @@ jobs:
     - name: Rust stable
       run: rustup default stable
     - name: Compile stdlib
-      run: clang-10 --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
+      run: make
       working-directory: ./stdlib
     - name: Build
       run: cargo build --verbose --release
@@ -43,7 +43,7 @@ jobs:
     - name: Add LLVM to Path
       run: echo "c:\llvm10.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - name: Compile stdlib
-      run: clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
+      run: make
       working-directory: ./stdlib
     - name: Build
       run: cargo build --release --verbose
