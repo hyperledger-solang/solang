@@ -21,6 +21,7 @@ pub mod tags;
 mod types;
 mod variables;
 
+use self::contracts::visit_bases;
 use self::eval::eval_const_number;
 use self::expression::expression;
 use self::symtable::Symtable;
@@ -457,7 +458,7 @@ impl ast::Namespace {
         None
     }
 
-    /// Resolve an event
+    /// Resolve an event. We should only be resolving events for emit statements
     pub fn resolve_event(
         &mut self,
         file_no: usize,
@@ -490,25 +491,27 @@ impl ast::Namespace {
         if namespace.is_empty() {
             let mut events = Vec::new();
 
-            // we should only be resolving events for emit statements
-            assert!(contract_no.is_some());
+            // If we're in a contract, then event can be defined in current contract or its bases
+            if let Some(contract_no) = contract_no {
+                for contract_no in visit_bases(contract_no, self).into_iter().rev() {
+                    match self
+                        .symbols
+                        .get(&(file_no, Some(contract_no), id.name.to_owned()))
+                    {
+                        None => (),
+                        Some(ast::Symbol::Event(ev)) => {
+                            for (_, event_no) in ev {
+                                events.push(*event_no);
+                            }
+                        }
+                        sym => {
+                            let error = ast::Namespace::wrong_symbol(sym, &id);
 
-            match self
-                .symbols
-                .get(&(file_no, contract_no, id.name.to_owned()))
-            {
-                None => (),
-                Some(ast::Symbol::Event(ev)) => {
-                    for (_, event_no) in ev {
-                        events.push(*event_no);
+                            self.diagnostics.push(error);
+
+                            return Err(());
+                        }
                     }
-                }
-                sym => {
-                    let error = ast::Namespace::wrong_symbol(sym, &id);
-
-                    self.diagnostics.push(error);
-
-                    return Err(());
                 }
             }
 
