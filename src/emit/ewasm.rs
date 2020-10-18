@@ -47,7 +47,7 @@ impl EwasmTarget {
 
         runtime_code.internalize(&["main"]);
 
-        let runtime_bs = runtime_code.wasm(true).unwrap();
+        let runtime_bs = runtime_code.code(true).unwrap();
 
         // Now we have the runtime code, create the deployer
         let mut b = EwasmTarget {
@@ -1215,7 +1215,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         // wasm
-        let wasm = target_contract.wasm(true).expect("compile should succeeed");
+        let wasm = target_contract.code(true).expect("compile should succeeed");
 
         let code = contract.emit_global_string(
             &format!("contract_{}_code", resolver_contract.name),

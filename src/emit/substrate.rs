@@ -2901,7 +2901,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             contract.opt,
         );
 
-        let wasm = target_contract.wasm(true).expect("compile should succeeed");
+        let wasm = target_contract.code(true).expect("compile should succeeed");
 
         // code hash
         let codehash = contract.emit_global_string(
