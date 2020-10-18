@@ -375,6 +375,7 @@ pub struct Parameter {
 pub enum StateMutability {
     Pure(Loc),
     View(Loc),
+    Constant(Loc),
     Payable(Loc),
 }
 
@@ -382,7 +383,7 @@ impl fmt::Display for StateMutability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             StateMutability::Pure(_) => write!(f, "pure"),
-            StateMutability::View(_) => write!(f, "view"),
+            StateMutability::Constant(_) | StateMutability::View(_) => write!(f, "view"),
             StateMutability::Payable(_) => write!(f, "payable"),
         }
     }
@@ -392,6 +393,7 @@ impl StateMutability {
     pub fn loc(&self) -> Loc {
         match self {
             StateMutability::Pure(loc)
+            | StateMutability::Constant(loc)
             | StateMutability::View(loc)
             | StateMutability::Payable(loc) => *loc,
         }
