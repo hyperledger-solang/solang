@@ -52,7 +52,7 @@ RUN Invoke-BatchFile C:\BuildTools\vc\Auxiliary\Build\vcvars64.bat ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name INCLUDE -Value $env:INCLUDE ; `
 	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment\' -Name LIBPATH -Value $env:LIBPATH ;
 
-RUN git clone -b release/10.x git://github.com/llvm/llvm-project
+RUN git clone --branch bpf --single-branch git://github.com/seanyoung/llvm-project
 
 WORKDIR \llvm-project
 
@@ -60,7 +60,7 @@ WORKDIR \llvm-project
 RUN Add-Content llvm\CMakeLists.txt 'set(CMAKE_SUPPRESS_REGENERATION 1)' ;
 
 # All llvm targets should be enabled or inkwell refused to link
-RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang `
+RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld' `
 	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX=C:/llvm10.0 `
 	-B build llvm
 RUN cmake --build build --target install
