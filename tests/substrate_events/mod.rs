@@ -211,7 +211,7 @@ fn emit() {
         r##"
         contract a {
             event foo(bool) anonymous;
-            function emit_event() public { 
+            function emit_event() public {
                 emit foo(true);
             }
         }"##,
@@ -232,7 +232,7 @@ fn emit() {
         r##"
         contract a {
             event foo(bool,uint32);
-            function emit_event() public { 
+            function emit_event() public {
                 emit foo(true, 102);
             }
         }"##,
@@ -261,7 +261,7 @@ fn event_imported() {
         import "b.sol";
 
         contract foo {
-            function emit_event() public { 
+            function emit_event() public {
                 emit bar(102, true);
             }
         }
@@ -289,7 +289,7 @@ fn event_imported() {
         import "b.sol";
 
         contract foo {
-            function emit_event() public { 
+            function emit_event() public {
                 emit baz.bar(102, true);
             }
         }
@@ -319,7 +319,7 @@ fn event_imported() {
         import "b.sol" as X;
 
         contract foo {
-            function emit_event() public { 
+            function emit_event() public {
                 emit X.baz.bar(102, true);
             }
         }
@@ -349,7 +349,7 @@ fn event_imported() {
         import "b.sol" as X;
 
         contract foo {
-            function emit_event() public { 
+            function emit_event() public {
                 emit X.bar(102, true);
             }
         }
@@ -366,6 +366,25 @@ fn event_imported() {
     );
 
     let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    no_errors(ns.diagnostics);
+}
+
+#[test]
+fn inherited() {
+    let ns = parse_and_resolve(
+        r#"
+        contract base {
+            event foo(bool a, int b);
+        }
+
+        contract c is base {
+            function f() public {
+                emit foo(true, 1);
+            }
+        }"#,
+        Target::Substrate,
+    );
 
     no_errors(ns.diagnostics);
 }
