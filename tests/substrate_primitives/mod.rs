@@ -343,6 +343,18 @@ fn address() {
         "expression of type address not allowed"
     );
 
+    let ns = parse_and_resolve(
+        "contract test {
+            address foo = 0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487;
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "address literal ‘0x5b0Ddf2835f0A76c96D6113D47F6482e51a55487’ has length of ethereum address (20 bytes). Addresses are 32 bytes on target Substrate"
+    );
+
     #[derive(Debug, PartialEq, Encode, Decode)]
     struct Address([u8; 32]);
 

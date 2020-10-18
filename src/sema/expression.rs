@@ -1082,37 +1082,48 @@ pub fn expression(
         pt::Expression::NumberLiteral(loc, b) => bigint_to_expression(loc, b, ns),
         pt::Expression::HexNumberLiteral(loc, n) => {
             // ns.address_length is in bytes; double for hex and two for the leading 0x
-            let looks_like_address = n.len() == ns.address_length * 2 + 2
-                && n.starts_with("0x")
-                && !n.chars().any(|c| c == '_');
+            if n.starts_with("0x") && !n.chars().any(|c| c == '_') && (n.len() % 2) == 0 {
+                let length_bytes = (n.len() - 2) / 2;
 
-            if looks_like_address {
-                let address = to_hexstr_eip55(n);
+                if length_bytes == ns.address_length {
+                    let address = to_hexstr_eip55(n);
 
-                if address == *n {
-                    let s: String = address.chars().skip(2).collect();
+                    return if address == *n {
+                        let s: String = address.chars().skip(2).collect();
 
-                    Ok(Expression::NumberLiteral(
-                        *loc,
-                        Type::Address(false),
-                        BigInt::from_str_radix(&s, 16).unwrap(),
-                    ))
-                } else {
-                    ns.diagnostics.push(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "address literal has incorrect checksum, expected ‘{}’",
-                            address
-                        ),
-                    ));
-                    Err(())
+                        Ok(Expression::NumberLiteral(
+                            *loc,
+                            Type::Address(false),
+                            BigInt::from_str_radix(&s, 16).unwrap(),
+                        ))
+                    } else {
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!(
+                                "address literal has incorrect checksum, expected ‘{}’",
+                                address
+                            ),
+                        ));
+                        Err(())
+                    };
+                } else if length_bytes == 20 {
+                    let address = to_hexstr_eip55(n);
+
+                    if address == *n {
+                        // looks like ethereum address
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("address literal ‘{}’ has length of ethereum address (20 bytes). Addresses are {} bytes on target {}", n, ns.address_length, ns.target),
+                        ));
+                        return Err(());
+                    }
                 }
-            } else {
-                // from_str_radix does not like the 0x prefix
-                let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
-
-                bigint_to_expression(loc, &BigInt::from_str_radix(&s, 16).unwrap(), ns)
             }
+
+            // from_str_radix does not like the 0x prefix
+            let s: String = n.chars().filter(|v| *v != 'x' && *v != '_').collect();
+
+            bigint_to_expression(loc, &BigInt::from_str_radix(&s, 16).unwrap(), ns)
         }
         pt::Expression::Variable(id) => {
             if let Some(v) = symtable.find(&id.name) {
