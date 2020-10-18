@@ -162,7 +162,6 @@ pub enum Token<'input> {
 
     This,
     As,
-    From,
     Is,
     Abstract,
     Virtual,
@@ -289,7 +288,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Ether => write!(f, "ether"),
             Token::This => write!(f, "this"),
             Token::As => write!(f, "as"),
-            Token::From => write!(f, "from"),
             Token::Is => write!(f, "is"),
             Token::Abstract => write!(f, "abstract"),
             Token::Virtual => write!(f, "virtual"),
@@ -315,6 +313,7 @@ pub enum LexicalError {
     InvalidCharacterInHexLiteral(usize, char),
     UnrecognisedToken(usize, usize, String),
     MissingExponent(usize, usize),
+    ExpectedFrom(usize, usize, String),
 }
 
 impl fmt::Display for LexicalError {
@@ -332,6 +331,7 @@ impl fmt::Display for LexicalError {
                 write!(f, "invalid character ‘{}’ in hex literal string", ch)
             }
             LexicalError::UnrecognisedToken(_, _, t) => write!(f, "unrecognised token ‘{}’", t),
+            LexicalError::ExpectedFrom(_, _, t) => write!(f, "‘{}’ found where ‘from’ expected", t),
             LexicalError::MissingExponent(_, _) => write!(f, "missing number"),
         }
     }
@@ -346,6 +346,7 @@ impl LexicalError {
             LexicalError::MissingNumber(start, end) => Loc(file_no, *start, *end),
             LexicalError::InvalidCharacterInHexLiteral(pos, _) => Loc(file_no, *pos, *pos),
             LexicalError::UnrecognisedToken(start, end, _) => Loc(file_no, *start, *end),
+            LexicalError::ExpectedFrom(start, end, _) => Loc(file_no, *start, *end),
             LexicalError::MissingExponent(start, end) => Loc(file_no, *start, *end),
         }
     }
@@ -509,7 +510,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "ether" => Token::Ether,
     "this" => Token::This,
     "as" => Token::As,
-    "from" => Token::From,
     "is" => Token::Is,
     "abstract" => Token::Abstract,
     "virtual" => Token::Virtual,
