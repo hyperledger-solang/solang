@@ -39,6 +39,7 @@ use link::link;
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {
         Target::initialize_webassembly(&Default::default());
+        Target::initialize_bpf(&Default::default());
     };
 }
 
@@ -967,21 +968,20 @@ pub trait TargetRuntime<'a> {
                     contract.opt,
                 );
 
-                // wasm
-                let wasm = if *runtime && target_contract.runtime.is_some() {
+                let code = if *runtime && target_contract.runtime.is_some() {
                     target_contract
                         .runtime
                         .unwrap()
-                        .wasm(true)
+                        .code(true)
                         .expect("compile should succeeed")
                 } else {
-                    target_contract.wasm(true).expect("compile should succeeed")
+                    target_contract.code(true).expect("compile should succeeed")
                 };
 
                 let size = contract
                     .context
                     .i32_type()
-                    .const_int(wasm.len() as u64, false);
+                    .const_int(code.len() as u64, false);
 
                 let elem_size = contract.context.i32_type().const_int(1, false);
 
@@ -991,7 +991,7 @@ pub trait TargetRuntime<'a> {
                         if *runtime { "runtime" } else { "deployer" },
                         &codegen_contract.name
                     ),
-                    &wasm,
+                    &code,
                     true,
                 );
 
@@ -4415,7 +4415,7 @@ pub struct Contract<'a> {
     contract: &'a ast::Contract,
     ns: &'a ast::Namespace,
     functions: HashMap<usize, FunctionValue<'a>>,
-    wasm: RefCell<Vec<u8>>,
+    code: RefCell<Vec<u8>>,
     opt: OptimizationLevel,
     code_size: RefCell<Option<IntValue<'a>>>,
     selector: GlobalValue<'a>,
@@ -4446,18 +4446,21 @@ impl<'a> Contract<'a> {
         }
     }
 
-    /// Compile the contract to wasm and return the wasm as bytes. The result is
+    /// Compile the contract and return the code as bytes. The result is
     /// cached, since this function can be called multiple times (e.g. one for
     /// each time a contract of this type is created).
-    pub fn wasm(&self, linking: bool) -> Result<Vec<u8>, String> {
-        {
-            let wasm = self.wasm.borrow();
+    pub fn code(&self, linking: bool) -> Result<Vec<u8>, String> {
+        let wasm = self.code.borrow();
 
-            if !wasm.is_empty() {
-                return Ok(wasm.clone());
-            }
+        if wasm.is_empty() {
+            self.compile(linking)
+        } else {
+            Ok(wasm.clone())
         }
+    }
 
+    /// Pass our module to llvm for optimization and compilation
+    fn compile(&self, linking: bool) -> Result<Vec<u8>, String> {
         match self.opt {
             OptimizationLevel::Default | OptimizationLevel::Aggressive => {
                 let pass_manager = PassManager::create(());
@@ -4472,7 +4475,7 @@ impl<'a> Contract<'a> {
             _ => {}
         }
 
-        let target = Target::from_name("wasm32").unwrap();
+        let target = Target::from_name(self.ns.target.llvm_target_name()).unwrap();
 
         let target_machine = target
             .create_target_machine(
@@ -4500,12 +4503,12 @@ impl<'a> Contract<'a> {
                         let bs = link(slice, self.ns.target);
 
                         if !self.patch_code_size(bs.len() as u64) {
-                            self.wasm.replace(bs.to_vec());
+                            self.code.replace(bs.to_vec());
 
                             return Ok(bs.to_vec());
                         }
                     } else {
-                        self.wasm.replace(slice.to_vec());
+                        self.code.replace(slice.to_vec());
 
                         return Ok(slice.to_vec());
                     }
@@ -4562,7 +4565,7 @@ impl<'a> Contract<'a> {
     ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
 
-        let triple = TargetTriple::create("wasm32-unknown-unknown-wasm");
+        let triple = TargetTriple::create(ns.target.llvm_target_triple());
         let module = context.create_module(&contract.name);
 
         module.set_triple(&triple);
@@ -4622,7 +4625,7 @@ impl<'a> Contract<'a> {
             contract,
             ns,
             functions: HashMap::new(),
-            wasm: RefCell::new(Vec::new()),
+            code: RefCell::new(Vec::new()),
             opt,
             code_size: RefCell::new(None),
             selector,
@@ -5252,4 +5255,16 @@ fn load_stdlib<'a>(context: &'a Context, target: &crate::Target) -> Module<'a> {
     }
 
     module
+}
+
+impl crate::Target {
+    // LLVM Targett name
+    fn llvm_target_name(&self) -> &'static str {
+        "wasm32"
+    }
+
+    // LLVM Target triple
+    fn llvm_target_triple(&self) -> &'static str {
+        "wasm32-unknown-unknown-wasm"
+    }
 }

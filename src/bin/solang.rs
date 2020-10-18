@@ -341,7 +341,7 @@ fn process_filename(
         }
 
         if let Some("object") = matches.value_of("EMIT") {
-            let obj = match contract.wasm(false) {
+            let obj = match contract.code(false) {
                 Ok(o) => o,
                 Err(s) => {
                     println!("error: {}", s);
@@ -364,7 +364,7 @@ fn process_filename(
             continue;
         }
 
-        let wasm = match contract.wasm(true) {
+        let code = match contract.code(true) {
             Ok(o) => o,
             Err(s) => {
                 println!("error: {}", s);
@@ -378,7 +378,7 @@ fn process_filename(
                 JsonContract {
                     abi: abi::ethereum::gen_abi(contract_no, &ns),
                     ewasm: EwasmContract {
-                        wasm: hex::encode_upper(wasm),
+                        wasm: hex::encode_upper(code),
                     },
                 },
             );
@@ -394,9 +394,9 @@ fn process_filename(
             }
 
             let mut file = File::create(wasm_filename).unwrap();
-            file.write_all(&wasm).unwrap();
+            file.write_all(&code).unwrap();
 
-            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &wasm, verbose);
+            let (abi_bytes, abi_ext) = abi::generate_abi(contract_no, &ns, &code, verbose);
             let abi_filename = output_file(&contract.name, abi_ext);
 
             if verbose {
