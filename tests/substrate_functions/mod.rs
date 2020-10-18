@@ -258,6 +258,20 @@ fn mutability() {
 
     let ns = parse_and_resolve(
         "contract test {
+            function bar() public constant returns (int64) {
+                return 102;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_warning(ns.diagnostics),
+        "‘constant’ is deprecated. Use ‘view’ instead"
+    );
+
+    let ns = parse_and_resolve(
+        "contract test {
             function bar(int64[] storage foo) private pure returns (int64) {
                 return foo[0];
             }

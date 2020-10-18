@@ -104,7 +104,16 @@ pub fn function_decl(
                     continue;
                 }
 
-                mutability = Some(m.clone());
+                if let pt::StateMutability::Constant(loc) = m {
+                    ns.diagnostics.push(Diagnostic::warning(
+                        *loc,
+                        "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
+                    ));
+
+                    mutability = Some(pt::StateMutability::View(*loc));
+                } else {
+                    mutability = Some(m.clone());
+                }
             }
             pt::FunctionAttribute::Visibility(v) => {
                 if let Some(e) = &visibility {

@@ -78,7 +78,7 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
 
     match func.mutability {
         Some(pt::StateMutability::Pure(_)) => (),
-        Some(pt::StateMutability::View(_)) => {
+        Some(pt::StateMutability::Constant(_)) | Some(pt::StateMutability::View(_)) => {
             state.can_read_state = true;
         }
         Some(pt::StateMutability::Payable(_)) | None => {
@@ -271,7 +271,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
 
             match &state.ns.contracts[base_contract_no].functions[function_no].mutability {
                 None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                Some(pt::StateMutability::View(_)) => state.read(loc),
+                Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
+                    state.read(loc)
+                }
                 Some(pt::StateMutability::Pure(_)) => (),
             };
         }
@@ -283,7 +285,9 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         } => {
             match &state.ns.contracts[*contract_no].functions[*function_no].mutability {
                 None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                Some(pt::StateMutability::View(_)) => state.read(loc),
+                Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
+                    state.read(loc)
+                }
                 Some(pt::StateMutability::Pure(_)) => (),
             };
         }
