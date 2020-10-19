@@ -41,7 +41,7 @@ jobs:
     - name: Extract LLVM
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
-      run: echo "::add-path::c:\llvm10.0\bin"
+      run: echo "c:\llvm10.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - name: Compile stdlib
       run: clang --target=wasm32 -c -emit-llvm -O3 -ffreestanding -fno-builtin -Wall stdlib.c sha3.c substrate.c ripemd160.c
       working-directory: ./stdlib
