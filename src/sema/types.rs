@@ -618,6 +618,7 @@ impl Type {
             Type::Address(true) => "address payable".to_string(),
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
+            Type::Value => format!("uint{}", ns.value_length * 8),
             Type::Bytes(n) => format!("bytes{}", n),
             Type::String => "string".to_string(),
             Type::DynamicBytes => "bytes".to_string(),
@@ -772,6 +773,7 @@ impl Type {
             Type::Uint(n) => *n,
             Type::Bytes(n) => *n as u16 * 8,
             Type::Enum(n) => ns.enums[*n].ty.bits(ns),
+            Type::Value => ns.value_length as u16 * 8,
             _ => panic!("type not allowed"),
         }
     }

@@ -785,6 +785,77 @@ fn cast_types(
                 Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
             }
         }
+        // Casting value to uint
+        (Type::Value, Type::Uint(to_len)) => {
+            let from_len = ns.value_length * 8;
+            let to_len = *to_len as usize;
+
+            match from_len.cmp(&to_len) {
+                Ordering::Greater => {
+                    if implicit {
+                        Err(Diagnostic::type_error(
+                            *loc,
+                            format!(
+                                "implicit conversion would truncate from {} to {}",
+                                from.to_string(ns),
+                                to.to_string(ns)
+                            ),
+                        ))
+                    } else {
+                        Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
+                    }
+                }
+                Ordering::Less => Ok(Expression::SignExt(*loc, to.clone(), Box::new(expr))),
+                Ordering::Equal => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr))),
+            }
+        }
+        (Type::Value, Type::Int(to_len)) => {
+            let from_len = ns.value_length * 8;
+            let to_len = *to_len as usize;
+
+            if implicit {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion would change sign from {} to {}",
+                        from.to_string(ns),
+                        to.to_string(ns)
+                    ),
+                ))
+            } else if from_len > to_len {
+                Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
+            } else if from_len < to_len {
+                Ok(Expression::ZeroExt(*loc, to.clone(), Box::new(expr)))
+            } else {
+                Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
+            }
+        }
+        // Casting value to uint
+        (Type::Uint(from_len), Type::Value) => {
+            let from_len = *from_len as usize;
+            let to_len = ns.value_length * 8;
+
+            match from_len.cmp(&to_len) {
+                Ordering::Greater => {
+                    if implicit {
+                        Err(Diagnostic::type_error(
+                            *loc,
+                            format!(
+                                "conversion truncates {} to {}, as value is type {} on {}",
+                                from.to_string(ns),
+                                to.to_string(ns),
+                                Type::Value.to_string(ns),
+                                ns.target
+                            ),
+                        ))
+                    } else {
+                        Ok(Expression::Trunc(*loc, to.clone(), Box::new(expr)))
+                    }
+                }
+                Ordering::Less => Ok(Expression::SignExt(*loc, to.clone(), Box::new(expr))),
+                Ordering::Equal => Ok(Expression::Cast(*loc, to.clone(), Box::new(expr))),
+            }
+        }
         // Casting int to address
         (Type::Uint(from_len), Type::Address(_)) | (Type::Int(from_len), Type::Address(_)) => {
             if implicit {
@@ -3087,11 +3158,7 @@ fn member_access(
                     }
                 }
 
-                return Ok(Expression::Balance(
-                    *loc,
-                    Type::Uint(ns.value_length as u16 * 8),
-                    Box::new(expr),
-                ));
+                return Ok(Expression::Balance(*loc, Type::Value, Box::new(expr)));
             }
         }
         _ => (),
@@ -3955,7 +4022,7 @@ fn method_call_pos_args(
                 } else {
                     Box::new(Expression::NumberLiteral(
                         pt::Loc(0, 0, 0),
-                        Type::Uint(ns.value_length as u16 * 8),
+                        Type::Value,
                         BigInt::zero(),
                     ))
                 };
@@ -4017,13 +4084,7 @@ fn method_call_pos_args(
 
             let expr = expression(&args[0], file_no, contract_no, ns, symtable, false)?;
 
-            let value = cast(
-                &args[0].loc(),
-                expr,
-                &Type::Uint(ns.value_length as u16 * 8),
-                true,
-                ns,
-            )?;
+            let value = cast(&args[0].loc(), expr, &Type::Value, true, ns)?;
 
             return if func.name == "transfer" {
                 Ok(Expression::Builtin(
@@ -4074,7 +4135,7 @@ fn method_call_pos_args(
             let value = call_args.value.unwrap_or_else(|| {
                 Box::new(Expression::NumberLiteral(
                     pt::Loc(0, 0, 0),
-                    Type::Uint(ns.value_length as u16 * 8),
+                    Type::Value,
                     BigInt::zero(),
                 ))
             });
@@ -4390,7 +4451,7 @@ fn method_call_named_args(
                 } else {
                     Box::new(Expression::NumberLiteral(
                         pt::Loc(0, 0, 0),
-                        Type::Uint(ns.value_length as u16 * 8),
+                        Type::Value,
                         BigInt::zero(),
                     ))
                 };
@@ -4688,7 +4749,7 @@ fn parse_call_args(
             "value" => {
                 let expr = expression(&arg.expr, file_no, contract_no, ns, symtable, false)?;
 
-                let ty = Type::Uint(ns.value_length as u16 * 8);
+                let ty = Type::Value;
 
                 res.value = Some(Box::new(cast(&arg.expr.loc(), expr, &ty, true, ns)?));
             }

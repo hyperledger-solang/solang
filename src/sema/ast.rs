@@ -23,6 +23,8 @@ pub enum Type {
     Contract(usize),
     Ref(Box<Type>),
     StorageRef(Box<Type>),
+    /// There is no way to declare this type in Solidity
+    Value,
     Void,
     Unreachable,
 }

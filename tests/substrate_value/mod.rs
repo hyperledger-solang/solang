@@ -213,6 +213,30 @@ fn external_call_value() {
     let ns = parse_and_resolve(
         r##"
         contract a {
+            function test(int32 l) public payable {
+            }
+        }
+
+        contract b {
+            int x;
+
+            function test() public {
+                uint256 x = 500;
+                a f = new a();
+                f.test{value: x}({l: 501});
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "conversion truncates uint256 to uint128, as value is type uint128 on Substrate"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        contract a {
             function test(int32 l) public {
             }
         }

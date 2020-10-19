@@ -903,7 +903,7 @@ pub fn expression(
         Expression::Builtin(loc, _, Builtin::Gasprice, expr)
             if expr.len() == 1 && ns.target != Target::Substrate =>
         {
-            let ty = Type::Uint(ns.value_length as u16 * 8);
+            let ty = Type::Value;
             let gasprice = Expression::Builtin(*loc, vec![ty.clone()], Builtin::Gasprice, vec![]);
             let units = expression(&expr[0], cfg, contract_no, ns, vartab);
 

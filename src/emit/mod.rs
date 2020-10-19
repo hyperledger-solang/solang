@@ -5132,6 +5132,10 @@ impl<'a> Contract<'a> {
             ast::Type::Int(n) | ast::Type::Uint(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32))
             }
+            ast::Type::Value => BasicTypeEnum::IntType(
+                self.context
+                    .custom_width_int_type(self.ns.value_length as u32 * 8),
+            ),
             ast::Type::Contract(_) | ast::Type::Address(_) => {
                 BasicTypeEnum::IntType(self.address_type())
             }
