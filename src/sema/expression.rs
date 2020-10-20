@@ -382,6 +382,7 @@ fn get_int_length(
     match l {
         Type::Uint(n) => Ok((*n, false)),
         Type::Int(n) => Ok((*n, true)),
+        Type::Value => Ok((ns.value_length as u16 * 8, false)),
         Type::Bytes(n) if allow_bytes => Ok((*n as u16 * 8, false)),
         Type::Enum(n) => {
             ns.diagnostics.push(Diagnostic::error(
