@@ -280,6 +280,7 @@ impl Abi {
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
+    #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
         let length = self.types.len();
 
@@ -304,12 +305,11 @@ impl Abi {
     }
 
     /// Adds struct type to registry. Does not check for duplication (yet)
-    fn struct_type(&mut self, name: &str, fields: Vec<StructField>) -> usize {
+    fn struct_type(&mut self, path: Vec<String>, fields: Vec<StructField>) -> usize {
         let length = self.types.len();
-        let name = name.to_owned();
 
         self.types.push(Type::Struct {
-            path: vec![name],
+            path,
             def: Composite {
                 composite: StructFields { fields },
             },
@@ -497,7 +497,7 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                             .collect();
 
                         Some(ParamType {
-                            ty: abi.struct_type("", fields),
+                            ty: abi.struct_type(Vec::new(), fields),
                             display_name: vec![],
                         })
                     }
@@ -545,10 +545,22 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
 
 fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamType {
     match ty {
-        ast::Type::Enum(n) => ParamType {
+        ast::Type::Enum(n) => {
+            /* clike_enums are broken in polkadot. Use u8 for now.
             ty: registry.builtin_enum_type(&ns.enums[*n]),
             display_name: vec![ns.enums[*n].name.to_owned()],
-        },
+            */
+            let mut display_name = vec![ns.enums[*n].name.to_owned()];
+
+            if let Some(contract_name) = &ns.enums[*n].contract {
+                display_name.insert(0, contract_name.to_owned());
+            }
+
+            ParamType {
+                ty: registry.builtin_type("u8"),
+                display_name,
+            }
+        }
         ast::Type::Bytes(n) => {
             let elem = registry.builtin_type("u8");
             ParamType {
@@ -596,11 +608,20 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             let ty = registry.builtin_array_type(elem, 32);
 
             ParamType {
-                ty: registry.struct_type("AccountId", vec![StructField { name: None, ty }]),
-                display_name: vec![String::from("AccountId")],
+                ty: registry.struct_type(
+                    vec!["AccountId".to_owned()],
+                    vec![StructField { name: None, ty }],
+                ),
+                display_name: vec!["AccountId".to_owned()],
             }
         }
         ast::Type::Struct(n) => {
+            let mut display_name = vec![ns.structs[*n].name.to_owned()];
+
+            if let Some(contract_name) = &ns.structs[*n].contract {
+                display_name.insert(0, contract_name.to_owned());
+            }
+
             let def = &ns.structs[*n];
             let fields = def
                 .fields
@@ -610,9 +631,10 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
                     ty: ty_to_abi(&f.ty, ns, registry).ty,
                 })
                 .collect();
+
             ParamType {
-                ty: registry.struct_type(&def.name, fields),
-                display_name: vec![],
+                ty: registry.struct_type(display_name.clone(), fields),
+                display_name,
             }
         }
         ast::Type::DynamicBytes => {
