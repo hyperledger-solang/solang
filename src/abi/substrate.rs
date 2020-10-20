@@ -101,7 +101,7 @@ struct PrimitiveDef {
 
 #[derive(Deserialize, Serialize)]
 struct StructField {
-    name: String,
+    name: Option<String>,
     #[serde(rename = "type")]
     ty: usize,
 }
@@ -127,6 +127,7 @@ pub struct Message {
     pub selector: String,
     pub docs: Vec<String>,
     mutates: bool,
+    payable: bool,
     args: Vec<Param>,
     return_type: Option<ParamType>,
 }
@@ -276,20 +277,6 @@ impl Abi {
         });
 
         length + 1
-    }
-
-    /// Returns index to builtin type in registry. Type is added if not already present
-    fn string_type(&mut self) -> usize {
-        let ty_u8 = self.builtin_type("u8");
-
-        let elem_ty = self.builtin_slice_type(ty_u8);
-        let name = String::from("elems");
-
-        let elem_ty = self.struct_type("Vec", vec![StructField { name, ty: elem_ty }]);
-
-        let name = String::from("vec");
-
-        self.struct_type("str", vec![StructField { name, ty: elem_ty }])
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
@@ -489,35 +476,40 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
             }
             _ => false,
         })
-        .map(|f| Message {
-            name: f.name.to_owned(),
-            mutates: f.mutability.is_none(),
-            return_type: match f.returns.len() {
-                0 => None,
-                1 => Some(ty_to_abi(&f.returns[0].ty, ns, &mut abi)),
-                _ => {
-                    let fields = f
-                        .returns
-                        .iter()
-                        .map(|f| StructField {
-                            name: f.name.to_string(),
-                            ty: ty_to_abi(&f.ty, ns, &mut abi).ty,
-                        })
-                        .collect();
+        .map(|f| {
+            let payable = matches!(f.mutability, Some(pt::StateMutability::Payable(_)));
 
-                    Some(ParamType {
-                        ty: abi.struct_type("", fields),
-                        display_name: vec![],
-                    })
-                }
-            },
-            selector: render_selector(f),
-            args: f
-                .params
-                .iter()
-                .map(|p| parameter_to_abi(p, ns, &mut abi))
-                .collect(),
-            docs: vec![render(&f.tags)],
+            Message {
+                name: f.name.to_owned(),
+                mutates: f.mutability.is_none() || payable,
+                payable,
+                return_type: match f.returns.len() {
+                    0 => None,
+                    1 => Some(ty_to_abi(&f.returns[0].ty, ns, &mut abi)),
+                    _ => {
+                        let fields = f
+                            .returns
+                            .iter()
+                            .map(|f| StructField {
+                                name: Some(f.name.to_string()),
+                                ty: ty_to_abi(&f.ty, ns, &mut abi).ty,
+                            })
+                            .collect();
+
+                        Some(ParamType {
+                            ty: abi.struct_type("", fields),
+                            display_name: vec![],
+                        })
+                    }
+                },
+                selector: render_selector(f),
+                args: f
+                    .params
+                    .iter()
+                    .map(|p| parameter_to_abi(p, ns, &mut abi))
+                    .collect(),
+                docs: vec![render(&f.tags)],
+            }
         })
         .collect();
 
@@ -586,16 +578,26 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
         }
         ast::Type::StorageRef(ty) => ty_to_abi(ty, ns, registry),
         ast::Type::Ref(ty) => ty_to_abi(ty, ns, registry),
-        ast::Type::Bool
-        | ast::Type::Uint(_)
-        | ast::Type::Int(_)
-        | ast::Type::Address(_)
-        | ast::Type::Contract(_) => {
-            let scalety = primitive_to_string(ty.clone());
+        ast::Type::Bool | ast::Type::Uint(_) | ast::Type::Int(_) => {
+            let scalety = match ty {
+                ast::Type::Bool => "bool".into(),
+                ast::Type::Uint(n) => format!("u{}", n),
+                ast::Type::Int(n) => format!("i{}", n),
+                _ => unreachable!(),
+            };
 
             ParamType {
                 ty: registry.builtin_type(&scalety),
                 display_name: vec![scalety.to_string()],
+            }
+        }
+        ast::Type::Address(_) | ast::Type::Contract(_) => {
+            let elem = registry.builtin_type("u8");
+            let ty = registry.builtin_array_type(elem, 32);
+
+            ParamType {
+                ty: registry.struct_type("AccountId", vec![StructField { name: None, ty }]),
+                display_name: vec![String::from("AccountId")],
             }
         }
         ast::Type::Struct(n) => {
@@ -604,7 +606,7 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
                 .fields
                 .iter()
                 .map(|f| StructField {
-                    name: f.name.to_string(),
+                    name: Some(f.name.to_string()),
                     ty: ty_to_abi(&f.ty, ns, registry).ty,
                 })
                 .collect();
@@ -622,21 +624,9 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             }
         }
         ast::Type::String => ParamType {
-            ty: registry.string_type(),
-            display_name: vec![String::from("str")],
+            ty: registry.builtin_type("str"),
+            display_name: vec![String::from("String")],
         },
-        _ => unreachable!(),
-    }
-}
-
-// For a given primitive, give the name as Substrate would like it (i.e. 64 bits
-// signed int is i64, not int64).
-fn primitive_to_string(ty: ast::Type) -> String {
-    match ty {
-        ast::Type::Bool => "bool".into(),
-        ast::Type::Uint(n) => format!("u{}", n),
-        ast::Type::Int(n) => format!("i{}", n),
-        ast::Type::Contract(_) | ast::Type::Address(_) => "address".into(),
         _ => unreachable!(),
     }
 }
