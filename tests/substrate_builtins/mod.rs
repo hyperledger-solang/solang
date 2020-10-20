@@ -1,7 +1,7 @@
 use parity_scale_codec::Encode;
 use parity_scale_codec_derive::{Decode, Encode};
 
-use super::{build_solidity, first_error, first_warning, parse_and_resolve};
+use super::{build_solidity, first_error, first_warning, no_errors, parse_and_resolve};
 use solang::Target;
 
 #[test]
@@ -759,6 +759,18 @@ fn msg() {
         first_error(ns.diagnostics),
         "implicit conversion would change sign from uint128 to int64"
     );
+
+    let ns = parse_and_resolve(
+        r#"
+        contract bar {
+            function test(uint128 v) public returns (bool) {
+                return msg.value > v;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
 
     let mut runtime = build_solidity(
         r##"
