@@ -22,30 +22,30 @@ impl Abi {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 pub struct ArrayDef {
     array: Array,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 pub struct Array {
     len: usize,
     #[serde(rename = "type")]
     ty: usize,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 pub struct SequenceDef {
     sequence: Sequence,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 pub struct Sequence {
     #[serde(rename = "type")]
     ty: usize,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 #[serde(untagged)]
 enum Type {
     Builtin { def: PrimitiveDef },
@@ -55,51 +55,44 @@ enum Type {
     Enum { path: Vec<String>, def: EnumDef },
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct Spec {
-    pub constructors: Vec<Constructor>,
-    pub messages: Vec<Message>,
-    pub events: Vec<Event>,
-}
-
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct BuiltinType {
     id: String,
     def: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct EnumVariant {
     name: String,
     discriminant: usize,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct EnumDef {
     variant: Enum,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct Enum {
     variants: Vec<EnumVariant>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct Composite {
     composite: StructFields,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct StructFields {
     fields: Vec<StructField>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct PrimitiveDef {
     primitive: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, PartialEq)]
 struct StructField {
     name: Option<String>,
     #[serde(rename = "type")]
@@ -144,6 +137,13 @@ pub struct Event {
     docs: Vec<String>,
     name: String,
     args: Vec<ParamIndexed>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct Spec {
+    pub constructors: Vec<Constructor>,
+    pub messages: Vec<Message>,
+    pub events: Vec<Event>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -198,93 +198,52 @@ struct LayoutFieldCell {
 /// Create a new registry and create new entries. Note that the registry is
 /// accessed by number, and the first entry is 1, not 0.
 impl Abi {
-    /// Returns index to builtin type in registry. Type is added if not already present
-    fn builtin_type(&mut self, ty: &str) -> usize {
-        for (i, s) in self.types.iter().enumerate() {
-            match s {
-                Type::Builtin {
-                    def: PrimitiveDef { primitive },
-                } if primitive == ty => {
-                    return i + 1;
-                }
-                _ => (),
+    /// Add a type to the list unless already present
+    fn register_ty(&mut self, ty: Type) -> usize {
+        match self.types.iter().position(|t| *t == ty) {
+            Some(i) => i + 1,
+            None => {
+                self.types.push(ty);
+
+                self.types.len()
             }
         }
+    }
 
-        let length = self.types.len();
-
-        self.types.push(Type::Builtin {
+    /// Returns index to builtin type in registry. Type is added if not already present
+    fn builtin_type(&mut self, ty: &str) -> usize {
+        self.register_ty(Type::Builtin {
             def: PrimitiveDef {
                 primitive: ty.to_owned(),
             },
-        });
-
-        length + 1
+        })
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
     fn builtin_array_type(&mut self, elem: usize, array_len: usize) -> usize {
-        for (i, s) in self.types.iter().enumerate() {
-            match s {
-                Type::BuiltinArray {
-                    def:
-                        ArrayDef {
-                            array: Array { len, ty },
-                        },
-                } if *len == array_len && *ty == elem => {
-                    return i + 1;
-                }
-                _ => (),
-            }
-        }
-
-        let length = self.types.len();
-
-        self.types.push(Type::BuiltinArray {
+        self.register_ty(Type::BuiltinArray {
             def: ArrayDef {
                 array: Array {
                     len: array_len,
                     ty: elem,
                 },
             },
-        });
-
-        length + 1
+        })
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
     fn builtin_slice_type(&mut self, elem: usize) -> usize {
-        for (i, s) in self.types.iter().enumerate() {
-            match s {
-                Type::BuiltinSequence {
-                    def:
-                        SequenceDef {
-                            sequence: Sequence { ty },
-                        },
-                } if *ty == elem => {
-                    return i + 1;
-                }
-                _ => (),
-            }
-        }
-
-        let length = self.types.len();
-
-        self.types.push(Type::BuiltinSequence {
+        self.register_ty(Type::BuiltinSequence {
             def: SequenceDef {
                 sequence: Sequence { ty: elem },
             },
-        });
-
-        length + 1
+        })
     }
 
     /// Returns index to builtin type in registry. Type is added if not already present
     #[allow(dead_code)]
     fn builtin_enum_type(&mut self, e: &ast::EnumDecl) -> usize {
-        let length = self.types.len();
-
-        let t = Type::Enum {
+        self.register_ty(Type::Enum {
             path: vec![e.name.to_owned()],
             def: EnumDef {
                 variant: Enum {
@@ -298,24 +257,17 @@ impl Abi {
                         .collect(),
                 },
             },
-        };
-        self.types.push(t);
-
-        length + 1
+        })
     }
 
     /// Adds struct type to registry. Does not check for duplication (yet)
     fn struct_type(&mut self, path: Vec<String>, fields: Vec<StructField>) -> usize {
-        let length = self.types.len();
-
-        self.types.push(Type::Struct {
+        self.register_ty(Type::Struct {
             path,
             def: Composite {
                 composite: StructFields { fields },
             },
-        });
-
-        length + 1
+        })
     }
 }
 
