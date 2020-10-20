@@ -95,11 +95,12 @@ pub fn resolve(
     }
 
     // Now we can resolve the bodies
-    resolve_bodies(function_bodies, file_no, ns);
-
-    for (contract_no, _) in contracts {
-        check_base_args(*contract_no, ns);
-        missing_overrides(*contract_no, ns);
+    if !resolve_bodies(function_bodies, file_no, ns) {
+        // only if we could resolve all the bodies
+        for (contract_no, _) in contracts {
+            check_base_args(*contract_no, ns);
+            missing_overrides(*contract_no, ns);
+        }
     }
 }
 
