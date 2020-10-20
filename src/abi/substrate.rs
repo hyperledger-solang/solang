@@ -94,6 +94,7 @@ struct PrimitiveDef {
 
 #[derive(Deserialize, Serialize, PartialEq)]
 struct StructField {
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     #[serde(rename = "type")]
     ty: usize,
@@ -443,7 +444,11 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
                             .returns
                             .iter()
                             .map(|f| StructField {
-                                name: Some(f.name.to_string()),
+                                name: if f.name.is_empty() {
+                                    None
+                                } else {
+                                    Some(f.name.to_string())
+                                },
                                 ty: ty_to_abi(&f.ty, ns, &mut abi).ty,
                             })
                             .collect();
