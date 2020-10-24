@@ -60,3 +60,38 @@ jobs:
       uses: actions/checkout@v2
     - name: Build dockerfile
       run: docker build .
+
+  solana:
+    name: Solana Integration test
+    runs-on: ubuntu-18.04
+    container: hyperledgerlabs/solang:ci
+    services:
+      solana:
+        image: solanalabs/solana:v1.4.2
+        ports:
+          - 8899
+          - 8900
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12'
+    - name: Rust stable
+      run: rustup default stable
+    - name: Install npm packages
+      run: npm install
+      working-directory: ./integration/solana
+    - name: Compile stdlib
+      run: make
+      working-directory:  ./stdlib
+    - name: Build
+      run: cargo build --verbose
+    - name: Build Solang contract
+      run: npm run build:bpf-solang
+      working-directory: ./integration/solana
+    - name: Set github env
+      run: echo "RPC_URL=http://solana:8899/" >> $GITHUB_ENV
+    - name: Deploy and test contract
+      run: npm run start
+      working-directory: ./integration/solana
