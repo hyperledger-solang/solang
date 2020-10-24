@@ -1,0 +1,8 @@
+/node_modules
+*.sw[po]
+/store
+/.cargo
+/dist
+.env
+*.so
+*.abi
