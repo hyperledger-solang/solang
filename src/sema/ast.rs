@@ -23,7 +23,17 @@ pub enum Type {
     Contract(usize),
     Ref(Box<Type>),
     StorageRef(Box<Type>),
-    /// There is no way to declare this type in Solidity
+    InternalFunction {
+        mutability: Option<pt::StateMutability>,
+        params: Vec<Type>,
+        returns: Vec<Type>,
+    },
+    ExternalFunction {
+        mutability: Option<pt::StateMutability>,
+        params: Vec<Type>,
+        returns: Vec<Type>,
+    },
+    /// There is no way to declare value in Solidity (should there be?)
     Value,
     Void,
     Unreachable,
@@ -495,12 +505,17 @@ pub enum Expression {
 
     Or(pt::Loc, Box<Expression>, Box<Expression>),
     And(pt::Loc, Box<Expression>, Box<Expression>),
-    InternalFunctionCall {
+    InternalFunction {
         loc: pt::Loc,
-        returns: Vec<Type>,
+        ty: Type,
         contract_no: usize,
         function_no: usize,
         signature: Option<String>,
+    },
+    InternalFunctionCall {
+        loc: pt::Loc,
+        returns: Vec<Type>,
+        function: Box<Expression>,
         args: Vec<Expression>,
     },
     ExternalFunctionCall {
@@ -805,6 +820,7 @@ pub enum Statement {
 }
 
 #[derive(Clone, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum DestructureField {
     None,
     Expression(Expression),

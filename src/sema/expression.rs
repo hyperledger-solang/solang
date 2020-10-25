@@ -91,6 +91,7 @@ impl Expression {
             | Expression::StringConcat(loc, _, _, _)
             | Expression::Keccak256(loc, _, _)
             | Expression::ReturnData(loc)
+            | Expression::InternalFunction { loc, .. }
             | Expression::InternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
@@ -207,6 +208,7 @@ impl Expression {
             Expression::StorageBytesPush(_, _, _) | Expression::StorageBytesPop(_, _) => {
                 unreachable!()
             }
+            Expression::InternalFunction { ty, .. } => ty.clone(),
         }
     }
     /// Is this expression 0
@@ -1090,6 +1092,49 @@ fn cast_types(
             *loc,
             "function or method does not return a value".to_string(),
         )),
+        (
+            Type::InternalFunction {
+                params: from_params,
+                mutability: from_mutablity,
+                returns: from_returns,
+            },
+            Type::InternalFunction {
+                params: to_params,
+                mutability: to_mutablity,
+                returns: to_returns,
+            },
+        ) => {
+            if from_params != to_params {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "function arguments do not match in conversion from ‘{}’ to ‘{}’",
+                        to.to_string(ns),
+                        from.to_string(ns)
+                    ),
+                ))
+            } else if from_returns != to_returns {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "function returns do not match in conversion from ‘{}’ to ‘{}’",
+                        to.to_string(ns),
+                        from.to_string(ns)
+                    ),
+                ))
+            } else if !compatible_mutability(from_mutablity, to_mutablity) {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "function mutability not compatible in conversion from ‘{}’ to ‘{}’",
+                        from.to_string(ns),
+                        to.to_string(ns),
+                    ),
+                ))
+            } else {
+                Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
+            }
+        }
         _ => Err(Diagnostic::type_error(
             *loc,
             format!(
@@ -1098,6 +1143,27 @@ fn cast_types(
                 to.to_string(ns)
             ),
         )),
+    }
+}
+
+/// Compare two mutability levels
+pub fn compatible_mutability(
+    left: &Option<pt::StateMutability>,
+    right: &Option<pt::StateMutability>,
+) -> bool {
+    match (left, right) {
+        // only payable is compatible with payable
+        (Some(pt::StateMutability::Payable(_)), Some(pt::StateMutability::Payable(_))) => true,
+        // default is compatible with anything but pure and view
+        (None, Some(pt::StateMutability::Payable(_))) | (None, None) => true,
+        // view is compatible with anything but pure
+        (Some(pt::StateMutability::View(_)), Some(pt::StateMutability::Payable(_)))
+        | (Some(pt::StateMutability::View(_)), None)
+        | (Some(pt::StateMutability::View(_)), Some(pt::StateMutability::View(_))) => true,
+        // pure is compatible with anything
+        (Some(pt::StateMutability::Pure(_)), _) => true,
+        // everything else is not compatible
+        _ => false,
     }
 }
 
@@ -1221,35 +1287,86 @@ pub fn expression(
                 return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
             }
 
-            let (var_contract_no, var_no) = ns.resolve_var(file_no, contract_no.unwrap(), id)?;
+            match ns.resolve_var(file_no, contract_no.unwrap(), id) {
+                Some(Symbol::Variable(_, var_contract_no, var_no)) => {
+                    let var_contract_no = *var_contract_no;
+                    let var_no = *var_no;
 
-            let var = &ns.contracts[var_contract_no].variables[var_no];
+                    let var = &ns.contracts[var_contract_no].variables[var_no];
 
-            match var.var {
-                ContractVariableType::Constant => Ok(Expression::ConstantVariable(
-                    id.loc,
-                    var.ty.clone(),
-                    var_contract_no,
-                    var_no,
-                )),
-                ContractVariableType::Storage => {
-                    if is_constant {
-                        ns.diagnostics.push(Diagnostic::error(
+                    match var.var {
+                        ContractVariableType::Constant => Ok(Expression::ConstantVariable(
                             id.loc,
-                            format!(
-                                "cannot read contract variable ‘{}’ in constant expression",
-                                id.name
-                            ),
-                        ));
-                        Err(())
-                    } else {
-                        Ok(Expression::StorageVariable(
-                            id.loc,
-                            Type::StorageRef(Box::new(var.ty.clone())),
+                            var.ty.clone(),
                             var_contract_no,
                             var_no,
-                        ))
+                        )),
+                        ContractVariableType::Storage => {
+                            if is_constant {
+                                ns.diagnostics.push(Diagnostic::error(
+                                    id.loc,
+                                    format!(
+                                        "cannot read contract variable ‘{}’ in constant expression",
+                                        id.name
+                                    ),
+                                ));
+                                Err(())
+                            } else {
+                                Ok(Expression::StorageVariable(
+                                    id.loc,
+                                    Type::StorageRef(Box::new(var.ty.clone())),
+                                    var_contract_no,
+                                    var_no,
+                                ))
+                            }
+                        }
                     }
+                }
+                Some(Symbol::Function(_)) => {
+                    let mut name_matches = 0;
+                    let mut expr = None;
+
+                    for (base_contract_no, function_no) in
+                        ns.contracts[contract_no.unwrap()].all_functions.keys()
+                    {
+                        let func = &ns.contracts[*base_contract_no].functions[*function_no];
+
+                        if func.name != id.name || func.ty != pt::FunctionTy::Function {
+                            continue;
+                        }
+
+                        // FIXME: virtual call
+
+                        let ty = Type::InternalFunction {
+                            params: func.params.iter().map(|p| p.ty.clone()).collect(),
+                            mutability: func.mutability.clone(),
+                            returns: func.returns.iter().map(|p| p.ty.clone()).collect(),
+                        };
+
+                        name_matches += 1;
+                        expr = Some(Expression::InternalFunction {
+                            loc: id.loc,
+                            ty,
+                            contract_no: *base_contract_no,
+                            function_no: *function_no,
+                            signature: None,
+                        });
+                    }
+
+                    if name_matches == 1 {
+                        Ok(expr.unwrap())
+                    } else {
+                        ns.diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            format!("function ‘{}’ is overloaded", id.name),
+                        ));
+                        Err(())
+                    }
+                }
+                sym => {
+                    let error = Namespace::wrong_symbol(sym, id);
+                    ns.diagnostics.push(error);
+                    Err(())
                 }
             }
         }
@@ -3302,6 +3419,65 @@ fn struct_literal(
     }
 }
 
+/// Resolve a function call via function type
+/// Function types do not have names so call cannot be using named parameters
+fn call_function_type(
+    loc: &pt::Loc,
+    expr: &pt::Expression,
+    args: &[pt::Expression],
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &mut Namespace,
+    symtable: &Symtable,
+) -> Result<Expression, ()> {
+    let function = expression(expr, file_no, contract_no, ns, symtable, false)?;
+
+    let mut resolved_args = Vec::new();
+
+    for arg in args {
+        let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
+
+        resolved_args.push(expr);
+    }
+
+    if let Type::InternalFunction {
+        params, returns, ..
+    } = function.ty()
+    {
+        if params.len() != resolved_args.len() {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "function expects {} arguments, {} provided",
+                    params.len(),
+                    resolved_args.len()
+                ),
+            ));
+            return Err(());
+        }
+
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for (i, arg) in resolved_args.iter().enumerate() {
+            cast_args.push(cast(&arg.loc(), arg.clone(), &params[i], true, ns)?);
+        }
+
+        Ok(Expression::InternalFunctionCall {
+            loc: *loc,
+            returns,
+            function: Box::new(function),
+            args: cast_args,
+        })
+    } else {
+        ns.diagnostics.push(Diagnostic::error(
+            *loc,
+            "expression is not a function".to_string(),
+        ));
+        Err(())
+    }
+}
+
 /// Resolve a function call with positional arguments
 pub fn call_position_args(
     loc: &pt::Loc,
@@ -3315,38 +3491,6 @@ pub fn call_position_args(
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    // is it a builtin
-    if builtin::is_builtin_call(None, &id.name, ns) {
-        return if func_ty == pt::FunctionTy::Modifier {
-            ns.diagnostics.push(Diagnostic::error(
-                *loc,
-                format!("cannot call builtin ‘{}’ via function modifier", id.name),
-            ));
-            Err(())
-        } else {
-            let expr = builtin::resolve_call(
-                loc,
-                file_no,
-                None,
-                &id.name,
-                args,
-                contract_no,
-                ns,
-                symtable,
-            )?;
-
-            if expr.tys().len() > 1 {
-                ns.diagnostics.push(Diagnostic::error(
-                    *loc,
-                    format!("builtin function ‘{}’ returns more than one value", id.name),
-                ));
-                Err(())
-            } else {
-                Ok(expr)
-            }
-        };
-    }
-
     let mut name_matches = 0;
     let mut errors = Vec::new();
     let mut resolved_args = Vec::new();
@@ -3413,17 +3557,22 @@ pub fn call_position_args(
         }
 
         let returns = function_returns(func);
+        let ty = function_type(func);
 
         return Ok(Expression::InternalFunctionCall {
             loc: *loc,
             returns,
-            contract_no: *base_contract_no,
-            function_no: *function_no,
-            signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
-                Some(func.signature.clone())
-            } else {
-                None
-            },
+            function: Box::new(Expression::InternalFunction {
+                loc: *loc,
+                ty,
+                contract_no: *base_contract_no,
+                function_no: *function_no,
+                signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
+                    Some(func.signature.clone())
+                } else {
+                    None
+                },
+            }),
             args: cast_args,
         });
     }
@@ -3559,17 +3708,22 @@ fn function_call_with_named_args(
         }
 
         let returns = function_returns(func);
+        let ty = function_type(func);
 
         return Ok(Expression::InternalFunctionCall {
             loc: *loc,
             returns,
-            contract_no: *base_contract_no,
-            function_no: *function_no,
-            signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
-                Some(func.signature.clone())
-            } else {
-                None
-            },
+            function: Box::new(Expression::InternalFunction {
+                loc: *loc,
+                ty,
+                contract_no: *base_contract_no,
+                function_no: *function_no,
+                signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
+                    Some(func.signature.clone())
+                } else {
+                    None
+                },
+            }),
             args: cast_args,
         });
     }
@@ -4235,15 +4389,20 @@ fn method_call_pos_args(
                 }
 
                 let returns = function_returns(libfunc);
+                let ty = function_type(libfunc);
 
                 import_library(contract_no, library_no, ns);
 
                 return Ok(Expression::InternalFunctionCall {
                     loc: *loc,
                     returns,
-                    contract_no: library_no,
-                    function_no,
-                    signature: None,
+                    function: Box::new(Expression::InternalFunction {
+                        loc: *loc,
+                        ty,
+                        contract_no: library_no,
+                        function_no,
+                        signature: None,
+                    }),
                     args: cast_args,
                 });
             }
@@ -4823,33 +4982,56 @@ pub fn function_call_expr(
                 return Err(());
             }
 
-            call_position_args(
-                loc,
-                &id,
-                pt::FunctionTy::Function,
-                args,
-                file_no,
-                contract_no.unwrap(),
-                true,
-                contract_no,
-                ns,
-                symtable,
-            )
+            // is it a builtin
+            if builtin::is_builtin_call(None, &id.name, ns) {
+                return {
+                    let expr = builtin::resolve_call(
+                        loc,
+                        file_no,
+                        None,
+                        &id.name,
+                        args,
+                        contract_no,
+                        ns,
+                        symtable,
+                    )?;
+
+                    if expr.tys().len() > 1 {
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("builtin function ‘{}’ returns more than one value", id.name),
+                        ));
+                        Err(())
+                    } else {
+                        Ok(expr)
+                    }
+                };
+            }
+
+            // is there a local variable or contract variable with this name
+            if symtable.find(&id.name).is_some()
+                || matches!(
+                    ns.resolve_var(file_no, contract_no.unwrap(), id),
+                    Some(Symbol::Variable(_, _, _))
+                )
+            {
+                call_function_type(loc, ty, args, file_no, contract_no, ns, symtable)
+            } else {
+                call_position_args(
+                    loc,
+                    &id,
+                    pt::FunctionTy::Function,
+                    args,
+                    file_no,
+                    contract_no.unwrap(),
+                    true,
+                    contract_no,
+                    ns,
+                    symtable,
+                )
+            }
         }
-        pt::Expression::ArraySubscript(_, _, _) => {
-            ns.diagnostics.push(Diagnostic::error(
-                ty.loc(),
-                "unexpected array type".to_string(),
-            ));
-            Err(())
-        }
-        _ => {
-            ns.diagnostics.push(Diagnostic::error(
-                ty.loc(),
-                "expression not expected here".to_string(),
-            ));
-            Err(())
-        }
+        _ => call_function_type(loc, ty, args, file_no, contract_no, ns, symtable),
     }
 }
 
@@ -4922,6 +5104,15 @@ fn function_returns(ftype: &Function) -> Vec<Type> {
         ftype.returns.iter().map(|p| p.ty.clone()).collect()
     } else {
         vec![Type::Void]
+    }
+}
+
+/// Get the function type for an internal function call
+fn function_type(func: &Function) -> Type {
+    Type::InternalFunction {
+        params: func.params.iter().map(|p| p.ty.clone()).collect(),
+        mutability: func.mutability.clone(),
+        returns: func.returns.iter().map(|p| p.ty.clone()).collect(),
     }
 }
 

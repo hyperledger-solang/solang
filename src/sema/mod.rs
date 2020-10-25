@@ -24,6 +24,7 @@ mod variables;
 use self::contracts::visit_bases;
 use self::eval::eval_const_number;
 use self::expression::expression;
+use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
 use file_cache::FileCache;
 
@@ -553,7 +554,7 @@ impl ast::Namespace {
         }
     }
 
-    fn wrong_symbol(sym: Option<&ast::Symbol>, id: &pt::Identifier) -> ast::Diagnostic {
+    pub fn wrong_symbol(sym: Option<&ast::Symbol>, id: &pt::Identifier) -> ast::Diagnostic {
         match sym {
             None => ast::Diagnostic::decl_error(id.loc, format!("`{}' is not found", id.name)),
             Some(ast::Symbol::Enum(_, _)) => {
@@ -625,7 +626,7 @@ impl ast::Namespace {
         file_no: usize,
         contract_no: usize,
         id: &pt::Identifier,
-    ) -> Result<(usize, usize), ()> {
+    ) -> Option<&ast::Symbol> {
         let mut s = self
             .symbols
             .get(&(file_no, Some(contract_no), id.name.to_owned()));
@@ -637,17 +638,9 @@ impl ast::Namespace {
         }
 
         if s.is_none() {
-            s = self.symbols.get(&(file_no, None, id.name.to_owned()));
-        }
-
-        if let Some(ast::Symbol::Variable(_, contract_no, var_no)) = s {
-            Ok((*contract_no, *var_no))
+            self.symbols.get(&(file_no, None, id.name.to_owned()))
         } else {
-            let error = ast::Namespace::wrong_symbol(s, &id);
-
-            self.diagnostics.push(error);
-
-            Err(())
+            s
         }
     }
 
@@ -821,6 +814,165 @@ impl ast::Namespace {
                             return Err(());
                         }
                         _ => ast::Type::Mapping(Box::new(key), Box::new(value)),
+                    }
+                }
+                pt::Type::Function {
+                    params,
+                    attributes,
+                    returns,
+                    trailing_attributes,
+                } => {
+                    let mut mutability: Option<pt::StateMutability> = None;
+                    let mut visibility: Option<pt::Visibility> = None;
+
+                    let mut success = true;
+
+                    for a in attributes {
+                        match a {
+                            pt::FunctionAttribute::StateMutability(m) => {
+                                if let Some(e) = &mutability {
+                                    self.diagnostics.push(ast::Diagnostic::error_with_note(
+                                        m.loc(),
+                                        format!(
+                                            "function type mutability redeclared `{}'",
+                                            m.to_string()
+                                        ),
+                                        e.loc(),
+                                        format!(
+                                            "location of previous mutability declaration of `{}'",
+                                            e.to_string()
+                                        ),
+                                    ));
+                                    success = false;
+                                    continue;
+                                }
+
+                                if let pt::StateMutability::Constant(loc) = m {
+                                    self.diagnostics.push(ast::Diagnostic::warning(
+                                        *loc,
+                                        "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
+                                    ));
+
+                                    mutability = Some(pt::StateMutability::View(*loc));
+                                } else {
+                                    mutability = Some(m.clone());
+                                }
+                            }
+                            pt::FunctionAttribute::Visibility(v) => {
+                                if let Some(e) = &visibility {
+                                    self.diagnostics.push(ast::Diagnostic::error_with_note(
+                                        v.loc(),
+                                        format!(
+                                            "function type visibility redeclared `{}'",
+                                            v.to_string()
+                                        ),
+                                        e.loc(),
+                                        format!(
+                                            "location of previous visibility declaration of `{}'",
+                                            e.to_string()
+                                        ),
+                                    ));
+                                    success = false;
+                                    continue;
+                                }
+
+                                visibility = Some(v.clone());
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+
+                    let is_external = match visibility {
+                        None | Some(pt::Visibility::Internal(_)) => false,
+                        Some(pt::Visibility::External(_)) => true,
+                        Some(v) => {
+                            self.diagnostics.push(ast::Diagnostic::error(
+                                v.loc(),
+                                format!("function type cannot have visibility attribute `{}'", v),
+                            ));
+                            success = false;
+                            false
+                        }
+                    };
+
+                    let (params, params_success) =
+                        resolve_params(params, is_external, file_no, contract_no, self);
+
+                    let (returns, returns_success) =
+                        resolve_returns(returns, is_external, file_no, contract_no, self);
+
+                    // trailing attribute should not be there
+                    // trailing visibility for contract variables should be removed already
+                    for a in trailing_attributes {
+                        match a {
+                            pt::FunctionAttribute::StateMutability(m) => {
+                                self.diagnostics.push(ast::Diagnostic::error(
+                                    m.loc(),
+                                    format!(
+                                        "mutability `{}' cannot be declared after returns",
+                                        m.to_string()
+                                    ),
+                                ));
+                                success = false;
+                            }
+                            pt::FunctionAttribute::Visibility(v) => {
+                                self.diagnostics.push(ast::Diagnostic::error(
+                                    v.loc(),
+                                    format!(
+                                        "visibility `{}' cannot be declared after returns",
+                                        v.to_string()
+                                    ),
+                                ));
+                                success = false;
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+
+                    if !success || !params_success || !returns_success {
+                        return Err(());
+                    }
+
+                    let params = params
+                        .into_iter()
+                        .map(|p| {
+                            if !p.name.is_empty() {
+                                self.diagnostics.push(ast::Diagnostic::error(
+                                    p.name_loc.unwrap(),
+                                    "function type parameters cannot be named".to_string(),
+                                ));
+                                success = false;
+                            }
+                            p.ty
+                        })
+                        .collect();
+
+                    let returns = returns
+                        .into_iter()
+                        .map(|p| {
+                            if !p.name.is_empty() {
+                                self.diagnostics.push(ast::Diagnostic::error(
+                                    p.name_loc.unwrap(),
+                                    "function type returns cannot be named".to_string(),
+                                ));
+                                success = false;
+                            }
+                            p.ty
+                        })
+                        .collect();
+
+                    if is_external {
+                        ast::Type::ExternalFunction {
+                            params,
+                            mutability,
+                            returns,
+                        }
+                    } else {
+                        ast::Type::InternalFunction {
+                            params,
+                            mutability,
+                            returns,
+                        }
                     }
                 }
                 pt::Type::Payable => {

@@ -274,6 +274,15 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             String::from("logical and"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
+        Expression::InternalFunction {
+            contract_no,
+            function_no,
+            ..
+        } => Tree::Leaf(format!(
+            "function {}.{}",
+            ns.contracts[*contract_no].name,
+            ns.contracts[*contract_no].functions[*function_no].name
+        )),
         _ => Tree::Leaf(String::from("not implemented")),
     }
 }

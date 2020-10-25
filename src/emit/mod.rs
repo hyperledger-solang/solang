@@ -5296,4 +5296,15 @@ impl Target {
             _ => "wasm",
         }
     }
+
+    /// Size of a pointer in bytes
+    pub fn ptr_size(&self) -> usize {
+        if *self == Target::Solana {
+            // Solana is BPF, which is 64 bit
+            64
+        } else {
+            // All others are WebAssembly in 32 bit mode
+            32
+        }
+    }
 }

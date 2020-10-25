@@ -1,5 +1,5 @@
 use super::ast::{
-    Builtin, DestructureField, Diagnostic, Expression, Function, Namespace, Statement,
+    Builtin, DestructureField, Diagnostic, Expression, Function, Namespace, Statement, Type,
 };
 use parser::pt;
 
@@ -88,30 +88,31 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
     };
 
     for arg in &func.modifiers {
-        if let Expression::InternalFunctionCall {
-            contract_no,
-            function_no,
-            signature,
-            args,
-            ..
-        } = &arg
-        {
+        if let Expression::InternalFunctionCall { function, args, .. } = &arg {
             // check the arguments to the modifiers
             for arg in args {
                 arg.recurse(&mut state, read_expression);
             }
 
             // check the modifier itself
-            let (base_contract_no, function_no) = if let Some(signature) = signature {
-                state.ns.contracts[*contract_no].virtual_functions[signature]
-            } else {
-                (*contract_no, *function_no)
-            };
+            if let Expression::InternalFunction {
+                contract_no,
+                function_no,
+                signature,
+                ..
+            } = function.as_ref()
+            {
+                let (base_contract_no, function_no) = if let Some(signature) = signature {
+                    state.ns.contracts[*contract_no].virtual_functions[signature]
+                } else {
+                    (*contract_no, *function_no)
+                };
 
-            // modifiers do not have mutability, bases or modifiers itself
-            let func = &ns.contracts[base_contract_no].functions[function_no];
+                // modifiers do not have mutability, bases or modifiers itself
+                let func = &ns.contracts[base_contract_no].functions[function_no];
 
-            recurse_statements(&func.body, &mut state);
+                recurse_statements(&func.body, &mut state);
+            }
         }
     }
 
@@ -256,26 +257,16 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Constructor { loc, .. } => {
             state.write(loc);
         }
-        Expression::InternalFunctionCall {
-            loc,
-            contract_no,
-            function_no,
-            signature,
-            ..
-        } => {
-            let (base_contract_no, function_no) = if let Some(signature) = signature {
-                state.ns.contracts[*contract_no].virtual_functions[signature]
-            } else {
-                (*contract_no, *function_no)
-            };
-
-            match &state.ns.contracts[base_contract_no].functions[function_no].mutability {
-                None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
-                    state.read(loc)
-                }
-                Some(pt::StateMutability::Pure(_)) => (),
-            };
+        Expression::InternalFunctionCall { loc, function, .. } => {
+            if let Type::InternalFunction { mutability, .. } = function.ty() {
+                match mutability {
+                    None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
+                    Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
+                        state.read(loc)
+                    }
+                    Some(pt::StateMutability::Pure(_)) => (),
+                };
+            }
         }
         Expression::ExternalFunctionCall {
             loc,

@@ -759,7 +759,7 @@ fn positional_argument_call() {
 
     let ns = parse_and_resolve(&src, Target::Substrate);
 
-    assert_eq!(first_error(ns.diagnostics), "unexpected array type");
+    assert_eq!(first_error(ns.diagnostics), "expression is not an array");
 
     let src = "
     contract args {
