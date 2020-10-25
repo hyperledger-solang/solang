@@ -42,7 +42,31 @@ fn var_decl(
     ns: &mut Namespace,
     symtable: &mut Symtable,
 ) -> bool {
-    let ty = match ns.resolve_type(file_no, Some(contract_no), false, &s.ty) {
+    let mut attrs = s.attrs.clone();
+    let mut ty = s.ty.clone();
+
+    // For function types, the parser adds the attributes incl visibility to the type,
+    // not the pt::ContractVariableDefinition attrs. We need to chomp off the visibility
+    // from the attributes before resolving the type
+    if let pt::Expression::Type(
+        _,
+        pt::Type::Function {
+            attributes,
+            trailing_attributes,
+            ..
+        },
+    ) = &mut ty
+    {
+        if let Some(pt::FunctionAttribute::Visibility(v)) = trailing_attributes.last() {
+            attrs.push(pt::VariableAttribute::Visibility(v.clone()));
+            trailing_attributes.pop();
+        } else if let Some(pt::FunctionAttribute::Visibility(v)) = attributes.last() {
+            attrs.push(pt::VariableAttribute::Visibility(v.clone()));
+            attributes.pop();
+        }
+    }
+
+    let ty = match ns.resolve_type(file_no, Some(contract_no), false, &ty) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -52,7 +76,7 @@ fn var_decl(
     let mut is_constant = false;
     let mut visibility: Option<pt::Visibility> = None;
 
-    for attr in &s.attrs {
+    for attr in attrs {
         match &attr {
             pt::VariableAttribute::Constant(loc) => {
                 if is_constant {

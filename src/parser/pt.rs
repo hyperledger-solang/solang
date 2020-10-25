@@ -197,7 +197,7 @@ pub struct EnumDefinition {
     pub values: Vec<Identifier>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum VariableAttribute {
     Visibility(Visibility),
     Constant(Loc),

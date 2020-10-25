@@ -988,58 +988,63 @@ pub fn emit_function_call(
     vartab: &mut Vartable,
 ) -> Vec<Expression> {
     match expr {
-        Expression::InternalFunctionCall {
-            contract_no,
-            function_no,
-            signature,
-            args,
-            ..
-        } => {
-            let args = args
-                .iter()
-                .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
-                .collect();
+        Expression::InternalFunctionCall { function, args, .. } => {
+            if let Expression::InternalFunction {
+                contract_no,
+                function_no,
+                signature,
+                ..
+            } = function.as_ref()
+            {
+                let args = args
+                    .iter()
+                    .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                    .collect();
 
-            let (base_contract_no, function_no) = if let Some(signature) = signature {
-                ns.contracts[callee_contract_no].virtual_functions[signature]
-            } else {
-                (*contract_no, *function_no)
-            };
+                let (base_contract_no, function_no) = if let Some(signature) = signature {
+                    ns.contracts[callee_contract_no].virtual_functions[signature]
+                } else {
+                    (*contract_no, *function_no)
+                };
 
-            let cfg_no =
-                ns.contracts[callee_contract_no].all_functions[&(base_contract_no, function_no)];
+                let cfg_no = ns.contracts[callee_contract_no].all_functions
+                    [&(base_contract_no, function_no)];
 
-            let ftype = &ns.contracts[base_contract_no].functions[function_no];
+                let ftype = &ns.contracts[base_contract_no].functions[function_no];
 
-            if !ftype.returns.is_empty() {
-                let mut res = Vec::new();
-                let mut returns = Vec::new();
+                if !ftype.returns.is_empty() {
+                    let mut res = Vec::new();
+                    let mut returns = Vec::new();
 
-                for ret in &ftype.returns {
-                    let id = pt::Identifier {
-                        loc: ret.loc,
-                        name: ret.name.to_owned(),
-                    };
+                    for ret in &ftype.returns {
+                        let id = pt::Identifier {
+                            loc: ret.loc,
+                            name: ret.name.to_owned(),
+                        };
 
-                    let temp_pos = vartab.temp(&id, &ret.ty);
-                    res.push(temp_pos);
-                    returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+                        let temp_pos = vartab.temp(&id, &ret.ty);
+                        res.push(temp_pos);
+                        returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+                    }
+
+                    cfg.add(vartab, Instr::Call { res, cfg_no, args });
+
+                    returns
+                } else {
+                    cfg.add(
+                        vartab,
+                        Instr::Call {
+                            res: Vec::new(),
+                            cfg_no,
+                            args,
+                        },
+                    );
+
+                    vec![Expression::Poison]
                 }
-
-                cfg.add(vartab, Instr::Call { res, cfg_no, args });
-
-                returns
             } else {
-                cfg.add(
-                    vartab,
-                    Instr::Call {
-                        res: Vec::new(),
-                        cfg_no,
-                        args,
-                    },
-                );
-
-                vec![Expression::Poison]
+                // FIXME dispatch on runtime function thing
+                unimplemented!();
             }
         }
         Expression::ExternalFunctionCallRaw {

@@ -273,10 +273,21 @@ pub fn function_decl(
         }
     };
 
-    let (params, params_success) = resolve_params(func, storage_allowed, file_no, contract_no, ns);
+    let (params, params_success) = resolve_params(
+        &func.params,
+        storage_allowed,
+        file_no,
+        Some(contract_no),
+        ns,
+    );
 
-    let (returns, returns_success) =
-        resolve_returns(func, storage_allowed, file_no, contract_no, ns);
+    let (returns, returns_success) = resolve_returns(
+        &func.returns,
+        storage_allowed,
+        file_no,
+        Some(contract_no),
+        ns,
+    );
 
     if ns.contracts[contract_no].is_interface() {
         if func.ty == pt::FunctionTy::Constructor {
@@ -571,17 +582,17 @@ pub fn function_decl(
 }
 
 /// Resolve the parameters
-fn resolve_params(
-    f: &pt::FunctionDefinition,
+pub fn resolve_params(
+    parameters: &[(pt::Loc, Option<pt::Parameter>)],
     storage_allowed: bool,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> (Vec<Parameter>, bool) {
     let mut params = Vec::new();
     let mut success = true;
 
-    for (loc, p) in &f.params {
+    for (loc, p) in parameters {
         let p = match p {
             Some(p) => p,
             None => {
@@ -594,7 +605,7 @@ fn resolve_params(
 
         let mut ty_loc = p.ty.loc();
 
-        match ns.resolve_type(file_no, Some(contract_no), false, &p.ty) {
+        match ns.resolve_type(file_no, contract_no, false, &p.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
@@ -651,17 +662,17 @@ fn resolve_params(
 }
 
 /// Resolve the return values
-fn resolve_returns(
-    f: &pt::FunctionDefinition,
+pub fn resolve_returns(
+    returns: &[(pt::Loc, Option<pt::Parameter>)],
     storage_allowed: bool,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> (Vec<Parameter>, bool) {
-    let mut returns = Vec::new();
+    let mut resolved_returns = Vec::new();
     let mut success = true;
 
-    for (loc, r) in &f.returns {
+    for (loc, r) in returns {
         let r = match r {
             Some(r) => r,
             None => {
@@ -674,7 +685,7 @@ fn resolve_returns(
 
         let mut ty_loc = r.ty.loc();
 
-        match ns.resolve_type(file_no, Some(contract_no), false, &r.ty) {
+        match ns.resolve_type(file_no, contract_no, false, &r.ty) {
             Ok(ty) => {
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
@@ -730,7 +741,7 @@ fn resolve_returns(
                     }
                 };
 
-                returns.push(Parameter {
+                resolved_returns.push(Parameter {
                     loc: *loc,
                     name: r
                         .name
@@ -746,7 +757,7 @@ fn resolve_returns(
         }
     }
 
-    (returns, success)
+    (resolved_returns, success)
 }
 
 #[test]

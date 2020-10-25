@@ -505,18 +505,19 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunctionCall { contract_no, function_no, signature, args, .. } => {
+            Expression::InternalFunction {contract_no, function_no, signature, ..} => {
                 let (base_contract_no, function_no) = if let Some(signature) = signature {
                     contract.virtual_functions[signature]
                 } else {
                     (*contract_no, *function_no)
                 };
 
-                let cfg_no = contract.all_functions[&(base_contract_no, function_no)];
-
+                format!("function {}.{}", ns.contracts[base_contract_no].name, ns.contracts[base_contract_no].functions[function_no].name)
+            }
+            Expression::InternalFunctionCall { function, args, .. } => {
                 format!(
                 "(call {} ({})",
-                contract.cfg[cfg_no].name,
+                self.expr_to_string(contract, ns, function),
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
@@ -984,25 +985,26 @@ fn resolve_modifier_call<'a>(
     call: &'a Expression,
     contract: &Contract,
 ) -> (usize, usize, &'a Vec<Expression>) {
-    if let Expression::InternalFunctionCall {
-        contract_no,
-        function_no,
-        signature,
-        args,
-        ..
-    } = call
-    {
-        // is it a virtual function call
-        let (contract_no, function_no) = if let Some(signature) = signature {
-            contract.virtual_functions[signature]
-        } else {
-            (*contract_no, *function_no)
-        };
+    if let Expression::InternalFunctionCall { function, args, .. } = call {
+        if let Expression::InternalFunction {
+            contract_no,
+            function_no,
+            signature,
+            ..
+        } = function.as_ref()
+        {
+            // is it a virtual function call
+            let (contract_no, function_no) = if let Some(signature) = signature {
+                contract.virtual_functions[signature]
+            } else {
+                (*contract_no, *function_no)
+            };
 
-        (contract_no, function_no, args)
-    } else {
-        panic!("modifier should internal call");
+            return (contract_no, function_no, args);
+        }
     }
+
+    panic!("modifier should resolve to internal call");
 }
 
 /// Generate the CFG for a function. If function_no is None, generate the implicit default

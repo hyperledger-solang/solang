@@ -635,6 +635,49 @@ impl Type {
                     .collect::<String>()
             ),
             Type::Mapping(k, v) => format!("mapping({} => {})", k.to_string(ns), v.to_string(ns)),
+            Type::ExternalFunction {
+                params,
+                mutability,
+                returns,
+            }
+            | Type::InternalFunction {
+                params,
+                mutability,
+                returns,
+            } => {
+                let mut s = format!(
+                    "function({}) {}",
+                    params
+                        .iter()
+                        .map(|ty| ty.to_string(ns))
+                        .collect::<Vec<String>>()
+                        .join(","),
+                    if matches!(self, Type::InternalFunction { .. }) {
+                        "internal"
+                    } else {
+                        "external"
+                    }
+                );
+
+                if let Some(mutability) = mutability {
+                    s.push(' ');
+
+                    s.push_str(&mutability.to_string());
+                }
+
+                if !returns.is_empty() {
+                    s.push_str(&format!(
+                        " returns ({})",
+                        returns
+                            .iter()
+                            .map(|ty| ty.to_string(ns))
+                            .collect::<Vec<String>>()
+                            .join(",")
+                    ));
+                }
+
+                s
+            }
             Type::Contract(n) => format!("contract {}", ns.contracts[*n].name),
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(ty) => format!("{} storage", ty.to_string(ns)),
@@ -761,6 +804,7 @@ impl Type {
                 .map(|f| f.ty.size_hint(ns))
                 .sum(),
             Type::String | Type::DynamicBytes => BigInt::from(4),
+            Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
             _ => unimplemented!(),
         }
     }
