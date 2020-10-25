@@ -62,6 +62,11 @@ SingleDocComment: (usize, CommentType, &'input str)= {
 }
 
 Type: Type = {
+    NoFunctionType,
+    FunctionType
+}
+
+NoFunctionType: Type = {
     "bool" => Type::Bool,
     "address" => Type::Address,
     "address" "payable" => Type::AddressPayable,
@@ -74,7 +79,30 @@ Type: Type = {
     Bytes => Type::Bytes(<>),
     <l:@L> "mapping" "(" <k:Precedence0> "=>" <v:Precedence0> ")" <r:@R> => {
         Type::Mapping(Loc(file_no, l, r), Box::new(k), Box::new(v))
+    },
+}
+
+FunctionType: Type = {
+    "function" <params:ParameterList>
+    <attributes:FunctionTypeAttribute*>
+    <returns:("returns" <ParameterList> <FunctionTypeAttribute*>)?> => {
+        let (returns, trailing_attributes) = match returns {
+            Some((r, t)) => (r, t),
+            None => (Vec::new(), Vec::new())
+        };
+
+        Type::Function {
+            params,
+            attributes,
+            returns,
+            trailing_attributes,
+        }
     }
+}
+
+FunctionTypeAttribute: FunctionAttribute = {
+    StateMutability => FunctionAttribute::StateMutability(<>),
+    Visibility => FunctionAttribute::Visibility(<>),
 }
 
 ArrayDimension: Option<Expression> = {
@@ -118,6 +146,7 @@ ContractPart: ContractPart = {
     ContractVariableDefinition => ContractPart::ContractVariableDefinition(<>),
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
+    ConstructorDefinition => ContractPart::FunctionDefinition(<>),
     Using => ContractPart::Using(<>),
 }
 
@@ -162,9 +191,19 @@ EnumDefinition: Box<EnumDefinition> = {
 }
 
 ContractVariableDefinition: Box<ContractVariableDefinition> = {
-    <doc:DocComments> <l:@L> <ty:Precedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+    <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
         Box::new(ContractVariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs, name, initializer: e,
+        })
+    },
+    // attributes cause shift-reduce errors with function type, since a function type contract variable can be declare as
+    // contract foo {
+    //     // f is a variable with internal visibility referencing an external function
+    //     function() external internal f;
+    // }
+    <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
+        Box::new(ContractVariableDefinition{
+            doc, loc: Loc(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
     }
 }
@@ -287,18 +326,27 @@ NamedArgument: NamedArgument = {
 }
 
 FunctionCall: Expression = {
-    <a:@L> <i:Precedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
+    <a:@L> <i:NoFunctionTyPrecedence0> "(" <v:Comma<Expression>> ")" <b:@R> => {
         Expression::FunctionCall(Loc(file_no, a, b), Box::new(i), v)
     },
-    <i:Precedence0> <l:@L> <block:BlockStatement> <r:@R> => {
+    <i:NoFunctionTyPrecedence0> <l:@L> <block:BlockStatement> <r:@R> => {
         Expression::FunctionCallBlock(Loc(file_no, l, r), Box::new(i), Box::new(block))
     },
-    <a:@L> <i:Precedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
+    <a:@L> <i:NoFunctionTyPrecedence0> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
         Expression::NamedFunctionCall(Loc(file_no, a, b), Box::new(i), v)
     },
 }
 
 Precedence0: Expression = {
+    NoFunctionTyPrecedence0,
+    FunctionTyPrecedence0
+}
+
+FunctionTyPrecedence0: Expression = {
+    <l:@L> <ty:FunctionType> <r:@R> => Expression::Type(Loc(file_no, l, r), ty),
+}
+
+NoFunctionTyPrecedence0: Expression = {
     <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc(file_no, a, b), Box::new(e)),
     <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc(file_no, a, b), Box::new(e)),
     <FunctionCall> => <>,
@@ -313,7 +361,7 @@ Precedence0: Expression = {
     <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc(file_no, a, b), false),
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
-    <l:@L> <ty:Type> <r:@R> => Expression::Type(Loc(file_no, l, r), ty),
+    <l:@L> <ty:NoFunctionType> <r:@R> => Expression::Type(Loc(file_no, l, r), ty),
     <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
         Expression::ArrayLiteral(Loc(file_no, a, b), v)
     },
@@ -414,12 +462,11 @@ FunctionAttribute: FunctionAttribute = {
     <l:@L> <base:Base> <r:@R> => FunctionAttribute::BaseOrModifier(Loc(file_no, l, r), base),
 }
 
-// Modifier has special case
+// Modifier and function have special case
 FunctionTy: FunctionTy = {
-    "constructor" => FunctionTy::Constructor,
     "fallback" => FunctionTy::Fallback,
     "receive" => FunctionTy::Receive,
-    "function" => FunctionTy::Function,
+    "constructor" => FunctionTy::Constructor,
 }
 
 BlockStatementOrSemiColon: Option<Statement> = {
@@ -428,7 +475,7 @@ BlockStatementOrSemiColon: Option<Statement> = {
 }
 
 // Modifiers can't have attributes or return values, but we parse them anyway so we can give nice
-// error messages.
+// error messages. The parameter list is optional
 ModifierDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> "modifier" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList?>
     <attributes:FunctionAttribute*>
@@ -450,7 +497,7 @@ ModifierDefinition: Box<FunctionDefinition> = {
     },
 }
 
-FunctionDefinition: Box<FunctionDefinition> = {
+ConstructorDefinition: Box<FunctionDefinition> = {
     <doc:DocComments> <l:@L> <ty:FunctionTy> <nl:@L> <name:Identifier?> <nr:@R> <params:ParameterList>
     <attributes:FunctionAttribute*>
     <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
@@ -468,6 +515,48 @@ FunctionDefinition: Box<FunctionDefinition> = {
             body,
         })
     },
+}
+
+FunctionDefinition: Box<FunctionDefinition> = {
+    <doc:DocComments> <l:@L> "function" <nl:@L> <name:Identifier> <nr:@R> <params:ParameterList>
+    <attributes:FunctionAttribute*>
+    <returns:("returns" <ParameterList>)?> <body:BlockStatementOrSemiColon> <r:@R> => {
+        let returns = returns.unwrap_or(Vec::new());
+
+        Box::new(FunctionDefinition{
+            doc,
+            loc: Loc(file_no, l, r),
+            ty: FunctionTy::Function,
+            name: Some(name),
+            name_loc: Loc(file_no, nl, nr),
+            params,
+            attributes,
+            returns,
+            body,
+        })
+    },
+    // Old-style fallback function without name. Sema will give a nice error message
+    // with some instructions how to update your syntax
+    <doc:DocComments> <l:@L> <ft:FunctionType> <body:BlockStatementOrSemiColon> <r:@R> => {
+        match ft {
+            // we're dropping the trailing attributes, but this production is for
+            // generating an error messages
+            Type::Function { params, attributes, returns, .. }  => {
+                Box::new(FunctionDefinition{
+                    doc,
+                    loc: Loc(file_no, l, r),
+                    ty: FunctionTy::Function,
+                    name: None,
+                    name_loc: Loc(file_no, l, r),
+                    params,
+                    attributes,
+                    returns,
+                    body,
+                })
+            },
+            _ => unreachable!(),
+        }
+    }
 }
 
 Using: Box<Using> = {
@@ -540,6 +629,11 @@ TryReturns: (Vec<(Loc, Option<Parameter>)>, Box<Statement>) = {
     "returns" <list:ParameterList> <ok:BlockStatement> => (list, Box::new(ok))
 }
 
+TryExpression: Expression = {
+    <a:@L> "new" <call:FunctionCall> <b:@R> => Expression::New(Loc(file_no, a, b), Box::new(call)),
+    FunctionCall
+}
+
 NonIfStatement: Statement = {
     BlockStatement => <>,
     <SimpleStatement> ";" => <>,
@@ -558,7 +652,7 @@ NonIfStatement: Statement = {
     <l:@L> "return" <e:Expression> <r:@R> ";" => {
         Statement::Return(Loc(file_no, l, r), Some(e))
     },
-    <l:@L> "try" <e:Expression> <returns:TryReturns?> <error:CatchError?>
+    <l:@L> "try" <e:TryExpression> <returns:TryReturns?> <error:CatchError?>
         "catch" "(" <p:Parameter> ")" <b:BlockStatement> <r:@R> => {
             Statement::Try(Loc(file_no, l, r), e, returns,
                 box_option(error),
