@@ -263,6 +263,7 @@ impl From<&pt::Type> for Type {
             pt::Type::String => Type::String,
             pt::Type::DynamicBytes => Type::DynamicBytes,
             // needs special casing
+            pt::Type::Function { .. } => unimplemented!(),
             pt::Type::Mapping(_, _, _) => unimplemented!(),
         }
     }

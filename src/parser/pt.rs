@@ -49,6 +49,12 @@ pub enum Type {
     Bytes(u8),
     DynamicBytes,
     Mapping(Loc, Box<Expression>, Box<Expression>),
+    Function {
+        params: Vec<(Loc, Option<Parameter>)>,
+        attributes: Vec<FunctionAttribute>,
+        returns: Vec<(Loc, Option<Parameter>)>,
+        trailing_attributes: Vec<FunctionAttribute>,
+    },
 }
 
 impl fmt::Display for Type {
@@ -64,6 +70,7 @@ impl fmt::Display for Type {
             Type::Bytes(n) => write!(f, "bytes{}", n),
             Type::DynamicBytes => write!(f, "bytes"),
             Type::Mapping(_, _, _) => write!(f, "mapping(key => value)"),
+            Type::Function { .. } => write!(f, "function()"),
         }
     }
 }
@@ -148,7 +155,7 @@ impl fmt::Display for ContractTy {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Base {
     pub loc: Loc,
     pub name: Identifier,
@@ -430,7 +437,7 @@ impl Visibility {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FunctionAttribute {
     StateMutability(StateMutability),
     Visibility(Visibility),
