@@ -115,6 +115,19 @@ fn var_decl(
         None => pt::Visibility::Internal(s.ty.loc()),
     };
 
+    if ty.contains_internal_function(ns)
+        && matches!(visibility, pt::Visibility::Public(_) | pt::Visibility::External(_))
+    {
+        ns.diagnostics.push(Diagnostic::error(
+            s.ty.loc(),
+            format!(
+                "variable of type internal function cannot be ‘{}’",
+                visibility
+            ),
+        ));
+        return false;
+    }
+
     let var = if !is_constant {
         ContractVariableType::Storage
     } else {

@@ -606,6 +606,10 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             ty: registry.builtin_type("str"),
             display_name: vec![String::from("String")],
         },
+        ast::Type::InternalFunction { .. } => ParamType {
+            ty: registry.builtin_type("u32"),
+            display_name: vec![String::from("FunctionSelector")],
+        },
         _ => unreachable!(),
     }
 }

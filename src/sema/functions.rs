@@ -584,7 +584,7 @@ pub fn function_decl(
 /// Resolve the parameters
 pub fn resolve_params(
     parameters: &[(pt::Loc, Option<pt::Parameter>)],
-    storage_allowed: bool,
+    is_internal: bool,
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
@@ -607,6 +607,14 @@ pub fn resolve_params(
 
         match ns.resolve_type(file_no, contract_no, false, &p.ty) {
             Ok(ty) => {
+                if !is_internal && ty.contains_internal_function(ns) {
+                    ns.diagnostics.push(Diagnostic::error(
+                        p.ty.loc(),
+                        "parameter of type ‘function internal’ not allowed public or external functions".to_string(),
+                    ));
+                    success = false;
+                }
+
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &p.storage {
                         ns.diagnostics.push(Diagnostic::error(
@@ -619,7 +627,7 @@ pub fn resolve_params(
 
                     ty
                 } else if let Some(pt::StorageLocation::Storage(loc)) = p.storage {
-                    if !storage_allowed {
+                    if !is_internal {
                         ns.diagnostics.push(Diagnostic::error(
                             loc,
                             "parameter of type ‘storage’ not allowed public or external functions"
@@ -631,14 +639,15 @@ pub fn resolve_params(
                     ty_loc.2 = loc.2;
 
                     Type::StorageRef(Box::new(ty))
-                } else if ty.contains_mapping(ns) {
-                    ns.diagnostics.push(Diagnostic::error(
-                        p.ty.loc(),
-                        "parameter with mapping type must be of type ‘storage’".to_string(),
-                    ));
-                    success = false;
-                    ty
                 } else {
+                    if ty.contains_mapping(ns) {
+                        ns.diagnostics.push(Diagnostic::error(
+                            p.ty.loc(),
+                            "parameter with mapping type must be of type ‘storage’".to_string(),
+                        ));
+                        success = false;
+                    }
+
                     ty
                 };
 
@@ -664,7 +673,7 @@ pub fn resolve_params(
 /// Resolve the return values
 pub fn resolve_returns(
     returns: &[(pt::Loc, Option<pt::Parameter>)],
-    storage_allowed: bool,
+    is_internal: bool,
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
@@ -687,6 +696,15 @@ pub fn resolve_returns(
 
         match ns.resolve_type(file_no, contract_no, false, &r.ty) {
             Ok(ty) => {
+                if !is_internal && ty.contains_internal_function(ns) {
+                    ns.diagnostics.push(Diagnostic::error(
+                        r.ty.loc(),
+                        "return type ‘function internal’ not allowed public or external functions"
+                            .to_string(),
+                    ));
+                    success = false;
+                }
+
                 let ty = if !ty.can_have_data_location() {
                     if let Some(storage) = &r.storage {
                         ns.diagnostics.push(Diagnostic::error(
@@ -713,7 +731,7 @@ pub fn resolve_returns(
                             ty
                         }
                         Some(pt::StorageLocation::Storage(loc)) => {
-                            if !storage_allowed {
+                            if !is_internal {
                                 ns.diagnostics.push(Diagnostic::error(
                                     loc,
                                     "return type of type ‘storage’ not allowed public or external functions"

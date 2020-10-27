@@ -56,7 +56,7 @@ pub enum Instr {
     },
     Call {
         res: Vec<usize>,
-        cfg_no: usize,
+        call: InternalCallTy,
         args: Vec<Expression>,
     },
     Return {
@@ -130,6 +130,13 @@ pub enum Instr {
         topics: Vec<Expression>,
         topic_tys: Vec<Parameter>,
     },
+}
+
+#[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
+pub enum InternalCallTy {
+    Static(usize),
+    Dynamic(Expression),
 }
 
 #[derive(Clone, PartialEq)]
@@ -514,6 +521,9 @@ impl ControlFlowGraph {
 
                 format!("function {}.{}", ns.contracts[base_contract_no].name, ns.contracts[base_contract_no].functions[function_no].name)
             }
+            Expression::InternalFunctionCfg(cfg_no) => {
+                format!("function {}", contract.cfg[*cfg_no].name)
+            }
             Expression::InternalFunctionCall { function, args, .. } => {
                 format!(
                 "(call {} ({})",
@@ -707,13 +717,33 @@ impl ControlFlowGraph {
             Instr::AssertFailure { expr: Some(expr) } => {
                 format!("assert-failure:{}", self.expr_to_string(contract, ns, expr))
             }
-            Instr::Call { res, cfg_no, args } => format!(
+            Instr::Call {
+                res,
+                call: InternalCallTy::Static(cfg_no),
+                args,
+            } => format!(
                 "{} = call {} {}",
                 res.iter()
                     .map(|local| format!("%{}", self.vars[local].id.name))
                     .collect::<Vec<String>>()
                     .join(", "),
                 contract.cfg[*cfg_no].name,
+                args.iter()
+                    .map(|expr| self.expr_to_string(contract, ns, expr))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Instr::Call {
+                res,
+                call: InternalCallTy::Dynamic(cfg),
+                args,
+            } => format!(
+                "{} = call {} {}",
+                res.iter()
+                    .map(|local| format!("%{}", self.vars[local].id.name))
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                self.expr_to_string(contract, ns, cfg),
                 args.iter()
                     .map(|expr| self.expr_to_string(contract, ns, expr))
                     .collect::<Vec<String>>()
@@ -1169,7 +1199,7 @@ fn function_cfg(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        cfg_no,
+                        call: InternalCallTy::Static(cfg_no),
                         args,
                     },
                 );
@@ -1180,7 +1210,7 @@ fn function_cfg(
                     &mut vartab,
                     Instr::Call {
                         res: Vec::new(),
-                        cfg_no,
+                        call: InternalCallTy::Static(cfg_no),
                         args: Vec::new(),
                     },
                 );
@@ -1285,7 +1315,7 @@ pub fn generate_modifier_dispatch(
     // create the instruction for the place holder
     let placeholder = Instr::Call {
         res: func.symtable.returns.clone(),
-        cfg_no,
+        call: InternalCallTy::Static(cfg_no),
         args: func
             .params
             .iter()

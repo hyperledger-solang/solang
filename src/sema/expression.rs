@@ -106,7 +106,7 @@ impl Expression {
             | Expression::Assign(loc, _, _, _)
             | Expression::List(loc, _)
             | Expression::And(loc, _, _) => *loc,
-            Expression::Poison => unreachable!(),
+            Expression::InternalFunctionCfg(_) | Expression::Poison => unreachable!(),
         }
     }
 
@@ -209,6 +209,7 @@ impl Expression {
                 unreachable!()
             }
             Expression::InternalFunction { ty, .. } => ty.clone(),
+            Expression::InternalFunctionCfg(_) => unreachable!(),
         }
     }
     /// Is this expression 0
@@ -1335,8 +1336,6 @@ pub fn expression(
                             continue;
                         }
 
-                        // FIXME: virtual call
-
                         let ty = Type::InternalFunction {
                             params: func.params.iter().map(|p| p.ty.clone()).collect(),
                             mutability: func.mutability.clone(),
@@ -1349,7 +1348,11 @@ pub fn expression(
                             ty,
                             contract_no: *base_contract_no,
                             function_no: *function_no,
-                            signature: None,
+                            signature: if func.is_virtual || func.is_override.is_some() {
+                                Some(func.signature.clone())
+                            } else {
+                                None
+                            },
                         });
                     }
 
@@ -3132,6 +3135,72 @@ fn member_access(
         return Ok(expr);
     }
 
+    // is it an basecontract.function expression (unless basecontract is a local variable)
+    if let pt::Expression::Variable(namespace) = e {
+        if symtable.find(&namespace.name).is_none() {
+            if let Some(call_contract_no) = ns.resolve_contract(file_no, &namespace) {
+                if let Some(contract_no) = contract_no {
+                    if is_base(call_contract_no, contract_no, ns) {
+                        // find function with this name
+                        let mut name_matches = 0;
+                        let mut expr = Err(());
+
+                        for (function_no, func) in
+                            ns.contracts[call_contract_no].functions.iter().enumerate()
+                        {
+                            if func.name != id.name || func.ty != pt::FunctionTy::Function {
+                                continue;
+                            }
+
+                            name_matches += 1;
+
+                            expr = Ok(Expression::InternalFunction {
+                                loc: e.loc(),
+                                ty: function_type(func),
+                                contract_no: call_contract_no,
+                                function_no,
+                                signature: None,
+                            })
+                        }
+
+                        return match name_matches {
+                            0 => {
+                                ns.diagnostics.push(Diagnostic::error(
+                                    e.loc(),
+                                    format!(
+                                        "contract ‘{}’ does not have a function called ‘{}’",
+                                        ns.contracts[call_contract_no].name, id.name,
+                                    ),
+                                ));
+                                Err(())
+                            }
+                            1 => expr,
+                            _ => {
+                                ns.diagnostics.push(Diagnostic::error(
+                                    e.loc(),
+                                    format!(
+                                        "function ‘{}’ of contract ‘{}’ is overloaded",
+                                        id.name, ns.contracts[call_contract_no].name,
+                                    ),
+                                ));
+                                Err(())
+                            }
+                        };
+                    } else {
+                        ns.diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            format!(
+                                "contract ‘{}’ is not a base of ‘{}’",
+                                ns.contracts[call_contract_no].name, ns.contracts[contract_no].name,
+                            ),
+                        ));
+                        return Err(());
+                    }
+                }
+            }
+        }
+    }
+
     // is of the form "type(x).field", like type(c).min
     if let pt::Expression::FunctionCall(_, name, args) = e {
         if let pt::Expression::Variable(func_name) = name.as_ref() {
@@ -3430,7 +3499,7 @@ fn call_function_type(
     ns: &mut Namespace,
     symtable: &Symtable,
 ) -> Result<Expression, ()> {
-    let function = expression(expr, file_no, contract_no, ns, symtable, false)?;
+    let mut function = expression(expr, file_no, contract_no, ns, symtable, false)?;
 
     let mut resolved_args = Vec::new();
 
@@ -3440,9 +3509,19 @@ fn call_function_type(
         resolved_args.push(expr);
     }
 
+    let mut ty = function.ty();
+
+    match ty {
+        Type::StorageRef(real_ty) | Type::Ref(real_ty) => {
+            ty = *real_ty;
+            function = cast(&expr.loc(), function, &ty, true, ns)?;
+        }
+        _ => (),
+    };
+
     if let Type::InternalFunction {
         params, returns, ..
-    } = function.ty()
+    } = ty
     {
         if params.len() != resolved_args.len() {
             ns.diagnostics.push(Diagnostic::error(
@@ -3465,7 +3544,11 @@ fn call_function_type(
 
         Ok(Expression::InternalFunctionCall {
             loc: *loc,
-            returns,
+            returns: if returns.is_empty() {
+                vec![Type::Void]
+            } else {
+                returns
+            },
             function: Box::new(function),
             args: cast_args,
         })
@@ -5112,7 +5195,7 @@ fn function_type(func: &Function) -> Type {
     Type::InternalFunction {
         params: func.params.iter().map(|p| p.ty.clone()).collect(),
         mutability: func.mutability.clone(),
-        returns: func.returns.iter().map(|p| p.ty.clone()).collect(),
+        returns: function_returns(func),
     }
 }
 

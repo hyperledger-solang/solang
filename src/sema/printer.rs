@@ -176,7 +176,7 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             vec![print_expr(expr, func, ns)],
         ),
         Expression::Assign(_, ty, left, right) => Tree::Branch(
-            format!("asign {}", ty.to_string(ns)),
+            format!("assign {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::UMore(_, left, right) => Tree::Branch(
@@ -277,11 +277,13 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         Expression::InternalFunction {
             contract_no,
             function_no,
+            signature,
             ..
         } => Tree::Leaf(format!(
-            "function {}.{}",
+            "function {}.{} {:?}",
             ns.contracts[*contract_no].name,
-            ns.contracts[*contract_no].functions[*function_no].name
+            ns.contracts[*contract_no].functions[*function_no].name,
+            signature,
         )),
         _ => Tree::Leaf(String::from("not implemented")),
     }
