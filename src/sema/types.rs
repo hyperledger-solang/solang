@@ -723,6 +723,7 @@ impl Type {
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
             Type::Struct(_) => "tuple".to_owned(),
+            Type::InternalFunction { .. } => "function".to_owned(),
             _ => unreachable!(),
         }
     }
@@ -886,6 +887,7 @@ impl Type {
             Type::Contract(_) => false,
             Type::Ref(r) => r.is_reference_type(),
             Type::StorageRef(r) => r.is_reference_type(),
+            Type::InternalFunction { .. } => false,
             _ => unreachable!(),
         }
     }
@@ -955,6 +957,20 @@ impl Type {
                 .iter()
                 .any(|f| f.ty.contains_mapping(ns)),
             Type::StorageRef(r) | Type::Ref(r) => r.contains_mapping(ns),
+            _ => false,
+        }
+    }
+
+    /// Does the type contain any internal function type
+    pub fn contains_internal_function(&self, ns: &Namespace) -> bool {
+        match self {
+            Type::InternalFunction { .. } => true,
+            Type::Array(ty, _) => ty.contains_internal_function(ns),
+            Type::Struct(n) => ns.structs[*n]
+                .fields
+                .iter()
+                .any(|f| f.ty.contains_internal_function(ns)),
+            Type::StorageRef(r) | Type::Ref(r) => r.contains_internal_function(ns),
             _ => false,
         }
     }

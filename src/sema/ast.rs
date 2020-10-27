@@ -238,6 +238,7 @@ impl Function {
                             type_to_wasm_name(v, ns)
                         ),
                         Type::Contract(i) => ns.contracts[*i].name.to_owned(),
+                        Type::InternalFunction { .. } => "function".to_owned(),
                         Type::Ref(r) => type_to_wasm_name(r, ns),
                         Type::StorageRef(r) => type_to_wasm_name(r, ns),
                         _ => unreachable!(),
@@ -512,6 +513,7 @@ pub enum Expression {
         function_no: usize,
         signature: Option<String>,
     },
+    InternalFunctionCfg(usize),
     InternalFunctionCall {
         loc: pt::Loc,
         returns: Vec<Type>,

@@ -20,7 +20,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::passes::PassManager;
 use inkwell::targets::{CodeModel, FileType, RelocMode, TargetTriple};
 use inkwell::types::BasicTypeEnum;
-use inkwell::types::{BasicType, IntType, StringRadix};
+use inkwell::types::{BasicType, FunctionType, IntType, StringRadix};
 use inkwell::values::{
     ArrayValue, BasicValueEnum, FunctionValue, GlobalValue, IntValue, PhiValue, PointerValue,
 };
@@ -504,6 +504,24 @@ pub trait TargetRuntime<'a> {
 
                 ret.into()
             }
+            ast::Type::InternalFunction { .. } => {
+                contract.builder.build_store(slot_ptr, *slot);
+
+                let ptr_ty = contract
+                    .context
+                    .custom_width_int_type(contract.ns.target.ptr_size() as u32);
+
+                let ret = self.get_storage_int(contract, function, slot_ptr, ptr_ty);
+
+                contract
+                    .builder
+                    .build_int_to_ptr(
+                        ret,
+                        contract.llvm_type(ty.deref_any()).into_pointer_type(),
+                        "",
+                    )
+                    .into()
+            }
             _ => {
                 contract.builder.build_store(slot_ptr, *slot);
 
@@ -752,6 +770,26 @@ pub trait TargetRuntime<'a> {
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 self.set_storage_string(contract, function, slot_ptr, dest.into_pointer_value());
+            }
+            ast::Type::InternalFunction { .. } => {
+                let ptr_ty = contract
+                    .context
+                    .custom_width_int_type(contract.ns.target.ptr_size() as u32);
+
+                let m = contract.builder.build_alloca(ptr_ty, "");
+
+                contract.builder.build_store(
+                    m,
+                    contract.builder.build_ptr_to_int(
+                        dest.into_pointer_value(),
+                        ptr_ty,
+                        "function_pointer",
+                    ),
+                );
+
+                contract.builder.build_store(slot_ptr, *slot);
+
+                self.set_storage(contract, function, slot_ptr, m);
             }
             _ => {
                 contract.builder.build_store(slot_ptr, *slot);
@@ -2398,6 +2436,10 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::Builtin(_, _, _, _) => self.builtin(contract, e, vartab, function),
+            Expression::InternalFunctionCfg(cfg_no) => contract.functions[cfg_no]
+                .as_global_value()
+                .as_pointer_value()
+                .into(),
             _ => panic!("{:?} not implemented", e),
         }
     }
@@ -3106,7 +3148,11 @@ pub trait TargetRuntime<'a> {
                                 .into_int_value(),
                         );
                     }
-                    cfg::Instr::Call { res, cfg_no, args } => {
+                    cfg::Instr::Call {
+                        res,
+                        call: cfg::InternalCallTy::Static(cfg_no),
+                        args,
+                    } => {
                         let f = &contract.contract.cfg[*cfg_no];
 
                         let mut parms = args
@@ -3156,13 +3202,92 @@ pub trait TargetRuntime<'a> {
                         if !res.is_empty() {
                             for (i, v) in f.returns.iter().enumerate() {
                                 let val = contract.builder.build_load(
-                                    parms[f.params.len() + i].into_pointer_value(),
+                                    parms[args.len() + i].into_pointer_value(),
                                     &v.name,
                                 );
 
                                 let dest = w.vars[&res[i]].value;
 
                                 if dest.is_pointer_value() && !v.ty.is_reference_type() {
+                                    contract.builder.build_store(dest.into_pointer_value(), val);
+                                } else {
+                                    w.vars.get_mut(&res[i]).unwrap().value = val;
+                                }
+                            }
+                        }
+                    }
+                    cfg::Instr::Call {
+                        res,
+                        call: cfg::InternalCallTy::Dynamic(call_expr),
+                        args,
+                    } => {
+                        let ty = call_expr.ty();
+
+                        let returns =
+                            if let ast::Type::InternalFunction { returns, .. } = ty.deref_any() {
+                                returns
+                            } else {
+                                panic!("should be Type::InternalFunction type");
+                            };
+
+                        let mut parms = args
+                            .iter()
+                            .map(|p| self.expression(contract, p, &w.vars, function))
+                            .collect::<Vec<BasicValueEnum>>();
+
+                        if !res.is_empty() {
+                            for ty in returns.iter() {
+                                parms.push(
+                                    contract
+                                        .builder
+                                        .build_alloca(contract.llvm_var(ty), "")
+                                        .into(),
+                                );
+                            }
+                        }
+
+                        let ret = contract
+                            .builder
+                            .build_call(
+                                self.expression(contract, call_expr, &w.vars, function)
+                                    .into_pointer_value(),
+                                &parms,
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap();
+
+                        let success = contract.builder.build_int_compare(
+                            IntPredicate::EQ,
+                            ret.into_int_value(),
+                            contract.context.i32_type().const_zero(),
+                            "success",
+                        );
+
+                        let success_block =
+                            contract.context.append_basic_block(function, "success");
+                        let bail_block = contract.context.append_basic_block(function, "bail");
+                        contract.builder.build_conditional_branch(
+                            success,
+                            success_block,
+                            bail_block,
+                        );
+
+                        contract.builder.position_at_end(bail_block);
+
+                        contract.builder.build_return(Some(&ret));
+                        contract.builder.position_at_end(success_block);
+
+                        if !res.is_empty() {
+                            for (i, ty) in returns.iter().enumerate() {
+                                let val = contract
+                                    .builder
+                                    .build_load(parms[args.len() + i].into_pointer_value(), "");
+
+                                let dest = w.vars[&res[i]].value;
+
+                                if dest.is_pointer_value() && !ty.is_reference_type() {
                                     contract.builder.build_store(dest.into_pointer_value(), val);
                                 } else {
                                     w.vars.get_mut(&res[i]).unwrap().value = val;
@@ -3900,7 +4025,22 @@ pub trait TargetRuntime<'a> {
 
         for (cfg_no, cfg) in contract.contract.cfg.iter().enumerate() {
             if !cfg.is_placeholder() {
-                let func_decl = contract.declare_function(cfg);
+                let ftype = contract.function_type(
+                    &cfg.params
+                        .iter()
+                        .map(|p| p.ty.clone())
+                        .collect::<Vec<ast::Type>>(),
+                    &cfg.returns
+                        .iter()
+                        .map(|p| p.ty.clone())
+                        .collect::<Vec<ast::Type>>(),
+                );
+
+                let func_decl =
+                    contract
+                        .module
+                        .add_function(&cfg.name, ftype, Some(Linkage::Internal));
+
                 contract.functions.insert(cfg_no, func_decl);
 
                 defines.push((func_decl, cfg));
@@ -4878,29 +5018,25 @@ impl<'a> Contract<'a> {
     }
 
     /// Emit function prototype
-    fn declare_function(&self, cfg: &cfg::ControlFlowGraph) -> FunctionValue<'a> {
+    fn function_type(&self, params: &[ast::Type], returns: &[ast::Type]) -> FunctionType<'a> {
         // function parameters
-        let mut args = cfg
-            .params
+        let mut args = params
             .iter()
-            .map(|p| self.llvm_var(&p.ty))
+            .map(|ty| self.llvm_var(&ty))
             .collect::<Vec<BasicTypeEnum>>();
 
         // add return values
-        for p in &cfg.returns {
-            args.push(if p.ty.is_reference_type() && !p.ty.is_contract_storage() {
-                self.llvm_type(&p.ty)
+        for ty in returns {
+            args.push(if ty.is_reference_type() && !ty.is_contract_storage() {
+                self.llvm_type(&ty)
                     .ptr_type(AddressSpace::Generic)
                     .ptr_type(AddressSpace::Generic)
                     .into()
             } else {
-                self.llvm_type(&p.ty).ptr_type(AddressSpace::Generic).into()
+                self.llvm_type(&ty).ptr_type(AddressSpace::Generic).into()
             });
         }
-        let ftype = self.context.i32_type().fn_type(&args, false);
-
-        self.module
-            .add_function(&cfg.name, ftype, Some(Linkage::Internal))
+        self.context.i32_type().fn_type(&args, false)
     }
 
     pub fn upower(&self, bit: u32) -> FunctionValue<'a> {
@@ -5188,6 +5324,13 @@ impl<'a> Contract<'a> {
                 .as_basic_type_enum(),
             ast::Type::StorageRef(_) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(256))
+            }
+            ast::Type::InternalFunction {
+                params, returns, ..
+            } => {
+                let ftype = self.function_type(params, returns);
+
+                BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::Generic))
             }
             _ => unreachable!(),
         }

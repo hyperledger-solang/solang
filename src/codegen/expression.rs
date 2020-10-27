@@ -1,4 +1,4 @@
-use super::cfg::{ControlFlowGraph, HashTy, Instr, Vartable};
+use super::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Vartable};
 use super::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push};
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
@@ -351,6 +351,22 @@ pub fn expression(
             );
 
             Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
+        }
+        Expression::InternalFunction {
+            contract_no: base_contract_no,
+            function_no,
+            signature,
+            ..
+        } => {
+            let (base_contract_no, function_no) = if let Some(signature) = signature {
+                ns.contracts[contract_no].virtual_functions[signature]
+            } else {
+                (*base_contract_no, *function_no)
+            };
+
+            Expression::InternalFunctionCfg(
+                ns.contracts[contract_no].all_functions[&(base_contract_no, function_no)],
+            )
         }
         Expression::InternalFunctionCall { .. }
         | Expression::ExternalFunctionCall { .. }
@@ -1027,7 +1043,14 @@ pub fn emit_function_call(
                         returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
                     }
 
-                    cfg.add(vartab, Instr::Call { res, cfg_no, args });
+                    cfg.add(
+                        vartab,
+                        Instr::Call {
+                            res,
+                            call: InternalCallTy::Static(cfg_no),
+                            args,
+                        },
+                    );
 
                     returns
                 } else {
@@ -1035,7 +1058,52 @@ pub fn emit_function_call(
                         vartab,
                         Instr::Call {
                             res: Vec::new(),
-                            cfg_no,
+                            call: InternalCallTy::Static(cfg_no),
+                            args,
+                        },
+                    );
+
+                    vec![Expression::Poison]
+                }
+            } else if let Type::InternalFunction { returns, .. } = function.ty().deref_any() {
+                let cfg_expr = expression(function, cfg, callee_contract_no, ns, vartab);
+
+                let args = args
+                    .iter()
+                    .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                    .collect();
+
+                if !returns.is_empty() {
+                    let mut res = Vec::new();
+                    let mut return_values = Vec::new();
+
+                    for ty in returns {
+                        let id = pt::Identifier {
+                            loc: pt::Loc(0, 0, 0),
+                            name: String::new(),
+                        };
+
+                        let temp_pos = vartab.temp(&id, &ty);
+                        res.push(temp_pos);
+                        return_values.push(Expression::Variable(id.loc, ty.clone(), temp_pos));
+                    }
+
+                    cfg.add(
+                        vartab,
+                        Instr::Call {
+                            res,
+                            call: InternalCallTy::Dynamic(cfg_expr),
+                            args,
+                        },
+                    );
+
+                    return_values
+                } else {
+                    cfg.add(
+                        vartab,
+                        Instr::Call {
+                            res: Vec::new(),
+                            call: InternalCallTy::Dynamic(cfg_expr),
                             args,
                         },
                     );
@@ -1043,8 +1111,7 @@ pub fn emit_function_call(
                     vec![Expression::Poison]
                 }
             } else {
-                // FIXME dispatch on runtime function thing
-                unimplemented!();
+                unreachable!();
             }
         }
         Expression::ExternalFunctionCallRaw {

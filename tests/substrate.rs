@@ -41,6 +41,7 @@ mod substrate_calls;
 mod substrate_contracts;
 mod substrate_events;
 mod substrate_first;
+mod substrate_function_types;
 mod substrate_functions;
 mod substrate_imports;
 mod substrate_inheritance;
