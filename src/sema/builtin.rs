@@ -7,7 +7,7 @@ use num_bigint::BigInt;
 use num_traits::One;
 use parser::pt;
 
-struct Prototype {
+pub struct Prototype {
     pub builtin: Builtin,
     pub namespace: Option<&'static str>,
     pub name: &'static str,
@@ -356,6 +356,20 @@ pub fn is_builtin_call(namespace: Option<&str>, fname: &str, ns: &Namespace) -> 
             && p.namespace == namespace
             && (p.target.is_none() || p.target == Some(ns.target))
     })
+}
+
+/// Get the prototype for a builtin. If the prototype has arguments, it is a function else
+/// it is a variable.
+pub fn get_prototype(builtin: Builtin) -> &'static Prototype {
+    if let Some(p) = BUILTIN_FUNCTIONS.iter().find(|p| p.builtin == builtin) {
+        return p;
+    }
+
+    if let Some(p) = BUILTIN_VARIABLE.iter().find(|p| p.builtin == builtin) {
+        return p;
+    }
+
+    panic!("cannot find prototype for {:?}", builtin);
 }
 
 /// Does variable name match builtin
