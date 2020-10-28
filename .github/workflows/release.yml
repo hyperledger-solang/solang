@@ -56,3 +56,30 @@ jobs:
         file: target/release/solang.exe
         asset_name: solang.exe
         tag: ${{ github.ref }}
+
+  mac:
+    name: Mac
+    runs-on: macos-latest
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Download LLVM
+      run: curl -sS -o llvm10.0-mac.tar.gz https://solang.io/download/llvm10.0-mac.tar.gz
+    - name: Extract LLVM
+      run: tar zxf llvm10.0-mac.tar.gz
+    - name: Add LLVM to Path
+      run: echo "$(pwd)/llvm10.0/bin" >> $GITHUB_PATH
+    - name: Compile stdlib
+      run: make
+      working-directory: ./stdlib
+    - name: Build
+      run: cargo build --release --verbose
+    - name: Run tests
+      run: cargo test --release --verbose
+    - name: Upload binary
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/release/solang
+        asset_name: solang_mac
+        tag: ${{ github.ref }}
