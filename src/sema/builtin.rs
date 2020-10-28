@@ -360,16 +360,11 @@ pub fn is_builtin_call(namespace: Option<&str>, fname: &str, ns: &Namespace) -> 
 
 /// Get the prototype for a builtin. If the prototype has arguments, it is a function else
 /// it is a variable.
-pub fn get_prototype(builtin: Builtin) -> &'static Prototype {
-    if let Some(p) = BUILTIN_FUNCTIONS.iter().find(|p| p.builtin == builtin) {
-        return p;
-    }
-
-    if let Some(p) = BUILTIN_VARIABLE.iter().find(|p| p.builtin == builtin) {
-        return p;
-    }
-
-    panic!("cannot find prototype for {:?}", builtin);
+pub fn get_prototype(builtin: Builtin) -> Option<&'static Prototype> {
+    BUILTIN_FUNCTIONS
+        .iter()
+        .find(|p| p.builtin == builtin)
+        .or_else(|| BUILTIN_VARIABLE.iter().find(|p| p.builtin == builtin))
 }
 
 /// Does variable name match builtin
