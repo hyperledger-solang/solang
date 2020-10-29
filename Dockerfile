@@ -17,8 +17,6 @@ RUN cargo build --release
 
 FROM ubuntu:18.04
 COPY --from=builder /src/target/release/solang /usr/bin/solang
-COPY --from=builder /llvm10.0/bin/wasm-ld /usr/bin/
-COPY --from=builder /llvm10.0/bin/ld.lld /usr/bin/
 
 ENV PATH="/llvm10.0/bin:${PATH}"
 

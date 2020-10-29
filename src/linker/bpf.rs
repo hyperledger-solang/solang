@@ -7,17 +7,18 @@
 // Using the llvm linker does give some possibilities around linking non-Solidity files
 // and doing link time optimizations
 
+use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use std::process::Command;
 use tempfile::tempdir;
+
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
     let dir = tempdir().expect("failed to create temp directory for linking");
 
     let object_filename = dir.path().join(&format!("{}.o", name));
-    let ldscript_filename = dir.path().join("bpf.ld");
     let res_filename = dir.path().join(&format!("{}.so", name));
+    let linker_script_filename = dir.path().join("linker.ld");
 
     let mut objectfile =
         File::create(object_filename.clone()).expect("failed to create object file");
@@ -27,7 +28,7 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
         .expect("failed to write object file to temp file");
 
     let mut linker_script =
-        File::create(ldscript_filename.clone()).expect("failed to create object file");
+        File::create(linker_script_filename.clone()).expect("failed to create linker script");
 
     linker_script
         .write_all(
@@ -53,31 +54,35 @@ SECTIONS
         )
         .expect("failed to write linker script to temp file");
 
-    let command_line = format!(
-        "ld.lld  -z notext -shared --Bdynamic {} --entry entrypoint {} -o {}",
-        ldscript_filename
-            .to_str()
-            .expect("temp path should be unicode"),
-        object_filename
-            .to_str()
-            .expect("temp path should be unicode"),
-        res_filename.to_str().expect("temp path should be unicode"),
+    let mut command_line = Vec::new();
+
+    command_line.push(CString::new("-z").unwrap());
+    command_line.push(CString::new("notext").unwrap());
+    command_line.push(CString::new("-shared").unwrap());
+    command_line.push(CString::new("--Bdynamic").unwrap());
+    command_line.push(
+        CString::new(
+            linker_script_filename
+                .to_str()
+                .expect("temp path should be unicode"),
+        )
+        .unwrap(),
     );
+    command_line.push(CString::new("--entry").unwrap());
+    command_line.push(CString::new("entrypoint").unwrap());
+    command_line.push(
+        CString::new(
+            object_filename
+                .to_str()
+                .expect("temp path should be unicode"),
+        )
+        .unwrap(),
+    );
+    command_line.push(CString::new("-o").unwrap());
+    command_line
+        .push(CString::new(res_filename.to_str().expect("temp path should be unicode")).unwrap());
 
-    let status = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(&["/C", &command_line])
-            .status()
-            .expect("linker failed")
-    } else {
-        Command::new("sh")
-            .arg("-c")
-            .arg(command_line)
-            .status()
-            .expect("linker failed")
-    };
-
-    if !status.success() {
+    if super::elf_linker(&command_line) {
         panic!("linker failed");
     }
 
