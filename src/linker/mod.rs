@@ -8,6 +8,6 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     if target == Target::Solana {
         bpf::link(input, name)
     } else {
-        wasm::link(input, target)
+        wasm::link(input, name, target)
     }
 }

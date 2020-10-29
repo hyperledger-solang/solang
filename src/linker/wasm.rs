@@ -1,111 +1,108 @@
 use parity_wasm;
 use parity_wasm::builder;
-use parity_wasm::elements::{
-    ExportEntry, GlobalEntry, GlobalType, InitExpr, Internal, Module, ValueType,
-};
+use parity_wasm::elements::{InitExpr, Instruction, Module};
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
+use std::process::Command;
+use tempfile::tempdir;
 use Target;
 
-use parity_wasm::elements;
-use parity_wasm::elements::{Deserialize, ImportEntry, VarUint32, VarUint7};
-
-#[allow(dead_code)]
-pub const FLAG_UNDEFINED: u32 = 0x10;
-#[allow(dead_code)]
-pub const FLAG_EXPLICIT_NAME: u32 = 0x40;
-#[allow(dead_code)]
-pub const FLAG_MASK_VISIBILITY: u32 = 0x04;
-#[allow(dead_code)]
-pub const FLAG_MASK_BINDING: u32 = 0x03;
-
-pub fn link(input: &[u8], target: Target) -> Vec<u8> {
-    let mut module: Module =
-        parity_wasm::deserialize_buffer(input).expect("cannot deserialize llvm wasm");
-
+pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     if target == Target::Generic {
         // Cannot link generic object
         return input.to_vec();
     }
 
-    let mut exports = Vec::new();
-    let mut globals = Vec::new();
+    let dir = tempdir().expect("failed to create temp directory for linking");
 
-    // FIXME: rather than filtering out functions which should not be exported, we should
-    // rely on LLVM to optimize them away, with e.g. LLVMAddInternalizePassWithMustPreservePredicate()
-    // or something like that.
-    let allowed_externs = |name: &str| match target {
-        Target::Ewasm => name == "main",
-        Target::Substrate => name == "deploy" || name == "call",
-        Target::Sabre => name == "entrypoint",
+    let object_filename = dir.path().join(&format!("{}.o", name));
+    let res_filename = dir.path().join(&format!("{}.wasm", name));
+
+    let mut objectfile =
+        File::create(object_filename.clone()).expect("failed to create object file");
+
+    objectfile
+        .write_all(input)
+        .expect("failed to write object file to temp file");
+
+    let mut command_line =
+        String::from("wasm-ld -O3 --no-entry --allow-undefined --gc-sections --global-base=0");
+
+    match target {
+        Target::Ewasm => {
+            command_line.push_str(" --export main");
+        }
+        Target::Sabre => {
+            command_line.push_str(" --export entrypoint");
+        }
+        Target::Substrate => {
+            command_line.push_str(" --export deploy --export call");
+            command_line.push_str(" --import-memory --initial-memory=1048576 --max-memory=1048576");
+        }
         _ => unreachable!(),
+    }
+
+    command_line.push_str(&format!(
+        " {} -o {}",
+        object_filename
+            .to_str()
+            .expect("temp path should be unicode"),
+        res_filename.to_str().expect("temp path should be unicode")
+    ));
+
+    let status = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(&["/C", &command_line])
+            .status()
+            .expect("linker failed")
+    } else {
+        Command::new("sh")
+            .arg("-c")
+            .arg(command_line)
+            .status()
+            .expect("linker failed")
     };
 
-    for c in module.custom_sections() {
-        if c.name() != "linking" {
-            continue;
-        }
-
-        let mut payload = c.payload();
-
-        for sym in read_linking_section(&mut payload).expect("cannot read linking section") {
-            match sym {
-                Symbol::Function(SymbolFunction { flags, index, name }) => {
-                    if (flags & FLAG_UNDEFINED) == 0 && allowed_externs(&name) {
-                        exports.push(ExportEntry::new(name, Internal::Function(index)));
-                    }
-                }
-                Symbol::Global(SymbolGlobal { .. }) => {
-                    // FIXME: Here we're assuming it's the stack pointer
-                    // Stack is 64 KiB for now -- size of one page.
-                    globals.push(GlobalEntry::new(
-                        GlobalType::new(ValueType::I32, true),
-                        InitExpr::new(vec![
-                            elements::Instruction::I32Const(0x10000 as i32),
-                            elements::Instruction::End,
-                        ]),
-                    ));
-                }
-                _ => {}
-            }
-        }
+    if !status.success() {
+        panic!("linker failed");
     }
+
+    let mut output = Vec::new();
+    // read the whole file
+    let mut outputfile = File::open(res_filename).expect("output file should exist");
+
+    outputfile
+        .read_to_end(&mut output)
+        .expect("failed to read output file");
+
+    let mut module: Module =
+        parity_wasm::deserialize_buffer(&output).expect("cannot deserialize llvm wasm");
 
     {
         let imports = module.import_section_mut().unwrap().entries_mut();
         let mut ind = 0;
 
         while ind < imports.len() {
-            if imports[ind].field().starts_with("__") {
-                imports.remove(ind);
-            } else {
-                match target {
-                    Target::Ewasm => {
-                        let module_name = if imports[ind].field().starts_with("print") {
-                            "debug"
-                        } else {
-                            "ethereum"
-                        };
+            match target {
+                Target::Ewasm => {
+                    let module_name = if imports[ind].field().starts_with("print") {
+                        "debug"
+                    } else {
+                        "ethereum"
+                    };
 
-                        *imports[ind].module_mut() = module_name.to_owned();
-                    }
-                    Target::Substrate => {
+                    *imports[ind].module_mut() = module_name.to_owned();
+                }
+                Target::Substrate => {
+                    if imports[ind].field().starts_with("seal") {
                         *imports[ind].module_mut() = "seal0".to_owned();
                     }
-                    _ => (),
                 }
-
-                ind += 1;
+                _ => (),
             }
-        }
 
-        match target {
-            Target::Ewasm => exports.push(ExportEntry::new("memory".into(), Internal::Memory(0))),
-            Target::Substrate => imports.push(ImportEntry::new(
-                "env".into(),
-                "memory".into(),
-                elements::External::Memory(elements::MemoryType::new(16, Some(16))),
-            )),
-            Target::Sabre => exports.push(ExportEntry::new("memory".into(), Internal::Memory(0))),
-            _ => (),
+            ind += 1;
         }
     }
 
@@ -123,142 +120,16 @@ pub fn link(input: &[u8], target: Target) -> Vec<u8> {
         }
     }
 
-    module.clear_custom_section("linking");
-
-    let mut linked = builder::module().with_module(module);
-
-    if Target::Sabre == target || Target::Ewasm == target {
-        let memory = builder::MemoryBuilder::new().with_min(2);
-
-        linked.push_memory(memory.build());
+    // set stack pointer to 64k (there is only one global)
+    for global in module.global_section_mut().unwrap().entries_mut() {
+        let init_expr = global.init_expr_mut();
+        *init_expr = InitExpr::new(vec![
+            Instruction::I32Const(0x10000 as i32),
+            Instruction::End,
+        ]);
     }
 
-    for e in exports {
-        linked.push_export(e);
-    }
-
-    for e in globals {
-        linked = linked.with_global(e);
-    }
+    let linked = builder::module().with_module(module);
 
     parity_wasm::serialize(linked.build()).expect("cannot serialize linked wasm")
-}
-
-pub struct SymbolFunction {
-    pub flags: u32,
-    pub index: u32,
-    pub name: String,
-}
-
-pub struct SymbolGlobal {
-    pub flags: u32,
-    pub index: u32,
-    pub name: String,
-}
-
-pub struct SymbolEvent {
-    pub flags: u32,
-    pub index: u32,
-    pub name: String,
-}
-
-pub struct SymbolData {
-    pub flags: u32,
-    pub name: String,
-    pub index: u32,
-    pub offset: u32,
-    pub size: u32,
-}
-
-pub struct SymbolSection {
-    pub flags: u32,
-    pub section: u32,
-}
-
-pub enum Symbol {
-    Function(SymbolFunction),
-    Global(SymbolGlobal),
-    Event(SymbolEvent),
-    Data(SymbolData),
-    Section(SymbolSection),
-}
-
-fn read_linking_section<R: std::io::Read>(input: &mut R) -> Result<Vec<Symbol>, elements::Error> {
-    let meta_data_version = u32::from(VarUint32::deserialize(input)?);
-
-    match meta_data_version {
-        1 | 2 => (),
-        _ => {
-            return Err(elements::Error::Other("unsupported meta data version"));
-        }
-    }
-
-    let mut symbol_table = Vec::new();
-
-    let subsection_id = u8::from(VarUint7::deserialize(input)?);
-
-    if subsection_id != 8 {
-        return Err(elements::Error::Other("symbol table id is wrong"));
-    }
-
-    let _length = u32::from(VarUint32::deserialize(input)?);
-    let count = u32::from(VarUint32::deserialize(input)?);
-
-    for _ in 0..count {
-        let kind = u8::from(VarUint7::deserialize(input)?);
-        let flags = u32::from(VarUint32::deserialize(input)?);
-
-        symbol_table.push(match kind {
-            0 => {
-                let index = u32::from(VarUint32::deserialize(input)?);
-                let name = if (flags & FLAG_UNDEFINED) == 0 || (flags & FLAG_EXPLICIT_NAME) != 0 {
-                    String::deserialize(input)?
-                } else {
-                    String::new()
-                };
-
-                Symbol::Function(SymbolFunction { flags, index, name })
-            }
-            1 => {
-                let name = String::deserialize(input)?;
-                let index = u32::from(VarUint32::deserialize(input)?);
-                let offset = u32::from(VarUint32::deserialize(input)?);
-                let size = u32::from(VarUint32::deserialize(input)?);
-
-                Symbol::Data(SymbolData {
-                    flags,
-                    name,
-                    index,
-                    offset,
-                    size,
-                })
-            }
-            2 => {
-                let index = u32::from(VarUint32::deserialize(input)?);
-                let name = if (flags & FLAG_UNDEFINED) == 0 || (flags & FLAG_EXPLICIT_NAME) != 0 {
-                    String::deserialize(input)?
-                } else {
-                    String::new()
-                };
-
-                Symbol::Global(SymbolGlobal { flags, index, name })
-            }
-            3 => {
-                let section = u32::from(VarUint32::deserialize(input)?);
-
-                Symbol::Section(SymbolSection { flags, section })
-            }
-            4 => {
-                let index = u32::from(VarUint32::deserialize(input)?);
-                let name = String::deserialize(input)?;
-
-                Symbol::Event(SymbolEvent { flags, index, name })
-            }
-            _ => {
-                return Err(elements::Error::Other("invalid symbol table kind"));
-            }
-        });
-    }
-
-    Ok(symbol_table)
 }
