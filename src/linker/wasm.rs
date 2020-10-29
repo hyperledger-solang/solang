@@ -1,10 +1,10 @@
 use parity_wasm;
 use parity_wasm::builder;
 use parity_wasm::elements::{InitExpr, Instruction, Module};
+use std::ffi::CString;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use std::process::Command;
 use tempfile::tempdir;
 use Target;
 
@@ -26,45 +26,49 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
         .write_all(input)
         .expect("failed to write object file to temp file");
 
-    let mut command_line =
-        String::from("wasm-ld -O3 --no-entry --allow-undefined --gc-sections --global-base=0");
+    let mut command_line = Vec::new();
+
+    command_line.push(CString::new("-O3").unwrap());
+    command_line.push(CString::new("--no-entry").unwrap());
+    command_line.push(CString::new("--allow-undefined").unwrap());
+    command_line.push(CString::new("--gc-sections").unwrap());
+    command_line.push(CString::new("--global-base=0").unwrap());
 
     match target {
         Target::Ewasm => {
-            command_line.push_str(" --export main");
+            command_line.push(CString::new("--export").unwrap());
+            command_line.push(CString::new("main").unwrap());
         }
         Target::Sabre => {
-            command_line.push_str(" --export entrypoint");
+            command_line.push(CString::new("--export").unwrap());
+            command_line.push(CString::new("entrypoint").unwrap());
         }
         Target::Substrate => {
-            command_line.push_str(" --export deploy --export call");
-            command_line.push_str(" --import-memory --initial-memory=1048576 --max-memory=1048576");
+            command_line.push(CString::new("--export").unwrap());
+            command_line.push(CString::new("deploy").unwrap());
+            command_line.push(CString::new("--export").unwrap());
+            command_line.push(CString::new("call").unwrap());
+
+            command_line.push(CString::new("--import-memory").unwrap());
+            command_line.push(CString::new("--initial-memory=1048576").unwrap());
+            command_line.push(CString::new("--max-memory=1048576").unwrap());
         }
-        _ => unreachable!(),
+        _ => (),
     }
 
-    command_line.push_str(&format!(
-        " {} -o {}",
-        object_filename
-            .to_str()
-            .expect("temp path should be unicode"),
-        res_filename.to_str().expect("temp path should be unicode")
-    ));
+    command_line.push(
+        CString::new(
+            object_filename
+                .to_str()
+                .expect("temp path should be unicode"),
+        )
+        .unwrap(),
+    );
+    command_line.push(CString::new("-o").unwrap());
+    command_line
+        .push(CString::new(res_filename.to_str().expect("temp path should be unicode")).unwrap());
 
-    let status = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(&["/C", &command_line])
-            .status()
-            .expect("linker failed")
-    } else {
-        Command::new("sh")
-            .arg("-c")
-            .arg(command_line)
-            .status()
-            .expect("linker failed")
-    };
-
-    if !status.success() {
+    if super::wasm_linker(&command_line) {
         panic!("linker failed");
     }
 

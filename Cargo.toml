@@ -11,6 +11,7 @@ keywords = [ "solidity", "compiler", "ewasm", "llvm", "substrate" ]
 
 [build-dependencies]
 lalrpop = "0.19"
+cc = "1.0"
 
 [dependencies]
 lalrpop-util = "0.19"
@@ -34,6 +35,7 @@ handlebars = "3.4"
 contract-metadata = "0.1.0"
 semver = { version = "0.10.0", features = ["serde"] }
 tempfile = "3.1"
+libc = "0.2"
 
 [dev-dependencies]
 parity-scale-codec-derive = "1.2"
@@ -45,7 +47,6 @@ rand = "0.7"
 sha2 = "0.9"
 solana_rbpf = "=0.1.32"
 byteorder = "1.3"
-libc = "0.2"
 
 [profile.release]
 lto = true
