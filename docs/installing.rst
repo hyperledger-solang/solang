@@ -81,7 +81,7 @@ Installing the LLVM Libraries
 -----------------------------
 
 Solang needs a build of llvm with some extra patches for the bpf target. You can either
-download the the pre-built binaries or build your own from source. You need to add
+download the pre-built binaries or build your own from source. You need to add
 the `bin` directory to your path, so that the build system of Solang can find the
 correct version of llvm to use.
 
@@ -91,9 +91,7 @@ ________________________
 A pre-built version of llvm, specifically configured for Solang, is available at
 `<https://solang.io/download/llvm10.0-linux.tar.gz>`_. This version is built using the
 `dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-linux.dockerfile>`_.
-After downloading, untar the file in a terminal and add it to your path.
-
-.. code-block::
+After downloading, untar the file in a terminal and add it to your path::
 
 	tar zxf llvm10.0-linux.tar.gz
 	export PATH=$(pwd)/llvm10.0/bin:$PATH
@@ -114,7 +112,7 @@ If you are running Windows 10 in a virtual machine, be sure to check
 
 After unzipping the file, add the bin directory to your path.
 
-.. code-block::
+.. code-block:: text
 
 	set PATH=%PATH%;C:\llvm10.0\bin
 
@@ -122,13 +120,14 @@ Installing LLVM on Mac
 ______________________
 
 A pre-built version of llvm, specifically configured for Solang, is available on
-`solang.io <https://solang.io/download/llvm10.0-mac.tar.gz>`_. This version is built
+`<https://solang.io/download/llvm10.0-mac.tar.gz>`_. This version is built
 with the instructions below. After downloading, untar the file in a terminal and
 add it to your path.
 
-.. code-block::
+.. code-block:: bash
 
 	tar zxf llvm10.0-mac.tar.gz
+	xattr -rd com.apple.quarantine llvm10.0
 	export PATH=$(pwd)/llvm10.0/bin:$PATH
 
 .. _llvm-from-source:
