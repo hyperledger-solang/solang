@@ -92,9 +92,8 @@ pub enum Instr {
     },
     ExternalCall {
         success: Option<usize>,
-        address: Expression,
-        contract_no: Option<usize>,
-        function_no: usize,
+        address: Option<Expression>,
+        payload: Expression,
         args: Vec<Expression>,
         value: Expression,
         gas: Expression,
@@ -521,6 +520,11 @@ impl ControlFlowGraph {
 
                 format!("function {}.{}", ns.contracts[base_contract_no].name, ns.contracts[base_contract_no].functions[function_no].name)
             }
+            Expression::ExternalFunction {address, contract_no, function_no, ..} => {
+                format!("function address {} {}.{}",
+                    self.expr_to_string(contract, ns, address),
+                    ns.contracts[*contract_no].name, ns.contracts[*contract_no].functions[*function_no].name)
+            }
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
@@ -570,16 +574,12 @@ impl ControlFlowGraph {
                 ns.contracts[*contract_no].name,
             ),
             Expression::ExternalFunctionCall {
-                function_no,
-                contract_no,
-                address,
+                function,
                 args,
                 ..
             } => format!(
-                "(external call address:{} {}.{} ({})",
-                self.expr_to_string(contract, ns, address),
-                ns.contracts[*contract_no].name,
-                contract.functions[*function_no].name,
+                "(external call {} ({})",
+                self.expr_to_string(contract, ns, function),
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
@@ -752,45 +752,59 @@ impl ControlFlowGraph {
             Instr::ExternalCall {
                 success,
                 address,
-                contract_no: Some(contract_no),
-                function_no,
+                payload,
                 args,
                 value,
                 gas,
                 callty,
-            } => format!(
-                "{} = external call::{} address:{} signature:{} value:{} gas:{} func:{}.{} {}",
-                match success {
-                    Some(i) => format!("%{}", self.vars[i].id.name),
-                    None => "_".to_string(),
-                },
-                callty,
-                self.expr_to_string(contract, ns, address),
-                ns.contracts[*contract_no].functions[*function_no].signature,
-                self.expr_to_string(contract, ns, value),
-                self.expr_to_string(contract, ns, gas),
-                ns.contracts[*contract_no].name,
-                ns.contracts[*contract_no].functions[*function_no].name,
-                args.iter()
-                    .map(|expr| self.expr_to_string(contract, ns, expr))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            ),
-            Instr::ExternalCall {
-                success,
-                address,
-                contract_no: None,
-                value,
-                ..
-            } => format!(
-                "{} = external call address:{} value:{}",
-                match success {
-                    Some(i) => format!("%{}", self.vars[i].id.name),
-                    None => "_".to_string(),
-                },
-                self.expr_to_string(contract, ns, address),
-                self.expr_to_string(contract, ns, value),
-            ),
+            } => {
+                if let Expression::ExternalFunction {
+                    address,
+                    contract_no,
+                    function_no,
+                    ..
+                } = payload
+                {
+                    format!(
+                        "{} = external call::{} address:{} signature:{} value:{} gas:{} func:{}.{} {}",
+                        match success {
+                            Some(i) => format!("%{}", self.vars[i].id.name),
+                            None => "_".to_string(),
+                        },
+                        callty,
+                        self.expr_to_string(contract, ns, address),
+                        ns.contracts[*contract_no].functions[*function_no].signature,
+                        self.expr_to_string(contract, ns, value),
+                        self.expr_to_string(contract, ns, gas),
+                        ns.contracts[*contract_no].name,
+                        ns.contracts[*contract_no].functions[*function_no].name,
+                        args.iter()
+                            .map(|expr| self.expr_to_string(contract, ns, expr))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                } else if let Some(address) = address {
+                    format!(
+                        "{} = external call address:{} value:{}",
+                        match success {
+                            Some(i) => format!("%{}", self.vars[i].id.name),
+                            None => "_".to_string(),
+                        },
+                        self.expr_to_string(contract, ns, address),
+                        self.expr_to_string(contract, ns, value),
+                    )
+                } else {
+                    format!(
+                        "{} = external call payload:{} value:{}",
+                        match success {
+                            Some(i) => format!("%{}", self.vars[i].id.name),
+                            None => "_".to_string(),
+                        },
+                        self.expr_to_string(contract, ns, payload),
+                        self.expr_to_string(contract, ns, value),
+                    )
+                }
+            }
             Instr::AbiDecode {
                 res,
                 tys,

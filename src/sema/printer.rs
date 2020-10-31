@@ -285,6 +285,15 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             ns.contracts[*contract_no].functions[*function_no].name,
             signature,
         )),
+        Expression::ExternalFunction {
+            contract_no,
+            function_no,
+            ..
+        } => Tree::Leaf(format!(
+            "function external {}.{}",
+            ns.contracts[*contract_no].name,
+            ns.contracts[*contract_no].functions[*function_no].name,
+        )),
         _ => Tree::Leaf(String::from("not implemented")),
     }
 }

@@ -1384,25 +1384,28 @@ fn try_catch(
 
     let mut args = match &fcall {
         Expression::ExternalFunctionCall {
-            contract_no,
-            function_no,
+            returns: func_returns,
             ..
         } => {
-            let ftype = &ns.contracts[*contract_no].functions[*function_no];
+            let mut func_returns = func_returns.clone();
 
-            if returns.len() != ftype.returns.len() {
+            if func_returns == vec![Type::Void] {
+                func_returns = vec![];
+            }
+
+            if returns.len() != func_returns.len() {
                 ns.diagnostics.push(Diagnostic::error(
                     expr.loc(),
                     format!(
                         "try returns list has {} entries while function returns {} values",
-                        ftype.returns.len(),
-                        returns.len()
+                        returns.len(),
+                        func_returns.len()
                     ),
                 ));
                 return Err(());
             }
 
-            ftype.returns.iter().map(|ret| ret.ty.clone()).collect()
+            func_returns
         }
         Expression::Constructor { contract_no, .. } => match returns.len() {
             0 => Vec::new(),

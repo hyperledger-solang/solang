@@ -723,7 +723,7 @@ impl Type {
             Type::Ref(r) => r.to_string(ns),
             Type::StorageRef(r) => r.to_string(ns),
             Type::Struct(_) => "tuple".to_owned(),
-            Type::InternalFunction { .. } => "function".to_owned(),
+            Type::InternalFunction { .. } | Type::ExternalFunction { .. } => "function".to_owned(),
             _ => unreachable!(),
         }
     }
@@ -806,6 +806,10 @@ impl Type {
                 .sum(),
             Type::String | Type::DynamicBytes => BigInt::from(4),
             Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
+            Type::ExternalFunction { .. } => {
+                // Address and selector
+                Type::Address(false).size_hint(ns) + Type::Uint(32).size_hint(ns)
+            }
             _ => unimplemented!(),
         }
     }
@@ -888,6 +892,7 @@ impl Type {
             Type::Ref(r) => r.is_reference_type(),
             Type::StorageRef(r) => r.is_reference_type(),
             Type::InternalFunction { .. } => false,
+            Type::ExternalFunction { .. } => false,
             _ => unreachable!(),
         }
     }

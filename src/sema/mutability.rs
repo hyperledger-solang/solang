@@ -257,8 +257,10 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::Constructor { loc, .. } => {
             state.write(loc);
         }
-        Expression::InternalFunctionCall { loc, function, .. } => {
-            if let Type::InternalFunction { mutability, .. } = function.ty() {
+        Expression::ExternalFunctionCall { loc, function, .. }
+        | Expression::InternalFunctionCall { loc, function, .. } => match function.ty() {
+            Type::ExternalFunction { mutability, .. }
+            | Type::InternalFunction { mutability, .. } => {
                 match mutability {
                     None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
                     Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
@@ -267,21 +269,8 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
                     Some(pt::StateMutability::Pure(_)) => (),
                 };
             }
-        }
-        Expression::ExternalFunctionCall {
-            loc,
-            contract_no,
-            function_no,
-            ..
-        } => {
-            match &state.ns.contracts[*contract_no].functions[*function_no].mutability {
-                None | Some(pt::StateMutability::Payable(_)) => state.write(loc),
-                Some(pt::StateMutability::View(_)) | Some(pt::StateMutability::Constant(_)) => {
-                    state.read(loc)
-                }
-                Some(pt::StateMutability::Pure(_)) => (),
-            };
-        }
+            _ => unreachable!(),
+        },
         _ => {
             return true;
         }

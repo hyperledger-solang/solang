@@ -913,6 +913,64 @@ impl SubstrateTarget {
                     .into()
             }
             ast::Type::Ref(ty) => self.decode_ty(contract, function, ty, data, end),
+            ast::Type::ExternalFunction { .. } => {
+                let address =
+                    self.decode_ty(contract, function, &ast::Type::Address(false), data, end);
+                let selector = self.decode_ty(contract, function, &ast::Type::Uint(32), data, end);
+
+                let ty = contract.llvm_type(&ty);
+
+                let ef = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[ty.into_pointer_type()
+                            .get_element_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false)
+                            .into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let ef = contract.builder.build_pointer_cast(
+                    ef,
+                    ty.into_pointer_type(),
+                    "function_type",
+                );
+
+                let address_member = unsafe {
+                    contract.builder.build_gep(
+                        ef,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "address",
+                    )
+                };
+
+                contract.builder.build_store(address_member, address);
+
+                let selector_member = unsafe {
+                    contract.builder.build_gep(
+                        ef,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(1, false),
+                        ],
+                        "selector",
+                    )
+                };
+
+                contract.builder.build_store(selector_member, selector);
+
+                ef.into()
+            }
             _ => unreachable!(),
         }
     }
@@ -1280,6 +1338,59 @@ impl SubstrateTarget {
                     *data = unsafe { contract.builder.build_gep(*data, &[len], "") };
                 }
             }
+            ast::Type::ExternalFunction { .. } => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let address_member = unsafe {
+                    contract.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "address",
+                    )
+                };
+
+                let address = contract.builder.build_load(address_member, "address");
+
+                self.encode_ty(
+                    contract,
+                    false,
+                    false,
+                    function,
+                    &ast::Type::Address(false),
+                    address,
+                    data,
+                );
+
+                let selector_member = unsafe {
+                    contract.builder.build_gep(
+                        arg.into_pointer_value(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(1, false),
+                        ],
+                        "selector",
+                    )
+                };
+
+                let selector = contract.builder.build_load(selector_member, "selector");
+
+                self.encode_ty(
+                    contract,
+                    false,
+                    false,
+                    function,
+                    &ast::Type::Uint(32),
+                    selector,
+                    data,
+                );
+            }
             _ => unreachable!(),
         };
     }
@@ -1543,6 +1654,13 @@ impl SubstrateTarget {
                     )
                 }
             }
+            ast::Type::ExternalFunction { .. } => {
+                // address + 4 bytes selector
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(contract.ns.address_length as u64 + 4, false)
+            }
             _ => unreachable!(),
         }
     }
@@ -1623,6 +1741,106 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             ],
             "",
         );
+    }
+
+    fn set_storage_extfunc(
+        &self,
+        contract: &Contract,
+        _function: FunctionValue,
+        slot: PointerValue,
+        dest: PointerValue,
+    ) {
+        contract.builder.build_call(
+            contract.module.get_function("seal_set_storage").unwrap(),
+            &[
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                contract
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                dest.get_type()
+                    .get_element_type()
+                    .size_of()
+                    .unwrap()
+                    .const_cast(contract.context.i32_type(), false)
+                    .into(),
+            ],
+            "",
+        );
+    }
+
+    fn get_storage_extfunc(
+        &self,
+        contract: &Contract<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> PointerValue<'a> {
+        let ty = contract.llvm_type(&ast::Type::ExternalFunction {
+            params: Vec::new(),
+            mutability: None,
+            returns: Vec::new(),
+        });
+
+        let len = ty
+            .into_pointer_type()
+            .get_element_type()
+            .size_of()
+            .unwrap()
+            .const_cast(contract.context.i32_type(), false);
+
+        let ef = contract
+            .builder
+            .build_call(
+                contract.module.get_function("__malloc").unwrap(),
+                &[len.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+        contract.builder.build_store(scratch_len, len);
+
+        let _exists = contract
+            .builder
+            .build_call(
+                contract.module.get_function("seal_get_storage").unwrap(),
+                &[
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    ef.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        // TODO: decide behaviour if not exist
+
+        contract
+            .builder
+            .build_pointer_cast(ef, ty.into_pointer_type(), "function_type")
     }
 
     fn set_storage_string(
@@ -2664,7 +2882,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<u32>,
+        selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
@@ -2715,10 +2933,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     contract.context.i32_type().ptr_type(AddressSpace::Generic),
                     "",
                 ),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(selector as u64, false),
+                selector,
             );
 
             argsdata = unsafe {
@@ -2727,7 +2942,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                     &[contract
                         .context
                         .i32_type()
-                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                        .const_int(std::mem::size_of::<u32>() as u64, false)],
                     "",
                 )
             };
@@ -2847,7 +3062,12 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         // input
         let (input, input_len) = self.abi_encode(
             contract,
-            Some(constructor.selector()),
+            Some(
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(constructor.selector() as u64, false),
+            ),
             false,
             function,
             &args,

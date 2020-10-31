@@ -160,6 +160,24 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         unimplemented!();
     }
 
+    fn set_storage_extfunc(
+        &self,
+        _contract: &Contract,
+        _function: FunctionValue,
+        _slot: PointerValue,
+        _dest: PointerValue,
+    ) {
+        unimplemented!();
+    }
+    fn get_storage_extfunc(
+        &self,
+        _contract: &Contract<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+    ) -> PointerValue<'a> {
+        unimplemented!();
+    }
+
     fn set_storage_string(
         &self,
         _contract: &Contract,
@@ -298,7 +316,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<u32>,
+        selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
@@ -356,10 +374,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     contract.context.i32_type().ptr_type(AddressSpace::Generic),
                     "",
                 ),
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(selector.to_be() as u64, false),
+                selector,
             );
 
             data = unsafe {
