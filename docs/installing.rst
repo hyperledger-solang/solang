@@ -91,7 +91,9 @@ ________________________
 A pre-built version of llvm, specifically configured for Solang, is available at
 `<https://solang.io/download/llvm10.0-linux.tar.gz>`_. This version is built using the
 `dockerfile for building llvm on linux <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-linux.dockerfile>`_.
-After downloading, untar the file in a terminal and add it to your path::
+After downloading, untar the file in a terminal and add it to your path.
+
+.. code-block:: bash
 
 	tar zxf llvm10.0-linux.tar.gz
 	export PATH=$(pwd)/llvm10.0/bin:$PATH
@@ -112,7 +114,7 @@ If you are running Windows 10 in a virtual machine, be sure to check
 
 After unzipping the file, add the bin directory to your path.
 
-.. code-block:: text
+.. code-block:: batch
 
 	set PATH=%PATH%;C:\llvm10.0\bin
 
@@ -135,17 +137,8 @@ add it to your path.
 Building LLVM from source
 ___________________________
 
-If your distribution does not have the correct llvm library versions, then you have
-to build your own. Building your own llvm libraries does not interfere with any llvm libraries
-installed by your distribution.
-
-The llvm project is a large code base so it will take some time to build.
-
-If you are planning to do development on Solang itself, then building
-llvm libraries can be helpful, see `Debugging issues with LLVM`.
-
-The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which you may need to consult.
-First if all clone the llvm repository:
+The llvm project itself has a guide to `installing from source <http://www.llvm.org/docs/CMake.html>`_ which
+you may need to consult. First if all clone our llvm repository:
 
 .. code-block:: bash
 
@@ -162,7 +155,7 @@ Now run cmake to create the makefiles. Replace the *installdir* argument to ``CM
 
 .. code-block:: bash
 
-	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_PROJECTS=clang\;lld  \
+	cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On '-DLLVM_ENABLE_PROJECTS=clang;lld'  \
 		-DLLVM_ENABLE_TERMINFO=Off -DCMAKE_BUILD_TYPE=Release \
 		-DCMAKE_INSTALL_PREFIX=installdir -B build llvm
 	cmake --build build --target install
@@ -176,6 +169,6 @@ Solang build can find the ``llvm-config`` from this build:
 
 And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 
-.. code-block::
+.. code-block:: batch
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
