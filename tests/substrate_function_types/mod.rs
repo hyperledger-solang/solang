@@ -413,3 +413,195 @@ fn virtual_contract_function() {
 
     assert_eq!(runtime.vm.output, 10000u32.encode());
 }
+
+// external function types tests
+#[test]
+fn ext() {
+    let ns = parse_and_resolve(
+        "contract test {
+            function x(int64 arg1) internal returns (bool) {
+                function(int32) external returns (bool) x = foo;
+            }
+
+            function foo(int32) public returns (bool) {
+                return false;
+            }
+        }",
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "conversion from function(int32) internal returns (bool) to function(int32) external returns (bool) not possible"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (bool) x = this.foo;
+            }
+
+            function foo(int32) internal returns (bool) {
+                return false;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘ft’ has no public function ‘foo’"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (bool) x = this.foo;
+            }
+
+            function foo(int32) public returns (bool) {
+                return false;
+            }
+
+            function foo(int64) public returns (bool) {
+                return false;
+            }
+        }"##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘foo’ of contract ‘ft’ is overloaded"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (bool) func = this.foo;
+
+                assert(address(this) == func.address);
+                assert(func.selector == 0x37117642);
+            }
+
+            function foo(int32) public returns (bool) {
+                return false;
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (uint64) func = this.foo;
+
+                assert(func(102) == 0xabbaabba);
+            }
+
+            function foo(int32) public returns (uint64) {
+                return 0xabbaabba;
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (uint64) func = this.foo;
+
+                bar(func);
+            }
+
+            function foo(int32) public returns (uint64) {
+                return 0xabbaabba;
+            }
+
+            function bar(function(int32) external returns (uint64) f) internal {
+                assert(f(102) == 0xabbaabba);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (uint64) func = this.foo;
+
+                bar(func);
+            }
+
+            function foo(int32) public returns (uint64) {
+                return 0xabbaabba;
+            }
+
+            function bar(function(int32) external returns (uint64) f) internal {
+                assert(f(102) == 0xabbaabba);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    println!("return external function type from public function");
+
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function test() public {
+                function(int32) external returns (uint64) func = this.foo;
+
+                this.bar(func);
+            }
+
+            function foo(int32) public returns (uint64) {
+                return 0xabbaabba;
+            }
+
+            function bar(function(int32) external returns (uint64) f) public {
+                assert(f(102) == 0xabbaabba);
+            }
+        }"##,
+    );
+
+    runtime.function("test", Vec::new());
+
+    println!("external function type in storage");
+
+    let mut runtime = build_solidity(
+        r##"
+        contract ft {
+            function(int32) external returns (uint64) func;
+
+            function test1() public {
+                func = this.foo;
+            }
+
+            function test2() public {
+                this.bar(func);
+            }
+
+            function foo(int32) public returns (uint64) {
+                return 0xabbaabba;
+            }
+
+            function bar(function(int32) external returns (uint64) f) public {
+                assert(f(102) == 0xabbaabba);
+            }
+        }"##,
+    );
+
+    runtime.function("test1", Vec::new());
+    runtime.function("test2", Vec::new());
+}

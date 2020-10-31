@@ -716,70 +716,86 @@ fn try_catch(
 
     match &fcall {
         Expression::ExternalFunctionCall {
-            contract_no,
-            function_no,
-            address,
+            function,
             args,
             value,
             gas,
             ..
         } => {
-            let address = expression(address, cfg, callee_contract_no, ns, vartab);
-            let value = expression(value, cfg, callee_contract_no, ns, vartab);
-            let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
+            if let Type::ExternalFunction {
+                returns: func_returns,
+                ..
+            } = function.ty()
+            {
+                let value = expression(value, cfg, callee_contract_no, ns, vartab);
+                let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
+                let function = expression(function, cfg, callee_contract_no, ns, vartab);
 
-            let args = args
-                .iter()
-                .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
-                .collect();
-
-            cfg.add(
-                vartab,
-                Instr::ExternalCall {
-                    success: Some(success),
-                    address,
-                    contract_no: Some(*contract_no),
-                    function_no: *function_no,
-                    args,
-                    value,
-                    gas,
-                    callty: CallTy::Regular,
-                },
-            );
-
-            let ftype = &ns.contracts[*contract_no].functions[*function_no];
-
-            cfg.add(
-                vartab,
-                Instr::BranchCond {
-                    cond: Expression::Variable(fcall.loc(), Type::Bool, success),
-                    true_: success_block,
-                    false_: catch_block,
-                },
-            );
-
-            cfg.set_basic_block(success_block);
-
-            if !ftype.returns.is_empty() {
-                let mut res = Vec::new();
-
-                for ret in returns {
-                    res.push(match ret {
-                        (Some(pos), _) => *pos,
-                        (None, param) => vartab.temp_anonymous(&param.ty),
-                    });
-                }
+                let args = args
+                    .iter()
+                    .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                    .collect();
 
                 cfg.add(
                     vartab,
-                    Instr::AbiDecode {
-                        res,
-                        selector: None,
-                        exception: None,
-                        tys: ftype.returns.clone(),
-                        data: Expression::ReturnData(pt::Loc(0, 0, 0)),
+                    Instr::ExternalCall {
+                        success: Some(success),
+                        address: None,
+                        payload: function,
+                        args,
+                        value,
+                        gas,
+                        callty: CallTy::Regular,
                     },
                 );
+
+                cfg.add(
+                    vartab,
+                    Instr::BranchCond {
+                        cond: Expression::Variable(fcall.loc(), Type::Bool, success),
+                        true_: success_block,
+                        false_: catch_block,
+                    },
+                );
+
+                cfg.set_basic_block(success_block);
+
+                if func_returns != vec![Type::Void] {
+                    let mut res = Vec::new();
+
+                    for ret in returns {
+                        res.push(match ret {
+                            (Some(pos), _) => *pos,
+                            (None, param) => vartab.temp_anonymous(&param.ty),
+                        });
+                    }
+
+                    let tys = func_returns
+                        .iter()
+                        .map(|ty| Parameter {
+                            ty: ty.clone(),
+                            name: String::new(),
+                            ty_loc: pt::Loc(0, 0, 0),
+                            name_loc: None,
+                            loc: pt::Loc(0, 0, 0),
+                            indexed: false,
+                        })
+                        .collect();
+
+                    cfg.add(
+                        vartab,
+                        Instr::AbiDecode {
+                            res,
+                            selector: None,
+                            exception: None,
+                            tys,
+                            data: Expression::ReturnData(pt::Loc(0, 0, 0)),
+                        },
+                    );
+                }
+            } else {
+                // dynamic dispatch
+                unimplemented!();
             }
         }
         Expression::Constructor {

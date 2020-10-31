@@ -610,6 +610,25 @@ fn ty_to_abi(ty: &ast::Type, ns: &ast::Namespace, registry: &mut Abi) -> ParamTy
             ty: registry.builtin_type("u32"),
             display_name: vec![String::from("FunctionSelector")],
         },
+        ast::Type::ExternalFunction { .. } => {
+            let fields = vec![
+                StructField {
+                    name: None,
+                    ty: ty_to_abi(&ast::Type::Address(false), ns, registry).ty,
+                },
+                StructField {
+                    name: None,
+                    ty: ty_to_abi(&ast::Type::Uint(32), ns, registry).ty,
+                },
+            ];
+
+            let display_name = vec![String::from("ExternalFunction")];
+
+            ParamType {
+                ty: registry.struct_type(display_name.clone(), fields),
+                display_name,
+            }
+        }
         _ => unreachable!(),
     }
 }

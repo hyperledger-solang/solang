@@ -53,6 +53,7 @@ fn var_decl(
         pt::Type::Function {
             attributes,
             trailing_attributes,
+            returns,
             ..
         },
     ) = &mut ty
@@ -60,9 +61,11 @@ fn var_decl(
         if let Some(pt::FunctionAttribute::Visibility(v)) = trailing_attributes.last() {
             attrs.push(pt::VariableAttribute::Visibility(v.clone()));
             trailing_attributes.pop();
-        } else if let Some(pt::FunctionAttribute::Visibility(v)) = attributes.last() {
-            attrs.push(pt::VariableAttribute::Visibility(v.clone()));
-            attributes.pop();
+        } else if returns.is_empty() {
+            if let Some(pt::FunctionAttribute::Visibility(v)) = attributes.last() {
+                attrs.push(pt::VariableAttribute::Visibility(v.clone()));
+                attributes.pop();
+            }
         }
     }
 

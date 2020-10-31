@@ -92,6 +92,7 @@ impl Expression {
             | Expression::Keccak256(loc, _, _)
             | Expression::ReturnData(loc)
             | Expression::InternalFunction { loc, .. }
+            | Expression::ExternalFunction { loc, .. }
             | Expression::InternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
@@ -209,6 +210,7 @@ impl Expression {
                 unreachable!()
             }
             Expression::InternalFunction { ty, .. } => ty.clone(),
+            Expression::ExternalFunction { ty, .. } => ty.clone(),
             Expression::InternalFunctionCfg(_) => unreachable!(),
         }
     }
@@ -884,8 +886,9 @@ fn cast_types(
                 Err(Diagnostic::type_error(
                     *loc,
                     format!(
-                        "implicit conversion to {} from address not allowed",
-                        from.to_string(ns)
+                        "implicit conversion to {} from {} not allowed",
+                        from.to_string(ns),
+                        to.to_string(ns)
                     ),
                 ))
             } else if *to_len < address_bits {
@@ -1094,6 +1097,18 @@ fn cast_types(
             "function or method does not return a value".to_string(),
         )),
         (
+            Type::ExternalFunction {
+                params: from_params,
+                mutability: from_mutablity,
+                returns: from_returns,
+            },
+            Type::ExternalFunction {
+                params: to_params,
+                mutability: to_mutablity,
+                returns: to_returns,
+            },
+        )
+        | (
             Type::InternalFunction {
                 params: from_params,
                 mutability: from_mutablity,
@@ -3156,7 +3171,7 @@ fn member_access(
 
                             expr = Ok(Expression::InternalFunction {
                                 loc: e.loc(),
-                                ty: function_type(func),
+                                ty: function_type(func, false),
                                 contract_no: call_contract_no,
                                 function_no,
                                 signature: None,
@@ -3348,6 +3363,77 @@ fn member_access(
                 return Ok(Expression::Balance(*loc, Type::Value, Box::new(expr)));
             }
         }
+        Type::Contract(ref_contract_no) => {
+            let mut name_matches = 0;
+            let mut ext_expr = Err(());
+
+            for (base_contract_no, function_no) in
+                ns.contracts[ref_contract_no].all_functions.keys()
+            {
+                let func = &ns.contracts[*base_contract_no].functions[*function_no];
+
+                if func.name != id.name || func.ty != pt::FunctionTy::Function || !func.is_public()
+                {
+                    continue;
+                }
+
+                let ty = Type::ExternalFunction {
+                    params: func.params.iter().map(|p| p.ty.clone()).collect(),
+                    mutability: func.mutability.clone(),
+                    returns: func.returns.iter().map(|p| p.ty.clone()).collect(),
+                };
+
+                name_matches += 1;
+                ext_expr = Ok(Expression::ExternalFunction {
+                    loc: id.loc,
+                    ty,
+                    address: Box::new(expr.clone()),
+                    contract_no: *base_contract_no,
+                    function_no: *function_no,
+                });
+            }
+
+            #[allow(clippy::comparison_chain)]
+            return if name_matches == 0 {
+                ns.diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!(
+                        "contract ‘{}’ has no public function ‘{}’",
+                        ns.contracts[ref_contract_no].name, id.name
+                    ),
+                ));
+                Err(())
+            } else if name_matches == 1 {
+                ext_expr
+            } else {
+                ns.diagnostics.push(Diagnostic::error(
+                    id.loc,
+                    format!(
+                        "function ‘{}’ of contract ‘{}’ is overloaded",
+                        id.name, ns.contracts[ref_contract_no].name
+                    ),
+                ));
+                Err(())
+            };
+        }
+        Type::ExternalFunction { .. } => {
+            if id.name == "address" {
+                return Ok(Expression::Builtin(
+                    e.loc(),
+                    vec![Type::Address(false)],
+                    Builtin::ExternalFunctionAddress,
+                    vec![expr],
+                ));
+            }
+            if id.name == "selector" {
+                return Ok(Expression::Builtin(
+                    e.loc(),
+                    vec![Type::Uint(32)],
+                    Builtin::ExternalFunctionSelector,
+                    vec![expr],
+                ));
+            }
+        }
         _ => (),
     }
 
@@ -3494,6 +3580,8 @@ fn call_function_type(
     loc: &pt::Loc,
     expr: &pt::Expression,
     args: &[pt::Expression],
+    call_args: &[&pt::NamedArgument],
+    call_args_loc: Option<pt::Loc>,
     file_no: usize,
     contract_no: Option<usize>,
     ns: &mut Namespace,
@@ -3523,6 +3611,13 @@ fn call_function_type(
         params, returns, ..
     } = ty
     {
+        if let Some(loc) = call_args_loc {
+            ns.diagnostics.push(Diagnostic::error(
+                loc,
+                "call arguments not permitted for internal calls".to_string(),
+            ));
+        }
+
         if params.len() != resolved_args.len() {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
@@ -3551,6 +3646,68 @@ fn call_function_type(
             },
             function: Box::new(function),
             args: cast_args,
+        })
+    } else if let Type::ExternalFunction {
+        returns,
+        params,
+        mutability,
+    } = ty
+    {
+        let call_args = parse_call_args(call_args, true, file_no, contract_no, ns, symtable)?;
+
+        let value = if let Some(value) = call_args.value {
+            if !value.const_zero(contract_no, ns)
+                && !matches!(mutability, Some(pt::StateMutability::Payable(_)))
+            {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    format!(
+                        "sending value to function type ‘{}’ which is not payable",
+                        function.ty().to_string(ns),
+                    ),
+                ));
+                return Err(());
+            }
+
+            value
+        } else {
+            Box::new(Expression::NumberLiteral(
+                pt::Loc(0, 0, 0),
+                Type::Value,
+                BigInt::zero(),
+            ))
+        };
+
+        if params.len() != resolved_args.len() {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!(
+                    "function expects {} arguments, {} provided",
+                    params.len(),
+                    resolved_args.len()
+                ),
+            ));
+            return Err(());
+        }
+
+        let mut cast_args = Vec::new();
+
+        // check if arguments can be implicitly casted
+        for (i, arg) in resolved_args.iter().enumerate() {
+            cast_args.push(cast(&arg.loc(), arg.clone(), &params[i], true, ns)?);
+        }
+
+        Ok(Expression::ExternalFunctionCall {
+            loc: *loc,
+            returns: if returns.is_empty() {
+                vec![Type::Void]
+            } else {
+                returns
+            },
+            function: Box::new(function),
+            args: cast_args,
+            gas: call_args.gas,
+            value,
         })
     } else {
         ns.diagnostics.push(Diagnostic::error(
@@ -3640,7 +3797,7 @@ pub fn call_position_args(
         }
 
         let returns = function_returns(func);
-        let ty = function_type(func);
+        let ty = function_type(func, false);
 
         return Ok(Expression::InternalFunctionCall {
             loc: *loc,
@@ -3791,7 +3948,7 @@ fn function_call_with_named_args(
         }
 
         let returns = function_returns(func);
-        let ty = function_type(func);
+        let ty = function_type(func, false);
 
         return Ok(Expression::InternalFunctionCall {
             loc: *loc,
@@ -4265,20 +4422,26 @@ fn method_call_pos_args(
                     ))
                 };
 
-                let returns = function_returns(&ns.contracts[*contract_no].functions[function_no]);
+                let func = &ns.contracts[*contract_no].functions[function_no];
+                let returns = function_returns(func);
+                let ty = function_type(func, true);
 
                 return Ok(Expression::ExternalFunctionCall {
                     loc: *loc,
-                    contract_no: *contract_no,
-                    function_no,
                     returns,
-                    address: Box::new(cast(
-                        &var.loc(),
-                        var_expr,
-                        &Type::Contract(*contract_no),
-                        true,
-                        ns,
-                    )?),
+                    function: Box::new(Expression::ExternalFunction {
+                        loc: *loc,
+                        ty,
+                        contract_no: *contract_no,
+                        function_no,
+                        address: Box::new(cast(
+                            &var.loc(),
+                            var_expr,
+                            &Type::Contract(*contract_no),
+                            true,
+                            ns,
+                        )?),
+                    }),
                     args: cast_args,
                     value,
                     gas: call_args.gas,
@@ -4472,7 +4635,7 @@ fn method_call_pos_args(
                 }
 
                 let returns = function_returns(libfunc);
-                let ty = function_type(libfunc);
+                let ty = function_type(libfunc, false);
 
                 import_library(contract_no, library_no, ns);
 
@@ -4699,21 +4862,26 @@ fn method_call_named_args(
                     ))
                 };
 
-                let returns =
-                    function_returns(&ns.contracts[*external_contract_no].functions[function_no]);
+                let func = &ns.contracts[*external_contract_no].functions[function_no];
+                let returns = function_returns(func);
+                let ty = function_type(func, true);
 
                 return Ok(Expression::ExternalFunctionCall {
                     loc: *loc,
-                    contract_no: *external_contract_no,
-                    function_no,
                     returns,
-                    address: Box::new(cast(
-                        &var.loc(),
-                        var_expr,
-                        &Type::Contract(*external_contract_no),
-                        true,
-                        ns,
-                    )?),
+                    function: Box::new(Expression::ExternalFunction {
+                        loc: *loc,
+                        ty,
+                        contract_no: *external_contract_no,
+                        function_no,
+                        address: Box::new(cast(
+                            &var.loc(),
+                            var_expr,
+                            &Type::Contract(*external_contract_no),
+                            true,
+                            ns,
+                        )?),
+                    }),
                     args: cast_args,
                     value,
                     gas: call_args.gas,
@@ -5057,14 +5225,6 @@ pub fn function_call_expr(
             symtable,
         ),
         pt::Expression::Variable(id) => {
-            if let Some(loc) = call_args_loc {
-                ns.diagnostics.push(Diagnostic::error(
-                    loc,
-                    "call arguments not permitted for internal calls".to_string(),
-                ));
-                return Err(());
-            }
-
             // is it a builtin
             if builtin::is_builtin_call(None, &id.name, ns) {
                 return {
@@ -5098,8 +5258,26 @@ pub fn function_call_expr(
                     Some(Symbol::Variable(_, _, _))
                 )
             {
-                call_function_type(loc, ty, args, file_no, contract_no, ns, symtable)
+                call_function_type(
+                    loc,
+                    ty,
+                    args,
+                    &call_args,
+                    call_args_loc,
+                    file_no,
+                    contract_no,
+                    ns,
+                    symtable,
+                )
             } else {
+                if let Some(loc) = call_args_loc {
+                    ns.diagnostics.push(Diagnostic::error(
+                        loc,
+                        "call arguments not permitted for internal calls".to_string(),
+                    ));
+                    return Err(());
+                }
+
                 call_position_args(
                     loc,
                     &id,
@@ -5114,7 +5292,17 @@ pub fn function_call_expr(
                 )
             }
         }
-        _ => call_function_type(loc, ty, args, file_no, contract_no, ns, symtable),
+        _ => call_function_type(
+            loc,
+            ty,
+            args,
+            &call_args,
+            call_args_loc,
+            file_no,
+            contract_no,
+            ns,
+            symtable,
+        ),
     }
 }
 
@@ -5190,12 +5378,24 @@ fn function_returns(ftype: &Function) -> Vec<Type> {
     }
 }
 
-/// Get the function type for an internal function call
-fn function_type(func: &Function) -> Type {
-    Type::InternalFunction {
-        params: func.params.iter().map(|p| p.ty.clone()).collect(),
-        mutability: func.mutability.clone(),
-        returns: function_returns(func),
+/// Get the function type for an internal.external function call
+fn function_type(func: &Function, external: bool) -> Type {
+    let params = func.params.iter().map(|p| p.ty.clone()).collect();
+    let mutability = func.mutability.clone();
+    let returns = function_returns(func);
+
+    if external {
+        Type::ExternalFunction {
+            params,
+            mutability,
+            returns,
+        }
+    } else {
+        Type::InternalFunction {
+            params,
+            mutability,
+            returns,
+        }
     }
 }
 

@@ -27,11 +27,9 @@ Missing features:
 
 - ``immutable`` is not supported. Note this is impossible to implement on Parity Substrate or Hyperledger Sawtooth; this is purely an ethereum feature
 - libraries functions are always statically linked into the contract wasm
-- function types are not implemented yet
 - Solang generates WebAssembly rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported
 - Defining functions outside of contracts (solc 0.7.1)
-- Getting the selector of the a function using the ``.selector`` syntax
 - Calling parent contract via ``super``
 
 Unique features to Solang:

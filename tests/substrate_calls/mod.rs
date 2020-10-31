@@ -312,7 +312,7 @@ fn try_catch_external_calls() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "try returns list has 2 entries while function returns 1 values"
+        "try returns list has 1 entries while function returns 2 values"
     );
 
     let ns = parse_and_resolve(

@@ -239,6 +239,7 @@ impl Function {
                         ),
                         Type::Contract(i) => ns.contracts[*i].name.to_owned(),
                         Type::InternalFunction { .. } => "function".to_owned(),
+                        Type::ExternalFunction { .. } => "function".to_owned(),
                         Type::Ref(r) => type_to_wasm_name(r, ns),
                         Type::StorageRef(r) => type_to_wasm_name(r, ns),
                         _ => unreachable!(),
@@ -513,6 +514,13 @@ pub enum Expression {
         function_no: usize,
         signature: Option<String>,
     },
+    ExternalFunction {
+        loc: pt::Loc,
+        ty: Type,
+        address: Box<Expression>,
+        contract_no: usize,
+        function_no: usize,
+    },
     InternalFunctionCfg(usize),
     InternalFunctionCall {
         loc: pt::Loc,
@@ -523,9 +531,7 @@ pub enum Expression {
     ExternalFunctionCall {
         loc: pt::Loc,
         returns: Vec<Type>,
-        contract_no: usize,
-        function_no: usize,
-        address: Box<Expression>,
+        function: Box<Expression>,
         args: Vec<Expression>,
         value: Box<Expression>,
         gas: Box<Expression>,
@@ -656,8 +662,11 @@ impl Expression {
                         e.recurse(cx, f);
                     }
                 }
+                Expression::ExternalFunction { address, .. } => {
+                    address.recurse(cx, f);
+                }
                 Expression::ExternalFunctionCall {
-                    address,
+                    function,
                     args,
                     value,
                     gas,
@@ -666,7 +675,7 @@ impl Expression {
                     for e in args {
                         e.recurse(cx, f);
                     }
-                    address.recurse(cx, f);
+                    function.recurse(cx, f);
                     value.recurse(cx, f);
                     gas.recurse(cx, f);
                 }
@@ -761,6 +770,8 @@ pub enum Builtin {
     AbiEncodeWithSignature,
     MulMod,
     AddMod,
+    ExternalFunctionAddress,
+    ExternalFunctionSelector,
 }
 
 #[derive(PartialEq, Clone, Debug)]

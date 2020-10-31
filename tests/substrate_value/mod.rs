@@ -723,7 +723,10 @@ fn balance() {
         Target::Substrate,
     );
 
-    assert_eq!(first_error(ns.diagnostics), "‘balance’ not found");
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "contract ‘b’ has no public function ‘balance’"
+    );
 
     let ns = parse_and_resolve(
         r##"

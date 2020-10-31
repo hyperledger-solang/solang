@@ -368,6 +368,41 @@ pub fn expression(
                 ns.contracts[contract_no].all_functions[&(base_contract_no, function_no)],
             )
         }
+        Expression::Builtin(loc, returns, Builtin::ExternalFunctionAddress, func) => {
+            if let Expression::ExternalFunction { address, .. } = &func[0] {
+                expression(address, cfg, contract_no, ns, vartab)
+            } else {
+                let func = expression(&func[0], cfg, contract_no, ns, vartab);
+
+                Expression::Builtin(
+                    *loc,
+                    returns.clone(),
+                    Builtin::ExternalFunctionAddress,
+                    vec![func],
+                )
+            }
+        }
+        Expression::Builtin(loc, returns, Builtin::ExternalFunctionSelector, func) => {
+            if let Expression::ExternalFunction {
+                contract_no: base_contract_no,
+                function_no,
+                ..
+            } = &func[0]
+            {
+                let selector = ns.contracts[*base_contract_no].functions[*function_no].selector();
+
+                Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector))
+            } else {
+                let func = expression(&func[0], cfg, contract_no, ns, vartab);
+
+                Expression::Builtin(
+                    *loc,
+                    returns.clone(),
+                    Builtin::ExternalFunctionSelector,
+                    vec![func],
+                )
+            }
+        }
         Expression::InternalFunctionCall { .. }
         | Expression::ExternalFunctionCall { .. }
         | Expression::Builtin(_, _, Builtin::AbiDecode, _) => {
@@ -376,6 +411,23 @@ pub fn expression(
             assert_eq!(returns.len(), 1);
 
             returns.remove(0)
+        }
+        Expression::ExternalFunction {
+            loc,
+            ty,
+            address,
+            contract_no: base_contract_no,
+            function_no,
+        } => {
+            let address = expression(address, cfg, contract_no, ns, vartab);
+
+            Expression::ExternalFunction {
+                loc: *loc,
+                ty: ty.clone(),
+                address: Box::new(address),
+                contract_no: *base_contract_no,
+                function_no: *function_no,
+            }
         }
         Expression::ArraySubscript(loc, ty, array, index) => {
             array_subscript(loc, ty, array, index, cfg, contract_no, ns, vartab)
@@ -760,9 +812,8 @@ pub fn expression(
                 vartab,
                 Instr::ExternalCall {
                     success: Some(success),
-                    address,
-                    contract_no: None,
-                    function_no: 0,
+                    address: Some(address),
+                    payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
                     args: Vec::new(),
                     value,
                     gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
@@ -780,9 +831,8 @@ pub fn expression(
                 vartab,
                 Instr::ExternalCall {
                     success: None,
-                    address,
-                    contract_no: None,
-                    function_no: 0,
+                    address: Some(address),
+                    payload: Expression::BytesLiteral(*loc, Type::DynamicBytes, vec![]),
                     args: Vec::new(),
                     value,
                     gas: Expression::NumberLiteral(*loc, Type::Uint(64), BigInt::zero()),
@@ -1133,10 +1183,9 @@ pub fn emit_function_call(
                 vartab,
                 Instr::ExternalCall {
                     success: Some(success),
-                    address,
-                    contract_no: None,
-                    function_no: 0,
-                    args: vec![args],
+                    address: Some(address),
+                    payload: args,
+                    args: vec![],
                     value,
                     gas,
                     callty: ty.clone(),
@@ -1150,65 +1199,140 @@ pub fn emit_function_call(
         }
         Expression::ExternalFunctionCall {
             loc,
-            contract_no,
-            function_no,
-            address,
+            function,
             args,
             value,
             gas,
             ..
         } => {
-            let ftype = &ns.contracts[*contract_no].functions[*function_no];
-            let args = args
-                .iter()
-                .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
-                .collect();
-            let address = expression(address, cfg, callee_contract_no, ns, vartab);
-            let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
-            let value = expression(value, cfg, callee_contract_no, ns, vartab);
-
-            cfg.add(
-                vartab,
-                Instr::ExternalCall {
-                    success: None,
-                    address,
-                    contract_no: Some(*contract_no),
-                    function_no: *function_no,
-                    args,
-                    value,
-                    gas,
-                    callty: CallTy::Regular,
-                },
-            );
-
-            if !ftype.returns.is_empty() {
-                let mut returns = Vec::new();
-                let mut res = Vec::new();
-
-                for ret in &ftype.returns {
-                    let id = pt::Identifier {
-                        loc: ret.loc,
-                        name: ret.name.to_owned(),
-                    };
-                    let temp_pos = vartab.temp(&id, &ret.ty);
-                    res.push(temp_pos);
-                    returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
-                }
+            if let Expression::ExternalFunction {
+                contract_no,
+                function_no,
+                address,
+                ty,
+                ..
+            } = function.as_ref()
+            {
+                let ftype = &ns.contracts[*contract_no].functions[*function_no];
+                let args = args
+                    .iter()
+                    .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                    .collect();
+                let address = expression(address, cfg, callee_contract_no, ns, vartab);
+                let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
+                let value = expression(value, cfg, callee_contract_no, ns, vartab);
 
                 cfg.add(
                     vartab,
-                    Instr::AbiDecode {
-                        res,
-                        selector: None,
-                        exception: None,
-                        tys: ftype.returns.clone(),
-                        data: Expression::ReturnData(*loc),
+                    Instr::ExternalCall {
+                        success: None,
+                        address: None,
+                        payload: Expression::ExternalFunction {
+                            contract_no: *contract_no,
+                            function_no: *function_no,
+                            address: Box::new(address),
+                            loc: *loc,
+                            ty: ty.clone(),
+                        },
+                        args,
+                        value,
+                        gas,
+                        callty: CallTy::Regular,
                     },
                 );
 
-                returns
+                if !ftype.returns.is_empty() {
+                    let mut returns = Vec::new();
+                    let mut res = Vec::new();
+
+                    for ret in &ftype.returns {
+                        let id = pt::Identifier {
+                            loc: ret.loc,
+                            name: ret.name.to_owned(),
+                        };
+                        let temp_pos = vartab.temp(&id, &ret.ty);
+                        res.push(temp_pos);
+                        returns.push(Expression::Variable(id.loc, ret.ty.clone(), temp_pos));
+                    }
+
+                    cfg.add(
+                        vartab,
+                        Instr::AbiDecode {
+                            res,
+                            selector: None,
+                            exception: None,
+                            tys: ftype.returns.clone(),
+                            data: Expression::ReturnData(*loc),
+                        },
+                    );
+
+                    returns
+                } else {
+                    vec![Expression::Poison]
+                }
+            } else if let Type::ExternalFunction {
+                returns: func_returns,
+                ..
+            } = function.ty()
+            {
+                let args = args
+                    .iter()
+                    .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
+                    .collect();
+                let payload = expression(function, cfg, callee_contract_no, ns, vartab);
+                let gas = expression(gas, cfg, callee_contract_no, ns, vartab);
+                let value = expression(value, cfg, callee_contract_no, ns, vartab);
+
+                cfg.add(
+                    vartab,
+                    Instr::ExternalCall {
+                        success: None,
+                        address: None,
+                        payload,
+                        args,
+                        value,
+                        gas,
+                        callty: CallTy::Regular,
+                    },
+                );
+
+                if !func_returns.is_empty() {
+                    let mut returns = Vec::new();
+                    let mut res = Vec::new();
+                    let mut tys = Vec::new();
+
+                    for ty in func_returns {
+                        let temp_pos = vartab.temp_anonymous(&ty);
+                        res.push(temp_pos);
+                        returns.push(Expression::Variable(pt::Loc(0, 0, 0), ty.clone(), temp_pos));
+
+                        tys.push(Parameter {
+                            loc: pt::Loc(0, 0, 0),
+                            ty,
+                            ty_loc: pt::Loc(0, 0, 0),
+                            name: String::new(),
+                            name_loc: None,
+                            indexed: false,
+                        });
+                    }
+
+                    cfg.add(
+                        vartab,
+                        Instr::AbiDecode {
+                            res,
+                            selector: None,
+                            exception: None,
+                            tys,
+                            data: Expression::ReturnData(*loc),
+                        },
+                    );
+
+                    returns
+                } else {
+                    vec![Expression::Poison]
+                }
             } else {
-                vec![Expression::Poison]
+                unreachable!();
             }
         }
         Expression::Builtin(loc, tys, Builtin::AbiDecode, args) => {

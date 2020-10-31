@@ -66,7 +66,7 @@ pub trait TargetRuntime<'a> {
     fn abi_encode<'b>(
         &self,
         contract: &Contract<'b>,
-        selector: Option<u32>,
+        selector: Option<IntValue<'b>>,
         load: bool,
         function: FunctionValue,
         args: &[BasicValueEnum<'b>],
@@ -111,6 +111,19 @@ pub trait TargetRuntime<'a> {
         dest: PointerValue,
     );
     fn get_storage_string(
+        &self,
+        contract: &Contract<'a>,
+        function: FunctionValue,
+        slot: PointerValue<'a>,
+    ) -> PointerValue<'a>;
+    fn set_storage_extfunc(
+        &self,
+        contract: &Contract,
+        function: FunctionValue,
+        slot: PointerValue,
+        dest: PointerValue,
+    );
+    fn get_storage_extfunc(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
@@ -522,6 +535,19 @@ pub trait TargetRuntime<'a> {
                     )
                     .into()
             }
+            ast::Type::ExternalFunction { .. } => {
+                contract.builder.build_store(slot_ptr, *slot);
+
+                let ret = self.get_storage_extfunc(contract, function, slot_ptr);
+
+                *slot = contract.builder.build_int_add(
+                    *slot,
+                    contract.number_literal(256, &BigInt::one()),
+                    "string",
+                );
+
+                ret.into()
+            }
             _ => {
                 contract.builder.build_store(slot_ptr, *slot);
 
@@ -770,6 +796,9 @@ pub trait TargetRuntime<'a> {
             }
             ast::Type::String | ast::Type::DynamicBytes => {
                 self.set_storage_string(contract, function, slot_ptr, dest.into_pointer_value());
+            }
+            ast::Type::ExternalFunction { .. } => {
+                self.set_storage_extfunc(contract, function, slot_ptr, dest.into_pointer_value());
             }
             ast::Type::InternalFunction { .. } => {
                 let ptr_ty = contract
@@ -2435,6 +2464,117 @@ pub trait TargetRuntime<'a> {
                     .build_int_truncate(quotient, res_ty, "quotient")
                     .into()
             }
+            Expression::ExternalFunction {
+                ty,
+                address,
+                contract_no,
+                function_no,
+                ..
+            } => {
+                let address = self
+                    .expression(contract, address, vartab, function)
+                    .into_int_value();
+
+                let selector =
+                    contract.ns.contracts[*contract_no].functions[*function_no].selector();
+
+                assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
+
+                let ty = contract.llvm_type(&ty);
+
+                let ef = contract
+                    .builder
+                    .build_call(
+                        contract.module.get_function("__malloc").unwrap(),
+                        &[ty.into_pointer_type()
+                            .get_element_type()
+                            .size_of()
+                            .unwrap()
+                            .const_cast(contract.context.i32_type(), false)
+                            .into()],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_pointer_value();
+
+                let ef = contract.builder.build_pointer_cast(
+                    ef,
+                    ty.into_pointer_type(),
+                    "function_type",
+                );
+
+                let address_member = unsafe {
+                    contract.builder.build_gep(
+                        ef,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "address",
+                    )
+                };
+
+                contract.builder.build_store(address_member, address);
+
+                let selector_member = unsafe {
+                    contract.builder.build_gep(
+                        ef,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(1, false),
+                        ],
+                        "selector",
+                    )
+                };
+
+                contract.builder.build_store(
+                    selector_member,
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(selector as u64, false),
+                );
+
+                ef.into()
+            }
+            Expression::Builtin(_, _, Builtin::ExternalFunctionSelector, args) => {
+                let ef = self
+                    .expression(contract, &args[0], vartab, function)
+                    .into_pointer_value();
+
+                let selector_member = unsafe {
+                    contract.builder.build_gep(
+                        ef,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(1, false),
+                        ],
+                        "selector",
+                    )
+                };
+
+                contract.builder.build_load(selector_member, "selector")
+            }
+            Expression::Builtin(_, _, Builtin::ExternalFunctionAddress, args) => {
+                let ef = self
+                    .expression(contract, &args[0], vartab, function)
+                    .into_pointer_value();
+
+                let selector_member = unsafe {
+                    contract.builder.build_gep(
+                        ef,
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_zero(),
+                        ],
+                        "address",
+                    )
+                };
+
+                contract.builder.build_load(selector_member, "address")
+            }
             Expression::Builtin(_, _, _, _) => self.builtin(contract, e, vartab, function),
             Expression::InternalFunctionCfg(cfg_no) => contract.functions[cfg_no]
                 .as_global_value()
@@ -3090,9 +3230,20 @@ pub trait TargetRuntime<'a> {
                     cfg::Instr::AssertFailure { expr: Some(expr) } => {
                         let v = self.expression(contract, expr, &w.vars, function);
 
+                        let selector = if contract.ns.target == Target::Ewasm {
+                            0x08c3_79a0u32.to_be()
+                        } else {
+                            0x08c3_79a0u32
+                        };
+
                         let (data, len) = self.abi_encode(
                             contract,
-                            Some(0x08c3_79a0),
+                            Some(
+                                contract
+                                    .context
+                                    .i32_type()
+                                    .const_int(selector as u64, false),
+                            ),
                             false,
                             function,
                             &[v],
@@ -3208,7 +3359,10 @@ pub trait TargetRuntime<'a> {
 
                                 let dest = w.vars[&res[i]].value;
 
-                                if dest.is_pointer_value() && !v.ty.is_reference_type() {
+                                if dest.is_pointer_value()
+                                    && !(v.ty.is_reference_type()
+                                        || matches!(v.ty, ast::Type::ExternalFunction{ .. }))
+                                {
                                     contract.builder.build_store(dest.into_pointer_value(), val);
                                 } else {
                                     w.vars.get_mut(&res[i]).unwrap().value = val;
@@ -3354,87 +3508,194 @@ pub trait TargetRuntime<'a> {
                     cfg::Instr::ExternalCall {
                         success,
                         address,
-                        contract_no,
-                        function_no,
+                        payload,
                         args,
                         value,
                         gas,
                         callty,
                     } => {
-                        let (payload, payload_len) = match contract_no {
-                            Some(contract_no) => {
-                                let dest_func =
-                                    &contract.ns.contracts[*contract_no].functions[*function_no];
+                        let (payload, payload_len, address) = match payload.ty() {
+                            ast::Type::ExternalFunction { params, .. } => {
+                                if let ast::Expression::ExternalFunction {
+                                    address,
+                                    contract_no,
+                                    function_no,
+                                    ..
+                                } = payload
+                                {
+                                    let dest_func = &contract.ns.contracts[*contract_no].functions
+                                        [*function_no];
 
-                                let selector = dest_func.selector();
-
-                                self.abi_encode(
-                                    contract,
-                                    Some(if contract.ns.target == Target::Ewasm {
-                                        selector.to_be()
+                                    let selector = if contract.ns.target == Target::Ewasm {
+                                        dest_func.selector().to_le()
                                     } else {
-                                        selector
-                                    }),
-                                    false,
-                                    function,
-                                    &args
-                                        .iter()
-                                        .map(|a| self.expression(contract, &a, &w.vars, function))
-                                        .collect::<Vec<BasicValueEnum>>(),
-                                    &dest_func.params,
-                                )
-                            }
-                            None if args.is_empty() => (
-                                contract
-                                    .context
-                                    .i8_type()
-                                    .ptr_type(AddressSpace::Generic)
-                                    .const_null(),
-                                contract.context.i32_type().const_zero(),
-                            ),
-                            None => {
-                                let raw = self
-                                    .expression(contract, &args[0], &w.vars, function)
-                                    .into_pointer_value();
+                                        dest_func.selector()
+                                    };
 
-                                let data = unsafe {
-                                    contract.builder.build_gep(
-                                        raw,
-                                        &[
-                                            contract.context.i32_type().const_zero(),
-                                            contract.context.i32_type().const_int(2, false),
-                                        ],
-                                        "rawdata",
-                                    )
-                                };
+                                    let selector = contract
+                                        .context
+                                        .i32_type()
+                                        .const_int(selector as u64, false);
 
-                                let data_len = unsafe {
-                                    contract.builder.build_gep(
-                                        raw,
-                                        &[
-                                            contract.context.i32_type().const_zero(),
-                                            contract.context.i32_type().const_zero(),
-                                        ],
-                                        "rawdata_len",
-                                    )
-                                };
+                                    let (payload, payload_len) = self.abi_encode(
+                                        contract,
+                                        Some(selector),
+                                        false,
+                                        function,
+                                        &args
+                                            .iter()
+                                            .map(|a| {
+                                                self.expression(contract, &a, &w.vars, function)
+                                            })
+                                            .collect::<Vec<BasicValueEnum>>(),
+                                        &dest_func.params,
+                                    );
 
-                                (
-                                    contract.builder.build_pointer_cast(
-                                        data,
-                                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                                        "data",
-                                    ),
-                                    contract
+                                    let address = self
+                                        .expression(contract, address, &w.vars, function)
+                                        .into_int_value();
+
+                                    (payload, payload_len, address)
+                                } else {
+                                    // load selector from function expression
+                                    let ft = self
+                                        .expression(contract, payload, &w.vars, function)
+                                        .into_pointer_value();
+
+                                    let selector_member = unsafe {
+                                        contract.builder.build_gep(
+                                            ft,
+                                            &[
+                                                contract.context.i32_type().const_zero(),
+                                                contract.context.i32_type().const_int(1, false),
+                                            ],
+                                            "selector",
+                                        )
+                                    };
+
+                                    let selector = contract
                                         .builder
-                                        .build_load(data_len, "data_len")
-                                        .into_int_value(),
-                                )
+                                        .build_load(selector_member, "selector")
+                                        .into_int_value();
+
+                                    // we don't know the names of the parameters any more
+                                    let params = params
+                                        .iter()
+                                        .map(|ty| ast::Parameter {
+                                            ty: ty.clone(),
+                                            name: String::new(),
+                                            ty_loc: pt::Loc(0, 0, 0),
+                                            name_loc: None,
+                                            loc: pt::Loc(0, 0, 0),
+                                            indexed: false,
+                                        })
+                                        .collect::<Vec<ast::Parameter>>();
+
+                                    let (payload, payload_len) = self.abi_encode(
+                                        contract,
+                                        Some(selector),
+                                        false,
+                                        function,
+                                        &args
+                                            .iter()
+                                            .map(|a| {
+                                                self.expression(contract, &a, &w.vars, function)
+                                            })
+                                            .collect::<Vec<BasicValueEnum>>(),
+                                        &params,
+                                    );
+
+                                    let address_member = unsafe {
+                                        contract.builder.build_gep(
+                                            ft,
+                                            &[
+                                                contract.context.i32_type().const_zero(),
+                                                contract.context.i32_type().const_zero(),
+                                            ],
+                                            "address",
+                                        )
+                                    };
+
+                                    let address = contract
+                                        .builder
+                                        .build_load(address_member, "address")
+                                        .into_int_value();
+
+                                    (payload, payload_len, address)
+                                }
+                            }
+                            ast::Type::DynamicBytes => {
+                                let address = self
+                                    .expression(
+                                        contract,
+                                        address.as_ref().unwrap(),
+                                        &w.vars,
+                                        function,
+                                    )
+                                    .into_int_value();
+
+                                if let ast::Expression::BytesLiteral(_, _, bs) = payload {
+                                    assert_eq!(bs.len(), 0);
+
+                                    (
+                                        contract
+                                            .context
+                                            .i8_type()
+                                            .ptr_type(AddressSpace::Generic)
+                                            .const_null(),
+                                        contract.context.i32_type().const_zero(),
+                                        address,
+                                    )
+                                } else {
+                                    let raw = self
+                                        .expression(contract, payload, &w.vars, function)
+                                        .into_pointer_value();
+
+                                    let data = unsafe {
+                                        contract.builder.build_gep(
+                                            raw,
+                                            &[
+                                                contract.context.i32_type().const_zero(),
+                                                contract.context.i32_type().const_int(2, false),
+                                            ],
+                                            "rawdata",
+                                        )
+                                    };
+
+                                    let data_len = unsafe {
+                                        contract.builder.build_gep(
+                                            raw,
+                                            &[
+                                                contract.context.i32_type().const_zero(),
+                                                contract.context.i32_type().const_zero(),
+                                            ],
+                                            "rawdata_len",
+                                        )
+                                    };
+
+                                    (
+                                        contract.builder.build_pointer_cast(
+                                            data,
+                                            contract
+                                                .context
+                                                .i8_type()
+                                                .ptr_type(AddressSpace::Generic),
+                                            "data",
+                                        ),
+                                        contract
+                                            .builder
+                                            .build_load(data_len, "data_len")
+                                            .into_int_value(),
+                                        address,
+                                    )
+                                }
+                            }
+                            _ => {
+                                println!("foo {:?}", payload);
+                                unreachable!();
                             }
                         };
-                        let address = self
-                            .expression(contract, address, &w.vars, function)
-                            .into_int_value();
+
                         let gas = self
                             .expression(contract, gas, &w.vars, function)
                             .into_int_value();
@@ -5331,6 +5592,16 @@ impl<'a> Contract<'a> {
                 let ftype = self.function_type(params, returns);
 
                 BasicTypeEnum::PointerType(ftype.ptr_type(AddressSpace::Generic))
+            }
+            ast::Type::ExternalFunction { .. } => {
+                let address = self.llvm_type(&ast::Type::Address(false));
+                let selector = self.llvm_type(&ast::Type::Uint(32));
+
+                BasicTypeEnum::PointerType(
+                    self.context
+                        .struct_type(&[address, selector], false)
+                        .ptr_type(AddressSpace::Generic),
+                )
             }
             _ => unreachable!(),
         }
