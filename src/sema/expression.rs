@@ -4330,30 +4330,30 @@ fn method_call_pos_args(
         }
     }
 
-    if let Type::Contract(contract_no) = &var_ty.deref_any() {
-        let call_args =
-            parse_call_args(call_args, true, file_no, Some(*contract_no), ns, symtable)?;
+    if let Type::Contract(ext_contract_no) = &var_ty.deref_any() {
+        let call_args = parse_call_args(call_args, true, file_no, contract_no, ns, symtable)?;
 
         let mut resolved_args = Vec::new();
 
         for arg in args {
-            let expr = expression(arg, file_no, Some(*contract_no), ns, symtable, false)?;
+            let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
             resolved_args.push(Box::new(expr));
         }
 
         let marker = ns.diagnostics.len();
         let mut name_match = 0;
 
-        for function_no in 0..ns.contracts[*contract_no].functions.len() {
-            if func.name != ns.contracts[*contract_no].functions[function_no].name
-                || ns.contracts[*contract_no].functions[function_no].ty != pt::FunctionTy::Function
+        for function_no in 0..ns.contracts[*ext_contract_no].functions.len() {
+            if func.name != ns.contracts[*ext_contract_no].functions[function_no].name
+                || ns.contracts[*ext_contract_no].functions[function_no].ty
+                    != pt::FunctionTy::Function
             {
                 continue;
             }
 
             name_match += 1;
 
-            let params_len = ns.contracts[*contract_no].functions[function_no]
+            let params_len = ns.contracts[*ext_contract_no].functions[function_no]
                 .params
                 .len();
 
@@ -4375,7 +4375,7 @@ fn method_call_pos_args(
                 match cast(
                     &arg.loc(),
                     *arg.clone(),
-                    &ns.contracts[*contract_no].functions[function_no].params[i]
+                    &ns.contracts[*ext_contract_no].functions[function_no].params[i]
                         .ty
                         .clone(),
                     true,
@@ -4391,7 +4391,7 @@ fn method_call_pos_args(
             if matches {
                 ns.diagnostics.truncate(marker);
 
-                if !ns.contracts[*contract_no].functions[function_no].is_public() {
+                if !ns.contracts[*ext_contract_no].functions[function_no].is_public() {
                     ns.diagnostics.push(Diagnostic::error(
                         *loc,
                         format!("function ‘{}’ is not ‘public’ or ‘external’", func.name),
@@ -4400,8 +4400,8 @@ fn method_call_pos_args(
                 }
 
                 let value = if let Some(value) = call_args.value {
-                    if !value.const_zero(Some(*contract_no), ns)
-                        && !ns.contracts[*contract_no].functions[function_no].is_payable()
+                    if !value.const_zero(Some(*ext_contract_no), ns)
+                        && !ns.contracts[*ext_contract_no].functions[function_no].is_payable()
                     {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
@@ -4422,7 +4422,7 @@ fn method_call_pos_args(
                     ))
                 };
 
-                let func = &ns.contracts[*contract_no].functions[function_no];
+                let func = &ns.contracts[*ext_contract_no].functions[function_no];
                 let returns = function_returns(func);
                 let ty = function_type(func, true);
 
@@ -4432,12 +4432,12 @@ fn method_call_pos_args(
                     function: Box::new(Expression::ExternalFunction {
                         loc: *loc,
                         ty,
-                        contract_no: *contract_no,
+                        contract_no: *ext_contract_no,
                         function_no,
                         address: Box::new(cast(
                             &var.loc(),
                             var_expr,
-                            &Type::Contract(*contract_no),
+                            &Type::Contract(*ext_contract_no),
                             true,
                             ns,
                         )?),

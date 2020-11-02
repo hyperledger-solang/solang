@@ -2,6 +2,15 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Added
+- Function types are implemented
+- An experimental [Solana](https://solana.com/) target has been added
+
+### Changed
+- The Substrate target requires Substrate 2.0
+
 ## [0.1.4]
 
 ### Added
