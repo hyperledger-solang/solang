@@ -815,6 +815,81 @@ The expression ``this`` evaluates to the current contract, which can be cast to 
         }
     }
 
+Function Types
+______________
+
+Function types are references to functions. You can use function types for callbacks for example.
+Function types come in two flavours, `internal` and `external`. An internal function is a reference
+to a function in same contract or one of its base contracts. An external function is a reference
+to a function on any contract.
+
+When declaring a function type, you must specify the parameters types, return types, mutability,
+and whether type is external or internal. The parameters or return types do cannot have names.
+
+.. code-block:: javascript
+
+    contract ft {
+        function test() public {
+            // reference to an internal function with two argments, returning bool
+            // with the default mutability (i.e. cannot be payable)
+            function(int32, bool) internal returns (bool) x;
+
+            // the local function func1 can be assigned to this type; mutability
+            // can be more restrictive than the type.
+            x = func1;
+
+            // now you can call func1 via the x
+            bool res = x(102, false);
+
+            // reference to an internal function with no return values, must be pure
+            function(int32 arg1, bool arg2) internal pure y;
+
+            // Does not compile: wrong number of return types and mutability
+            // is not compatible.
+            y = func1;
+        }
+
+        function func1(int32 arg, bool arg2) view internal returns (bool) {
+            return false;
+        }
+    }
+
+A function type can be a function argument, function return type, or a contract storage variable. Internal
+function types cannot be used in public functions. If the `internal` or `external` keyword is omitted,
+the type defaults to `internal`.
+
+An external function type is a reference to a function in a particular contract. It stores the address of
+the contract, and the function selector. An internal function type only stores the function selector. When
+assigning a value to an external function selector, the contract and function must be specified.
+
+.. code-block:: javascript
+
+    contract ft {
+        function test(paffling p) public {
+            // this.callback can be used as an external function type value
+            p.set_callback(this.callback);
+        }
+
+        function callback(int32 count, string foo) public {
+            // ...
+        }
+    }
+
+    contract paffling {
+        // the first visibility "external" is for the function type, the second "internal" is
+        // for the callback variables
+        function(int32, string) external internal callback;
+
+        function set_callback(function(int32, string) external c) public {
+            callback = c;
+        }
+
+        function piffle() public {
+            callback(1, "paffled");
+        }
+    }
+
+
 Storage References
 __________________
 
