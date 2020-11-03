@@ -11,16 +11,23 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::process::Command;
-use tempfile::NamedTempFile;
-
+use tempfile::tempdir;
 pub fn link(input: &[u8], name: &str) -> Vec<u8> {
-    let mut objectfile = NamedTempFile::new().expect("failed to create object temp file");
+    let dir = tempdir().expect("failed to create temp directory for linking");
+
+    let object_filename = dir.path().join(&format!("{}.o", name));
+    let ldscript_filename = dir.path().join("bpf.ld");
+    let res_filename = dir.path().join(&format!("{}.so", name));
+
+    let mut objectfile =
+        File::create(object_filename.clone()).expect("failed to create object file");
 
     objectfile
         .write_all(input)
         .expect("failed to write object file to temp file");
 
-    let mut linker_script = NamedTempFile::new().expect("failed to create linker script temp file");
+    let mut linker_script =
+        File::create(ldscript_filename.clone()).expect("failed to create object file");
 
     linker_script
         .write_all(
@@ -47,16 +54,14 @@ SECTIONS
         .expect("failed to write linker script to temp file");
 
     let command_line = format!(
-        "ld.lld  -z notext -shared --Bdynamic {} --entry entrypoint {} -o {}.so",
-        linker_script
-            .path()
+        "ld.lld  -z notext -shared --Bdynamic {} --entry entrypoint {} -o {}",
+        ldscript_filename
             .to_str()
             .expect("temp path should be unicode"),
-        objectfile
-            .path()
+        object_filename
             .to_str()
             .expect("temp path should be unicode"),
-        name,
+        res_filename.to_str().expect("temp path should be unicode"),
     );
 
     let status = if cfg!(target_os = "windows") {
@@ -78,7 +83,7 @@ SECTIONS
 
     let mut output = Vec::new();
     // read the whole file
-    let mut outputfile = File::open(format!("{}.so", name)).expect("output file should exist");
+    let mut outputfile = File::open(res_filename).expect("output file should exist");
 
     outputfile
         .read_to_end(&mut output)
