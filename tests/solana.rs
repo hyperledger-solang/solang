@@ -264,18 +264,17 @@ fn simple() {
     assert_eq!(vm.printbuf, "Hello from function");
 }
 
-/*
 #[test]
 fn basic() {
     let mut vm = build_solidity(
         r#"
         contract foo {
-            function test(uint32 x, uint32 y) public {
+            function test(uint32 x, uint64 y) public {
                 if (x == 10) {
                     print("x is 10");
                 }
-                if (x + 10 == y) {
-                    print("x plus 10 is y");
+                if (y == 102) {
+                    print("y is 102");
                 }
             }
         }"#,
@@ -284,21 +283,20 @@ fn basic() {
     vm.function(
         "test",
         &[
-            ethabi::Token::Int(ethereum_types::U256::from(10)),
-            ethabi::Token::Int(ethereum_types::U256::from(10)),
+            ethabi::Token::Uint(ethereum_types::U256::from(10)),
+            ethabi::Token::Uint(ethereum_types::U256::from(10)),
         ],
     );
 
-    assert_eq!(vm.printbuf, "Hello from function");
+    assert_eq!(vm.printbuf, "x is 10");
 
     vm.function(
         "test",
         &[
-            ethabi::Token::Int(ethereum_types::U256::from(10)),
-            ethabi::Token::Int(ethereum_types::U256::from(20)),
+            ethabi::Token::Uint(ethereum_types::U256::from(99)),
+            ethabi::Token::Uint(ethereum_types::U256::from(102)),
         ],
     );
 
-    assert_eq!(vm.printbuf, "Hello from function");
+    assert_eq!(vm.printbuf, "y is 102");
 }
-*/

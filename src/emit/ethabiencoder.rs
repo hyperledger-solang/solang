@@ -881,7 +881,8 @@ impl EthAbiEncoder {
             | ast::Type::Address(_)
             | ast::Type::Int(_)
             | ast::Type::Uint(_)
-            | ast::Type::Bytes(_) => 32,
+            | ast::Type::Bytes(_)
+            | ast::Type::ExternalFunction { .. } => 32,
             // String and Dynamic bytes use 32 bytes for the offset into dynamic encoded
             ast::Type::String | ast::Type::DynamicBytes => 32,
             ast::Type::Enum(_) => 32,
