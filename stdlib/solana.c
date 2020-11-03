@@ -4,8 +4,8 @@
 
 #include "solana_sdk.h"
 
-extern int solang_constructor(const uint8_t *input, uint32_t input_len);
-extern int solang_function(const uint8_t *input, uint32_t input_len);
+extern int solang_constructor(const uint8_t *input, uint64_t input_len);
+extern int solang_function(const uint8_t *input, uint64_t input_len);
 
 uint64_t
 entrypoint(const uint8_t *input)

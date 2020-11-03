@@ -4022,7 +4022,7 @@ pub trait TargetRuntime<'a> {
         let not_fallback = contract.builder.build_int_compare(
             IntPredicate::UGE,
             argslen,
-            contract.context.i32_type().const_int(4, false),
+            argslen.get_type().const_int(4, false),
             "",
         );
 
@@ -4055,7 +4055,7 @@ pub trait TargetRuntime<'a> {
 
         let argslen = contract.builder.build_int_sub(
             argslen,
-            contract.context.i32_type().const_int(4, false),
+            argslen.get_type().const_int(4, false),
             "argslen",
         );
 
@@ -5511,6 +5511,19 @@ impl<'a> Contract<'a> {
             ty.fn_type(&[ty.into(), self.context.bool_type().into()], false),
             None,
         )
+    }
+
+    // Create the llvm intrinsic for bswap
+    pub fn llvm_bswap(&self, bit: u32) -> FunctionValue<'a> {
+        let name = format!("llvm.bswap.i{}", bit);
+        let ty = self.context.custom_width_int_type(bit);
+
+        if let Some(f) = self.module.get_function(&name) {
+            return f;
+        }
+
+        self.module
+            .add_function(&name, ty.fn_type(&[ty.into()], false), None)
     }
 
     /// Return the llvm type for a variable holding the type, not the type itself

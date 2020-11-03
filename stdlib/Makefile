@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=--target=$(TARGET) -emit-llvm -O3 -ffreestanding -fno-builtin -Wall
+CFLAGS=--target=$(TARGET) -emit-llvm -O3 -ffreestanding -fno-builtin -Wall -Wno-unused-function
 
 %.bc: %.c
 	$(CC) -c $(CFLAGS) $< -o $@
