@@ -818,13 +818,13 @@ The expression ``this`` evaluates to the current contract, which can be cast to 
 Function Types
 ______________
 
-Function types are references to functions. You can use function types for callbacks for example.
-Function types come in two flavours, `internal` and `external`. An internal function is a reference
-to a function in same contract or one of its base contracts. An external function is a reference
-to a function on any contract.
+Function types are references to functions. You can use function types to pass functions
+for callbacks for example. Function types come in two flavours, ``internal`` and ``external``.
+An internal function is a reference to a function in same contract or one of its base contracts.
+An external function is a reference to a public or external function on any contract.
 
 When declaring a function type, you must specify the parameters types, return types, mutability,
-and whether type is external or internal. The parameters or return types do cannot have names.
+and whether it is external or internal. The parameters or return types cannot have names.
 
 .. code-block:: javascript
 
@@ -854,9 +854,9 @@ and whether type is external or internal. The parameters or return types do cann
         }
     }
 
-A function type can be a function argument, function return type, or a contract storage variable. Internal
-function types cannot be used in public functions. If the `internal` or `external` keyword is omitted,
-the type defaults to `internal`.
+Just like any other type, a function type can be a function argument, function return type, or a
+contract storage variable. Internal function types cannot be used in public functions parameters or
+return types. If the ``internal`` or ``external`` keyword is omitted, the type defaults to internal.
 
 An external function type is a reference to a function in a particular contract. It stores the address of
 the contract, and the function selector. An internal function type only stores the function selector. When

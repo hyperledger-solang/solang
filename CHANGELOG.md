@@ -7,6 +7,7 @@ will be documented here.
 ### Added
 - Function types are implemented
 - An experimental [Solana](https://solana.com/) target has been added
+- Binaries are generated for Mac
 
 ### Changed
 - The Substrate target requires Substrate 2.0
