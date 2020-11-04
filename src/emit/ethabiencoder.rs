@@ -154,10 +154,10 @@ impl EthAbiEncoder {
 
                     let fixed_elems_length = contract.builder.build_int_add(
                         len,
-                        contract
-                            .context
-                            .i32_type()
-                            .const_int(self.encoded_fixed_length(&elem_ty, contract.ns), false),
+                        contract.context.i32_type().const_int(
+                            EthAbiEncoder::encoded_fixed_length(&elem_ty, contract.ns),
+                            false,
+                        ),
                         "",
                     );
 
@@ -681,7 +681,6 @@ impl EthAbiEncoder {
 
     /// Return the amount of fixed and dynamic storage required to store a type
     pub fn encoded_dynamic_length<'a>(
-        &self,
         arg: BasicValueEnum<'a>,
         load: bool,
         ty: &ast::Type,
@@ -710,7 +709,7 @@ impl EthAbiEncoder {
                         )
                     };
 
-                    let len = self.encoded_dynamic_length(
+                    let len = EthAbiEncoder::encoded_dynamic_length(
                         elem.into(),
                         true,
                         &field.ty,
@@ -764,7 +763,7 @@ impl EthAbiEncoder {
                             contract.builder.build_int_mul(
                                 array_len,
                                 contract.context.i32_type().const_int(
-                                    self.encoded_fixed_length(&elem_ty, contract.ns),
+                                    EthAbiEncoder::encoded_fixed_length(&elem_ty, contract.ns),
                                     false,
                                 ),
                                 "",
@@ -819,7 +818,7 @@ impl EthAbiEncoder {
                             );
 
                             *sum = contract.builder.build_int_add(
-                                self.encoded_dynamic_length(
+                                EthAbiEncoder::encoded_dynamic_length(
                                     elem.into(),
                                     true,
                                     &elem_ty,
@@ -874,7 +873,7 @@ impl EthAbiEncoder {
     }
 
     /// Return the encoded length of the given type, fixed part only
-    pub fn encoded_fixed_length(&self, ty: &ast::Type, ns: &ast::Namespace) -> u64 {
+    pub fn encoded_fixed_length(ty: &ast::Type, ns: &ast::Namespace) -> u64 {
         match ty {
             ast::Type::Bool
             | ast::Type::Contract(_)
@@ -889,7 +888,7 @@ impl EthAbiEncoder {
             ast::Type::Struct(n) => ns.structs[*n]
                 .fields
                 .iter()
-                .map(|f| self.encoded_fixed_length(&f.ty, ns))
+                .map(|f| EthAbiEncoder::encoded_fixed_length(&f.ty, ns))
                 .sum(),
             ast::Type::Array(ty, dims) => {
                 let mut product = 1;
@@ -903,10 +902,10 @@ impl EthAbiEncoder {
                     }
                 }
 
-                product * self.encoded_fixed_length(&ty, ns)
+                product * EthAbiEncoder::encoded_fixed_length(&ty, ns)
             }
-            ast::Type::Ref(r) => self.encoded_fixed_length(r, ns),
-            ast::Type::StorageRef(r) => self.encoded_fixed_length(r, ns),
+            ast::Type::Ref(r) => EthAbiEncoder::encoded_fixed_length(r, ns),
+            ast::Type::StorageRef(r) => EthAbiEncoder::encoded_fixed_length(r, ns),
             _ => unreachable!(),
         }
     }
@@ -1484,5 +1483,46 @@ impl EthAbiEncoder {
                 data_length,
             ));
         }
+    }
+
+    /// Calculate length of encoded data and the offset where the dynamic part starts
+    pub fn total_encoded_length<'b>(
+        contract: &Contract<'b>,
+        selector: Option<IntValue<'b>>,
+        load: bool,
+        function: FunctionValue,
+        args: &[BasicValueEnum<'b>],
+        spec: &[ast::Parameter],
+    ) -> (IntValue<'b>, IntValue<'b>) {
+        let offset = contract.context.i32_type().const_int(
+            spec.iter()
+                .map(|arg| EthAbiEncoder::encoded_fixed_length(&arg.ty, contract.ns))
+                .sum(),
+            false,
+        );
+
+        let mut length = offset;
+
+        // now add the dynamic lengths
+        for (i, s) in spec.iter().enumerate() {
+            length = contract.builder.build_int_add(
+                length,
+                EthAbiEncoder::encoded_dynamic_length(args[i], load, &s.ty, function, contract),
+                "",
+            );
+        }
+
+        if selector.is_some() {
+            length = contract.builder.build_int_add(
+                length,
+                contract
+                    .context
+                    .i32_type()
+                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                "",
+            );
+        }
+
+        (length, offset)
     }
 }

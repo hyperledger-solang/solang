@@ -4,8 +4,8 @@
 
 #include "solana_sdk.h"
 
-extern int solang_constructor(const uint8_t *input, uint64_t input_len);
-extern int solang_function(const uint8_t *input, uint64_t input_len);
+extern int solang_constructor(const uint8_t *input, uint64_t input_len, uint8_t *ouyput, uint64_t *output_len);
+extern int solang_function(const uint8_t *input, uint64_t input_len, uint8_t *ouyput, uint64_t *output_len);
 
 uint64_t
 entrypoint(const uint8_t *input)
@@ -19,11 +19,11 @@ entrypoint(const uint8_t *input)
 
     if ((params.data_len % 32) == 0)
     {
-        return solang_constructor(params.data, params.data_len);
+        return solang_constructor(params.data, params.data_len, ka[0].data, ka[0].data_len);
     }
     else
     {
-        return solang_function(params.data, params.data_len);
+        return solang_function(params.data, params.data_len, ka[0].data, ka[0].data_len);
     }
 
     return SUCCESS;
@@ -42,6 +42,18 @@ struct vector
 void *__malloc(uint32_t size)
 {
     return sol_alloc_free_(size, NULL);
+}
+
+/*
+ * Fast-ish clear, 8 bytes at a time.
+ */
+void __bzero8(void *_dest, uint32_t length)
+{
+    uint64_t *dest = _dest;
+
+    do
+        *dest++ = 0;
+    while (--length);
 }
 
 // Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm

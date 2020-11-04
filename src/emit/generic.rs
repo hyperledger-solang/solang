@@ -544,35 +544,9 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         args: &[BasicValueEnum<'b>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
-        let mut offset = contract.context.i32_type().const_int(
-            spec.iter()
-                .map(|arg| self.abi.encoded_fixed_length(&arg.ty, contract.ns))
-                .sum(),
-            false,
+        let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
+            contract, selector, load, function, args, spec,
         );
-
-        let mut length = offset;
-
-        // now add the dynamic lengths
-        for (i, s) in spec.iter().enumerate() {
-            length = contract.builder.build_int_add(
-                length,
-                self.abi
-                    .encoded_dynamic_length(args[i], load, &s.ty, function, contract),
-                "",
-            );
-        }
-
-        if selector.is_some() {
-            length = contract.builder.build_int_add(
-                length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
-                "",
-            );
-        }
 
         let encoded_data = contract
             .builder
@@ -605,7 +579,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
                     &[contract
                         .context
                         .i32_type()
-                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                        .const_int(std::mem::size_of::<u32>() as u64, false)],
                     "",
                 )
             };

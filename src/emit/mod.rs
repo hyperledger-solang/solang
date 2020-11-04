@@ -63,15 +63,15 @@ pub trait TargetRuntime<'a> {
 
     /// Abi encode with optional four bytes selector. The load parameter should be set if the args are
     /// pointers to data, not the actual data  itself.
-    fn abi_encode<'b>(
+    fn abi_encode(
         &self,
-        contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
+        contract: &Contract<'a>,
+        selector: Option<IntValue<'a>>,
         load: bool,
         function: FunctionValue,
-        args: &[BasicValueEnum<'b>],
+        args: &[BasicValueEnum<'a>],
         spec: &[ast::Parameter],
-    ) -> (PointerValue<'b>, IntValue<'b>);
+    ) -> (PointerValue<'a>, IntValue<'a>);
 
     /// ABI encode into a vector for abi.encode* style builtin functions
     fn abi_encode_to_vector<'b>(
@@ -4198,13 +4198,12 @@ pub trait TargetRuntime<'a> {
             for v in f.returns.iter() {
                 args.push(if !v.ty.is_reference_type() {
                     contract
-                        .builder
-                        .build_alloca(contract.llvm_type(&v.ty), &v.name)
+                        .build_alloca(function, contract.llvm_type(&v.ty), &v.name)
                         .into()
                 } else {
                     contract
-                        .builder
                         .build_alloca(
+                            function,
                             contract.llvm_type(&v.ty).ptr_type(AddressSpace::Generic),
                             &v.name,
                         )
@@ -5072,6 +5071,30 @@ impl<'a> Contract<'a> {
             self.context.i8_type().ptr_type(AddressSpace::Generic),
             name,
         )
+    }
+
+    /// Wrapper for alloca. Ensures that the alloca is done on the first basic block.
+    /// If alloca is not on the first basic block, llvm will get to llvm_unreachable
+    /// for the BPF target.
+    fn build_alloca<T: BasicType<'a>>(
+        &self,
+        function: inkwell::values::FunctionValue<'a>,
+        ty: T,
+        name: &str,
+    ) -> PointerValue<'a> {
+        let entry = function
+            .get_first_basic_block()
+            .expect("function missing entry block");
+        let current = self.builder.get_insert_block().unwrap();
+
+        self.builder
+            .position_before(&entry.get_first_instruction().unwrap());
+
+        let res = self.builder.build_alloca(ty, name);
+
+        self.builder.position_at_end(current);
+
+        res
     }
 
     /// Emit a loop from `from` to `to`. The closure exists to insert the body of the loop; the closure
