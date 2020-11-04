@@ -14,11 +14,12 @@ use inkwell::OptimizationLevel;
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
 
-pub struct SolanaTarget {
-    abi: ethabiencoder::EthAbiEncoder,
+pub struct SolanaTarget<'a> {
+    output: PointerValue<'a>,
+    output_len: PointerValue<'a>,
 }
 
-impl SolanaTarget {
+impl<'s> SolanaTarget<'s> {
     pub fn build<'a>(
         context: &'a Context,
         contract: &'a ast::Contract,
@@ -26,8 +27,14 @@ impl SolanaTarget {
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
+        let undef = context
+            .i8_type()
+            .ptr_type(AddressSpace::Generic)
+            .get_undef();
+
         let mut b = SolanaTarget {
-            abi: ethabiencoder::EthAbiEncoder {},
+            output: undef,
+            output_len: undef,
         };
 
         let mut c = Contract::new(context, contract, ns, filename, opt, None);
@@ -58,6 +65,7 @@ impl SolanaTarget {
         function
             .as_global_value()
             .set_unnamed_address(UnnamedAddress::Local);
+
         let function = contract.module.add_function(
             "sol_log_",
             void_ty.fn_type(&[u8_ptr.into(), u64_ty.into()], false),
@@ -68,7 +76,7 @@ impl SolanaTarget {
             .set_unnamed_address(UnnamedAddress::Local);
     }
 
-    fn emit_constructor(&mut self, contract: &mut Contract) {
+    fn emit_constructor(&mut self, contract: &mut Contract<'s>) {
         let initializer = self.emit_initializer(contract);
 
         let function = contract.module.get_function("solang_constructor").unwrap();
@@ -79,6 +87,8 @@ impl SolanaTarget {
 
         let argsdata = function.get_nth_param(0).unwrap().into_pointer_value();
         let argslen = function.get_nth_param(1).unwrap().into_int_value();
+        self.output = function.get_nth_param(2).unwrap().into_pointer_value();
+        self.output_len = function.get_nth_param(3).unwrap().into_pointer_value();
 
         // init our storage vars
         contract.builder.build_call(initializer, &[], "");
@@ -118,27 +128,29 @@ impl SolanaTarget {
     }
 
     // emit function dispatch
-    fn emit_function<'s>(&'s mut self, contract: &'s mut Contract) {
+    fn emit_function(&mut self, contract: &mut Contract<'s>) {
         let function = contract.module.get_function("solang_function").unwrap();
 
         let entry = contract.context.append_basic_block(function, "entry");
 
         contract.builder.position_at_end(entry);
 
-        let argsdata = function.get_nth_param(0).unwrap().into_pointer_value();
-        let argslen = function.get_nth_param(1).unwrap().into_int_value();
+        let input = function.get_nth_param(0).unwrap().into_pointer_value();
+        let input_len = function.get_nth_param(1).unwrap().into_int_value();
+        self.output = function.get_nth_param(2).unwrap().into_pointer_value();
+        self.output_len = function.get_nth_param(3).unwrap().into_pointer_value();
 
-        let argsdata = contract.builder.build_pointer_cast(
-            argsdata,
+        let input = contract.builder.build_pointer_cast(
+            input,
             contract.context.i32_type().ptr_type(AddressSpace::Generic),
-            "argsdata32",
+            "input_ptr32",
         );
 
         self.emit_function_dispatch(
             contract,
             pt::FunctionTy::Function,
-            argsdata,
-            argslen,
+            input,
+            input_len,
             function,
             None,
             |_| false,
@@ -343,15 +355,122 @@ impl SolanaTarget {
 
                 val.into()
             }
-            ast::Type::Bytes(1) => {
-                let val = contract.builder.build_load(data, "bytes1");
-
-                if let Some(p) = to {
-                    contract.builder.build_store(p, val);
-                }
-                val
-            }
             _ => unreachable!(),
+        }
+    }
+
+    /// ABI encode a single primitive
+    fn encode_primitive(
+        &self,
+        contract: &Contract,
+        load: bool,
+        ty: &ast::Type,
+        dest: PointerValue,
+        arg: BasicValueEnum,
+    ) {
+        match ty {
+            ast::Type::Bool => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let value = contract.builder.build_select(
+                    arg.into_int_value(),
+                    contract.context.i8_type().const_int(1, false),
+                    contract.context.i8_type().const_zero(),
+                    "bool_val",
+                );
+
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "destvoid",
+                );
+
+                let dest = unsafe {
+                    contract.builder.build_gep(
+                        dest8,
+                        &[contract.context.i32_type().const_int(31, false)],
+                        "",
+                    )
+                };
+
+                contract.builder.build_store(dest, value);
+            }
+            ast::Type::Uint(8) | ast::Type::Int(8) | ast::Type::Bytes(1) => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "destvoid",
+                );
+
+                let dest = unsafe {
+                    contract.builder.build_gep(
+                        dest8,
+                        &[contract.context.i32_type().const_int(31, false)],
+                        "",
+                    )
+                };
+
+                contract.builder.build_store(dest, arg.into_int_value());
+            }
+            ast::Type::Uint(n) | ast::Type::Int(n) if *n == 16 || *n == 32 || *n == 64 => {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                // now convert to be
+                let bswap = contract.llvm_bswap(*n as u32);
+
+                let val = contract
+                    .builder
+                    .build_call(bswap, &[arg], "")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dest8",
+                );
+
+                // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
+                // where our value starts
+                let int8_ptr = unsafe {
+                    contract.builder.build_gep(
+                        dest8,
+                        &[contract
+                            .context
+                            .i32_type()
+                            .const_int(32 - (*n as u64 / 8), false)],
+                        "uint_ptr",
+                    )
+                };
+
+                let int_type = contract.context.custom_width_int_type(*n as u32);
+
+                contract.builder.build_store(
+                    contract.builder.build_pointer_cast(
+                        int8_ptr,
+                        int_type.ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    val,
+                );
+            }
+            _ => unimplemented!(),
         }
     }
 
@@ -383,7 +502,7 @@ impl SolanaTarget {
     }
 }
 
-impl<'a> TargetRuntime<'a> for SolanaTarget {
+impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
     fn clear_storage(&self, _contract: &Contract, _function: FunctionValue, _slot: PointerValue) {
         unimplemented!();
     }
@@ -524,14 +643,23 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
+        contract
+            .builder
+            .build_store(self.output_len, contract.context.i64_type().const_zero());
+
         // return 0 for success
         contract
             .builder
             .build_return(Some(&contract.context.i32_type().const_int(0, false)));
     }
 
-    fn return_abi<'b>(&self, _contract: &'b Contract, _data: PointerValue<'b>, _length: IntValue) {
-        unimplemented!();
+    fn return_abi<'b>(&self, contract: &'b Contract, _data: PointerValue<'b>, _length: IntValue) {
+        // return data already filled in output contract
+
+        // return 0 for success
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(0, false)));
     }
 
     fn assert_failure<'b>(&self, _contract: &'b Contract, _data: PointerValue, _length: IntValue) {
@@ -551,77 +679,45 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         unimplemented!();
     }
 
-    fn abi_encode<'b>(
+    fn abi_encode(
         &self,
-        contract: &Contract<'b>,
-        selector: Option<IntValue<'b>>,
+        contract: &Contract<'a>,
+        selector: Option<IntValue<'a>>,
         load: bool,
         function: FunctionValue,
-        args: &[BasicValueEnum<'b>],
+        args: &[BasicValueEnum<'a>],
         spec: &[ast::Parameter],
-    ) -> (PointerValue<'b>, IntValue<'b>) {
-        let mut offset = contract.context.i32_type().const_int(
-            spec.iter()
-                .map(|arg| self.abi.encoded_fixed_length(&arg.ty, contract.ns))
-                .sum(),
-            false,
+    ) -> (PointerValue<'a>, IntValue<'a>) {
+        let (length, _offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
+            contract, selector, load, function, args, spec,
         );
 
-        let mut length = offset;
+        let length64 =
+            contract
+                .builder
+                .build_int_z_extend(length, contract.context.i64_type(), "length64");
 
-        // now add the dynamic lengths
-        for (i, s) in spec.iter().enumerate() {
-            length = contract.builder.build_int_add(
-                length,
-                self.abi
-                    .encoded_dynamic_length(args[i], load, &s.ty, function, contract),
-                "",
-            );
-        }
+        contract.builder.build_store(self.output_len, length64);
 
-        if selector.is_some() {
-            length = contract.builder.build_int_add(
-                length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
-                "",
-            );
-        }
-
-        let encoded_data = contract
-            .builder
-            .build_call(
-                contract.module.get_function("solang_malloc").unwrap(),
-                &[length.into()],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_pointer_value();
-
-        // malloc returns u8*
-        let mut data = encoded_data;
+        let mut output = self.output;
 
         if let Some(selector) = selector {
             contract.builder.build_store(
                 contract.builder.build_pointer_cast(
-                    data,
+                    output,
                     contract.context.i32_type().ptr_type(AddressSpace::Generic),
                     "",
                 ),
                 selector,
             );
 
-            data = unsafe {
+            output = unsafe {
                 contract.builder.build_gep(
-                    data,
+                    output,
                     &[contract
                         .context
                         .i32_type()
-                        .const_int(std::mem::size_of_val(&selector) as u64, false)],
+                        .const_int(std::mem::size_of::<u32>() as u64, false)],
                     "",
                 )
             };
@@ -630,38 +726,35 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         // We use a little trick here. The length might or might not include the selector.
         // The length will be a multiple of 32 plus the selector (4). So by dividing by 8,
         // we lose the selector.
-        // contract.builder.build_call(
-        //     contract.module.get_function("__bzero8").unwrap(),
-        //     &[
-        //         data.into(),
-        //         contract
-        //             .builder
-        //             .build_int_unsigned_div(
-        //                 length,
-        //                 contract.context.i32_type().const_int(8, false),
-        //                 "",
-        //             )
-        //             .into(),
-        //     ],
-        //     "",
-        // );
-
-        let mut dynamic = unsafe { contract.builder.build_gep(data, &[offset], "") };
+        contract.builder.build_call(
+            contract.module.get_function("__bzero8").unwrap(),
+            &[
+                output.into(),
+                contract
+                    .builder
+                    .build_int_unsigned_div(
+                        length,
+                        contract.context.i32_type().const_int(8, false),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
 
         for (i, arg) in spec.iter().enumerate() {
-            self.abi.encode_ty(
-                contract,
-                load,
-                function,
-                &arg.ty,
-                args[i],
-                &mut data,
-                &mut offset,
-                &mut dynamic,
-            );
+            self.encode_primitive(contract, load, &arg.ty, output, args[i]);
+
+            output = unsafe {
+                contract.builder.build_gep(
+                    output,
+                    &[contract.context.i32_type().const_int(32, false)],
+                    "",
+                )
+            };
         }
 
-        (encoded_data, length)
+        (output, length)
     }
 
     fn abi_decode<'b>(

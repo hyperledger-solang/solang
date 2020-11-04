@@ -8,7 +8,7 @@ extern crate solang;
 
 mod solana_helpers;
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use ethabi::Token;
 use libc::c_char;
 use solana_helpers::allocator_bump::BPFAllocator;
@@ -21,7 +21,7 @@ use solana_rbpf::{
 use solang::{compile, file_cache::FileCache, sema::diagnostics, Target};
 use std::alloc::Layout;
 use std::io::Write;
-use std::mem::align_of;
+use std::mem::{align_of, size_of};
 
 fn build_solidity(src: &'static str) -> VM {
     let mut cache = FileCache::new();
@@ -50,6 +50,7 @@ fn build_solidity(src: &'static str) -> VM {
         code,
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         printbuf: String::new(),
+        output: Vec::new(),
     }
 }
 
@@ -101,10 +102,34 @@ fn serialize_parameters(input: &[u8]) -> Vec<u8> {
     v
 }
 
+// We want to extract the account data
+fn deserialize_parameters(input: &[u8]) -> Vec<Vec<u8>> {
+    let mut start = 0;
+
+    let ka_num = LittleEndian::read_u64(&input[start..]);
+    start += size_of::<u64>();
+
+    let mut res = Vec::new();
+
+    for _ in 0..ka_num {
+        start += 8 + 32 + 32 + 8;
+
+        let data_len = LittleEndian::read_u64(&input[start..]);
+        start += size_of::<u64>();
+
+        res.push(input[start..start + data_len as usize].to_vec());
+
+        // FIXME this is broken for >1 account
+    }
+
+    res
+}
+
 struct VM {
     code: Vec<u8>,
     abi: ethabi::Contract,
     printbuf: String,
+    output: Vec<u8>,
 }
 
 struct Printer<'a> {
@@ -185,7 +210,7 @@ impl SyscallObject<UserError> for SyscallAllocFree {
 }
 
 impl VM {
-    fn execute(&self, buf: &mut String, calldata: &[u8]) {
+    fn execute(&mut self, buf: &mut String, calldata: &[u8]) {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
         let executable =
@@ -211,6 +236,12 @@ impl VM {
             .execute_program(&parameter_bytes, &[], &[heap_region])
             .unwrap();
 
+        let mut account_data = deserialize_parameters(&parameter_bytes);
+
+        self.output = account_data.remove(0);
+
+        println!("account: {}", hex::encode(&self.output));
+
         assert_eq!(res, 0);
     }
 
@@ -226,7 +257,7 @@ impl VM {
         self.printbuf = buf;
     }
 
-    fn function(&mut self, name: &str, args: &[Token]) {
+    fn function(&mut self, name: &str, args: &[Token]) -> Vec<Token> {
         let calldata = match self.abi.functions[name][0].encode_input(args) {
             Ok(n) => n,
             Err(x) => panic!(format!("{}", x)),
@@ -235,6 +266,10 @@ impl VM {
         let mut buf = String::new();
         self.execute(&mut buf, &calldata);
         self.printbuf = buf;
+
+        self.abi.functions[name][0]
+            .decode_output(&self.output)
+            .unwrap()
     }
 }
 
@@ -265,7 +300,7 @@ fn simple() {
 }
 
 #[test]
-fn basic() {
+fn parameters() {
     let mut vm = build_solidity(
         r#"
         contract foo {
@@ -299,4 +334,48 @@ fn basic() {
     );
 
     assert_eq!(vm.printbuf, "y is 102");
+}
+
+#[test]
+fn returns() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function test(uint32 x) public returns (uint32) {
+                return x * x;
+            }
+        }"#,
+    );
+
+    let returns = vm.function(
+        "test",
+        &[ethabi::Token::Uint(ethereum_types::U256::from(10))],
+    );
+
+    assert_eq!(
+        returns,
+        vec![ethabi::Token::Uint(ethereum_types::U256::from(100))]
+    );
+
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            function test(uint64 x) public returns (bool, uint64) {
+                return (true, x * 961748941);
+            }
+        }"#,
+    );
+
+    let returns = vm.function(
+        "test",
+        &[ethabi::Token::Uint(ethereum_types::U256::from(982451653))],
+    );
+
+    assert_eq!(
+        returns,
+        vec![
+            ethabi::Token::Bool(true),
+            ethabi::Token::Uint(ethereum_types::U256::from(961748941u64 * 982451653u64))
+        ]
+    );
 }
