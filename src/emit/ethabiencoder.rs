@@ -1623,26 +1623,14 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     )
                 };
             }
-            ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Int(_)
-                if load =>
-            {
-                let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
-                    ast::Type::Uint(b) => *b,
-                    ast::Type::Int(b) => *b,
-                    _ => unreachable!(),
-                };
-
+            ast::Type::Uint(bits) | ast::Type::Int(bits) if load => {
                 let arg8 = binary.builder.build_pointer_cast(
                     arg.into_pointer_value(),
                     binary.context.i8_type().ptr_type(AddressSpace::Generic),
                     "arg8",
                 );
 
-                let len = binary.context.i32_type().const_int(n as u64 / 8, false);
+                let len = binary.context.i32_type().const_int(*bits as u64 / 8, false);
 
                 binary.builder.build_call(
                     binary.module.get_function("__leNtobeN").unwrap(),
@@ -1652,28 +1640,59 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
 
                 *output = unsafe { binary.builder.build_gep(*output, &[len], "") };
             }
-            ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Int(_)
-                if !load =>
-            {
-                let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
-                    ast::Type::Uint(b) => *b,
-                    ast::Type::Int(b) => *b,
-                    _ => unreachable!(),
-                };
+            ast::Type::Contract(_) | ast::Type::Address(_) => {
+                let len = binary
+                    .context
+                    .i32_type()
+                    .const_int(ns.address_length as u64, false);
 
+                if load {
+                    binary.builder.build_call(
+                        binary.module.get_function("__memcpy").unwrap(),
+                        &[
+                            binary
+                                .builder
+                                .build_pointer_cast(
+                                    *output,
+                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "encoded_string",
+                                )
+                                .into(),
+                            binary
+                                .builder
+                                .build_pointer_cast(
+                                    arg.into_pointer_value(),
+                                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                    "string_start",
+                                )
+                                .into(),
+                            len.into(),
+                        ],
+                        "",
+                    );
+                } else {
+                    binary.builder.build_store(
+                        binary.builder.build_pointer_cast(
+                            *output,
+                            binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                            "string_start",
+                        ),
+                        arg,
+                    );
+                }
+
+                *output = unsafe { binary.builder.build_gep(*output, &[len], "") };
+            }
+            ast::Type::Uint(bits) | ast::Type::Int(bits) if !load => {
                 let temp = binary.build_alloca(
                     function,
                     arg.into_int_value().get_type(),
-                    &format!("uint{}", n),
+                    &format!("uint{}", *bits),
                 );
 
                 binary.builder.build_store(temp, arg.into_int_value());
 
-                let len = binary.context.i32_type().const_int(n as u64 / 8, false);
+                let len = binary.context.i32_type().const_int(*bits as u64 / 8, false);
 
                 binary.builder.build_call(
                     binary.module.get_function("__leNtobeN").unwrap(),
@@ -2152,19 +2171,41 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                     val,
                 );
             }
-            ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Int(_)
-                if load =>
-            {
-                let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
-                    ast::Type::Uint(b) => *b,
-                    ast::Type::Int(b) => *b,
-                    _ => unreachable!(),
+            ast::Type::Contract(_) | ast::Type::Address(_) => {
+                let arg = if load {
+                    binary.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
                 };
 
+                let address = if ns.address_length == 32 {
+                    dest
+                } else {
+                    unsafe {
+                        binary.builder.build_gep(
+                            binary.builder.build_pointer_cast(
+                                dest,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "dest8",
+                            ),
+                            &[binary
+                                .context
+                                .i32_type()
+                                .const_int(32 - ns.address_length as u64, false)],
+                            "address_ptr",
+                        )
+                    }
+                };
+
+                let address = binary.builder.build_pointer_cast(
+                    address,
+                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                    "address_ptr",
+                );
+
+                binary.builder.build_store(address, arg);
+            }
+            ast::Type::Uint(bits) | ast::Type::Int(bits) if load => {
                 let dest8 = binary.builder.build_pointer_cast(
                     dest,
                     binary.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -2178,7 +2219,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 );
 
                 // first clear/set the upper bits
-                if n < 256 {
+                if *bits < 256 {
                     if let ast::Type::Int(_) = ty {
                         let signdest = unsafe {
                             binary.builder.build_gep(
@@ -2186,7 +2227,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                                 &[binary
                                     .context
                                     .i32_type()
-                                    .const_int((n as u64 / 8) - 1, false)],
+                                    .const_int((*bits as u64 / 8) - 1, false)],
                                 "signbyte",
                             )
                         };
@@ -2231,25 +2272,13 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         binary
                             .context
                             .i32_type()
-                            .const_int(n as u64 / 8, false)
+                            .const_int(*bits as u64 / 8, false)
                             .into(),
                     ],
                     "",
                 );
             }
-            ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Int(_)
-                if !load =>
-            {
-                let n = match ty {
-                    ast::Type::Contract(_) | ast::Type::Address(_) => ns.address_length as u16 * 8,
-                    ast::Type::Uint(b) => *b,
-                    ast::Type::Int(b) => *b,
-                    _ => unreachable!(),
-                };
-
+            ast::Type::Uint(bits) | ast::Type::Int(bits) if !load => {
                 let dest8 = binary.builder.build_pointer_cast(
                     dest,
                     binary.context.i8_type().ptr_type(AddressSpace::Generic),
@@ -2257,7 +2286,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 );
 
                 // first clear/set the upper bits
-                if n < 256 {
+                if *bits < 256 {
                     if let ast::Type::Int(_) = ty {
                         let negative = binary.builder.build_int_compare(
                             IntPredicate::SLT,
@@ -2291,7 +2320,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                 let temp = binary.build_alloca(
                     function,
                     arg.into_int_value().get_type(),
-                    &format!("uint{}", n),
+                    &format!("uint{}", bits),
                 );
 
                 binary.builder.build_store(temp, arg.into_int_value());
@@ -2311,7 +2340,7 @@ impl<'a, 'b> EncoderBuilder<'a, 'b> {
                         binary
                             .context
                             .i32_type()
-                            .const_int(n as u64 / 8, false)
+                            .const_int(*bits as u64 / 8, false)
                             .into(),
                     ],
                     "",
@@ -2463,38 +2492,31 @@ impl EthAbiDecoder {
                 val
             }
             ast::Type::Address(_) | ast::Type::Contract(_) => {
-                let int_type = binary
-                    .context
-                    .custom_width_int_type(ns.address_length as u32 * 8);
-                let type_size = int_type.size_of();
+                let address = if ns.address_length == 32 {
+                    data
+                } else {
+                    unsafe {
+                        binary.builder.build_gep(
+                            data,
+                            &[binary
+                                .context
+                                .i32_type()
+                                .const_int(32 - ns.address_length as u64, false)],
+                            "address_ptr",
+                        )
+                    }
+                };
 
-                let store =
-                    to.unwrap_or_else(|| binary.build_alloca(function, int_type, "address"));
-
-                binary.builder.build_call(
-                    binary.module.get_function("__be32toleN").unwrap(),
-                    &[
-                        data.into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                store,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_int_truncate(type_size, binary.context.i32_type(), "size")
-                            .into(),
-                    ],
-                    "",
+                let address = binary.builder.build_pointer_cast(
+                    address,
+                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                    "address_ptr",
                 );
 
                 if to.is_none() {
-                    binary.builder.build_load(store, "address")
+                    binary.builder.build_load(address, "address")
                 } else {
-                    store.into()
+                    address.into()
                 }
             }
             ast::Type::Uint(n) | ast::Type::Int(n) if self.bswap && *n <= 64 => {

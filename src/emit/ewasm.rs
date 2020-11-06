@@ -10,7 +10,7 @@ use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::IntType;
 use inkwell::values::{
-    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
 };
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
@@ -900,12 +900,13 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         slot: PointerValue,
         dest: PointerValue,
     ) {
-        if dest
-            .get_type()
-            .get_element_type()
-            .into_int_type()
-            .get_bit_width()
-            == 256
+        if !dest.get_type().get_element_type().is_array_type()
+            && dest
+                .get_type()
+                .get_element_type()
+                .into_int_type()
+                .get_bit_width()
+                == 256
         {
             binary.builder.build_call(
                 binary.module.get_function("storageStore").unwrap(),
@@ -1021,6 +1022,55 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 "loaded_int",
             )
             .into_int_value()
+    }
+
+    fn get_storage_address(
+        &self,
+        binary: &Binary<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        ns: &ast::Namespace,
+    ) -> ArrayValue<'a> {
+        let dest = binary.builder.build_array_alloca(
+            binary.context.i8_type(),
+            binary.context.i32_type().const_int(32, false),
+            "buf",
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("storageLoad").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        dest,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
+        binary
+            .builder
+            .build_load(
+                binary.builder.build_pointer_cast(
+                    dest,
+                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                    "",
+                ),
+                "loaded_address",
+            )
+            .into_array_value()
     }
 
     /// ewasm has no keccak256 host function, so call our implementation
@@ -1661,7 +1711,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace) {
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace) {
         let address = binary
             .builder
             .build_alloca(binary.address_type(ns), "address");
@@ -1687,7 +1737,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         &self,
         binary: &Binary<'b>,
         _function: FunctionValue<'b>,
-
         hash: HashTy,
         input: PointerValue<'b>,
         input_len: IntValue<'b>,
@@ -1695,7 +1744,9 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     ) -> IntValue<'b> {
         let (precompile, hashlen) = match hash {
             HashTy::Keccak256 => (
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20],
+                [
+                    0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20,
+                ],
                 32,
             ),
             HashTy::Ripemd160 => (
@@ -1723,7 +1774,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .builder
             .build_store(balance, binary.value_type(ns).const_zero());
 
-        let address = binary.emit_global_string(&format!("precompile_{}", hash), &precompile, true);
+        let address = binary.emit_global_string("precompile", &precompile, true);
 
         binary.builder.build_call(
             binary.module.get_function("call").unwrap(),
@@ -1995,7 +2046,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             ast::Expression::Builtin(_, _, ast::Builtin::Balance, addr) => {
                 let addr = self
                     .expression(binary, &addr[0], vartab, function, ns)
-                    .into_int_value();
+                    .into_array_value();
 
                 let address = binary
                     .builder

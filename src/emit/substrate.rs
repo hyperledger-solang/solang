@@ -4,7 +4,9 @@ use crate::sema::ast;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
-use inkwell::values::{BasicValueEnum, CallableValue, FunctionValue, IntValue, PointerValue};
+use inkwell::values::{
+    ArrayValue, BasicValueEnum, CallableValue, FunctionValue, IntValue, PointerValue,
+};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
@@ -589,16 +591,8 @@ impl SubstrateTarget {
                 );
                 (val.into(), 1)
             }
-            ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Int(_) => {
-                let bits = match ty {
-                    ast::Type::Uint(n) | ast::Type::Int(n) => *n as u32,
-                    _ => ns.address_length as u32 * 8,
-                };
-
-                let int_type = binary.context.custom_width_int_type(bits);
+            ast::Type::Uint(bits) | ast::Type::Int(bits) => {
+                let int_type = binary.context.custom_width_int_type(*bits as u32);
 
                 let val = binary.builder.build_load(
                     binary.builder.build_pointer_cast(
@@ -615,6 +609,20 @@ impl SubstrateTarget {
                 // FIXME: we should do some type-checking here and ensure that the
                 // encoded value fits into our smaller type
                 let len = bits.next_power_of_two() as u64 / 8;
+
+                (val, len)
+            }
+            ast::Type::Contract(_) | ast::Type::Address(_) => {
+                let val = binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        src,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "",
+                );
+
+                let len = ns.address_length as u64;
 
                 (val, len)
             }
@@ -1048,10 +1056,7 @@ impl SubstrateTarget {
 
                 1
             }
-            ast::Type::Contract(_)
-            | ast::Type::Address(_)
-            | ast::Type::Uint(_)
-            | ast::Type::Int(_) => {
+            ast::Type::Uint(_) | ast::Type::Int(_) => {
                 let len = match ty {
                     ast::Type::Uint(n) | ast::Type::Int(n) => *n as u64 / 8,
                     _ => ns.address_length as u64,
@@ -1096,6 +1101,24 @@ impl SubstrateTarget {
                 );
 
                 power_of_two_len
+            }
+            ast::Type::Contract(_) | ast::Type::Address(_) => {
+                let arg = if load {
+                    binary.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                binary.builder.build_store(
+                    binary.builder.build_pointer_cast(
+                        dest,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    arg.into_array_value(),
+                );
+
+                ns.address_length as u64
             }
             ast::Type::Bytes(n) => {
                 let val = if load {
@@ -1963,6 +1986,21 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         dest: PointerValue,
     ) {
         // TODO: check for non-zero
+        let dest_ty = dest.get_type().get_element_type();
+
+        let dest_size = if dest_ty.is_array_type() {
+            dest_ty
+                .into_array_type()
+                .size_of()
+                .expect("array should be fixed size")
+                .const_cast(binary.context.i32_type(), false)
+        } else {
+            dest_ty
+                .into_int_type()
+                .size_of()
+                .const_cast(binary.context.i32_type(), false)
+        };
+
         binary.builder.build_call(
             binary.module.get_function("seal_set_storage").unwrap(),
             &[
@@ -1982,12 +2020,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     )
                     .into(),
-                dest.get_type()
-                    .get_element_type()
-                    .into_int_type()
-                    .size_of()
-                    .const_cast(binary.context.i32_type(), false)
-                    .into(),
+                dest_size.into(),
             ],
             "",
         );
@@ -2356,6 +2389,79 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         ]);
 
         res.as_basic_value().into_pointer_value()
+    }
+
+    /// Read string from substrate storage
+    fn get_storage_address(
+        &self,
+        binary: &Binary<'a>,
+        _function: FunctionValue,
+        slot: PointerValue<'a>,
+        ns: &ast::Namespace,
+    ) -> ArrayValue<'a> {
+        let scratch_buf = binary.builder.build_pointer_cast(
+            binary.scratch.unwrap().as_pointer_value(),
+            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+            "scratch_buf",
+        );
+        let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+
+        binary.builder.build_store(
+            scratch_len,
+            binary
+                .context
+                .i32_type()
+                .const_int(ns.address_length as u64, false),
+        );
+
+        let exists = binary
+            .builder
+            .build_call(
+                binary.module.get_function("seal_get_storage").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            slot,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into(),
+                    scratch_buf.into(),
+                    scratch_len.into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        let exists = binary.builder.build_int_compare(
+            IntPredicate::EQ,
+            exists.into_int_value(),
+            binary.context.i32_type().const_zero(),
+            "storage_exists",
+        );
+
+        binary
+            .builder
+            .build_select(
+                exists,
+                binary
+                    .builder
+                    .build_load(
+                        binary.builder.build_pointer_cast(
+                            scratch_buf,
+                            binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                            "address_ptr",
+                        ),
+                        "address",
+                    )
+                    .into_array_value(),
+                binary.address_type(ns).const_zero(),
+                "retrieved_address",
+            )
+            .into_array_value()
     }
 
     /// Read string from substrate storage
@@ -3768,8 +3874,8 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .into_int_value()
     }
 
-    /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace) {
+    /// Terminate execution, destroy contract and send remaining funds to addr
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace) {
         let address = binary
             .builder
             .build_alloca(binary.address_type(ns), "address");
@@ -4191,7 +4297,35 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                 )
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Sender, _) => {
-                get_seal_value!("caller", "seal_caller", ns.address_length as u32 * 8)
+                let scratch_buf = binary.builder.build_pointer_cast(
+                    binary.scratch.unwrap().as_pointer_value(),
+                    binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = binary.scratch_len.unwrap().as_pointer_value();
+
+                binary.builder.build_store(
+                    scratch_len,
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false),
+                );
+
+                binary.builder.build_call(
+                    binary.module.get_function("seal_caller").unwrap(),
+                    &[scratch_buf.into(), scratch_len.into()],
+                    "caller",
+                );
+
+                binary.builder.build_load(
+                    binary.builder.build_pointer_cast(
+                        scratch_buf,
+                        binary.address_type(ns).ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "caller",
+                )
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
                 self.value_transferred(binary, ns).into()

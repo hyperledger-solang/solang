@@ -267,8 +267,7 @@ fn infinite_loop() {
         r#"
 contract line {
     function foo() public {
-    address x = int32(
-1);
+        address x = int32(1);
     }
 }"#,
     );
@@ -281,6 +280,6 @@ contract line {
 
     assert_eq!(
         ns.diagnostics[1].message,
-        "implicit conversion from int32 to address not allowed"
+        "implicit conversion from int to address not allowed"
     );
 }

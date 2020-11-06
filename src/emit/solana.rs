@@ -8,7 +8,8 @@ use std::str;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
 use inkwell::values::{
-    BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress,
+    ArrayValue, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, IntValue, PointerValue,
+    UnnamedAddress,
 };
 use inkwell::{context::Context, types::BasicTypeEnum};
 use inkwell::{AddressSpace, IntPredicate, OptimizationLevel};
@@ -968,6 +969,8 @@ impl SolanaTarget {
             "offset_ptr",
         );
 
+        let address = binary.build_alloca(function, binary.address_type(ns), "address");
+
         // calculate the correct bucket. We have an prime number of
         let bucket = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
             binary
@@ -975,6 +978,27 @@ impl SolanaTarget {
                 .build_call(
                     binary.module.get_function("vector_hash").unwrap(),
                     &[key.into()],
+                    "hash",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
+        } else if matches!(key_ty, ast::Type::Contract(_) | ast::Type::Address(_)) {
+            binary.builder.build_store(address, key);
+
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("address_hash").unwrap(),
+                    &[binary
+                        .builder
+                        .build_pointer_cast(
+                            address,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address_ptr",
+                        )
+                        .into()],
                     "hash",
                 )
                 .try_as_basic_value()
@@ -1055,26 +1079,26 @@ impl SolanaTarget {
             "offset_ptr",
         );
 
-        let entry_key = binary
-            .builder
-            .build_load(
-                unsafe {
-                    binary.builder.build_gep(
-                        entry_ptr,
-                        &[
-                            binary.context.i32_type().const_zero(),
-                            binary.context.i32_type().const_zero(),
-                        ],
-                        "key_ptr",
-                    )
-                },
-                "key",
+        let ptr = unsafe {
+            binary.builder.build_gep(
+                entry_ptr,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_zero(),
+                ],
+                "key_ptr",
             )
-            .into_int_value();
+        };
 
         let matches = if matches!(key_ty, ast::Type::String | ast::Type::DynamicBytes) {
+            let entry_key = binary.builder.build_load(ptr, "key");
+
             // entry_key is an offset
-            let entry_data = unsafe { binary.builder.build_gep(data, &[entry_key], "data") };
+            let entry_data = unsafe {
+                binary
+                    .builder
+                    .build_gep(data, &[entry_key.into_int_value()], "data")
+            };
             let entry_length = binary
                 .builder
                 .build_call(
@@ -1103,11 +1127,42 @@ impl SolanaTarget {
                 .left()
                 .unwrap()
                 .into_int_value()
+        } else if matches!(key_ty, ast::Type::Address(_) | ast::Type::Contract(_)) {
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("address_equal").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address_ptr",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                ptr,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "offset_ptr",
+                            )
+                            .into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value()
         } else {
+            let entry_key = binary.builder.build_load(ptr, "key");
+
             binary.builder.build_int_compare(
                 IntPredicate::EQ,
                 key.into_int_value(),
-                entry_key,
+                entry_key.into_int_value(),
                 "matches",
             )
         };
@@ -2683,16 +2738,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .into_int_value();
 
         binary.builder.build_call(
-            binary.module.get_function("__beNtoleN").unwrap(),
+            binary.module.get_function("__memcpy8").unwrap(),
             &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        payload,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
                 binary
                     .builder
                     .build_pointer_cast(
@@ -2702,9 +2749,17 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into(),
                 binary
+                    .builder
+                    .build_pointer_cast(
+                        payload,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
                     .context
                     .i32_type()
-                    .const_int(ns.address_length as u64, false)
+                    .const_int(ns.address_length as u64 / 8, false)
                     .into(),
             ],
             "",
@@ -3002,7 +3057,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     }
 
     /// Terminate execution, destroy binary and send remaining funds to addr
-    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: IntValue<'b>, _ns: &ast::Namespace) {
+    fn selfdestruct<'b>(&self, _binary: &Binary<'b>, _addr: ArrayValue<'b>, _ns: &ast::Namespace) {
         unimplemented!();
     }
 
@@ -3177,38 +3232,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into_pointer_value();
 
-                let value =
-                    binary.build_alloca(function, binary.address_type(ns), "sender_address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                sender,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                value,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
+                let sender_address = binary.builder.build_pointer_cast(
+                    sender,
+                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
                     "",
                 );
 
-                binary.builder.build_load(value, "sender_address")
+                binary.builder.build_load(sender_address, "sender_address")
             }
             ast::Expression::Builtin(_, _, ast::Builtin::Value, _) => {
                 self.value_transferred(binary, ns).into()
@@ -3227,33 +3257,9 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                     )
                     .into_pointer_value();
 
-                let value = binary.build_alloca(function, binary.address_type(ns), "self_address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                account_id,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                value,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
+                let value = binary.builder.build_pointer_cast(
+                    account_id,
+                    binary.address_type(ns).ptr_type(AddressSpace::Generic),
                     "",
                 );
 
@@ -3345,7 +3351,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 binary.builder.build_store(
                     address,
                     self.expression(binary, &args[0], vartab, function, ns)
-                        .into_int_value(),
+                        .into_array_value(),
                 );
 
                 let message = self.expression(binary, &args[1], vartab, function, ns);
@@ -3407,7 +3413,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
                 binary.builder.build_store(
                     address,
                     self.expression(binary, &args[0], vartab, function, ns)
-                        .into_int_value(),
+                        .into_array_value(),
                 );
 
                 let account_lamport = binary.module.get_function("sol_account_lamport").unwrap();

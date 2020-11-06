@@ -1096,6 +1096,11 @@ impl Type {
         }
     }
 
+    /// Is it an address (with some sugar)
+    pub fn is_address(&self) -> bool {
+        matches!(self, Type::Address(_) | Type::Contract(_))
+    }
+
     /// Does the type contain any mapping type
     pub fn contains_mapping(&self, ns: &Namespace) -> bool {
         match self {

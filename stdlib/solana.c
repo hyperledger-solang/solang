@@ -5,7 +5,6 @@
 #include "solana_sdk.h"
 
 extern uint64_t solang_dispatch(const SolParameters *param);
-extern void __be32toleN(uint8_t *from, uint8_t *to, uint32_t length);
 
 // The address 'SysvarC1ock11111111111111111111111111111111' base58 decoded
 static const SolPubkey clock_address = {0x06, 0xa7, 0xd5, 0x17, 0x18, 0xc7, 0x74, 0xc9, 0x28, 0x56, 0x63, 0x98, 0x69, 0x1d, 0x5e, 0xb6, 0x8b, 0x5e, 0xb8, 0xa3, 0x9b, 0x4b, 0x6d, 0x5c, 0x73, 0x55, 0x5b, 0x21, 0x00, 0x00, 0x00, 0x00};
@@ -234,19 +233,17 @@ uint64_t *sol_account_lamport(
     uint8_t *address,
     SolParameters *params)
 {
-    SolPubkey pubkey;
-
-    __be32toleN(address, pubkey.x, SIZE_PUBKEY);
+    SolPubkey *pubkey = (SolPubkey *)address;
 
     for (int i = 0; i < params->ka_num; i++)
     {
-        if (SolPubkey_same(&pubkey, params->ka[i].key))
+        if (SolPubkey_same(pubkey, params->ka[i].key))
         {
             return params->ka[i].lamports;
         }
     }
 
-    sol_log_pubkey(&pubkey);
+    sol_log_pubkey(pubkey);
     sol_log("account missing from transaction");
     sol_panic();
 
@@ -351,6 +348,35 @@ bool sol_try_transfer(uint8_t *to_address, uint64_t lamports, SolParameters *par
     return true;
 }
 
+uint64_t address_hash(uint8_t data[32])
+{
+    uint64_t hash = 0;
+    uint32_t i;
+
+    for (i = 0; i < 32; i++)
+    {
+        hash += data[i];
+    }
+
+    return hash;
+}
+
+bool address_equal(void *a, void *b)
+{
+    uint64_t *left = a;
+    uint64_t *right = b;
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        if (left[i] != right[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 struct ed25519_instruction_sig
 {
     uint16_t signature_offset;
@@ -372,12 +398,8 @@ struct ed25519_instruction
     struct ed25519_instruction_sig sig[0];
 };
 
-uint64_t signature_verify(uint8_t *address, struct vector *message, struct vector *signature, SolParameters *params)
+uint64_t signature_verify(uint8_t *public_key, struct vector *message, struct vector *signature, SolParameters *params)
 {
-    uint8_t public_key[32];
-
-    __be32toleN(address, public_key, SIZE_PUBKEY);
-
     if (params->ka_instructions)
     {
         uint16_t *data = (uint16_t *)params->ka_instructions->data;

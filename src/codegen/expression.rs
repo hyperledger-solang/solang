@@ -538,6 +538,17 @@ pub fn expression(
             ty.clone(),
             Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
         ),
+        Expression::Cast(loc, ty @ Type::Address(_), e) => {
+            if let Ok((_, address)) = eval_const_number(e, Some(contract_no), ns) {
+                Expression::NumberLiteral(*loc, ty.clone(), address)
+            } else {
+                Expression::Cast(
+                    *loc,
+                    ty.clone(),
+                    Box::new(expression(e, cfg, contract_no, func, ns, vartab, opt)),
+                )
+            }
+        }
         Expression::Cast(loc, ty, e) => {
             if matches!(ty, Type::String | Type::DynamicBytes)
                 && matches!(expr.ty(), Type::String | Type::DynamicBytes)
