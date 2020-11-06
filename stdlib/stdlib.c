@@ -66,6 +66,19 @@ void __bzero8(void *_dest, uint32_t length)
 	}
 }
 
+int __memcmp_ord(uint8_t *a, uint8_t *b, uint32_t len)
+{
+	do
+	{
+		int diff = (int)(*a++) - (int)(*b++);
+
+		if (diff)
+			return diff;
+	} while (--len);
+
+	return 0;
+}
+
 // This function is used for abi decoding integers.
 // ABI encoding is big endian, and can have integers of 8 to 256 bits
 // (1 to 32 bytes). This function copies length bytes and reverses the

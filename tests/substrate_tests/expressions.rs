@@ -1440,3 +1440,49 @@ fn unchecked_multiplication_overflow() {
 
     runtime.function("bar", Vec::new());
 }
+
+#[test]
+fn address_compare() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Args([u8; 32], [u8; 32]);
+
+    let mut runtime = build_solidity(
+        r#"
+        contract addr {
+            function bar() public {
+                address left = address(1);
+                address right = address(2);
+
+                assert(left < right);
+                assert(left <= right);
+                assert(right > left);
+                assert(right >= left);
+            }
+
+            function order(address tokenA, address tokenB) external returns (address token0, address token1) {
+                require(tokenA != tokenB, 'UniswapV2: IDENTICAL_ADDRESSES');
+                (token0,  token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+            }
+        }"#,
+    );
+
+    runtime.function("bar", Vec::new());
+
+    let address0: [u8; 32] = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 1,
+    ];
+
+    let address1: [u8; 32] = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 2,
+    ];
+
+    runtime.function("order", Args(address0, address1).encode());
+
+    assert_eq!(runtime.vm.output, Args(address0, address1).encode());
+
+    runtime.function("order", Args(address1, address0).encode());
+
+    assert_eq!(runtime.vm.output, Args(address0, address1).encode());
+}

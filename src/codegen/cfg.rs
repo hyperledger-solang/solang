@@ -407,8 +407,11 @@ impl ControlFlowGraph {
                 format!("{}", String::from_utf8_lossy(s))
             }
             Expression::BytesLiteral(_, _, s) => format!("hex\"{}\"", hex::encode(s)),
+            Expression::NumberLiteral(_, ty @ Type::Address(_), n) => {
+                format!("{} {:#x}", ty.to_string(ns), n)
+            }
             Expression::NumberLiteral(_, ty, n) => {
-                format!("{} {}", ty.to_string(ns), n.to_str_radix(10))
+                format!("{} {}", ty.to_string(ns), n)
             }
             Expression::RationalNumberLiteral(_, ty, n) => {
                 format!("{} {}", ty.to_string(ns), n)

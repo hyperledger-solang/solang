@@ -8,11 +8,10 @@ use std::fmt;
 use std::path::Path;
 use std::str;
 
-use num_bigint::BigInt;
+use num_bigint::{BigInt, Sign};
 use num_traits::One;
 use num_traits::ToPrimitive;
-use std::collections::HashMap;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use crate::Target;
 use inkwell::builder::Builder;
@@ -22,7 +21,7 @@ use inkwell::module::{Linkage, Module};
 use inkwell::passes::PassManager;
 use inkwell::targets::{CodeModel, FileType, RelocMode, TargetTriple};
 use inkwell::types::{
-    BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
+    ArrayType, BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType, IntType, StringRadix,
 };
 use inkwell::values::{
     ArrayValue, BasicMetadataValueEnum, BasicValueEnum, CallableValue, FunctionValue, GlobalValue,
@@ -131,6 +130,16 @@ pub trait TargetRuntime<'a> {
         slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a>;
+
+    fn get_storage_address(
+        &self,
+        _binary: &Binary<'a>,
+        _function: FunctionValue,
+        _slot: PointerValue<'a>,
+        _ns: &ast::Namespace,
+    ) -> ArrayValue<'a> {
+        unimplemented!();
+    }
 
     // Bytes and string have special storage layout
     fn set_storage_string(
@@ -303,7 +312,7 @@ pub trait TargetRuntime<'a> {
     fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b>;
 
     /// Terminate execution, destroy bin and send remaining funds to addr
-    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: IntValue<'b>, ns: &ast::Namespace);
+    fn selfdestruct<'b>(&self, binary: &Binary<'b>, addr: ArrayValue<'b>, ns: &ast::Namespace);
 
     /// Crypto Hash
     fn hash<'b>(
@@ -650,6 +659,19 @@ pub trait TargetRuntime<'a> {
 
                 ret.into()
             }
+            ast::Type::Address(_) | ast::Type::Contract(_) => {
+                bin.builder.build_store(slot_ptr, *slot);
+
+                let ret = self.get_storage_address(bin, function, slot_ptr, ns);
+
+                *slot = bin.builder.build_int_add(
+                    *slot,
+                    bin.number_literal(256, &BigInt::one(), ns),
+                    "string",
+                );
+
+                ret.into()
+            }
             _ => {
                 bin.builder.build_store(slot_ptr, *slot);
 
@@ -937,6 +959,15 @@ pub trait TargetRuntime<'a> {
 
                 self.set_storage(bin, function, slot_ptr, m);
             }
+            ast::Type::Address(_) | ast::Type::Contract(_) => {
+                let address = bin.builder.build_alloca(bin.address_type(ns), "address");
+
+                bin.builder.build_store(address, dest.into_array_value());
+
+                bin.builder.build_store(slot_ptr, *slot);
+
+                self.set_storage(bin, function, slot_ptr, address);
+            }
             _ => {
                 bin.builder.build_store(slot_ptr, *slot);
 
@@ -1111,6 +1142,32 @@ pub trait TargetRuntime<'a> {
             Expression::FunctionArg(_, _, pos) => function.get_nth_param(*pos as u32).unwrap(),
             Expression::BoolLiteral(_, val) => {
                 bin.context.bool_type().const_int(*val as u64, false).into()
+            }
+            Expression::NumberLiteral(_, ast::Type::Address(_), val) => {
+                // address can be negative; "address(-1)" is 0xffff...
+                let mut bs = val.to_signed_bytes_be();
+
+                // make sure it's no more than 32
+                if bs.len() > ns.address_length {
+                    // remove leading bytes
+                    for _ in 0..bs.len() - ns.address_length {
+                        bs.remove(0);
+                    }
+                } else {
+                    // insert leading bytes
+                    let val = if val.sign() == Sign::Minus { 0xff } else { 0 };
+
+                    for _ in 0..ns.address_length - bs.len() {
+                        bs.insert(0, val);
+                    }
+                }
+
+                let address = bs
+                    .iter()
+                    .map(|b| bin.context.i8_type().const_int(*b as u64, false))
+                    .collect::<Vec<IntValue>>();
+
+                bin.context.i8_type().const_array(&address).into()
             }
             Expression::NumberLiteral(_, ty, n) => {
                 bin.number_literal(ty.bits(ns) as u32, n, ns).into()
@@ -1789,16 +1846,49 @@ pub trait TargetRuntime<'a> {
                     .unwrap()
             }
             Expression::Equal(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
+                if l.ty().is_address() {
+                    let mut res = bin.context.bool_type().const_int(1, false);
+                    let left = self
+                        .expression(bin, l, vartab, function, ns)
+                        .into_array_value();
+                    let right = self
+                        .expression(bin, r, vartab, function, ns)
+                        .into_array_value();
 
-                bin.builder
-                    .build_int_compare(IntPredicate::EQ, left, right, "")
-                    .into()
+                    // TODO: Address should be passed around as pointer. Once this is done, we can replace
+                    // this with a call to address_equal()
+                    for index in 0..ns.address_length {
+                        let l = bin
+                            .builder
+                            .build_extract_value(left, index as u32, "left")
+                            .unwrap()
+                            .into_int_value();
+                        let r = bin
+                            .builder
+                            .build_extract_value(right, index as u32, "right")
+                            .unwrap()
+                            .into_int_value();
+
+                        res = bin.builder.build_and(
+                            res,
+                            bin.builder.build_int_compare(IntPredicate::EQ, l, r, ""),
+                            "cmp",
+                        );
+                    }
+
+                    res.into()
+                } else {
+                    let left = self
+                        .expression(bin, l, vartab, function, ns)
+                        .into_int_value();
+                    let right = self
+                        .expression(bin, r, vartab, function, ns)
+                        .into_int_value();
+
+                    bin.builder
+                        .build_int_compare(IntPredicate::EQ, left, right, "")
+                        .into()
+                }
             }
             Expression::NotEqual(_, l, r) => {
                 let left = self
@@ -1813,88 +1903,108 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::More(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
+                if l.ty().is_address() {
+                    self.compare_address(bin, l, r, IntPredicate::SGT, vartab, function, ns)
+                        .into()
+                } else {
+                    let left = self
+                        .expression(bin, l, vartab, function, ns)
+                        .into_int_value();
+                    let right = self
+                        .expression(bin, r, vartab, function, ns)
+                        .into_int_value();
 
-                bin.builder
-                    .build_int_compare(
-                        if l.ty().is_signed_int() {
-                            IntPredicate::SGT
-                        } else {
-                            IntPredicate::UGT
-                        },
-                        left,
-                        right,
-                        "",
-                    )
-                    .into()
+                    bin.builder
+                        .build_int_compare(
+                            if l.ty().is_signed_int() {
+                                IntPredicate::SGT
+                            } else {
+                                IntPredicate::UGT
+                            },
+                            left,
+                            right,
+                            "",
+                        )
+                        .into()
+                }
             }
             Expression::MoreEqual(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
+                if l.ty().is_address() {
+                    self.compare_address(bin, l, r, IntPredicate::SGE, vartab, function, ns)
+                        .into()
+                } else {
+                    let left = self
+                        .expression(bin, l, vartab, function, ns)
+                        .into_int_value();
+                    let right = self
+                        .expression(bin, r, vartab, function, ns)
+                        .into_int_value();
 
-                bin.builder
-                    .build_int_compare(
-                        if l.ty().is_signed_int() {
-                            IntPredicate::SGE
-                        } else {
-                            IntPredicate::UGE
-                        },
-                        left,
-                        right,
-                        "",
-                    )
-                    .into()
+                    bin.builder
+                        .build_int_compare(
+                            if l.ty().is_signed_int() {
+                                IntPredicate::SGE
+                            } else {
+                                IntPredicate::UGE
+                            },
+                            left,
+                            right,
+                            "",
+                        )
+                        .into()
+                }
             }
             Expression::Less(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
+                if l.ty().is_address() {
+                    self.compare_address(bin, l, r, IntPredicate::SLT, vartab, function, ns)
+                        .into()
+                } else {
+                    let left = self
+                        .expression(bin, l, vartab, function, ns)
+                        .into_int_value();
+                    let right = self
+                        .expression(bin, r, vartab, function, ns)
+                        .into_int_value();
 
-                bin.builder
-                    .build_int_compare(
-                        if l.ty().is_signed_int() {
-                            IntPredicate::SLT
-                        } else {
-                            IntPredicate::ULT
-                        },
-                        left,
-                        right,
-                        "",
-                    )
-                    .into()
+                    bin.builder
+                        .build_int_compare(
+                            if l.ty().is_signed_int() {
+                                IntPredicate::SLT
+                            } else {
+                                IntPredicate::ULT
+                            },
+                            left,
+                            right,
+                            "",
+                        )
+                        .into()
+                }
             }
             Expression::LessEqual(_, l, r) => {
-                let left = self
-                    .expression(bin, l, vartab, function, ns)
-                    .into_int_value();
-                let right = self
-                    .expression(bin, r, vartab, function, ns)
-                    .into_int_value();
+                if l.ty().is_address() {
+                    self.compare_address(bin, l, r, IntPredicate::SLE, vartab, function, ns)
+                        .into()
+                } else {
+                    let left = self
+                        .expression(bin, l, vartab, function, ns)
+                        .into_int_value();
+                    let right = self
+                        .expression(bin, r, vartab, function, ns)
+                        .into_int_value();
 
-                bin.builder
-                    .build_int_compare(
-                        if l.ty().is_signed_int() {
-                            IntPredicate::SLE
-                        } else {
-                            IntPredicate::ULE
-                        },
-                        left,
-                        right,
-                        "",
-                    )
-                    .into()
+                    bin.builder
+                        .build_int_compare(
+                            if l.ty().is_signed_int() {
+                                IntPredicate::SLE
+                            } else {
+                                IntPredicate::ULE
+                            },
+                            left,
+                            right,
+                            "",
+                        )
+                        .into()
+                }
             }
             Expression::Variable(_, _, s) => vartab[s].value,
             Expression::Load(_, ty, e) => {
@@ -2013,7 +2123,13 @@ pub trait TargetRuntime<'a> {
                     .build_int_truncate(e, ty.into_int_type(), "")
                     .into()
             }
-            Expression::Cast(_, _, e) => self.expression(bin, e, vartab, function, ns),
+            Expression::Cast(_, to, e) => {
+                let from = e.ty();
+
+                let e = self.expression(bin, e, vartab, function, ns);
+
+                self.runtime_cast(bin, function, &from, to, e, ns)
+            }
             Expression::BytesCast(_, ast::Type::Bytes(_), ast::Type::DynamicBytes, e) => {
                 let e = self
                     .expression(bin, e, vartab, function, ns)
@@ -2813,7 +2929,7 @@ pub trait TargetRuntime<'a> {
             } => {
                 let address = self
                     .expression(bin, address, vartab, function, ns)
-                    .into_int_value();
+                    .into_array_value();
 
                 let selector = ns.functions[*function_no].selector();
 
@@ -2947,6 +3063,68 @@ pub trait TargetRuntime<'a> {
         }
     }
 
+    fn compare_address(
+        &self,
+        binary: &Binary<'a>,
+        left: &ast::Expression,
+        right: &ast::Expression,
+        op: inkwell::IntPredicate,
+        vartab: &HashMap<usize, Variable<'a>>,
+        function: FunctionValue<'a>,
+        ns: &ast::Namespace,
+    ) -> IntValue<'a> {
+        let l = self
+            .expression(binary, left, vartab, function, ns)
+            .into_array_value();
+        let r = self
+            .expression(binary, right, vartab, function, ns)
+            .into_array_value();
+
+        let left = binary.build_alloca(function, binary.address_type(ns), "left");
+        let right = binary.build_alloca(function, binary.address_type(ns), "right");
+
+        binary.builder.build_store(left, l);
+        binary.builder.build_store(right, r);
+
+        let res = binary
+            .builder
+            .build_call(
+                binary.module.get_function("__memcmp_ord").unwrap(),
+                &[
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            left,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "left",
+                        )
+                        .into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            right,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "right",
+                        )
+                        .into(),
+                    binary
+                        .context
+                        .i32_type()
+                        .const_int(ns.address_length as u64, false)
+                        .into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        binary
+            .builder
+            .build_int_compare(op, res, binary.context.i32_type().const_zero(), "")
+    }
+
     /// Load a string from expression or create global
     fn string_location(
         &self,
@@ -2968,6 +3146,99 @@ pub trait TargetRuntime<'a> {
 
                 (bin.vector_bytes(v), bin.vector_len(v))
             }
+        }
+    }
+
+    fn runtime_cast(
+        &self,
+        bin: &Binary<'a>,
+        function: FunctionValue<'a>,
+        from: &ast::Type,
+        to: &ast::Type,
+        val: BasicValueEnum<'a>,
+        ns: &ast::Namespace,
+    ) -> BasicValueEnum<'a> {
+        if matches!(from, ast::Type::Address(_) | ast::Type::Contract(_))
+            && matches!(to, ast::Type::Address(_) | ast::Type::Contract(_))
+        {
+            // no conversion needed
+            val
+        } else if let ast::Type::Address(_) = to {
+            let llvm_ty = bin.llvm_type(from, ns);
+
+            let src = bin.build_alloca(function, llvm_ty, "dest");
+
+            bin.builder.build_store(src, val.into_int_value());
+
+            let dest = bin.build_alloca(function, bin.address_type(ns), "address");
+
+            let len = bin
+                .context
+                .i32_type()
+                .const_int(ns.address_length as u64, false);
+
+            bin.builder.build_call(
+                bin.module.get_function("__leNtobeN").unwrap(),
+                &[
+                    bin.builder
+                        .build_pointer_cast(
+                            src,
+                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address_ptr",
+                        )
+                        .into(),
+                    bin.builder
+                        .build_pointer_cast(
+                            dest,
+                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "dest_ptr",
+                        )
+                        .into(),
+                    len.into(),
+                ],
+                "",
+            );
+
+            bin.builder.build_load(dest, "val")
+        } else if let ast::Type::Address(_) = from {
+            let llvm_ty = bin.llvm_type(to, ns);
+
+            let src = bin.build_alloca(function, bin.address_type(ns), "address");
+
+            bin.builder.build_store(src, val.into_array_value());
+
+            let dest = bin.build_alloca(function, llvm_ty, "dest");
+
+            let len = bin
+                .context
+                .i32_type()
+                .const_int(ns.address_length as u64, false);
+
+            bin.builder.build_call(
+                bin.module.get_function("__beNtoleN").unwrap(),
+                &[
+                    bin.builder
+                        .build_pointer_cast(
+                            src,
+                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address_ptr",
+                        )
+                        .into(),
+                    bin.builder
+                        .build_pointer_cast(
+                            dest,
+                            bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "dest_ptr",
+                        )
+                        .into(),
+                    len.into(),
+                ],
+                "",
+            );
+
+            bin.builder.build_load(dest, "val")
+        } else {
+            val
         }
     }
 
@@ -3070,6 +3341,8 @@ pub trait TargetRuntime<'a> {
                         Variable {
                             value: if ty.is_pointer_type() {
                                 ty.into_pointer_type().const_zero().into()
+                            } else if ty.is_array_type() {
+                                ty.into_array_type().const_zero().into()
                             } else {
                                 ty.into_int_type().const_zero().into()
                             },
@@ -3870,15 +4143,9 @@ pub trait TargetRuntime<'a> {
                             .into_int_value();
                         let address = self
                             .expression(bin, address, &w.vars, function, ns)
-                            .into_int_value();
+                            .into_array_value();
 
-                        let addr = bin.builder.build_array_alloca(
-                            bin.context.i8_type(),
-                            bin.context
-                                .i32_type()
-                                .const_int(ns.address_length as u64, false),
-                            "address",
-                        );
+                        let addr = bin.builder.build_alloca(bin.address_type(ns), "address");
 
                         bin.builder.build_store(
                             bin.builder.build_pointer_cast(
@@ -3893,7 +4160,18 @@ pub trait TargetRuntime<'a> {
                             None => None,
                         };
 
-                        self.value_transfer(bin, function, success, addr, value, ns);
+                        self.value_transfer(
+                            bin,
+                            function,
+                            success,
+                            bin.builder.build_pointer_cast(
+                                addr,
+                                bin.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            ),
+                            value,
+                            ns,
+                        );
                     }
                     Instr::AbiDecode {
                         res,
@@ -4010,7 +4288,7 @@ pub trait TargetRuntime<'a> {
                     Instr::SelfDestruct { recipient } => {
                         let recipient = self
                             .expression(bin, recipient, &w.vars, function, ns)
-                            .into_int_value();
+                            .into_array_value();
 
                         self.selfdestruct(bin, recipient, ns);
                     }
@@ -4562,9 +4840,10 @@ pub trait TargetRuntime<'a> {
                         output = unsafe { bin.builder.build_gep(output, &[hex_len], "") };
                     }
                     ast::Type::Address(_) | ast::Type::Contract(_) => {
+                        // for Solana/Substrate, we should encode in base58
                         let buf = bin.build_alloca(function, bin.address_type(ns), "address");
 
-                        bin.builder.build_store(buf, val.into_int_value());
+                        bin.builder.build_store(buf, val.into_array_value());
 
                         let len = bin
                             .context
@@ -5509,9 +5788,8 @@ impl<'a> Binary<'a> {
     }
 
     /// llvm address type
-    fn address_type(&self, ns: &ast::Namespace) -> IntType<'a> {
-        self.context
-            .custom_width_int_type(ns.address_length as u32 * 8)
+    fn address_type(&self, ns: &ast::Namespace) -> ArrayType<'a> {
+        self.context.i8_type().array_type(ns.address_length as u32)
     }
 
     /// Creates global string in the llvm module with initializer
@@ -5553,9 +5831,10 @@ impl<'a> Binary<'a> {
             .expect("function missing entry block");
         let current = self.builder.get_insert_block().unwrap();
 
-        if let Some(instr) = entry.get_first_instruction() {
-            self.builder.position_before(&instr);
+        if let Some(instr) = &entry.get_first_instruction() {
+            self.builder.position_before(instr);
         } else {
+            // if there is no instruction yet, then nothing was built
             self.builder.position_at_end(entry);
         }
 
@@ -5911,6 +6190,8 @@ impl<'a> Binary<'a> {
         // const_zero() on BasicTypeEnum yet. Should be coming to inkwell soon
         if llvm_ty.is_pointer_type() {
             llvm_ty.into_pointer_type().const_null().into()
+        } else if llvm_ty.is_array_type() {
+            self.address_type(ns).const_zero().into()
         } else {
             llvm_ty.into_int_type().const_zero().into()
         }
@@ -5928,7 +6209,7 @@ impl<'a> Binary<'a> {
                     .custom_width_int_type(ns.value_length as u32 * 8),
             ),
             ast::Type::Contract(_) | ast::Type::Address(_) => {
-                BasicTypeEnum::IntType(self.address_type(ns))
+                BasicTypeEnum::ArrayType(self.address_type(ns))
             }
             ast::Type::Bytes(n) => {
                 BasicTypeEnum::IntType(self.context.custom_width_int_type(*n as u32 * 8))
