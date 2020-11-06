@@ -392,3 +392,73 @@ fn test_user() {
         assert_eq!(runtime.vm.output, GetRet(false, [0u8; 32]).encode());
     }
 }
+
+#[test]
+fn test_string_map() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct AddArg([u8; 32], Vec<u8>);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct GetArg([u8; 32]);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct GetRet(Vec<u8>);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract b {
+            struct SendTo{
+                address sender;
+                bytes hexOfAsset;
+                bool paid;
+            }
+
+            mapping(address => SendTo) send;
+
+            function add(address a, bytes v) public {
+                send[a].hexOfAsset = v;
+            }
+
+            function get(address a) public view returns (bytes) {
+                return send[a].hexOfAsset;
+            }
+
+            function rm(address a) public {
+                delete send[a].hexOfAsset;
+            }
+        }"##,
+    );
+
+    let mut rng = rand::thread_rng();
+
+    let mut vals = HashMap::new();
+
+    for _ in 0..2 {
+        let len = rng.gen::<usize>() % 256;
+        let mut val = Vec::new();
+        val.resize(len, 0u8);
+        rng.fill(&mut val[..]);
+        let mut address = [0u8; 32];
+        rng.fill(&mut address[..]);
+
+        runtime.function("add", AddArg(address, val.clone()).encode());
+
+        vals.insert(address, val);
+    }
+
+    for (address, val) in &vals {
+        runtime.function("get", GetArg(*address).encode());
+
+        assert_eq!(runtime.vm.output, GetRet(val.clone()).encode());
+    }
+
+    // now delete them
+
+    for (address, _) in &vals {
+        runtime.function("rm", GetArg(*address).encode());
+    }
+
+    for (address, _) in &vals {
+        runtime.function("get", GetArg(*address).encode());
+
+        assert_eq!(runtime.vm.output, GetRet(Vec::new()).encode());
+    }
+}

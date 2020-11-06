@@ -795,9 +795,13 @@ pub trait TargetRuntime<'a> {
                 }
             }
             ast::Type::String | ast::Type::DynamicBytes => {
+                contract.builder.build_store(slot_ptr, *slot);
+
                 self.set_storage_string(contract, function, slot_ptr, dest.into_pointer_value());
             }
             ast::Type::ExternalFunction { .. } => {
+                contract.builder.build_store(slot_ptr, *slot);
+
                 self.set_storage_extfunc(contract, function, slot_ptr, dest.into_pointer_value());
             }
             ast::Type::InternalFunction { .. } => {
