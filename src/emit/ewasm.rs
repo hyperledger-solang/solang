@@ -32,7 +32,7 @@ impl EwasmTarget {
     ) -> Contract<'a> {
         // first emit runtime code
         let mut b = EwasmTarget {
-            abi: ethabiencoder::EthAbiEncoder {},
+            abi: ethabiencoder::EthAbiEncoder { bswap: false },
         };
         let mut runtime_code = Contract::new(context, contract, ns, filename, opt, None);
 
@@ -51,7 +51,7 @@ impl EwasmTarget {
 
         // Now we have the runtime code, create the deployer
         let mut b = EwasmTarget {
-            abi: ethabiencoder::EthAbiEncoder {},
+            abi: ethabiencoder::EthAbiEncoder { bswap: false },
         };
         let mut deploy_code = Contract::new(
             context,

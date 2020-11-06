@@ -28,7 +28,7 @@ impl GenericTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         let mut b = GenericTarget {
-            abi: ethabiencoder::EthAbiEncoder {},
+            abi: ethabiencoder::EthAbiEncoder { bswap: false },
         };
 
         let mut c = Contract::new(context, contract, ns, filename, opt, None);

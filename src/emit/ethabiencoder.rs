@@ -7,7 +7,9 @@ use sema::ast;
 
 use super::Contract;
 
-pub struct EthAbiEncoder {}
+pub struct EthAbiEncoder {
+    pub bswap: bool,
+}
 
 impl EthAbiEncoder {
     /// recursively encode argument. The encoded data is written to the data pointer,
@@ -451,6 +453,56 @@ impl EthAbiEncoder {
                 };
 
                 contract.builder.build_store(dest, arg);
+            }
+            ast::Type::Uint(n) | ast::Type::Int(n)
+                if self.bswap && (*n == 16 || *n == 32 || *n == 64) =>
+            {
+                let arg = if load {
+                    contract.builder.build_load(arg.into_pointer_value(), "")
+                } else {
+                    arg
+                };
+
+                // now convert to be
+                let bswap = contract.llvm_bswap(*n as u32);
+
+                let val = contract
+                    .builder
+                    .build_call(bswap, &[arg], "")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dest8",
+                );
+
+                // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
+                // where our value starts
+                let int8_ptr = unsafe {
+                    contract.builder.build_gep(
+                        dest8,
+                        &[contract
+                            .context
+                            .i32_type()
+                            .const_int(32 - (*n as u64 / 8), false)],
+                        "uint_ptr",
+                    )
+                };
+
+                let int_type = contract.context.custom_width_int_type(*n as u32);
+
+                contract.builder.build_store(
+                    contract.builder.build_pointer_cast(
+                        int8_ptr,
+                        int_type.ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    val,
+                );
             }
             ast::Type::Contract(_)
             | ast::Type::Address(_)
@@ -1025,6 +1077,94 @@ impl EthAbiEncoder {
                     store.into()
                 }
             }
+            ast::Type::Uint(n) | ast::Type::Int(n)
+                if self.bswap && (*n == 16 || *n == 32 || *n == 64) =>
+            {
+                // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
+                // where our value starts
+                let int8_ptr = unsafe {
+                    contract.builder.build_gep(
+                        data,
+                        &[contract
+                            .context
+                            .i32_type()
+                            .const_int(32 - (*n as u64 / 8), false)],
+                        "uint8_ptr",
+                    )
+                };
+
+                let val = contract.builder.build_load(
+                    contract.builder.build_pointer_cast(
+                        int8_ptr,
+                        contract
+                            .context
+                            .custom_width_int_type(*n as u32)
+                            .ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    &format!("be{}", *n),
+                );
+
+                // now convert to le
+                let bswap = contract.llvm_bswap(*n as u32);
+
+                let val = contract
+                    .builder
+                    .build_call(bswap, &[val], "")
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                if let Some(p) = to {
+                    contract.builder.build_store(p, val);
+                }
+
+                val.into()
+            }
+            ast::Type::Uint(n) | ast::Type::Int(n) if self.bswap && *n < 64 => {
+                let uint64_ptr = contract.builder.build_pointer_cast(
+                    data,
+                    contract.context.i64_type().ptr_type(AddressSpace::Generic),
+                    "",
+                );
+
+                let uint64_ptr = unsafe {
+                    contract.builder.build_gep(
+                        uint64_ptr,
+                        &[contract.context.i32_type().const_int(3, false)],
+                        "uint64_ptr",
+                    )
+                };
+
+                let bswap = contract.llvm_bswap(64);
+
+                // load and bswap
+                let val = contract
+                    .builder
+                    .build_call(
+                        bswap,
+                        &[contract.builder.build_load(uint64_ptr, "uint64")],
+                        "",
+                    )
+                    .try_as_basic_value()
+                    .left()
+                    .unwrap()
+                    .into_int_value();
+
+                let val = contract.builder.build_right_shift(
+                    val,
+                    contract.context.i64_type().const_int(64 - *n as u64, false),
+                    ty.is_signed_int(),
+                    "",
+                );
+
+                let int_type = contract.context.custom_width_int_type(*n as u32);
+
+                let val = contract.builder.build_int_truncate(val, int_type, "");
+
+                val.into()
+            }
             ast::Type::Uint(n) | ast::Type::Int(n) => {
                 let int_type = contract.context.custom_width_int_type(*n as u32);
                 let type_size = int_type.size_of();
@@ -1466,11 +1606,15 @@ impl EthAbiEncoder {
 
         let mut offset = contract.context.i64_type().const_zero();
 
-        let data_length = contract.builder.build_int_z_extend(
-            datalength,
-            contract.context.i64_type(),
-            "data_length",
-        );
+        let data_length = if datalength.get_type().get_bit_width() != 64 {
+            contract.builder.build_int_z_extend(
+                datalength,
+                contract.context.i64_type(),
+                "data_length",
+            )
+        } else {
+            datalength
+        };
 
         for arg in spec {
             args.push(self.decode_ty(

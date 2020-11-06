@@ -28,7 +28,7 @@ impl SabreTarget {
         opt: OptimizationLevel,
     ) -> Contract<'a> {
         let mut b = SabreTarget {
-            abi: ethabiencoder::EthAbiEncoder {},
+            abi: ethabiencoder::EthAbiEncoder { bswap: false },
         };
         let mut c = Contract::new(context, contract, ns, filename, opt, None);
 

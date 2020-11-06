@@ -8,17 +8,18 @@ use inkwell::context::Context;
 use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
 use inkwell::AddressSpace;
-use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
 
 pub struct SolanaTarget<'a> {
+    abi: ethabiencoder::EthAbiEncoder,
     output: PointerValue<'a>,
     output_len: PointerValue<'a>,
 }
 
+// Implement the Solana target which uses BPF
 impl<'s> SolanaTarget<'s> {
     pub fn build<'a>(
         context: &'a Context,
@@ -32,24 +33,25 @@ impl<'s> SolanaTarget<'s> {
             .ptr_type(AddressSpace::Generic)
             .get_undef();
 
-        let mut b = SolanaTarget {
+        let mut target = SolanaTarget {
+            abi: ethabiencoder::EthAbiEncoder { bswap: true },
             output: undef,
             output_len: undef,
         };
 
-        let mut c = Contract::new(context, contract, ns, filename, opt, None);
+        let mut con = Contract::new(context, contract, ns, filename, opt, None);
 
         // externals
-        b.declare_externals(&mut c);
+        target.declare_externals(&mut con);
 
-        b.emit_functions(&mut c);
+        target.emit_functions(&mut con);
 
-        b.emit_constructor(&mut c);
-        b.emit_function(&mut c);
+        target.emit_constructor(&mut con);
+        target.emit_function(&mut con);
 
-        c.internalize(&["entrypoint", "sol_log_", "sol_alloc_free_"]);
+        con.internalize(&["entrypoint", "sol_log_", "sol_alloc_free_"]);
 
-        c
+        con
     }
 
     fn declare_externals(&self, contract: &mut Contract) {
@@ -85,8 +87,8 @@ impl<'s> SolanaTarget<'s> {
 
         contract.builder.position_at_end(entry);
 
-        let argsdata = function.get_nth_param(0).unwrap().into_pointer_value();
-        let argslen = function.get_nth_param(1).unwrap().into_int_value();
+        let input = function.get_nth_param(0).unwrap().into_pointer_value();
+        let input_len = function.get_nth_param(1).unwrap().into_int_value();
         self.output = function.get_nth_param(2).unwrap().into_pointer_value();
         self.output_len = function.get_nth_param(3).unwrap().into_pointer_value();
 
@@ -104,14 +106,8 @@ impl<'s> SolanaTarget<'s> {
             let mut args = Vec::new();
 
             // insert abi decode
-            self.decode(
-                contract,
-                function,
-                &mut args,
-                argsdata,
-                argslen,
-                &cfg.params,
-            );
+            self.abi
+                .decode(contract, function, &mut args, input, input_len, &cfg.params);
 
             contract
                 .builder
@@ -155,350 +151,6 @@ impl<'s> SolanaTarget<'s> {
             None,
             |_| false,
         );
-    }
-
-    /// abi decode the encoded data into the BasicValueEnums
-    pub fn decode<'a>(
-        &self,
-        contract: &Contract<'a>,
-        function: FunctionValue,
-        args: &mut Vec<BasicValueEnum<'a>>,
-        data: PointerValue<'a>,
-        data_length: IntValue<'a>,
-        spec: &[ast::Parameter],
-    ) {
-        let data = contract.builder.build_pointer_cast(
-            data,
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "data",
-        );
-
-        let mut offset = contract.context.i64_type().const_zero();
-
-        for arg in spec {
-            args.push(self.decode_primitive(
-                contract,
-                function,
-                &arg.ty,
-                None,
-                &mut offset,
-                data,
-                data_length,
-            ));
-        }
-    }
-
-    // abi decode a single primitive
-    /// decode a single primitive which is always encoded in 32 bytes
-    fn decode_primitive<'a>(
-        &self,
-        contract: &Contract<'a>,
-        function: FunctionValue,
-        ty: &ast::Type,
-        to: Option<PointerValue<'a>>,
-        offset: &mut IntValue<'a>,
-        data: PointerValue<'a>,
-        length: IntValue,
-    ) -> BasicValueEnum<'a> {
-        // TODO: investigate whether we can use build_int_nuw_add() and avoid 64 bit conversions
-        let new_offset = contract.builder.build_int_add(
-            *offset,
-            contract.context.i64_type().const_int(32, false),
-            "next_offset",
-        );
-
-        self.check_overrun(contract, function, new_offset, length);
-
-        let data = unsafe { contract.builder.build_gep(data, &[*offset], "") };
-
-        *offset = new_offset;
-
-        let ty = if let ast::Type::Enum(n) = ty {
-            &contract.ns.enums[*n].ty
-        } else {
-            ty
-        };
-
-        match &ty {
-            ast::Type::Bool => {
-                // solidity checks all the 32 bytes for being non-zero; we will just look at the upper 8 bytes, else we would need four loads
-                // which is unneeded (hopefully)
-                // cast to 64 bit pointer
-                let bool_ptr = contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i64_type().ptr_type(AddressSpace::Generic),
-                    "",
-                );
-
-                let bool_ptr = unsafe {
-                    contract.builder.build_gep(
-                        bool_ptr,
-                        &[contract.context.i32_type().const_int(3, false)],
-                        "bool_ptr",
-                    )
-                };
-
-                let val = contract.builder.build_int_compare(
-                    IntPredicate::NE,
-                    contract
-                        .builder
-                        .build_load(bool_ptr, "abi_bool")
-                        .into_int_value(),
-                    contract.context.i64_type().const_zero(),
-                    "bool",
-                );
-                if let Some(p) = to {
-                    contract.builder.build_store(p, val);
-                }
-                val.into()
-            }
-            ast::Type::Uint(8) | ast::Type::Int(8) => {
-                let int8_ptr = unsafe {
-                    contract.builder.build_gep(
-                        data,
-                        &[contract.context.i32_type().const_int(31, false)],
-                        "uint8_ptr",
-                    )
-                };
-
-                let val = contract.builder.build_load(int8_ptr, "int8");
-
-                if let Some(p) = to {
-                    contract.builder.build_store(p, val);
-                }
-
-                val
-            }
-            ast::Type::Uint(n) | ast::Type::Int(n) if *n == 16 || *n == 32 || *n == 64 => {
-                // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
-                // where our value starts
-                let int8_ptr = unsafe {
-                    contract.builder.build_gep(
-                        data,
-                        &[contract
-                            .context
-                            .i32_type()
-                            .const_int(32 - (*n as u64 / 8), false)],
-                        "uint8_ptr",
-                    )
-                };
-
-                let val = contract.builder.build_load(
-                    contract.builder.build_pointer_cast(
-                        int8_ptr,
-                        contract
-                            .context
-                            .custom_width_int_type(*n as u32)
-                            .ptr_type(AddressSpace::Generic),
-                        "",
-                    ),
-                    &format!("be{}", *n),
-                );
-
-                // now convert to le
-                let bswap = contract.llvm_bswap(*n as u32);
-
-                let val = contract
-                    .builder
-                    .build_call(bswap, &[val], "")
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_int_value();
-
-                if let Some(p) = to {
-                    contract.builder.build_store(p, val);
-                }
-
-                val.into()
-            }
-            ast::Type::Uint(n) | ast::Type::Int(n) if *n < 64 => {
-                let uint64_ptr = contract.builder.build_pointer_cast(
-                    data,
-                    contract.context.i64_type().ptr_type(AddressSpace::Generic),
-                    "",
-                );
-
-                let uint64_ptr = unsafe {
-                    contract.builder.build_gep(
-                        uint64_ptr,
-                        &[contract.context.i32_type().const_int(3, false)],
-                        "uint64_ptr",
-                    )
-                };
-
-                let bswap = contract.llvm_bswap(64);
-
-                // load and bswap
-                let val = contract
-                    .builder
-                    .build_call(
-                        bswap,
-                        &[contract.builder.build_load(uint64_ptr, "uint64")],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_int_value();
-
-                let val = contract.builder.build_right_shift(
-                    val,
-                    contract.context.i64_type().const_int(64 - *n as u64, false),
-                    ty.is_signed_int(),
-                    "",
-                );
-
-                let int_type = contract.context.custom_width_int_type(*n as u32);
-
-                let val = contract.builder.build_int_truncate(val, int_type, "");
-
-                val.into()
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    /// ABI encode a single primitive
-    fn encode_primitive(
-        &self,
-        contract: &Contract,
-        load: bool,
-        ty: &ast::Type,
-        dest: PointerValue,
-        arg: BasicValueEnum,
-    ) {
-        match ty {
-            ast::Type::Bool => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
-
-                let value = contract.builder.build_select(
-                    arg.into_int_value(),
-                    contract.context.i8_type().const_int(1, false),
-                    contract.context.i8_type().const_zero(),
-                    "bool_val",
-                );
-
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid",
-                );
-
-                let dest = unsafe {
-                    contract.builder.build_gep(
-                        dest8,
-                        &[contract.context.i32_type().const_int(31, false)],
-                        "",
-                    )
-                };
-
-                contract.builder.build_store(dest, value);
-            }
-            ast::Type::Uint(8) | ast::Type::Int(8) | ast::Type::Bytes(1) => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
-
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "destvoid",
-                );
-
-                let dest = unsafe {
-                    contract.builder.build_gep(
-                        dest8,
-                        &[contract.context.i32_type().const_int(31, false)],
-                        "",
-                    )
-                };
-
-                contract.builder.build_store(dest, arg.into_int_value());
-            }
-            ast::Type::Uint(n) | ast::Type::Int(n) if *n == 16 || *n == 32 || *n == 64 => {
-                let arg = if load {
-                    contract.builder.build_load(arg.into_pointer_value(), "")
-                } else {
-                    arg
-                };
-
-                // now convert to be
-                let bswap = contract.llvm_bswap(*n as u32);
-
-                let val = contract
-                    .builder
-                    .build_call(bswap, &[arg], "")
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-                    .into_int_value();
-
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "dest8",
-                );
-
-                // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
-                // where our value starts
-                let int8_ptr = unsafe {
-                    contract.builder.build_gep(
-                        dest8,
-                        &[contract
-                            .context
-                            .i32_type()
-                            .const_int(32 - (*n as u64 / 8), false)],
-                        "uint_ptr",
-                    )
-                };
-
-                let int_type = contract.context.custom_width_int_type(*n as u32);
-
-                contract.builder.build_store(
-                    contract.builder.build_pointer_cast(
-                        int8_ptr,
-                        int_type.ptr_type(AddressSpace::Generic),
-                        "",
-                    ),
-                    val,
-                );
-            }
-            _ => unimplemented!(),
-        }
-    }
-
-    /// Check that data has not overrun end
-    fn check_overrun(
-        &self,
-        contract: &Contract,
-        function: FunctionValue,
-        offset: IntValue,
-        end: IntValue,
-    ) {
-        let in_bounds = contract
-            .builder
-            .build_int_compare(IntPredicate::ULE, offset, end, "");
-
-        let success_block = contract.context.append_basic_block(function, "success");
-        let bail_block = contract.context.append_basic_block(function, "bail");
-        contract
-            .builder
-            .build_conditional_branch(in_bounds, success_block, bail_block);
-
-        contract.builder.position_at_end(bail_block);
-
-        contract
-            .builder
-            .build_return(Some(&contract.context.i32_type().const_int(3, false)));
-
-        contract.builder.position_at_end(success_block);
     }
 }
 
@@ -688,7 +340,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
         args: &[BasicValueEnum<'a>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'a>, IntValue<'a>) {
-        let (length, _offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
+        let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
             contract, selector, load, function, args, spec,
         );
 
@@ -697,6 +349,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
                 .builder
                 .build_int_z_extend(length, contract.context.i64_type(), "length64");
 
+        // FIXME ensure we have enough space for our return data
         contract.builder.build_store(self.output_len, length64);
 
         let mut output = self.output;
@@ -742,16 +395,19 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
             "",
         );
 
-        for (i, arg) in spec.iter().enumerate() {
-            self.encode_primitive(contract, load, &arg.ty, output, args[i]);
+        let mut dynamic = unsafe { contract.builder.build_gep(output, &[offset], "") };
 
-            output = unsafe {
-                contract.builder.build_gep(
-                    output,
-                    &[contract.context.i32_type().const_int(32, false)],
-                    "",
-                )
-            };
+        for (i, arg) in spec.iter().enumerate() {
+            self.abi.encode_ty(
+                contract,
+                load,
+                function,
+                &arg.ty,
+                args[i],
+                &mut output,
+                &mut offset,
+                &mut dynamic,
+            );
         }
 
         (output, length)
@@ -766,7 +422,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
         length: IntValue<'b>,
         spec: &[ast::Parameter],
     ) {
-        self.decode(contract, function, args, data, length, spec);
+        self.abi
+            .decode(contract, function, args, data, length, spec);
     }
 
     fn print(&self, contract: &Contract, string_ptr: PointerValue, string_len: IntValue) {
