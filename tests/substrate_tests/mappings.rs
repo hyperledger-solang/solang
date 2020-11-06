@@ -462,3 +462,52 @@ fn test_string_map() {
         assert_eq!(runtime.vm.output, GetRet(Vec::new()).encode());
     }
 }
+
+#[test]
+fn test_address() {
+    type Address = [u8; 32];
+
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct Val(i64);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct SetArg(Address, i64);
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    struct GetArg(Address);
+
+    let mut runtime = build_solidity(
+        r##"
+        contract foo {
+            uint bvar1;
+            uint bvar2;
+            mapping(address => int64) v;
+
+            function set(address index, int64 val) public {
+                v[index] = val;
+            }
+
+            function get(address index) public returns (int64) {
+                return v[index];
+            }
+        }"##,
+    );
+
+    let mut rng = rand::thread_rng();
+
+    let mut vals = HashMap::new();
+    let mut index: Address = [0u8; 32];
+
+    for _ in 0..100 {
+        rng.fill(&mut index[..]);
+        let val = rng.gen::<i64>();
+
+        runtime.function("set", SetArg(index, val).encode());
+
+        vals.insert(index, val);
+    }
+
+    for val in vals {
+        runtime.function("get", GetArg(val.0).encode());
+
+        assert_eq!(runtime.vm.output, Val(val.1).encode());
+    }
+}
