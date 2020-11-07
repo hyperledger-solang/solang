@@ -60,14 +60,10 @@ impl Expression {
             | Expression::Trunc(loc, _, _)
             | Expression::Cast(loc, _, _)
             | Expression::BytesCast(loc, _, _, _)
-            | Expression::UMore(loc, _, _)
-            | Expression::ULess(loc, _, _)
-            | Expression::UMoreEqual(loc, _, _)
-            | Expression::ULessEqual(loc, _, _)
-            | Expression::SMore(loc, _, _)
-            | Expression::SLess(loc, _, _)
-            | Expression::SMoreEqual(loc, _, _)
-            | Expression::SLessEqual(loc, _, _)
+            | Expression::More(loc, _, _)
+            | Expression::Less(loc, _, _)
+            | Expression::MoreEqual(loc, _, _)
+            | Expression::LessEqual(loc, _, _)
             | Expression::Equal(loc, _, _)
             | Expression::NotEqual(loc, _, _)
             | Expression::Not(loc, _)
@@ -113,14 +109,10 @@ impl Expression {
     pub fn ty(&self) -> Type {
         match self {
             Expression::BoolLiteral(_, _)
-            | Expression::UMore(_, _, _)
-            | Expression::ULess(_, _, _)
-            | Expression::UMoreEqual(_, _, _)
-            | Expression::ULessEqual(_, _, _)
-            | Expression::SMore(_, _, _)
-            | Expression::SLess(_, _, _)
-            | Expression::SMoreEqual(_, _, _)
-            | Expression::SLessEqual(_, _, _)
+            | Expression::More(_, _, _)
+            | Expression::Less(_, _, _)
+            | Expression::MoreEqual(_, _, _)
+            | Expression::LessEqual(_, _, _)
             | Expression::Equal(_, _, _)
             | Expression::Or(_, _, _)
             | Expression::And(_, _, _)
@@ -1561,19 +1553,11 @@ pub fn expression(
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
-            if ty.is_signed_int() {
-                Ok(Expression::SMore(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            } else {
-                Ok(Expression::UMore(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            }
+            Ok(Expression::More(
+                *loc,
+                Box::new(cast(&l.loc(), left, &ty, true, ns)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns)?),
+            ))
         }
         pt::Expression::Less(loc, l, r) => {
             let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
@@ -1581,19 +1565,11 @@ pub fn expression(
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
-            if ty.is_signed_int() {
-                Ok(Expression::SLess(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            } else {
-                Ok(Expression::ULess(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            }
+            Ok(Expression::Less(
+                *loc,
+                Box::new(cast(&l.loc(), left, &ty, true, ns)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns)?),
+            ))
         }
         pt::Expression::MoreEqual(loc, l, r) => {
             let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
@@ -1601,19 +1577,11 @@ pub fn expression(
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
-            if ty.is_signed_int() {
-                Ok(Expression::SMoreEqual(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            } else {
-                Ok(Expression::UMoreEqual(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            }
+            Ok(Expression::MoreEqual(
+                *loc,
+                Box::new(cast(&l.loc(), left, &ty, true, ns)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns)?),
+            ))
         }
         pt::Expression::LessEqual(loc, l, r) => {
             let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
@@ -1621,19 +1589,11 @@ pub fn expression(
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), true, ns)?;
 
-            if ty.is_signed_int() {
-                Ok(Expression::SLessEqual(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            } else {
-                Ok(Expression::ULessEqual(
-                    *loc,
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            }
+            Ok(Expression::LessEqual(
+                *loc,
+                Box::new(cast(&l.loc(), left, &ty, true, ns)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns)?),
+            ))
         }
         pt::Expression::Equal(loc, l, r) => {
             equal(loc, l, r, file_no, contract_no, ns, symtable, is_constant)

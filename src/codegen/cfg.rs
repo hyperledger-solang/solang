@@ -373,43 +373,23 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
-            Expression::SMore(_, l, r) => format!(
-                "({} >(s) {})",
+            Expression::More(_, l, r) => format!(
+                "({} > {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::SLess(_, l, r) => format!(
-                "({} <(s) {})",
+            Expression::Less(_, l, r) => format!(
+                "({} < {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::SMoreEqual(_, l, r) => format!(
-                "({} >=(s) {})",
+            Expression::MoreEqual(_, l, r) => format!(
+                "({} >= {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::SLessEqual(_, l, r) => format!(
-                "({} <=(s) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::UMore(_, l, r) => format!(
-                "({} >(u) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::ULess(_, l, r) => format!(
-                "({} <(u) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::UMoreEqual(_, l, r) => format!(
-                "({} >=(u) {})",
-                self.expr_to_string(contract, ns, l),
-                self.expr_to_string(contract, ns, r)
-            ),
-            Expression::ULessEqual(_, l, r) => format!(
-                "({} <=(u) {})",
+            Expression::LessEqual(_, l, r) => format!(
+                "({} <= {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
