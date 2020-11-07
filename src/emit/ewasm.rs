@@ -1510,31 +1510,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     }
 
     /// ewasm address is always 160 bits
-    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        let value = contract
-            .builder
-            .build_alloca(contract.address_type(), "self_address");
-
-        contract.builder.build_call(
-            contract.module.get_function("getAddress").unwrap(),
-            &[contract
-                .builder
-                .build_pointer_cast(
-                    value,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "",
-                )
-                .into()],
-            "self_address",
-        );
-
-        contract
-            .builder
-            .build_load(value, "self_address")
-            .into_int_value()
-    }
-
-    /// ewasm address is always 160 bits
     fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b> {
         let address = contract
             .builder
@@ -1885,6 +1860,26 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 );
 
                 contract.builder.build_load(value, "block_hash")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::GetAddress, _) => {
+                let value = contract
+                    .builder
+                    .build_alloca(contract.address_type(), "self_address");
+
+                contract.builder.build_call(
+                    contract.module.get_function("getAddress").unwrap(),
+                    &[contract
+                        .builder
+                        .build_pointer_cast(
+                            value,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into()],
+                    "self_address",
+                );
+
+                contract.builder.build_load(value, "self_address")
             }
             _ => unimplemented!(),
         }

@@ -97,7 +97,6 @@ impl Expression {
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
-            | Expression::GetAddress(loc, _)
             | Expression::Balance(loc, _, _)
             | Expression::PreIncrement(loc, _, _)
             | Expression::PreDecrement(loc, _, _)
@@ -173,7 +172,6 @@ impl Expression {
             | Expression::PreDecrement(_, ty, _)
             | Expression::PostIncrement(_, ty, _)
             | Expression::PostDecrement(_, ty, _)
-            | Expression::GetAddress(_, ty)
             | Expression::Keccak256(_, ty, _)
             | Expression::Assign(_, ty, _, _) => ty.clone(),
             Expression::DynamicArrayPush(_, _, ty, _) | Expression::DynamicArrayPop(_, _, ty) => {
@@ -2036,7 +2034,12 @@ pub fn expression(
             )
         }
         pt::Expression::This(loc) => match contract_no {
-            Some(contract_no) => Ok(Expression::GetAddress(*loc, Type::Contract(contract_no))),
+            Some(contract_no) => Ok(Expression::Builtin(
+                *loc,
+                vec![Type::Contract(contract_no)],
+                Builtin::GetAddress,
+                Vec::new(),
+            )),
             None => {
                 ns.diagnostics.push(Diagnostic::error(
                     *loc,
@@ -3346,7 +3349,7 @@ fn member_access(
                     let mut is_this = false;
 
                     if let Expression::Cast(_, _, this) = &expr {
-                        if let Expression::GetAddress(_, _) = this.as_ref() {
+                        if let Expression::Builtin(_, _, Builtin::GetAddress, _) = this.as_ref() {
                             is_this = true;
                         }
                     }

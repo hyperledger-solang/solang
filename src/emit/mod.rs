@@ -232,9 +232,6 @@ pub trait TargetRuntime<'a> {
     /// Return the value we received
     fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b>;
 
-    /// Return the current address
-    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b>;
-
     /// Return the balance for address
     fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b>;
 
@@ -2233,7 +2230,6 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::ReturnData(_) => self.return_data(contract).into(),
-            Expression::GetAddress(_, _) => self.get_address(contract).into(),
             Expression::Balance(_, _, addr) => {
                 let addr = self
                     .expression(contract, addr, vartab, function)

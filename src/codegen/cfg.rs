@@ -586,7 +586,6 @@ impl ControlFlowGraph {
                     .join(", ")
             ),
             Expression::ReturnData(_) => "(external call return data)".to_string(),
-            Expression::GetAddress(_, _) => "(get adddress)".to_string(),
             Expression::Balance(_, _, addr) => {
                 format!("(balance {})", self.expr_to_string(contract, ns, addr))
             }
