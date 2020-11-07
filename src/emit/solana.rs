@@ -486,11 +486,6 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
         contract.value_type().const_zero()
     }
 
-    /// Return the current address
-    fn get_address<'b>(&self, contract: &Contract<'b>) -> IntValue<'b> {
-        contract.address_type().const_zero()
-    }
-
     /// Return the balance for address
     fn balance<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
         unimplemented!();

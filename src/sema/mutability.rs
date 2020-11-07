@@ -232,9 +232,8 @@ fn read_expression(expr: &Expression, state: &mut StateCheck) -> bool {
         Expression::StorageBytesPush(loc, _, _) | Expression::StorageBytesPop(loc, _) => {
             state.write(loc);
         }
-        Expression::Balance(loc, _, _) | Expression::GetAddress(loc, _) => state.read(loc),
-
-        Expression::Builtin(loc, _, Builtin::BlockNumber, _)
+        Expression::Builtin(loc, _, Builtin::GetAddress, _)
+        | Expression::Builtin(loc, _, Builtin::BlockNumber, _)
         | Expression::Builtin(loc, _, Builtin::Timestamp, _)
         | Expression::Builtin(loc, _, Builtin::BlockCoinbase, _)
         | Expression::Builtin(loc, _, Builtin::BlockDifficulty, _)

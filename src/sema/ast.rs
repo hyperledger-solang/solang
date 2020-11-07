@@ -556,7 +556,6 @@ pub enum Expression {
     Keccak256(pt::Loc, Type, Vec<Expression>),
 
     ReturnData(pt::Loc),
-    GetAddress(pt::Loc, Type),
     Balance(pt::Loc, Type, Box<Expression>),
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
     List(pt::Loc, Vec<Expression>),
@@ -731,6 +730,7 @@ pub enum StringLocation {
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Builtin {
+    GetAddress,
     PayableSend,
     PayableTransfer,
     ArrayPush,
