@@ -19,7 +19,7 @@ pub fn array_offset(
     ns: &Namespace,
 ) -> Expression {
     let elem_size = elem_ty.storage_slots(ns);
-    let slot_ty = Type::Uint(256);
+    let slot_ty = ns.storage_type();
 
     // the index needs to be cast to i256 and multiplied by the number
     // of slots for each element
@@ -67,7 +67,7 @@ pub fn array_push(
     vartab: &mut Vartable,
 ) -> Expression {
     // set array+length to val_expr
-    let slot_ty = Type::Uint(256);
+    let slot_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
     let var_expr = expression(&args[0], cfg, contract_no, ns, vartab);
@@ -161,8 +161,8 @@ pub fn array_pop(
     vartab: &mut Vartable,
 ) -> Expression {
     // set array+length to val_expr
-    let slot_ty = Type::Uint(256);
-    let length_ty = Type::Uint(256);
+    let slot_ty = ns.storage_type();
+    let length_ty = ns.storage_type();
     let length_pos = vartab.temp_anonymous(&slot_ty);
 
     let ty = args[0].ty();

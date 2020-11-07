@@ -1,6 +1,7 @@
 use super::ast::*;
 use hex;
 use parser::pt;
+use Target;
 
 #[derive(Clone)]
 enum Tree {
@@ -641,5 +642,14 @@ impl Namespace {
         }
 
         print_tree(&Tree::Branch(filename.to_owned(), t), "", "")
+    }
+
+    /// Type storage
+    pub fn storage_type(&self) -> Type {
+        if self.target == Target::Solana {
+            Type::Uint(64)
+        } else {
+            Type::Uint(256)
+        }
     }
 }

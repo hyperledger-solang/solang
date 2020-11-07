@@ -7,7 +7,6 @@ use num_traits::One;
 use parser::pt;
 use std::collections::HashMap;
 use std::ops::Mul;
-#[cfg(test)]
 use Target;
 
 /// List the types which should be resolved later
@@ -781,7 +780,7 @@ impl Type {
     /// Calculate how much memory we expect this type to use when allocated on the
     /// stack or on the heap. Depending on the llvm implementation there might be
     /// padding between elements which is not accounted for.
-    pub fn size_hint(&self, ns: &Namespace) -> BigInt {
+    pub fn size_of(&self, ns: &Namespace) -> BigInt {
         match self {
             Type::Enum(_) => BigInt::one(),
             Type::Bool => BigInt::one(),
@@ -790,7 +789,7 @@ impl Type {
             Type::Uint(n) | Type::Int(n) => BigInt::from(n / 8),
             Type::Array(ty, dims) => {
                 let pointer_size = BigInt::from(4);
-                ty.size_hint(ns).mul(
+                ty.size_of(ns).mul(
                     dims.iter()
                         .map(|d| match d {
                             None => &pointer_size,
@@ -799,16 +798,12 @@ impl Type {
                         .product::<BigInt>(),
                 )
             }
-            Type::Struct(n) => ns.structs[*n]
-                .fields
-                .iter()
-                .map(|f| f.ty.size_hint(ns))
-                .sum(),
+            Type::Struct(n) => ns.structs[*n].fields.iter().map(|f| f.ty.size_of(ns)).sum(),
             Type::String | Type::DynamicBytes => BigInt::from(4),
             Type::InternalFunction { .. } => BigInt::from(ns.target.ptr_size()),
             Type::ExternalFunction { .. } => {
                 // Address and selector
-                Type::Address(false).size_hint(ns) + Type::Uint(32).size_hint(ns)
+                Type::Address(false).size_of(ns) + Type::Uint(32).size_of(ns)
             }
             _ => unimplemented!(),
         }
@@ -851,26 +846,30 @@ impl Type {
     /// Calculate how many storage slots a type occupies. Note that storage arrays can
     /// be very large
     pub fn storage_slots(&self, ns: &Namespace) -> BigInt {
-        match self {
-            Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
-            Type::Struct(n) => ns.structs[*n]
-                .fields
-                .iter()
-                .map(|f| f.ty.storage_slots(ns))
-                .sum(),
-            Type::Array(ty, dims) => {
-                let one = BigInt::one();
+        if ns.target == Target::Solana {
+            self.size_of(ns)
+        } else {
+            match self {
+                Type::StorageRef(r) | Type::Ref(r) => r.storage_slots(ns),
+                Type::Struct(n) => ns.structs[*n]
+                    .fields
+                    .iter()
+                    .map(|f| f.ty.storage_slots(ns))
+                    .sum(),
+                Type::Array(ty, dims) => {
+                    let one = BigInt::one();
 
-                ty.storage_slots(ns)
-                    * dims
-                        .iter()
-                        .map(|l| match l {
-                            None => &one,
-                            Some(l) => l,
-                        })
-                        .product::<BigInt>()
+                    ty.storage_slots(ns)
+                        * dims
+                            .iter()
+                            .map(|l| match l {
+                                None => &one,
+                                Some(l) => l,
+                            })
+                            .product::<BigInt>()
+                }
+                _ => BigInt::one(),
             }
-            _ => BigInt::one(),
         }
     }
 

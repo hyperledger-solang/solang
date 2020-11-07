@@ -73,7 +73,7 @@ fn storage_initializer(contract_no: usize, ns: &Namespace) -> ControlFlowGraph {
 
         if let Some(init) = &var.initializer {
             let storage =
-                ns.contracts[contract_no].get_storage_slot(layout.contract_no, layout.var_no);
+                ns.contracts[contract_no].get_storage_slot(layout.contract_no, layout.var_no, ns);
 
             let pos = vartab.temp_name(&var.name, &var.ty);
             let expr = expression(&init, &mut cfg, contract_no, ns, &mut vartab);
