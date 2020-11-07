@@ -264,7 +264,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                     notice: get_tag("notice", &var.tags),
                     author: get_tag("author", &var.tags),
                     dev: get_tag("dev", &var.tags),
-                    constant: !var.is_storage(),
+                    constant: var.constant,
                     visibility: format!("{}", var.visibility),
                 }
             }

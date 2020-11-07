@@ -311,7 +311,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
         }
 
         for var_no in 0..ns.contracts[base_contract_no].variables.len() {
-            if ns.contracts[base_contract_no].variables[var_no].is_storage() {
+            if !ns.contracts[base_contract_no].variables[var_no].constant {
                 ns.contracts[contract_no].layout.push(ast::Layout {
                     slot: slot.clone(),
                     contract_no: base_contract_no,

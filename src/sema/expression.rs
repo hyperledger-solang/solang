@@ -15,8 +15,7 @@ use std::ops::Sub;
 
 use super::address::to_hexstr_eip55;
 use super::ast::{
-    Builtin, CallTy, ContractVariableType, Diagnostic, Expression, Function, Namespace,
-    StringLocation, Symbol, Type,
+    Builtin, CallTy, Diagnostic, Expression, Function, Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
 use super::contracts::{import_library, is_base};
@@ -1306,32 +1305,29 @@ pub fn expression(
 
                     let var = &ns.contracts[var_contract_no].variables[var_no];
 
-                    match var.var {
-                        ContractVariableType::Constant => Ok(Expression::ConstantVariable(
+                    if var.constant {
+                        Ok(Expression::ConstantVariable(
                             id.loc,
                             var.ty.clone(),
                             var_contract_no,
                             var_no,
-                        )),
-                        ContractVariableType::Storage => {
-                            if is_constant {
-                                ns.diagnostics.push(Diagnostic::error(
-                                    id.loc,
-                                    format!(
-                                        "cannot read contract variable ‘{}’ in constant expression",
-                                        id.name
-                                    ),
-                                ));
-                                Err(())
-                            } else {
-                                Ok(Expression::StorageVariable(
-                                    id.loc,
-                                    Type::StorageRef(Box::new(var.ty.clone())),
-                                    var_contract_no,
-                                    var_no,
-                                ))
-                            }
-                        }
+                        ))
+                    } else if is_constant {
+                        ns.diagnostics.push(Diagnostic::error(
+                            id.loc,
+                            format!(
+                                "cannot read contract variable ‘{}’ in constant expression",
+                                id.name
+                            ),
+                        ));
+                        Err(())
+                    } else {
+                        Ok(Expression::StorageVariable(
+                            id.loc,
+                            Type::StorageRef(Box::new(var.ty.clone())),
+                            var_contract_no,
+                            var_no,
+                        ))
                     }
                 }
                 Some(Symbol::Function(_)) => {

@@ -544,10 +544,7 @@ impl Namespace {
             for var in &c.variables {
                 let name = format!(
                     "variable {} {} {}",
-                    match var.var {
-                        ContractVariableType::Constant => "constant",
-                        ContractVariableType::Storage => "storage",
-                    },
+                    if var.constant { "constant" } else { "storage" },
                     var.ty.to_string(self),
                     var.name
                 );
