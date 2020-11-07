@@ -379,7 +379,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue,
+        slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
         let exists = contract

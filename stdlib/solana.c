@@ -4,13 +4,13 @@
 
 #include "solana_sdk.h"
 
-extern int solang_constructor(const uint8_t *input, uint64_t input_len, uint8_t *ouyput, uint64_t *output_len);
-extern int solang_function(const uint8_t *input, uint64_t input_len, uint8_t *ouyput, uint64_t *output_len);
+extern int solang_constructor(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
+extern int solang_function(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
 
 uint64_t
 entrypoint(const uint8_t *input)
 {
-    SolAccountInfo ka[1];
+    SolAccountInfo ka[2];
     SolParameters params = (SolParameters){.ka = ka};
     if (!sol_deserialize(input, &params, SOL_ARRAY_SIZE(ka)))
     {
@@ -19,11 +19,11 @@ entrypoint(const uint8_t *input)
 
     if ((params.data_len % 32) == 0)
     {
-        return solang_constructor(params.data, params.data_len, ka[0].data, ka[0].data_len);
+        return solang_constructor(params.data, params.data_len, ka);
     }
     else
     {
-        return solang_function(params.data, params.data_len, ka[0].data, ka[0].data_len);
+        return solang_function(params.data, params.data_len, ka);
     }
 
     return SUCCESS;

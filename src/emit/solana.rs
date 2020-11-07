@@ -13,14 +13,12 @@ use inkwell::OptimizationLevel;
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
 
-pub struct SolanaTarget<'a> {
+pub struct SolanaTarget {
     abi: ethabiencoder::EthAbiEncoder,
-    output: PointerValue<'a>,
-    output_len: PointerValue<'a>,
 }
 
 // Implement the Solana target which uses BPF
-impl<'s> SolanaTarget<'s> {
+impl SolanaTarget {
     pub fn build<'a>(
         context: &'a Context,
         contract: &'a ast::Contract,
@@ -28,15 +26,8 @@ impl<'s> SolanaTarget<'s> {
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
-        let undef = context
-            .i8_type()
-            .ptr_type(AddressSpace::Generic)
-            .get_undef();
-
         let mut target = SolanaTarget {
             abi: ethabiencoder::EthAbiEncoder { bswap: true },
-            output: undef,
-            output_len: undef,
         };
 
         let mut con = Contract::new(context, contract, ns, filename, opt, None);
@@ -78,7 +69,7 @@ impl<'s> SolanaTarget<'s> {
             .set_unnamed_address(UnnamedAddress::Local);
     }
 
-    fn emit_constructor(&mut self, contract: &mut Contract<'s>) {
+    fn emit_constructor(&mut self, contract: &mut Contract) {
         let initializer = self.emit_initializer(contract);
 
         let function = contract.module.get_function("solang_constructor").unwrap();
@@ -89,11 +80,12 @@ impl<'s> SolanaTarget<'s> {
 
         let input = function.get_nth_param(0).unwrap().into_pointer_value();
         let input_len = function.get_nth_param(1).unwrap().into_int_value();
-        self.output = function.get_nth_param(2).unwrap().into_pointer_value();
-        self.output_len = function.get_nth_param(3).unwrap().into_pointer_value();
+        let accounts = function.get_nth_param(2).unwrap();
+        contract.accounts = Some(accounts.into_pointer_value());
 
-        // init our storage vars
-        contract.builder.build_call(initializer, &[], "");
+        // FIXME: write magic to data contract
+
+        contract.builder.build_call(initializer, &[accounts], "");
 
         // There is only one possible constructor
         let ret = if let Some((cfg_no, cfg)) = contract
@@ -108,6 +100,8 @@ impl<'s> SolanaTarget<'s> {
             // insert abi decode
             self.abi
                 .decode(contract, function, &mut args, input, input_len, &cfg.params);
+
+            args.push(accounts);
 
             contract
                 .builder
@@ -124,7 +118,7 @@ impl<'s> SolanaTarget<'s> {
     }
 
     // emit function dispatch
-    fn emit_function(&mut self, contract: &mut Contract<'s>) {
+    fn emit_function(&mut self, contract: &mut Contract) {
         let function = contract.module.get_function("solang_function").unwrap();
 
         let entry = contract.context.append_basic_block(function, "entry");
@@ -133,8 +127,8 @@ impl<'s> SolanaTarget<'s> {
 
         let input = function.get_nth_param(0).unwrap().into_pointer_value();
         let input_len = function.get_nth_param(1).unwrap().into_int_value();
-        self.output = function.get_nth_param(2).unwrap().into_pointer_value();
-        self.output_len = function.get_nth_param(3).unwrap().into_pointer_value();
+
+        contract.accounts = Some(function.get_nth_param(2).unwrap().into_pointer_value());
 
         let input = contract.builder.build_pointer_cast(
             input,
@@ -152,20 +146,53 @@ impl<'s> SolanaTarget<'s> {
             |_| false,
         );
     }
+
+    // Returns the pointer to the length of the return buffer, and the buffer itself
+    fn return_buffer<'b>(&self, contract: &Contract<'b>) -> (PointerValue<'b>, PointerValue<'b>) {
+        // the first account passed in is the return buffer; 3 field of account is "data"
+        let data = contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        contract.accounts.unwrap(),
+                        &[
+                            contract.context.i32_type().const_zero(),
+                            contract.context.i32_type().const_int(3, false),
+                        ],
+                        "data",
+                    )
+                },
+                "data",
+            )
+            .into_pointer_value();
+
+        // First we have the 64 bit length field
+        let data_len_ptr = contract.builder.build_pointer_cast(
+            data,
+            contract.context.i64_type().ptr_type(AddressSpace::Generic),
+            "data_len_ptr",
+        );
+
+        // step over that field, and cast to u8* for the buffer itself
+        let data_ptr = contract.builder.build_pointer_cast(
+            unsafe {
+                contract.builder.build_gep(
+                    data_len_ptr,
+                    &[contract.context.i32_type().const_int(1, false)],
+                    "data_ptr",
+                )
+            },
+            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+            "data_ptr",
+        );
+
+        (data_len_ptr, data_ptr)
+    }
 }
 
-impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
+impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn clear_storage(&self, _contract: &Contract, _function: FunctionValue, _slot: PointerValue) {
-        unimplemented!();
-    }
-
-    fn set_storage(
-        &self,
-        _contract: &Contract,
-        _function: FunctionValue,
-        _slot: PointerValue,
-        _dest: PointerValue,
-    ) {
         unimplemented!();
     }
 
@@ -249,15 +276,95 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
     ) -> IntValue<'a> {
         unimplemented!();
     }
-
     fn get_storage_int(
         &self,
         _contract: &Contract<'a>,
         _function: FunctionValue,
-        _slot: PointerValue,
+        _slot: PointerValue<'a>,
         _ty: IntType<'a>,
     ) -> IntValue<'a> {
         unimplemented!();
+    }
+
+    /// Recursively load a type from contract storage. This overrides the default method
+    /// in the trait, which is for chains with 256 bit storage keys.
+    fn storage_load(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        _function: FunctionValue,
+    ) -> BasicValueEnum<'a> {
+        // contract storage is in 2nd account (3rd member is data pointer)
+        let data = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[
+                    contract.context.i32_type().const_int(1, false),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        // slot is simply the offset
+        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
+
+        contract.builder.build_load(
+            contract.builder.build_pointer_cast(
+                member,
+                contract
+                    .llvm_type(ty)
+                    .into_int_type()
+                    .ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            "",
+        )
+    }
+    fn storage_store(
+        &self,
+        contract: &Contract<'a>,
+        _ty: &ast::Type,
+        slot: &mut IntValue<'a>,
+        val: BasicValueEnum<'a>,
+        _function: FunctionValue<'a>,
+    ) {
+        // contract storage is in 2nd account (3rd member is data pointer)
+        let data = unsafe {
+            contract.builder.build_gep(
+                contract.accounts.unwrap(),
+                &[
+                    contract.context.i32_type().const_int(1, false),
+                    contract.context.i32_type().const_int(3, false),
+                ],
+                "data",
+            )
+        };
+
+        let data = contract
+            .builder
+            .build_load(data, "data")
+            .into_pointer_value();
+
+        // the slot is simply the offset
+        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
+
+        contract.builder.build_store(
+            contract.builder.build_pointer_cast(
+                member,
+                val.get_type()
+                    .into_int_type()
+                    .ptr_type(AddressSpace::Generic),
+                "",
+            ),
+            val,
+        );
     }
 
     /// sabre has no keccak256 host function, so call our implementation
@@ -295,9 +402,11 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
     }
 
     fn return_empty_abi(&self, contract: &Contract) {
+        let (data_len_ptr, _) = self.return_buffer(contract);
+
         contract
             .builder
-            .build_store(self.output_len, contract.context.i64_type().const_zero());
+            .build_store(data_len_ptr, contract.context.i64_type().const_zero());
 
         // return 0 for success
         contract
@@ -340,6 +449,8 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
         args: &[BasicValueEnum<'a>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'a>, IntValue<'a>) {
+        let (output_len, mut output) = self.return_buffer(contract);
+
         let (length, mut offset) = ethabiencoder::EthAbiEncoder::total_encoded_length(
             contract, selector, load, function, args, spec,
         );
@@ -350,9 +461,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget<'a> {
                 .build_int_z_extend(length, contract.context.i64_type(), "length64");
 
         // FIXME ensure we have enough space for our return data
-        contract.builder.build_store(self.output_len, length64);
-
-        let mut output = self.output;
+        contract.builder.build_store(output_len, length64);
 
         if let Some(selector) = selector {
             contract.builder.build_store(

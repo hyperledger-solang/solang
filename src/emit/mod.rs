@@ -1,4 +1,3 @@
-use codegen::cfg;
 use hex;
 use parser::pt;
 use sema::ast;
@@ -36,6 +35,7 @@ mod sabre;
 mod solana;
 mod substrate;
 
+use codegen::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Storage};
 use linker::link;
 
 lazy_static::lazy_static! {
@@ -89,16 +89,18 @@ pub trait TargetRuntime<'a> {
 
     fn set_storage(
         &self,
-        contract: &Contract,
-        function: FunctionValue,
-        slot: PointerValue,
-        dest: PointerValue,
-    );
+        _contract: &Contract,
+        _function: FunctionValue,
+        _slot: PointerValue,
+        _dest: PointerValue,
+    ) {
+        unimplemented!();
+    }
     fn get_storage_int(
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue,
+        slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a>;
 
@@ -239,7 +241,7 @@ pub trait TargetRuntime<'a> {
     fn hash<'b>(
         &self,
         contract: &Contract<'b>,
-        hash: cfg::HashTy,
+        hash: HashTy,
         string: PointerValue<'b>,
         length: IntValue<'b>,
     ) -> IntValue<'b>;
@@ -301,11 +303,28 @@ pub trait TargetRuntime<'a> {
         contract: &Contract<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
+        function: FunctionValue,
+    ) -> BasicValueEnum<'a> {
+        // The storage slot is an i256 accessed through a pointer, so we need
+        // to store it
+        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+
+        self.storage_load_slot_ptr(contract, ty, slot, slot_ptr, function)
+    }
+
+    /// Recursively load a type from contract storage
+    fn storage_load_slot_ptr(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         function: FunctionValue,
     ) -> BasicValueEnum<'a> {
         match ty {
-            ast::Type::Ref(ty) => self.storage_load(contract, ty, slot, slot_ptr, function),
+            ast::Type::Ref(ty) => {
+                self.storage_load_slot_ptr(contract, ty, slot, slot_ptr, function)
+            }
             ast::Type::Array(_, dim) => {
                 if let Some(d) = &dim[0] {
                     let llvm_ty = contract.llvm_type(ty.deref_any());
@@ -352,7 +371,8 @@ pub trait TargetRuntime<'a> {
                                 )
                             };
 
-                            let val = self.storage_load(contract, &ty, slot, slot_ptr, function);
+                            let val =
+                                self.storage_load_slot_ptr(contract, &ty, slot, slot_ptr, function);
 
                             contract.builder.build_store(elem, val);
                         },
@@ -364,7 +384,7 @@ pub trait TargetRuntime<'a> {
                     let slot_ty = ast::Type::Uint(256);
 
                     let size = contract.builder.build_int_truncate(
-                        self.storage_load(contract, &slot_ty, slot, slot_ptr, function)
+                        self.storage_load_slot_ptr(contract, &slot_ty, slot, slot_ptr, function)
                             .into_int_value(),
                         contract.context.i32_type(),
                         "size",
@@ -418,7 +438,7 @@ pub trait TargetRuntime<'a> {
                         |elem_no: IntValue<'a>, slot: &mut IntValue<'a>| {
                             let index = contract.builder.build_int_mul(elem_no, elem_size, "");
 
-                            let entry = self.storage_load(
+                            let entry = self.storage_load_slot_ptr(
                                 contract,
                                 &ty.array_elem(),
                                 slot,
@@ -480,7 +500,8 @@ pub trait TargetRuntime<'a> {
                 );
 
                 for (i, field) in contract.ns.structs[*n].fields.iter().enumerate() {
-                    let val = self.storage_load(contract, &field.ty, slot, slot_ptr, function);
+                    let val =
+                        self.storage_load_slot_ptr(contract, &field.ty, slot, slot_ptr, function);
 
                     let elem = unsafe {
                         contract.builder.build_gep(
@@ -569,6 +590,20 @@ pub trait TargetRuntime<'a> {
         contract: &Contract<'a>,
         ty: &ast::Type,
         slot: &mut IntValue<'a>,
+        dest: BasicValueEnum<'a>,
+        function: FunctionValue<'a>,
+    ) {
+        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
+
+        self.storage_store_slot_ptr(contract, ty, slot, slot_ptr, dest, function)
+    }
+
+    /// Recursively store a type to contract storage with a buffer for the slot
+    fn storage_store_slot_ptr(
+        &self,
+        contract: &Contract<'a>,
+        ty: &ast::Type,
+        slot: &mut IntValue<'a>,
         slot_ptr: PointerValue<'a>,
         dest: BasicValueEnum<'a>,
         function: FunctionValue<'a>,
@@ -599,7 +634,7 @@ pub trait TargetRuntime<'a> {
                                 elem = contract.builder.build_load(elem, "").into_pointer_value();
                             }
 
-                            self.storage_store(
+                            self.storage_store_slot_ptr(
                                 contract,
                                 &ty,
                                 slot,
@@ -649,7 +684,7 @@ pub trait TargetRuntime<'a> {
                     // the previous length of the storage array
                     // we need this to clear any elements
                     let previous_size = contract.builder.build_int_truncate(
-                        self.storage_load(contract, &slot_ty, slot, slot_ptr, function)
+                        self.storage_load_slot_ptr(contract, &slot_ty, slot, slot_ptr, function)
                             .into_int_value(),
                         contract.context.i32_type(),
                         "previous_size",
@@ -717,7 +752,7 @@ pub trait TargetRuntime<'a> {
                                 elem = contract.builder.build_load(elem, "").into_pointer_value();
                             }
 
-                            self.storage_store(
+                            self.storage_store_slot_ptr(
                                 contract,
                                 &ty,
                                 slot,
@@ -777,7 +812,14 @@ pub trait TargetRuntime<'a> {
                             .into_pointer_value();
                     }
 
-                    self.storage_store(contract, &field.ty, slot, slot_ptr, elem.into(), function);
+                    self.storage_store_slot_ptr(
+                        contract,
+                        &field.ty,
+                        slot,
+                        slot_ptr,
+                        elem.into(),
+                        function,
+                    );
 
                     if !field.ty.is_reference_type() {
                         *slot = contract.builder.build_int_add(
@@ -1490,13 +1532,11 @@ pub trait TargetRuntime<'a> {
                 contract.builder.build_load(expr, "")
             }
             Expression::StorageLoad(_, ty, e) => {
-                // The storage slot is an i256 accessed through a pointer, so we need
-                // to store it
                 let mut slot = self
                     .expression(contract, e, vartab, function)
                     .into_int_value();
-                let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
-                self.storage_load(contract, ty, &mut slot, slot_ptr, function)
+
+                self.storage_load(contract, ty, &mut slot, function)
             }
             Expression::ZeroExt(_, t, e) => {
                 let e = self
@@ -2619,8 +2659,8 @@ pub trait TargetRuntime<'a> {
     #[allow(clippy::cognitive_complexity)]
     fn emit_cfg(
         &mut self,
-        contract: &Contract<'a>,
-        cfg: &cfg::ControlFlowGraph,
+        contract: &mut Contract<'a>,
+        cfg: &ControlFlowGraph,
         function: FunctionValue<'a>,
     ) {
         // recurse through basic blocks
@@ -2636,8 +2676,13 @@ pub trait TargetRuntime<'a> {
 
         let mut blocks: HashMap<usize, BasicBlock> = HashMap::new();
 
-        let create_bb = |bb_no| -> BasicBlock {
-            let cfg_bb: &cfg::BasicBlock = &cfg.bb[bb_no];
+        fn create_bb<'a>(
+            bb_no: usize,
+            contract: &Contract<'a>,
+            cfg: &ControlFlowGraph,
+            function: FunctionValue,
+        ) -> BasicBlock<'a> {
+            let cfg_bb = &cfg.bb[bb_no];
             let mut phis = HashMap::new();
 
             let bb = contract.context.append_basic_block(function, &cfg_bb.name);
@@ -2657,14 +2702,19 @@ pub trait TargetRuntime<'a> {
 
         let mut work = VecDeque::new();
 
-        blocks.insert(0, create_bb(0));
+        blocks.insert(0, create_bb(0, contract, cfg, function));
+
+        // On Solana, the last argument is the accounts
+        if contract.ns.target == Target::Solana {
+            contract.accounts = Some(function.get_last_param().unwrap().into_pointer_value());
+        }
 
         // Create all the stack variables
         let mut vars = HashMap::new();
 
         for (no, v) in &cfg.vars {
             match v.storage {
-                cfg::Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
+                Storage::Local if v.ty.is_reference_type() && !v.ty.is_contract_storage() => {
                     let ty = contract.llvm_type(&v.ty);
 
                     let p = contract
@@ -2695,7 +2745,7 @@ pub trait TargetRuntime<'a> {
                         },
                     );
                 }
-                cfg::Storage::Local if v.ty.is_contract_storage() => {
+                Storage::Local if v.ty.is_contract_storage() => {
                     vars.insert(
                         *no,
                         Variable {
@@ -2707,9 +2757,7 @@ pub trait TargetRuntime<'a> {
                         },
                     );
                 }
-                cfg::Storage::Constant(_) | cfg::Storage::Contract(_)
-                    if v.ty.is_reference_type() =>
-                {
+                Storage::Constant(_) | Storage::Contract(_) if v.ty.is_reference_type() => {
                     // This needs a placeholder
                     vars.insert(
                         *no,
@@ -2718,7 +2766,7 @@ pub trait TargetRuntime<'a> {
                         },
                     );
                 }
-                cfg::Storage::Local | cfg::Storage::Contract(_) | cfg::Storage::Constant(_) => {
+                Storage::Local | Storage::Contract(_) | Storage::Constant(_) => {
                     let ty = contract.llvm_type(&v.ty);
                     vars.insert(
                         *no,
@@ -2747,12 +2795,12 @@ pub trait TargetRuntime<'a> {
 
             for ins in &cfg.bb[w.bb_no].instr {
                 match ins {
-                    cfg::Instr::Return { value } if value.is_empty() => {
+                    Instr::Return { value } if value.is_empty() => {
                         contract
                             .builder
                             .build_return(Some(&contract.context.i32_type().const_zero()));
                     }
-                    cfg::Instr::Return { value } => {
+                    Instr::Return { value } => {
                         let returns_offset = cfg.params.len();
                         for (i, val) in value.iter().enumerate() {
                             let arg = function.get_nth_param((returns_offset + i) as u32).unwrap();
@@ -2766,15 +2814,15 @@ pub trait TargetRuntime<'a> {
                             .builder
                             .build_return(Some(&contract.context.i32_type().const_zero()));
                     }
-                    cfg::Instr::Set { res, expr } => {
+                    Instr::Set { res, expr } => {
                         let value_ref = self.expression(contract, expr, &w.vars, function);
 
                         w.vars.get_mut(res).unwrap().value = value_ref;
                     }
-                    cfg::Instr::Eval { expr } => {
+                    Instr::Eval { expr } => {
                         self.expression(contract, expr, &w.vars, function);
                     }
-                    cfg::Instr::Constant { res, constant } => {
+                    Instr::Constant { res, constant } => {
                         let const_expr = contract.contract.variables[*constant]
                             .initializer
                             .as_ref()
@@ -2783,11 +2831,11 @@ pub trait TargetRuntime<'a> {
 
                         w.vars.get_mut(res).unwrap().value = value_ref;
                     }
-                    cfg::Instr::Branch { bb: dest } => {
+                    Instr::Branch { bb: dest } => {
                         let pos = contract.builder.get_insert_block().unwrap();
 
                         if !blocks.contains_key(&dest) {
-                            blocks.insert(*dest, create_bb(*dest));
+                            blocks.insert(*dest, create_bb(*dest, contract, cfg, function));
                             work.push_back(Work {
                                 bb_no: *dest,
                                 vars: w.vars.clone(),
@@ -2803,7 +2851,7 @@ pub trait TargetRuntime<'a> {
                         contract.builder.position_at_end(pos);
                         contract.builder.build_unconditional_branch(bb.bb);
                     }
-                    cfg::Instr::Store { dest, pos } => {
+                    Instr::Store { dest, pos } => {
                         let value_ref = w.vars[pos].value;
                         let dest_ref = self
                             .expression(contract, dest, &w.vars, function)
@@ -2811,7 +2859,7 @@ pub trait TargetRuntime<'a> {
 
                         contract.builder.build_store(dest_ref, value_ref);
                     }
-                    cfg::Instr::BranchCond {
+                    Instr::BranchCond {
                         cond,
                         true_,
                         false_,
@@ -2822,7 +2870,7 @@ pub trait TargetRuntime<'a> {
 
                         let bb_true = {
                             if !blocks.contains_key(&true_) {
-                                blocks.insert(*true_, create_bb(*true_));
+                                blocks.insert(*true_, create_bb(*true_, contract, cfg, function));
                                 work.push_back(Work {
                                     bb_no: *true_,
                                     vars: w.vars.clone(),
@@ -2840,7 +2888,7 @@ pub trait TargetRuntime<'a> {
 
                         let bb_false = {
                             if !blocks.contains_key(&false_) {
-                                blocks.insert(*false_, create_bb(*false_));
+                                blocks.insert(*false_, create_bb(*false_, contract, cfg, function));
                                 work.push_back(Work {
                                     bb_no: *false_,
                                     vars: w.vars.clone(),
@@ -2863,7 +2911,7 @@ pub trait TargetRuntime<'a> {
                             bb_false,
                         );
                     }
-                    cfg::Instr::ClearStorage { ty, storage } => {
+                    Instr::ClearStorage { ty, storage } => {
                         let mut slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
@@ -2871,17 +2919,16 @@ pub trait TargetRuntime<'a> {
 
                         self.storage_clear(contract, ty, &mut slot, slot_ptr, function);
                     }
-                    cfg::Instr::SetStorage { ty, local, storage } => {
+                    Instr::SetStorage { ty, local, storage } => {
                         let value = w.vars[local].value;
 
                         let mut slot = self
                             .expression(contract, storage, &w.vars, function)
                             .into_int_value();
-                        let slot_ptr = contract.builder.build_alloca(slot.get_type(), "slot");
 
-                        self.storage_store(contract, ty, &mut slot, slot_ptr, value, function);
+                        self.storage_store(contract, ty, &mut slot, value, function);
                     }
-                    cfg::Instr::SetStorageBytes {
+                    Instr::SetStorageBytes {
                         local,
                         storage,
                         offset,
@@ -2905,7 +2952,7 @@ pub trait TargetRuntime<'a> {
                             value.into_int_value(),
                         );
                     }
-                    cfg::Instr::PushMemory {
+                    Instr::PushMemory {
                         res,
                         ty,
                         array,
@@ -3039,7 +3086,7 @@ pub trait TargetRuntime<'a> {
                         );
                         contract.builder.build_store(size_field, new_len);
                     }
-                    cfg::Instr::PopMemory { res, ty, array } => {
+                    Instr::PopMemory { res, ty, array } => {
                         let a = w.vars[array].value.into_pointer_value();
                         let len = unsafe {
                             contract.builder.build_gep(
@@ -3190,7 +3237,7 @@ pub trait TargetRuntime<'a> {
                         );
                         contract.builder.build_store(size_field, new_len);
                     }
-                    cfg::Instr::AssertFailure { expr: None } => {
+                    Instr::AssertFailure { expr: None } => {
                         self.assert_failure(
                             contract,
                             contract
@@ -3201,7 +3248,7 @@ pub trait TargetRuntime<'a> {
                             contract.context.i32_type().const_zero(),
                         );
                     }
-                    cfg::Instr::AssertFailure { expr: Some(expr) } => {
+                    Instr::AssertFailure { expr: Some(expr) } => {
                         let v = self.expression(contract, expr, &w.vars, function);
 
                         let selector = if contract.ns.target == Target::Ewasm {
@@ -3233,7 +3280,7 @@ pub trait TargetRuntime<'a> {
 
                         self.assert_failure(contract, data, len);
                     }
-                    cfg::Instr::Print { expr } => {
+                    Instr::Print { expr } => {
                         let v = self
                             .expression(contract, expr, &w.vars, function)
                             .into_pointer_value();
@@ -3273,9 +3320,9 @@ pub trait TargetRuntime<'a> {
                                 .into_int_value(),
                         );
                     }
-                    cfg::Instr::Call {
+                    Instr::Call {
                         res,
-                        call: cfg::InternalCallTy::Static(cfg_no),
+                        call: InternalCallTy::Static(cfg_no),
                         args,
                     } => {
                         let f = &contract.contract.cfg[*cfg_no];
@@ -3294,6 +3341,10 @@ pub trait TargetRuntime<'a> {
                                         .into(),
                                 );
                             }
+                        }
+
+                        if let Some(accounts) = contract.accounts {
+                            parms.push(accounts.into());
                         }
 
                         let ret = contract
@@ -3344,9 +3395,9 @@ pub trait TargetRuntime<'a> {
                             }
                         }
                     }
-                    cfg::Instr::Call {
+                    Instr::Call {
                         res,
-                        call: cfg::InternalCallTy::Dynamic(call_expr),
+                        call: InternalCallTy::Dynamic(call_expr),
                         args,
                     } => {
                         let ty = call_expr.ty();
@@ -3362,6 +3413,11 @@ pub trait TargetRuntime<'a> {
                             .iter()
                             .map(|p| self.expression(contract, p, &w.vars, function))
                             .collect::<Vec<BasicValueEnum>>();
+
+                        // on Solana, we need to pass the accounts parameter around
+                        if let Some(accounts) = contract.accounts {
+                            parms.push(accounts.into());
+                        }
 
                         if !res.is_empty() {
                             for ty in returns.iter() {
@@ -3423,7 +3479,7 @@ pub trait TargetRuntime<'a> {
                             }
                         }
                     }
-                    cfg::Instr::Constructor {
+                    Instr::Constructor {
                         success,
                         res,
                         contract_no,
@@ -3479,7 +3535,7 @@ pub trait TargetRuntime<'a> {
                         w.vars.get_mut(res).unwrap().value =
                             contract.builder.build_load(address, "address");
                     }
-                    cfg::Instr::ExternalCall {
+                    Instr::ExternalCall {
                         success,
                         address,
                         payload,
@@ -3712,7 +3768,7 @@ pub trait TargetRuntime<'a> {
                             callty.clone(),
                         );
                     }
-                    cfg::Instr::AbiEncodeVector {
+                    Instr::AbiEncodeVector {
                         res,
                         tys,
                         selector,
@@ -3736,7 +3792,7 @@ pub trait TargetRuntime<'a> {
                             )
                             .into();
                     }
-                    cfg::Instr::AbiDecode {
+                    Instr::AbiDecode {
                         res,
                         selector,
                         exception,
@@ -3786,7 +3842,7 @@ pub trait TargetRuntime<'a> {
                                     vars: w.vars.clone(),
                                 });
 
-                                create_bb(exception)
+                                create_bb(exception, contract, cfg, function)
                             });
 
                             contract.builder.position_at_end(pos);
@@ -3875,17 +3931,17 @@ pub trait TargetRuntime<'a> {
                             w.vars.get_mut(&res[i]).unwrap().value = ret;
                         }
                     }
-                    cfg::Instr::Unreachable => {
+                    Instr::Unreachable => {
                         contract.builder.build_unreachable();
                     }
-                    cfg::Instr::SelfDestruct { recipient } => {
+                    Instr::SelfDestruct { recipient } => {
                         let recipient = self
                             .expression(contract, recipient, &w.vars, function)
                             .into_int_value();
 
                         self.selfdestruct(contract, recipient);
                     }
-                    cfg::Instr::Hash { res, hash, expr } => {
+                    Instr::Hash { res, hash, expr } => {
                         let v = self
                             .expression(contract, expr, &w.vars, function)
                             .into_pointer_value();
@@ -3928,7 +3984,7 @@ pub trait TargetRuntime<'a> {
                             )
                             .into();
                     }
-                    cfg::Instr::EmitEvent {
+                    Instr::EmitEvent {
                         event_no,
                         data,
                         data_tys,
@@ -3981,7 +4037,7 @@ pub trait TargetRuntime<'a> {
         fallback: Option<inkwell::basic_block::BasicBlock>,
         nonpayable: F,
     ) where
-        F: Fn(&cfg::ControlFlowGraph) -> bool,
+        F: Fn(&ControlFlowGraph) -> bool,
     {
         // create start function
         let no_function_matched = match fallback {
@@ -4141,7 +4197,7 @@ pub trait TargetRuntime<'a> {
     fn add_dispatch_case<F>(
         &self,
         contract: &Contract<'a>,
-        f: &cfg::ControlFlowGraph,
+        f: &ControlFlowGraph,
         cases: &mut Vec<(
             inkwell::values::IntValue<'a>,
             inkwell::basic_block::BasicBlock<'a>,
@@ -4152,7 +4208,7 @@ pub trait TargetRuntime<'a> {
         dest: inkwell::values::FunctionValue<'a>,
         nonpayable: &F,
     ) where
-        F: Fn(&cfg::ControlFlowGraph) -> bool,
+        F: Fn(&ControlFlowGraph) -> bool,
     {
         let bb = contract.context.append_basic_block(function, "");
 
@@ -4184,6 +4240,10 @@ pub trait TargetRuntime<'a> {
                         .into()
                 });
             }
+        }
+
+        if contract.ns.target == Target::Solana {
+            args.push(function.get_last_param().unwrap());
         }
 
         let ret = contract
@@ -4239,10 +4299,16 @@ pub trait TargetRuntime<'a> {
     }
 
     /// Emit the contract storage initializers
-    fn emit_initializer(&mut self, contract: &Contract<'a>) -> FunctionValue<'a> {
+    fn emit_initializer(&mut self, contract: &mut Contract<'a>) -> FunctionValue<'a> {
+        let mut args = Vec::new();
+
+        if let Some(accounts) = contract.accounts {
+            args.push(accounts.get_type().into());
+        }
+
         let function = contract.module.add_function(
             "storage_initializers",
-            contract.context.i32_type().fn_type(&[], false),
+            contract.context.i32_type().fn_type(&args, false),
             Some(Linkage::Internal),
         );
 
@@ -4802,6 +4868,7 @@ pub struct Contract<'a> {
     calldata_len: GlobalValue<'a>,
     scratch_len: Option<GlobalValue<'a>>,
     scratch: Option<GlobalValue<'a>>,
+    accounts: Option<PointerValue<'a>>,
 }
 
 impl<'a> Contract<'a> {
@@ -5007,6 +5074,7 @@ impl<'a> Contract<'a> {
             calldata_len,
             scratch: None,
             scratch_len: None,
+            accounts: None,
         }
     }
 
@@ -5294,6 +5362,18 @@ impl<'a> Contract<'a> {
                 self.llvm_type(&ty).ptr_type(AddressSpace::Generic).into()
             });
         }
+
+        // On Solana, we need to pass around the accounts
+        if self.ns.target == Target::Solana {
+            args.push(
+                self.module
+                    .get_struct_type("struct.SolAccountInfo")
+                    .unwrap()
+                    .ptr_type(AddressSpace::Generic)
+                    .as_basic_type_enum(),
+            );
+        }
+
         self.context.i32_type().fn_type(&args, false)
     }
 

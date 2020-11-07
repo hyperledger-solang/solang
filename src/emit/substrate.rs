@@ -58,7 +58,7 @@ impl SubstrateTarget {
 
         b.emit_functions(&mut c);
 
-        b.emit_deploy(&c);
+        b.emit_deploy(&mut c);
         b.emit_call(&c);
 
         c.internalize(&[
@@ -471,7 +471,7 @@ impl SubstrateTarget {
         );
     }
 
-    fn emit_deploy(&mut self, contract: &Contract) {
+    fn emit_deploy(&mut self, contract: &mut Contract) {
         let initializer = self.emit_initializer(contract);
 
         // create deploy function
@@ -1905,7 +1905,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue,
+        slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
         let scratch_buf = contract.builder.build_pointer_cast(

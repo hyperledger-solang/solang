@@ -104,7 +104,7 @@ typedef struct
 {
   SolPubkey *key;      /** Public key of the account */
   uint64_t *lamports;  /** Number of lamports owned by this account */
-  uint64_t *data_len;  /** Length of data in bytes */
+  uint64_t data_len;   /** Length of data in bytes */
   uint8_t *data;       /** On-chain data within this account */
   SolPubkey *owner;    /** Program that owns this account */
   uint64_t rent_epoch; /** The epoch at which this account will next owe rent */
@@ -310,10 +310,10 @@ static bool sol_deserialize(
       input += sizeof(uint64_t);
 
       // account data
-      params->ka[i].data_len = (uint64_t *)input;
+      params->ka[i].data_len = *(uint64_t *)input;
       input += sizeof(uint64_t);
       params->ka[i].data = (uint8_t *)input;
-      input += *params->ka[i].data_len;
+      input += params->ka[i].data_len;
       input += MAX_PERMITTED_DATA_INCREASE;
       input = (uint8_t *)(((uint64_t)input + 8 - 1) & ~(8 - 1)); // padding
 
@@ -535,7 +535,7 @@ static void sol_log_params(const SolParameters *params)
     sol_log("  - Lamports");
     sol_log_64(0, 0, 0, 0, *params->ka[i].lamports);
     sol_log("  - data");
-    sol_log_array(params->ka[i].data, *params->ka[i].data_len);
+    sol_log_array(params->ka[i].data, params->ka[i].data_len);
     sol_log("  - Owner");
     sol_log_pubkey(params->ka[i].owner);
     sol_log("  - Executable");

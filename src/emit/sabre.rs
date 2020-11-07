@@ -434,7 +434,7 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         &self,
         contract: &Contract<'a>,
         function: FunctionValue,
-        slot: PointerValue,
+        slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
         let address = contract
