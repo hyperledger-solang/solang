@@ -23,7 +23,7 @@ pub fn expression(
     match expr {
         Expression::StorageVariable(_, _, var_contract_no, var_no) => {
             // base storage variables should precede contract variables, not overlap
-            ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no)
+            ns.contracts[contract_no].get_storage_slot(*var_contract_no, *var_no, ns)
         }
         Expression::StorageLoad(loc, ty, expr) => Expression::StorageLoad(
             *loc,
@@ -1477,7 +1477,7 @@ fn array_subscript(
             try_cast(
                 &index_loc,
                 Expression::Variable(index_loc, coerced_ty, pos),
-                &Type::Uint(256),
+                &ns.storage_type(),
                 false,
                 ns,
             )

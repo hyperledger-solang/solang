@@ -3199,7 +3199,7 @@ fn member_access(
                             *loc,
                             Type::StorageRef(Box::new(field.ty.clone())),
                             Box::new(expr),
-                            Box::new(Expression::NumberLiteral(*loc, Type::Uint(256), slot)),
+                            Box::new(Expression::NumberLiteral(*loc, ns.storage_type(), slot)),
                         ));
                     }
 
@@ -3229,7 +3229,7 @@ fn member_access(
                     return match dim.last().unwrap() {
                         None => Ok(Expression::StorageLoad(
                             id.loc,
-                            Type::Uint(256),
+                            ns.storage_type(),
                             Box::new(expr),
                         )),
                         Some(d) => bigint_to_expression(loc, d, ns),

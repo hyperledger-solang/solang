@@ -1146,7 +1146,7 @@ fn resolve_var_decl_ty(
         return Err(());
     }
 
-    if !var_ty.is_contract_storage() && var_ty.size_hint(ns) > BigInt::from(1024 * 1024) {
+    if !var_ty.is_contract_storage() && var_ty.size_of(ns) > BigInt::from(1024 * 1024) {
         ns.diagnostics.push(Diagnostic::error(
             ty.loc(),
             "type to large to fit into memory".to_string(),
