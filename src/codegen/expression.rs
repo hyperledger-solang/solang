@@ -119,42 +119,22 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::SMore(loc, left, right) => Expression::SMore(
+        Expression::More(loc, left, right) => Expression::More(
             *loc,
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::SMoreEqual(loc, left, right) => Expression::SMoreEqual(
+        Expression::MoreEqual(loc, left, right) => Expression::MoreEqual(
             *loc,
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::UMore(loc, left, right) => Expression::UMore(
+        Expression::Less(loc, left, right) => Expression::Less(
             *loc,
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::UMoreEqual(loc, left, right) => Expression::UMoreEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
-        ),
-        Expression::SLess(loc, left, right) => Expression::SLess(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
-        ),
-        Expression::SLessEqual(loc, left, right) => Expression::SLessEqual(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
-        ),
-        Expression::ULess(loc, left, right) => Expression::ULess(
-            *loc,
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
-        ),
-        Expression::ULessEqual(loc, left, right) => Expression::ULessEqual(
+        Expression::LessEqual(loc, left, right) => Expression::LessEqual(
             *loc,
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
@@ -1450,7 +1430,7 @@ fn array_subscript(
     cfg.add(
         vartab,
         Instr::BranchCond {
-            cond: Expression::UMoreEqual(
+            cond: Expression::MoreEqual(
                 *loc,
                 Box::new(Expression::Variable(index_loc, coerced_ty.clone(), pos)),
                 Box::new(

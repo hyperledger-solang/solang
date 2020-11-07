@@ -179,36 +179,20 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             format!("assign {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UMore(_, left, right) => Tree::Branch(
-            String::from("unsigned more"),
+        Expression::More(_, left, right) => Tree::Branch(
+            String::from("more"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::ULess(_, left, right) => Tree::Branch(
-            String::from("unsigned less"),
+        Expression::Less(_, left, right) => Tree::Branch(
+            String::from("less"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UMoreEqual(_, left, right) => Tree::Branch(
-            String::from("unsigned more or equal"),
+        Expression::MoreEqual(_, left, right) => Tree::Branch(
+            String::from("more or equal"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::ULessEqual(_, left, right) => Tree::Branch(
-            String::from("unsigned less or equal"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SMore(_, left, right) => Tree::Branch(
-            String::from("signed more"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SLess(_, left, right) => Tree::Branch(
-            String::from("signed less"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SMoreEqual(_, left, right) => Tree::Branch(
-            String::from("signed more or equal"),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SLessEqual(_, left, right) => Tree::Branch(
-            String::from("signed less or equal"),
+        Expression::LessEqual(_, left, right) => Tree::Branch(
+            String::from("less or equal"),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::Equal(_, left, right) => Tree::Branch(

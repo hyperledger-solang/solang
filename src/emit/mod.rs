@@ -1393,7 +1393,7 @@ pub trait TargetRuntime<'a> {
                     .build_int_compare(IntPredicate::NE, left, right, "")
                     .into()
             }
-            Expression::SMore(_, l, r) => {
+            Expression::More(_, l, r) => {
                 let left = self
                     .expression(contract, l, vartab, function)
                     .into_int_value();
@@ -1403,10 +1403,19 @@ pub trait TargetRuntime<'a> {
 
                 contract
                     .builder
-                    .build_int_compare(IntPredicate::SGT, left, right, "")
+                    .build_int_compare(
+                        if l.ty().is_signed_int() {
+                            IntPredicate::SGT
+                        } else {
+                            IntPredicate::UGT
+                        },
+                        left,
+                        right,
+                        "",
+                    )
                     .into()
             }
-            Expression::SMoreEqual(_, l, r) => {
+            Expression::MoreEqual(_, l, r) => {
                 let left = self
                     .expression(contract, l, vartab, function)
                     .into_int_value();
@@ -1416,10 +1425,19 @@ pub trait TargetRuntime<'a> {
 
                 contract
                     .builder
-                    .build_int_compare(IntPredicate::SGE, left, right, "")
+                    .build_int_compare(
+                        if l.ty().is_signed_int() {
+                            IntPredicate::SGE
+                        } else {
+                            IntPredicate::UGE
+                        },
+                        left,
+                        right,
+                        "",
+                    )
                     .into()
             }
-            Expression::SLess(_, l, r) => {
+            Expression::Less(_, l, r) => {
                 let left = self
                     .expression(contract, l, vartab, function)
                     .into_int_value();
@@ -1429,10 +1447,19 @@ pub trait TargetRuntime<'a> {
 
                 contract
                     .builder
-                    .build_int_compare(IntPredicate::SLT, left, right, "")
+                    .build_int_compare(
+                        if l.ty().is_signed_int() {
+                            IntPredicate::SLT
+                        } else {
+                            IntPredicate::ULT
+                        },
+                        left,
+                        right,
+                        "",
+                    )
                     .into()
             }
-            Expression::SLessEqual(_, l, r) => {
+            Expression::LessEqual(_, l, r) => {
                 let left = self
                     .expression(contract, l, vartab, function)
                     .into_int_value();
@@ -1442,59 +1469,16 @@ pub trait TargetRuntime<'a> {
 
                 contract
                     .builder
-                    .build_int_compare(IntPredicate::SLE, left, right, "")
-                    .into()
-            }
-            Expression::UMore(_, l, r) => {
-                let left = self
-                    .expression(contract, l, vartab, function)
-                    .into_int_value();
-                let right = self
-                    .expression(contract, r, vartab, function)
-                    .into_int_value();
-
-                contract
-                    .builder
-                    .build_int_compare(IntPredicate::UGT, left, right, "")
-                    .into()
-            }
-            Expression::UMoreEqual(_, l, r) => {
-                let left = self
-                    .expression(contract, l, vartab, function)
-                    .into_int_value();
-                let right = self
-                    .expression(contract, r, vartab, function)
-                    .into_int_value();
-
-                contract
-                    .builder
-                    .build_int_compare(IntPredicate::UGE, left, right, "")
-                    .into()
-            }
-            Expression::ULess(_, l, r) => {
-                let left = self
-                    .expression(contract, l, vartab, function)
-                    .into_int_value();
-                let right = self
-                    .expression(contract, r, vartab, function)
-                    .into_int_value();
-
-                contract
-                    .builder
-                    .build_int_compare(IntPredicate::ULT, left, right, "")
-                    .into()
-            }
-            Expression::ULessEqual(_, l, r) => {
-                let left = self
-                    .expression(contract, l, vartab, function)
-                    .into_int_value();
-                let right = self
-                    .expression(contract, r, vartab, function)
-                    .into_int_value();
-
-                contract
-                    .builder
-                    .build_int_compare(IntPredicate::ULE, left, right, "")
+                    .build_int_compare(
+                        if l.ty().is_signed_int() {
+                            IntPredicate::SLE
+                        } else {
+                            IntPredicate::ULE
+                        },
+                        left,
+                        right,
+                        "",
+                    )
                     .into()
             }
             Expression::Variable(_, _, s) => vartab[s].value,

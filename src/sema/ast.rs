@@ -457,14 +457,10 @@ pub enum Expression {
     PostDecrement(pt::Loc, Type, Box<Expression>),
     Assign(pt::Loc, Type, Box<Expression>, Box<Expression>),
 
-    UMore(pt::Loc, Box<Expression>, Box<Expression>),
-    ULess(pt::Loc, Box<Expression>, Box<Expression>),
-    UMoreEqual(pt::Loc, Box<Expression>, Box<Expression>),
-    ULessEqual(pt::Loc, Box<Expression>, Box<Expression>),
-    SMore(pt::Loc, Box<Expression>, Box<Expression>),
-    SLess(pt::Loc, Box<Expression>, Box<Expression>),
-    SMoreEqual(pt::Loc, Box<Expression>, Box<Expression>),
-    SLessEqual(pt::Loc, Box<Expression>, Box<Expression>),
+    More(pt::Loc, Box<Expression>, Box<Expression>),
+    Less(pt::Loc, Box<Expression>, Box<Expression>),
+    MoreEqual(pt::Loc, Box<Expression>, Box<Expression>),
+    LessEqual(pt::Loc, Box<Expression>, Box<Expression>),
     Equal(pt::Loc, Box<Expression>, Box<Expression>),
     NotEqual(pt::Loc, Box<Expression>, Box<Expression>),
 
@@ -591,14 +587,10 @@ impl Expression {
                 | Expression::PostDecrement(_, _, expr) => expr.recurse(cx, f),
 
                 Expression::Assign(_, _, left, right)
-                | Expression::UMore(_, left, right)
-                | Expression::ULess(_, left, right)
-                | Expression::UMoreEqual(_, left, right)
-                | Expression::ULessEqual(_, left, right)
-                | Expression::SMore(_, left, right)
-                | Expression::SLess(_, left, right)
-                | Expression::SMoreEqual(_, left, right)
-                | Expression::SLessEqual(_, left, right)
+                | Expression::More(_, left, right)
+                | Expression::Less(_, left, right)
+                | Expression::MoreEqual(_, left, right)
+                | Expression::LessEqual(_, left, right)
                 | Expression::Equal(_, left, right)
                 | Expression::NotEqual(_, left, right) => {
                     left.recurse(cx, f);
