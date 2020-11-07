@@ -281,25 +281,14 @@ impl From<&pt::Type> for Type {
     }
 }
 
-pub enum ContractVariableType {
-    Storage,
-    Constant,
-}
-
 pub struct ContractVariable {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
     pub ty: Type,
     pub visibility: pt::Visibility,
-    pub var: ContractVariableType,
+    pub constant: bool,
     pub initializer: Option<Expression>,
-}
-
-impl ContractVariable {
-    pub fn is_storage(&self) -> bool {
-        matches!(self.var, ContractVariableType::Storage)
-    }
 }
 
 #[derive(Clone, PartialEq)]

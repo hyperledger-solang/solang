@@ -1,4 +1,4 @@
-use super::ast::{ContractVariable, ContractVariableType, Diagnostic, Namespace, Symbol};
+use super::ast::{ContractVariable, Diagnostic, Namespace, Symbol};
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
@@ -131,12 +131,6 @@ fn var_decl(
         return false;
     }
 
-    let var = if !is_constant {
-        ContractVariableType::Storage
-    } else {
-        ContractVariableType::Constant
-    };
-
     let initializer = if let Some(initializer) = &s.initializer {
         let res = match expression(
             &initializer,
@@ -191,7 +185,7 @@ fn var_decl(
         tags,
         visibility,
         ty,
-        var,
+        constant: is_constant,
         initializer,
     };
 
