@@ -1165,7 +1165,7 @@ pub trait TargetRuntime<'a> {
                     contract.builder.build_int_mul(left, right, "").into()
                 }
             }
-            Expression::UDivide(_, _, l, r) => {
+            Expression::Divide(_, _, l, r) if !l.ty().is_signed_int() => {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
@@ -1214,7 +1214,7 @@ pub trait TargetRuntime<'a> {
                         .into()
                 }
             }
-            Expression::SDivide(_, _, l, r) => {
+            Expression::Divide(_, _, l, r) => {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
@@ -1259,7 +1259,7 @@ pub trait TargetRuntime<'a> {
                         .into()
                 }
             }
-            Expression::UModulo(_, _, l, r) => {
+            Expression::Modulo(_, _, l, r) if !l.ty().is_signed_int() => {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 
@@ -1308,7 +1308,7 @@ pub trait TargetRuntime<'a> {
                         .into()
                 }
             }
-            Expression::SModulo(_, _, l, r) => {
+            Expression::Modulo(_, _, l, r) => {
                 let left = self.expression(contract, l, vartab, function);
                 let right = self.expression(contract, r, vartab, function);
 

@@ -26,7 +26,7 @@ pub fn eval_const_number(
             *loc,
             eval_const_number(l, contract_no, ns)?.1 * eval_const_number(r, contract_no, ns)?.1,
         )),
-        Expression::UDivide(loc, _, l, r) | Expression::SDivide(loc, _, l, r) => {
+        Expression::Divide(loc, _, l, r) => {
             let divisor = eval_const_number(r, contract_no, ns)?.1;
 
             if divisor.is_zero() {
@@ -35,7 +35,7 @@ pub fn eval_const_number(
                 Ok((*loc, eval_const_number(l, contract_no, ns)?.1 / divisor))
             }
         }
-        Expression::UModulo(loc, _, l, r) | Expression::SModulo(loc, _, l, r) => {
+        Expression::Modulo(loc, _, l, r) => {
             let divisor = eval_const_number(r, contract_no, ns)?.1;
 
             if divisor.is_zero() {

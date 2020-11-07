@@ -330,12 +330,12 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::UDivide(_, _, l, r) | Expression::SDivide(_, _, l, r) => format!(
+            Expression::Divide(_, _, l, r) => format!(
                 "({} / {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)
             ),
-            Expression::UModulo(_, _, l, r) | Expression::SModulo(_, _, l, r) => format!(
+            Expression::Modulo(_, _, l, r) => format!(
                 "({} % {})",
                 self.expr_to_string(contract, ns, l),
                 self.expr_to_string(contract, ns, r)

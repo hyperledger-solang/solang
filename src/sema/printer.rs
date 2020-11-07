@@ -76,20 +76,12 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             format!("multiply {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::UDivide(_, ty, left, right) => Tree::Branch(
-            format!("unsigned divide {}", ty.to_string(ns)),
+        Expression::Divide(_, ty, left, right) => Tree::Branch(
+            format!("divide {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
-        Expression::SDivide(_, ty, left, right) => Tree::Branch(
-            format!("signed divide {}", ty.to_string(ns)),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::UModulo(_, ty, left, right) => Tree::Branch(
-            format!("unsigned modulo {}", ty.to_string(ns)),
-            vec![print_expr(left, func, ns), print_expr(right, func, ns)],
-        ),
-        Expression::SModulo(_, ty, left, right) => Tree::Branch(
-            format!("signed modulo {}", ty.to_string(ns)),
+        Expression::Modulo(_, ty, left, right) => Tree::Branch(
+            format!("modulo {}", ty.to_string(ns)),
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::Power(_, ty, left, right) => Tree::Branch(
