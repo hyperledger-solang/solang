@@ -1509,47 +1509,6 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .into_int_value()
     }
 
-    /// ewasm address is always 160 bits
-    fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b> {
-        let address = contract
-            .builder
-            .build_alloca(contract.address_type(), "address");
-
-        contract.builder.build_store(address, addr);
-
-        let balance = contract
-            .builder
-            .build_alloca(contract.value_type(), "balance");
-
-        contract.builder.build_call(
-            contract.module.get_function("getExternalBalance").unwrap(),
-            &[
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        balance,
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "",
-                    )
-                    .into(),
-            ],
-            "balance",
-        );
-
-        contract
-            .builder
-            .build_load(balance, "balance")
-            .into_int_value()
-    }
-
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) {
         let address = contract
@@ -1880,6 +1839,46 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
                 );
 
                 contract.builder.build_load(value, "self_address")
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Balance, addr) => {
+                let addr = self
+                    .expression(contract, &addr[0], vartab, function)
+                    .into_int_value();
+
+                let address = contract
+                    .builder
+                    .build_alloca(contract.address_type(), "address");
+
+                contract.builder.build_store(address, addr);
+
+                let balance = contract
+                    .builder
+                    .build_alloca(contract.value_type(), "balance");
+
+                contract.builder.build_call(
+                    contract.module.get_function("getExternalBalance").unwrap(),
+                    &[
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                        contract
+                            .builder
+                            .build_pointer_cast(
+                                balance,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                    ],
+                    "balance",
+                );
+
+                contract.builder.build_load(balance, "balance")
             }
             _ => unimplemented!(),
         }

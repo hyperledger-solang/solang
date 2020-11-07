@@ -3409,42 +3409,6 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             .into_int_value()
     }
 
-    /// Substrate value is usually 128 bits
-    fn balance<'b>(&self, contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
-        let scratch_buf = contract.builder.build_pointer_cast(
-            contract.scratch.unwrap().as_pointer_value(),
-            contract.context.i8_type().ptr_type(AddressSpace::Generic),
-            "scratch_buf",
-        );
-        let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
-
-        contract.builder.build_store(
-            scratch_len,
-            contract
-                .context
-                .i32_type()
-                .const_int(contract.ns.value_length as u64, false),
-        );
-
-        contract.builder.build_call(
-            contract.module.get_function("seal_balance").unwrap(),
-            &[scratch_buf.into(), scratch_len.into()],
-            "balance",
-        );
-
-        contract
-            .builder
-            .build_load(
-                contract.builder.build_pointer_cast(
-                    scratch_buf,
-                    contract.value_type().ptr_type(AddressSpace::Generic),
-                    "",
-                ),
-                "balance",
-            )
-            .into_int_value()
-    }
-
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) {
         let address = contract
@@ -3941,6 +3905,37 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
                         "",
                     ),
                     "self_address",
+                )
+            }
+            ast::Expression::Builtin(_, _, ast::Builtin::Balance, _) => {
+                let scratch_buf = contract.builder.build_pointer_cast(
+                    contract.scratch.unwrap().as_pointer_value(),
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "scratch_buf",
+                );
+                let scratch_len = contract.scratch_len.unwrap().as_pointer_value();
+
+                contract.builder.build_store(
+                    scratch_len,
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.value_length as u64, false),
+                );
+
+                contract.builder.build_call(
+                    contract.module.get_function("seal_balance").unwrap(),
+                    &[scratch_buf.into(), scratch_len.into()],
+                    "balance",
+                );
+
+                contract.builder.build_load(
+                    contract.builder.build_pointer_cast(
+                        scratch_buf,
+                        contract.value_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    ),
+                    "balance",
                 )
             }
             _ => unimplemented!(),

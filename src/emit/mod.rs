@@ -232,9 +232,6 @@ pub trait TargetRuntime<'a> {
     /// Return the value we received
     fn value_transferred<'b>(&self, contract: &Contract<'b>) -> IntValue<'b>;
 
-    /// Return the balance for address
-    fn balance<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>) -> IntValue<'b>;
-
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, contract: &Contract<'b>, addr: IntValue<'b>);
 
@@ -2230,13 +2227,6 @@ pub trait TargetRuntime<'a> {
                     .into()
             }
             Expression::ReturnData(_) => self.return_data(contract).into(),
-            Expression::Balance(_, _, addr) => {
-                let addr = self
-                    .expression(contract, addr, vartab, function)
-                    .into_int_value();
-
-                self.balance(contract, addr).into()
-            }
             Expression::Builtin(_, _, Builtin::Calldata, _)
                 if contract.ns.target != Target::Substrate =>
             {

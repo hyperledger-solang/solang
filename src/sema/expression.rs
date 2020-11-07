@@ -97,7 +97,6 @@ impl Expression {
             | Expression::ExternalFunctionCall { loc, .. }
             | Expression::ExternalFunctionCallRaw { loc, .. }
             | Expression::Constructor { loc, .. }
-            | Expression::Balance(loc, _, _)
             | Expression::PreIncrement(loc, _, _)
             | Expression::PreDecrement(loc, _, _)
             | Expression::PostIncrement(loc, _, _)
@@ -167,7 +166,6 @@ impl Expression {
             | Expression::StructMember(_, ty, _, _)
             | Expression::AllocDynamicArray(_, ty, _, _)
             | Expression::DynamicArraySubscript(_, ty, _, _)
-            | Expression::Balance(_, ty, _)
             | Expression::PreIncrement(_, ty, _)
             | Expression::PreDecrement(_, ty, _)
             | Expression::PostIncrement(_, ty, _)
@@ -3363,7 +3361,12 @@ fn member_access(
                     }
                 }
 
-                return Ok(Expression::Balance(*loc, Type::Value, Box::new(expr)));
+                return Ok(Expression::Builtin(
+                    *loc,
+                    vec![Type::Value],
+                    Builtin::Balance,
+                    vec![expr],
+                ));
             }
         }
         Type::Contract(ref_contract_no) => {
