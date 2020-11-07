@@ -999,7 +999,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         &self,
         contract: &Contract<'a>,
         _function: FunctionValue,
-        slot: PointerValue,
+        slot: PointerValue<'a>,
         ty: IntType<'a>,
     ) -> IntValue<'a> {
         let dest = contract.builder.build_array_alloca(

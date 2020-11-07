@@ -647,7 +647,7 @@ impl Namespace {
     /// Type storage
     pub fn storage_type(&self) -> Type {
         if self.target == Target::Solana {
-            Type::Uint(64)
+            Type::Uint(32)
         } else {
             Type::Uint(256)
         }

@@ -51,46 +51,57 @@ fn build_solidity(src: &'static str) -> VM {
         abi: ethabi::Contract::load(abi.as_bytes()).unwrap(),
         printbuf: String::new(),
         output: Vec::new(),
+        data: Vec::new(),
     }
 }
 
 const MAX_PERMITTED_DATA_INCREASE: usize = 10 * 1024;
 
-fn serialize_parameters(input: &[u8]) -> Vec<u8> {
+fn serialize_parameters(input: &[u8], data: &[u8]) -> Vec<u8> {
     let mut v: Vec<u8> = Vec::new();
 
     // ka_num
-    v.write_u64::<LittleEndian>(1).unwrap();
-    // dup_info
-    v.write_u8(0xff).unwrap();
-    // signer
-    v.write_u8(1).unwrap();
-    // is_writable
-    v.write_u8(1).unwrap();
-    // executable
-    v.write_u8(1).unwrap();
-    // padding
-    v.write_all(&[0u8; 4]).unwrap();
-    // key
-    v.write_all(&[0u8; 32]).unwrap();
-    // owner
-    v.write_all(&[0u8; 32]).unwrap();
-    // lamports
-    v.write_u64::<LittleEndian>(0).unwrap();
+    v.write_u64::<LittleEndian>(2).unwrap();
+    for account_no in 0..2 {
+        // dup_info
+        v.write_u8(0xff).unwrap();
+        // signer
+        v.write_u8(1).unwrap();
+        // is_writable
+        v.write_u8(1).unwrap();
+        // executable
+        v.write_u8(1).unwrap();
+        // padding
+        v.write_all(&[0u8; 4]).unwrap();
+        // key
+        v.write_all(&[0u8; 32]).unwrap();
+        // owner
+        v.write_all(&[0u8; 32]).unwrap();
+        // lamports
+        v.write_u64::<LittleEndian>(0).unwrap();
 
-    // account data
-    // data len
-    v.write_u64::<LittleEndian>(0).unwrap();
-    v.write_all(&[0u8; MAX_PERMITTED_DATA_INCREASE]).unwrap();
+        // account data
+        // data len
+        if account_no == 1 {
+            v.write_u64::<LittleEndian>(1024).unwrap();
+            let mut data = data.to_vec();
+            data.resize(1024, 0);
+            v.write_all(&data).unwrap();
+        } else {
+            v.write_u64::<LittleEndian>(1024).unwrap();
+            v.write_all(&[0u8; 1024]).unwrap();
+        }
+        v.write_all(&[0u8; MAX_PERMITTED_DATA_INCREASE]).unwrap();
 
-    let padding = v.len() % 8;
-    if padding != 0 {
-        let mut p = Vec::new();
-        p.resize(8 - padding, 0);
-        v.extend_from_slice(&p);
+        let padding = v.len() % 8;
+        if padding != 0 {
+            let mut p = Vec::new();
+            p.resize(8 - padding, 0);
+            v.extend_from_slice(&p);
+        }
+        // rent epoch
+        v.write_u64::<LittleEndian>(0).unwrap();
     }
-    // rent epoch
-    v.write_u64::<LittleEndian>(0).unwrap();
 
     // calldata
     v.write_u64::<LittleEndian>(input.len() as u64).unwrap();
@@ -114,12 +125,19 @@ fn deserialize_parameters(input: &[u8]) -> Vec<Vec<u8>> {
     for _ in 0..ka_num {
         start += 8 + 32 + 32 + 8;
 
-        let data_len = LittleEndian::read_u64(&input[start..]);
+        let data_len = LittleEndian::read_u64(&input[start..]) as usize;
         start += size_of::<u64>();
 
-        res.push(input[start..start + data_len as usize].to_vec());
+        res.push(input[start..start + data_len].to_vec());
 
-        // FIXME this is broken for >1 account
+        start += data_len + MAX_PERMITTED_DATA_INCREASE;
+
+        let padding = start % 8;
+        if padding > 0 {
+            start += 8 - padding
+        }
+
+        start += size_of::<u64>();
     }
 
     res
@@ -129,6 +147,7 @@ struct VM {
     code: Vec<u8>,
     abi: ethabi::Contract,
     printbuf: String,
+    data: Vec<u8>,
     output: Vec<u8>,
 }
 
@@ -230,15 +249,26 @@ impl VM {
         )
         .unwrap();
 
-        let parameter_bytes = serialize_parameters(&calldata);
+        let parameter_bytes = serialize_parameters(&calldata, &self.data);
 
         let res = vm
             .execute_program(&parameter_bytes, &[], &[heap_region])
             .unwrap();
 
-        let mut account_data = deserialize_parameters(&parameter_bytes);
+        let mut accounts = deserialize_parameters(&parameter_bytes);
 
-        self.output = account_data.remove(0);
+        let output = accounts.remove(0);
+        let data = accounts.remove(0);
+
+        println!(
+            "output: {} \ndata: {}",
+            hex::encode(&output),
+            hex::encode(&data)
+        );
+
+        let len = LittleEndian::read_u64(&output);
+        self.output = output[8..len as usize + 8].to_vec();
+        self.data = data;
 
         println!("account: {}", hex::encode(&self.output));
 
@@ -308,6 +338,7 @@ fn parameters() {
                 if (x == 10) {
                     print("x is 10");
                 }
+
                 if (y == 102) {
                     print("y is 102");
                 }
@@ -378,4 +409,47 @@ fn returns() {
             ethabi::Token::Uint(ethereum_types::U256::from(961748941u64 * 982451653u64))
         ]
     );
+}
+
+#[test]
+fn flipper() {
+    let mut vm = build_solidity(
+        r#"
+        contract flipper {
+            bool private value;
+
+            /// Constructor that initializes the `bool` value to the given `init_value`.
+            constructor(bool initvalue) {
+                value = initvalue;
+            }
+
+            /// A message that can be called on instantiated contracts.
+            /// This one flips the value of the stored `bool` from `true`
+            /// to `false` and vice versa.
+            function flip() public {
+                value = !value;
+            }
+
+            /// Simply returns the current value of our `bool`.
+            function get() public view returns (bool) {
+                return value;
+            }
+        }"#,
+    );
+
+    vm.constructor(&[ethabi::Token::Bool(true)]);
+
+    assert_eq!(vm.data[0], 0x01);
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::Bool(true)]);
+
+    vm.function("flip", &[]);
+
+    assert_eq!(vm.data[0], 0x00);
+
+    let returns = vm.function("get", &[]);
+
+    assert_eq!(returns, vec![ethabi::Token::Bool(false)]);
 }
