@@ -40,10 +40,8 @@ impl Expression {
             | Expression::Add(loc, _, _, _)
             | Expression::Subtract(loc, _, _, _)
             | Expression::Multiply(loc, _, _, _)
-            | Expression::UDivide(loc, _, _, _)
-            | Expression::SDivide(loc, _, _, _)
-            | Expression::UModulo(loc, _, _, _)
-            | Expression::SModulo(loc, _, _, _)
+            | Expression::Divide(loc, _, _, _)
+            | Expression::Modulo(loc, _, _, _)
             | Expression::Power(loc, _, _, _)
             | Expression::BitwiseOr(loc, _, _, _)
             | Expression::BitwiseAnd(loc, _, _, _)
@@ -130,10 +128,8 @@ impl Expression {
             | Expression::Add(_, ty, _, _)
             | Expression::Subtract(_, ty, _, _)
             | Expression::Multiply(_, ty, _, _)
-            | Expression::UDivide(_, ty, _, _)
-            | Expression::SDivide(_, ty, _, _)
-            | Expression::UModulo(_, ty, _, _)
-            | Expression::SModulo(_, ty, _, _)
+            | Expression::Divide(_, ty, _, _)
+            | Expression::Modulo(_, ty, _, _)
             | Expression::Power(_, ty, _, _)
             | Expression::BitwiseOr(_, ty, _, _)
             | Expression::BitwiseAnd(_, ty, _, _)
@@ -1482,21 +1478,12 @@ pub fn expression(
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), false, ns)?;
 
-            if ty.is_signed_int() {
-                Ok(Expression::SDivide(
-                    *loc,
-                    ty.clone(),
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            } else {
-                Ok(Expression::UDivide(
-                    *loc,
-                    ty.clone(),
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            }
+            Ok(Expression::Divide(
+                *loc,
+                ty.clone(),
+                Box::new(cast(&l.loc(), left, &ty, true, ns)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns)?),
+            ))
         }
         pt::Expression::Modulo(loc, l, r) => {
             let left = expression(l, file_no, contract_no, ns, symtable, is_constant)?;
@@ -1504,21 +1491,12 @@ pub fn expression(
 
             let ty = coerce_int(&left.ty(), &l.loc(), &right.ty(), &r.loc(), false, ns)?;
 
-            if ty.is_signed_int() {
-                Ok(Expression::SModulo(
-                    *loc,
-                    ty.clone(),
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            } else {
-                Ok(Expression::UModulo(
-                    *loc,
-                    ty.clone(),
-                    Box::new(cast(&l.loc(), left, &ty, true, ns)?),
-                    Box::new(cast(&r.loc(), right, &ty, true, ns)?),
-                ))
-            }
+            Ok(Expression::Modulo(
+                *loc,
+                ty.clone(),
+                Box::new(cast(&l.loc(), left, &ty, true, ns)?),
+                Box::new(cast(&r.loc(), right, &ty, true, ns)?),
+            ))
         }
         pt::Expression::Power(loc, b, e) => {
             let base = expression(b, file_no, contract_no, ns, symtable, is_constant)?;
@@ -2851,18 +2829,10 @@ fn assign_expr(
                 ty.is_signed_int(),
             ),
             pt::Expression::AssignDivide(_, _, _) => {
-                if ty.is_signed_int() {
-                    Expression::SDivide(*loc, ty.clone(), Box::new(assign), Box::new(set))
-                } else {
-                    Expression::UDivide(*loc, ty.clone(), Box::new(assign), Box::new(set))
-                }
+                Expression::Divide(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
             pt::Expression::AssignModulo(_, _, _) => {
-                if ty.is_signed_int() {
-                    Expression::SModulo(*loc, ty.clone(), Box::new(assign), Box::new(set))
-                } else {
-                    Expression::UModulo(*loc, ty.clone(), Box::new(assign), Box::new(set))
-                }
+                Expression::Modulo(*loc, ty.clone(), Box::new(assign), Box::new(set))
             }
             _ => unreachable!(),
         })

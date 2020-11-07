@@ -430,10 +430,8 @@ pub enum Expression {
     Add(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Subtract(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Multiply(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    UDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    SDivide(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    UModulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
-    SModulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Divide(pt::Loc, Type, Box<Expression>, Box<Expression>),
+    Modulo(pt::Loc, Type, Box<Expression>, Box<Expression>),
     Power(pt::Loc, Type, Box<Expression>, Box<Expression>),
     BitwiseOr(pt::Loc, Type, Box<Expression>, Box<Expression>),
     BitwiseAnd(pt::Loc, Type, Box<Expression>, Box<Expression>),
@@ -561,10 +559,8 @@ impl Expression {
                 Expression::Add(_, _, left, right)
                 | Expression::Subtract(_, _, left, right)
                 | Expression::Multiply(_, _, left, right)
-                | Expression::UDivide(_, _, left, right)
-                | Expression::SDivide(_, _, left, right)
-                | Expression::UModulo(_, _, left, right)
-                | Expression::SModulo(_, _, left, right)
+                | Expression::Divide(_, _, left, right)
+                | Expression::Modulo(_, _, left, right)
                 | Expression::Power(_, _, left, right)
                 | Expression::BitwiseOr(_, _, left, right)
                 | Expression::BitwiseAnd(_, _, left, right)

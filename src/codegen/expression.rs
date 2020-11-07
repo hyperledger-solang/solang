@@ -48,25 +48,13 @@ pub fn expression(
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::SDivide(loc, ty, left, right) => Expression::SDivide(
+        Expression::Divide(loc, ty, left, right) => Expression::Divide(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
             Box::new(expression(right, cfg, contract_no, ns, vartab)),
         ),
-        Expression::UDivide(loc, ty, left, right) => Expression::UDivide(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
-        ),
-        Expression::SModulo(loc, ty, left, right) => Expression::SModulo(
-            *loc,
-            ty.clone(),
-            Box::new(expression(left, cfg, contract_no, ns, vartab)),
-            Box::new(expression(right, cfg, contract_no, ns, vartab)),
-        ),
-        Expression::UModulo(loc, ty, left, right) => Expression::UModulo(
+        Expression::Modulo(loc, ty, left, right) => Expression::Modulo(
             *loc,
             ty.clone(),
             Box::new(expression(left, cfg, contract_no, ns, vartab)),
