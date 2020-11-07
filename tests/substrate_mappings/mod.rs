@@ -431,7 +431,7 @@ fn test_string_map() {
 
     let mut vals = HashMap::new();
 
-    for _ in 0..2 {
+    for _ in 0..10 {
         let len = rng.gen::<usize>() % 256;
         let mut val = Vec::new();
         val.resize(len, 0u8);
@@ -452,11 +452,11 @@ fn test_string_map() {
 
     // now delete them
 
-    for (address, _) in &vals {
+    for address in vals.keys() {
         runtime.function("rm", GetArg(*address).encode());
     }
 
-    for (address, _) in &vals {
+    for address in vals.keys() {
         runtime.function("get", GetArg(*address).encode());
 
         assert_eq!(runtime.vm.output, GetRet(Vec::new()).encode());
