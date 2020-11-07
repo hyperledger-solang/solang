@@ -556,7 +556,6 @@ pub enum Expression {
     Keccak256(pt::Loc, Type, Vec<Expression>),
 
     ReturnData(pt::Loc),
-    Balance(pt::Loc, Type, Box<Expression>),
     Builtin(pt::Loc, Vec<Type>, Builtin, Vec<Expression>),
     List(pt::Loc, Vec<Expression>),
     Poison,
@@ -715,7 +714,6 @@ impl Expression {
                         e.recurse(cx, f);
                     }
                 }
-                Expression::Balance(_, _, expr) => expr.recurse(cx, f),
                 _ => (),
             }
         }
@@ -731,6 +729,7 @@ pub enum StringLocation {
 #[derive(PartialEq, Clone, Debug)]
 pub enum Builtin {
     GetAddress,
+    Balance,
     PayableSend,
     PayableTransfer,
     ArrayPush,

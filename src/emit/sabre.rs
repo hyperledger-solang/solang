@@ -759,11 +759,6 @@ impl<'a> TargetRuntime<'a> for SabreTarget {
         contract.value_type().const_zero()
     }
 
-    /// Return the balance for address
-    fn balance<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) -> IntValue<'b> {
-        panic!("Sabre does not have the concept of balance");
-    }
-
     /// Terminate execution, destroy contract and send remaining funds to addr
     fn selfdestruct<'b>(&self, _contract: &Contract<'b>, _addr: IntValue<'b>) {
         panic!("Sabre does not have the concept of selfdestruct");
