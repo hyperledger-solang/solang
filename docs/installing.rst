@@ -102,13 +102,13 @@ Installing LLVM on Windows
 __________________________
 
 A pre-built version of llvm, specifically configured for Solang, is available at
-`<https://solang.io/download/llvm10.0.zip>`_. This version is built using the
+`<https://solang.io/download/llvm10.0-win.zip>`_. This version is built using the
 `dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_.
 
 If you want to use the dockerfile yourself rather than download the binaries above, then this
 requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ and switch to
 `windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
-Docker on Windows needs Hyper-V. The result will be an image with llvm compressed in ``c:\llvm10.0.zip``.
+Docker on Windows needs Hyper-V. The result will be an image with llvm compressed in ``c:\llvm10.0-win.zip``.
 If you are running Windows 10 in a virtual machine, be sure to check
 `this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
 

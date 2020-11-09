@@ -16,4 +16,4 @@ RUN cmake -G Ninja -DLLVM_ENABLE_ASSERTIONS=On -DLLVM_ENABLE_TERMINFO=Off \
 
 RUN cmake --build . --target install
 
-RUN tar jcf /llvm10.0.tar.bz2 /llvm10.0/
+RUN tar jcf /llvm10.0-linux.tar.bz2 /llvm10.0/
