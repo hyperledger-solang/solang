@@ -67,6 +67,6 @@ RUN cmake --build build --target install
 
 WORKDIR \
 
-RUN Compress-Archive -Path C:\llvm10.0 -DestinationPath C:\llvm10.0.zip
+RUN Compress-Archive -Path C:\llvm10.0 -DestinationPath C:\llvm10.0-win.zip
 
 RUN Remove-Item -Path \llvm-project,C:\TEMP -Recurse -Force

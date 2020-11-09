@@ -1,7 +1,7 @@
 FROM ubuntu:18.04 as builder
 
-ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get install -y libz-dev pkg-config libssl-dev git cmake ninja-build gcc g++ python
 
 RUN git clone --branch bpf --single-branch \
