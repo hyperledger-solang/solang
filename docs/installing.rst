@@ -33,8 +33,8 @@ The Solang binary is stored at ``/usr/bin/solang`` in this image. The `latest` t
 gets updated each time there is a commit to the master branch of the solang
 git repository.
 
-Build Solang from source using Dockerfile
------------------------------------------
+Build Solang using Dockerfile
+-----------------------------
 
 First clone the git repo using:
 
@@ -46,47 +46,24 @@ Then you can build the image using:
 
 .. code-block:: bash
 
-	docker build .
-
-Alternatively this will work with podman too:
-
-.. code-block:: bash
-
-	podman image build .
-
-Building Solang from source from crates.io
-------------------------------------------
-
-The latest solang release is  on `crates.io <https://crates.io/crates/solang>`_.
+	docker image build .
 
 Building Solang from source
 ---------------------------
 
-In order to build solang from source, you will need rust 1.42.0 or higher,
-and a build of llvm based on our tree. There are a few patches for the bpf target
-which are not upstream yet. First, follow the steps below for installing llvm
-and then proceed from here.
-
-So see if you have the correct version of rust, simply execute:
-
-.. code-block:: bash
-
-  rustc --version
+In order to build solang from source, you will need rust 1.43.0 or higher,
+and a build of llvm based on our tree. There are a few patches which are not upstream yet
+First, follow the steps below for installing llvm and then proceed from there.
 
 If you do not have the correct version of rust installed, go to `rustup <https://rustup.rs/>`_.
-
-.. code-block:: bash
-
-  cargo build --release
-
-The executable will be in ``target/release/solang``.
 
 Installing the LLVM Libraries
 -----------------------------
 
-Solang needs a build of llvm with some extra patches for the bpf target. You can either
-download the pre-built binaries or build your own from source. You need to add
-the `bin` directory to your path, so that the build system of Solang can find the
+Solang needs a build of
+`llvm with some extra patches <https://github.com/seanyoung/llvm-project/tree/bpf>`_.
+You can either download the pre-built binaries or build your own from source. After that,
+You need to add the `bin` directory to your path, so that the build system of Solang can find the
 correct version of llvm to use.
 
 Installing LLVM on Linux
@@ -176,3 +153,26 @@ And on Windows, assuming *installdir* was ``C:\Users\User\solang-llvm``:
 .. code-block:: batch
 
 	set PATH=%PATH%;C:\Users\User\solang-llvm\bin
+
+Building Solang from crates.io
+------------------------------
+
+The latest solang release is  on `crates.io <https://crates.io/crates/solang>`_. Once you have the
+correct llvm version in your path, simply run:
+
+.. code-block:: bash
+
+	cargo install solang
+
+Building Solang from git
+------------------------
+
+Once you have the correct llvm version in your path, simply run:
+
+.. code-block:: bash
+
+	git clone https://github.com/hyperledger-labs/solang/
+	cd solang
+	cargo build --release
+
+The executable will be in ``target/release/solang``.
