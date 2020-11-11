@@ -1,5 +1,5 @@
 /**
- * Hello world
+ * Flipper
  *
  * @flow
  */
@@ -8,14 +8,13 @@ import {
   establishConnection,
   establishPayer,
   loadProgram,
-  sayHello,
-  reportHellos,
   callConstructor,
-  callTest,
-} from './hello_world';
+  callFlip,
+  callGet,
+} from './flipper';
 
 async function main() {
-  console.log("Let's say hello to a Solana account...");
+  console.log("Let's try out lfipper to a Solana account...");
 
   // Establish connection to the cluster
   await establishConnection();
@@ -27,8 +26,21 @@ async function main() {
   await loadProgram();
 
   await callConstructor();
-  await callTest();
 
+  let ret = await callGet();
+  if (ret !== true) {
+    throw new Error('flip value should be true after constructor');
+  }
+  await callFlip();
+  ret = await callGet();
+  if (ret !== false) {
+    throw new Error('flip value should be false after 1st flip');
+  }
+  await callFlip();
+  ret = await callGet();
+  if (ret !== true) {
+    throw new Error('flip value should be true after 2nd flip');
+  }
   console.log('Success');
 }
 
