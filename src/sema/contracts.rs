@@ -1,7 +1,7 @@
+use crate::parser::pt;
 use inkwell::OptimizationLevel;
 use num_bigint::BigInt;
 use num_traits::Zero;
-use parser::pt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -12,7 +12,7 @@ use super::functions;
 use super::statements;
 use super::symtable::Symtable;
 use super::variables;
-use emit;
+use crate::emit;
 
 impl ast::Contract {
     /// Create a new contract, abstract contract, interface or library

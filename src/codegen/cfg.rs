@@ -6,14 +6,13 @@ use std::str;
 
 use super::expression::expression;
 use super::statements::{statement, LoopScopes};
-use hex;
-use parser::pt;
-use sema::ast::{
+use crate::parser::pt;
+use crate::sema::ast::{
     CallTy, Contract, Expression, Function, Namespace, Parameter, StringLocation, Type,
 };
-use sema::contracts::{collect_base_args, visit_bases};
-use sema::symtable::Symtable;
-use Target;
+use crate::sema::contracts::{collect_base_args, visit_bases};
+use crate::sema::symtable::Symtable;
+use crate::Target;
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]

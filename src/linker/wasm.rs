@@ -1,4 +1,4 @@
-use parity_wasm;
+use crate::Target;
 use parity_wasm::builder;
 use parity_wasm::elements::{InitExpr, Instruction, Module};
 use std::ffi::CString;
@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use tempfile::tempdir;
-use Target;
 
 pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     if target == Target::Generic {

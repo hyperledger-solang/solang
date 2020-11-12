@@ -1,6 +1,6 @@
-use codegen::cfg::HashTy;
-use parser::pt;
-use sema::ast;
+use crate::codegen::cfg::HashTy;
+use crate::parser::pt;
+use crate::sema::ast;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::str;

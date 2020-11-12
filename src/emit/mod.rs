@@ -1,7 +1,6 @@
-use hex;
-use parser::pt;
-use sema::ast;
-use sema::ast::{Builtin, Expression, StringLocation};
+use crate::parser::pt;
+use crate::sema::ast;
+use crate::sema::ast::{Builtin, Expression, StringLocation};
 use std::cell::RefCell;
 use std::path::Path;
 use std::str;
@@ -12,6 +11,7 @@ use num_traits::ToPrimitive;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
+use crate::Target;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::memory_buffer::MemoryBuffer;
@@ -26,7 +26,6 @@ use inkwell::values::{
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
-use Target;
 
 mod ethabiencoder;
 mod ewasm;
@@ -35,8 +34,8 @@ mod sabre;
 mod solana;
 mod substrate;
 
-use codegen::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Storage};
-use linker::link;
+use crate::codegen::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Storage};
+use crate::linker::link;
 
 lazy_static::lazy_static! {
     static ref LLVM_INIT: () = {

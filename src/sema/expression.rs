@@ -21,9 +21,8 @@ use super::builtin;
 use super::contracts::{import_library, is_base};
 use super::eval::eval_const_number;
 use super::symtable::Symtable;
+use crate::parser::pt;
 use crate::Target;
-use hex;
-use parser::pt;
 
 impl Expression {
     /// Return the location for this expression

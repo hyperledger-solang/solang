@@ -2,7 +2,7 @@ use super::ast::{ContractVariable, Diagnostic, Namespace, Symbol};
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
-use parser::pt;
+use crate::parser::pt;
 
 pub fn contract_variables(
     def: &pt::ContractDefinition,

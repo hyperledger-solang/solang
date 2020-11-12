@@ -1,11 +1,3 @@
-extern crate ethabi;
-extern crate ethereum_types;
-extern crate num_derive;
-extern crate num_traits;
-extern crate rand;
-extern crate solang;
-extern crate wasmi;
-
 use ethabi::{decode, RawLog, Token};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;

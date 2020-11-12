@@ -1,7 +1,6 @@
 use super::ast::*;
-use hex;
-use parser::pt;
-use Target;
+use crate::parser::pt;
+use crate::Target;
 
 #[derive(Clone)]
 enum Tree {

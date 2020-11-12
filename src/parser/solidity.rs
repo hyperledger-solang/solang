@@ -1,13 +1,13 @@
 // auto-generated: "lalrpop 0.19.1"
-// sha256: 6faba038aaa964784befc7cdfcee592dfa40b9a7b44991b5d2641097556174d9
+// sha256: 31898c44ba4b9b8cf6a22ee3d0f821e6c59115a6fccede53c6cb2775f9f
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
 use num_traits::Pow;
-use parser::pt::*;
 use std::ops::Mul;
-use parser::box_option;
 use lalrpop_util::ParseError;
+use super::pt::*;
+use super::box_option;
 use super::lexer::{Token, LexicalError, CommentType};
 use super::doc::tags;
 #[allow(unused_extern_crates)]
@@ -23,10 +23,10 @@ mod __parse__SourceUnit {
     use num_bigint::BigInt;
     use num_bigint::BigUint;
     use num_traits::Pow;
-    use parser::pt::*;
     use std::ops::Mul;
-    use parser::box_option;
     use lalrpop_util::ParseError;
+    use super::super::pt::*;
+    use super::super::box_option;
     use super::super::lexer::{Token, LexicalError, CommentType};
     use super::super::doc::tags;
     #[allow(unused_extern_crates)]

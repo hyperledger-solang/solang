@@ -5,7 +5,7 @@ use num_traits::ToPrimitive;
 use num_traits::Zero;
 
 use super::ast::{Diagnostic, Expression, Namespace};
-use parser::pt;
+use crate::parser::pt;
 
 /// Resolve an expression where a compile-time constant is expected
 pub fn eval_const_number(

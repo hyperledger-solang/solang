@@ -1,7 +1,7 @@
 use super::ast::{
     Builtin, DestructureField, Diagnostic, Expression, Function, Namespace, Statement, Type,
 };
-use parser::pt;
+use crate::parser::pt;
 
 /// check state mutablity
 pub fn mutablity(file_no: usize, ns: &mut Namespace) {

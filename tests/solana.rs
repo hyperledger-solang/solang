@@ -1,11 +1,3 @@
-//
-extern crate byteorder;
-extern crate ethabi;
-extern crate ethereum_types;
-extern crate libc;
-extern crate solana_rbpf;
-extern crate solang;
-
 mod solana_helpers;
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};

@@ -5,7 +5,7 @@ mod storage;
 
 use self::cfg::{ControlFlowGraph, Instr, Vartable};
 use self::expression::expression;
-use sema::ast::Namespace;
+use crate::sema::ast::Namespace;
 
 /// The contracts are fully resolved but they do not have any a CFG which is needed for the llvm code emitter
 /// not all contracts need a cfg; only those for which we need the

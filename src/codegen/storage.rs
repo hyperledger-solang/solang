@@ -5,8 +5,8 @@ use num_traits::Zero;
 
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::expression;
-use parser::pt;
-use sema::ast::{Expression, Namespace, Type};
+use crate::parser::pt;
+use crate::sema::ast::{Expression, Namespace, Type};
 
 /// Given a storage slot which is the start of the array, calculate the
 /// offset of the array element. This function exists to avoid doing

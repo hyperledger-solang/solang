@@ -2,12 +2,12 @@ use super::ast::{
     Contract, Diagnostic, EnumDecl, EventDecl, Namespace, Parameter, StructDecl, Symbol, Tag, Type,
 };
 use super::tags::resolve_tags;
+use crate::parser::pt;
+use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
-use parser::pt;
 use std::collections::HashMap;
 use std::ops::Mul;
-use Target;
 
 /// List the types which should be resolved later
 pub struct ResolveFields<'a> {

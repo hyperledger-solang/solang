@@ -1,9 +1,9 @@
 // Parity Substrate style ABIs/Abi
+use crate::parser::pt;
+use crate::sema::ast;
+use crate::sema::tags::render;
 use contract_metadata::*;
 use num_traits::ToPrimitive;
-use parser::pt;
-use sema::ast;
-use sema::tags::render;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};

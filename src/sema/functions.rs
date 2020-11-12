@@ -1,8 +1,8 @@
 use super::ast::{Diagnostic, Function, Namespace, Parameter, Symbol, Type};
 use super::contracts::is_base;
 use super::tags::resolve_tags;
-use parser::pt;
-use Target;
+use crate::parser::pt;
+use crate::Target;
 
 /// Resolve function declaration
 pub fn function_decl(

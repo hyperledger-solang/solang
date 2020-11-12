@@ -1,23 +1,3 @@
-extern crate blake2_rfc;
-extern crate clap;
-extern crate contract_metadata;
-extern crate hex;
-extern crate inkwell;
-extern crate lalrpop_util;
-extern crate lazy_static;
-extern crate num_bigint;
-extern crate num_derive;
-extern crate num_traits;
-extern crate parity_wasm;
-extern crate phf;
-extern crate semver;
-extern crate serde;
-extern crate serde_derive;
-extern crate serde_json;
-extern crate tempfile;
-extern crate tiny_keccak;
-extern crate unicode_xid;
-
 pub mod abi;
 pub mod codegen;
 mod emit;

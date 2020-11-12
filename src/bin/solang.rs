@@ -1,8 +1,3 @@
-extern crate clap;
-extern crate handlebars;
-extern crate serde;
-extern crate solang;
-
 use clap::{App, Arg, ArgMatches};
 use serde::Serialize;
 use std::collections::HashMap;

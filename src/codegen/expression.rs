@@ -1,17 +1,17 @@
 use super::cfg::{ControlFlowGraph, HashTy, Instr, InternalCallTy, Vartable};
 use super::storage::{array_offset, array_pop, array_push, bytes_pop, bytes_push};
+use crate::parser::pt;
+use crate::sema::ast::{Builtin, CallTy, Expression, Namespace, Parameter, StringLocation, Type};
+use crate::sema::eval::eval_const_number;
+use crate::sema::expression::{cast_shift_arg, try_bigint_to_expression, try_cast};
+use crate::Target;
 use num_bigint::BigInt;
 use num_traits::FromPrimitive;
 use num_traits::One;
 use num_traits::ToPrimitive;
 use num_traits::Zero;
-use parser::pt;
-use sema::ast::{Builtin, CallTy, Expression, Namespace, Parameter, StringLocation, Type};
-use sema::eval::eval_const_number;
-use sema::expression::{cast_shift_arg, try_bigint_to_expression, try_cast};
 use std::collections::HashSet;
 use std::ops::Mul;
-use Target;
 
 pub fn expression(
     expr: &Expression,

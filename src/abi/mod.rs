@@ -1,5 +1,5 @@
-use sema::ast::Namespace;
-use Target;
+use crate::sema::ast::Namespace;
+use crate::Target;
 
 pub mod ethereum;
 pub mod substrate;
