@@ -169,7 +169,7 @@ export async function loadProgram(): Promise<void> {
   storagePubkey = storageAccount.publicKey;
   {
     console.log('Creating account', storagePubkey.toBase58(), 'for flipper contract storage');
-    const space = 8;
+    const space = 10;
     const lamports = await connection.getMinimumBalanceForRentExemption(
       storageAccountDataLayout.span,
     );

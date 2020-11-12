@@ -346,6 +346,8 @@ fn parameters() {
         }"#,
     );
 
+    vm.constructor(&[]);
+
     vm.function(
         "test",
         &[
@@ -378,6 +380,8 @@ fn returns() {
         }"#,
     );
 
+    vm.constructor(&[]);
+
     let returns = vm.function(
         "test",
         &[ethabi::Token::Uint(ethereum_types::U256::from(10))],
@@ -396,6 +400,8 @@ fn returns() {
             }
         }"#,
     );
+
+    vm.constructor(&[]);
 
     let returns = vm.function(
         "test",
@@ -439,7 +445,10 @@ fn flipper() {
 
     vm.constructor(&[ethabi::Token::Bool(true)]);
 
-    assert_eq!(vm.data[0], 0x01);
+    assert_eq!(
+        vm.data[0..9].to_vec(),
+        hex::decode("6fc90ec5ae05628b01").unwrap()
+    );
 
     let returns = vm.function("get", &[]);
 
@@ -447,7 +456,10 @@ fn flipper() {
 
     vm.function("flip", &[]);
 
-    assert_eq!(vm.data[0], 0x00);
+    assert_eq!(
+        vm.data[0..9].to_vec(),
+        hex::decode("6fc90ec5ae05628b00").unwrap()
+    );
 
     let returns = vm.function("get", &[]);
 

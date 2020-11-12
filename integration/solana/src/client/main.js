@@ -14,7 +14,7 @@ import {
 } from './flipper';
 
 async function main() {
-  console.log("Let's try out lfipper to a Solana account...");
+  console.log("Let's try out flipper to a Solana account...");
 
   // Establish connection to the cluster
   await establishConnection();
