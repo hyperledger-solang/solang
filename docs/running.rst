@@ -5,9 +5,10 @@ The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
 wasm file which is ready for deployment on a chain, and an abi file.
 
-Three targets are supported right now:
+The following targets are supported right now:
 `Ethereum ewasm <https://github.com/ewasm/design>`_,
-`Parity Substrate <https://substrate.dev/>`_, and
+`Parity Substrate <https://substrate.dev/>`_,
+`Solana <https://www.solana.com/>`_ and
 `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_.
 
 .. note::
@@ -35,8 +36,8 @@ Options:
   will be silent if there are no errors or warnings.
 
 \\-\\-target *target*
-  This takes one argument, which can either be ``ewasm``, ``sabre``, or ``substrate``.
-  The default is substrate.
+  This takes one argument, which can either be ``ewasm``, ``sabre``, ``solana``,
+  or ``substrate``. The default is substrate.
 
 \\-\\-doc
   Generate documentation for the given Solidity as a simple html page. This uses the
@@ -150,6 +151,39 @@ directory. Write this to flipper.sol and run:
 
 Now you should have ``flipper.wasm`` and ``flipper.json``. This can be used
 directly in the `Polkadot UI <https://substrate.dev/substrate-contracts-workshop/#/0/deploying-your-contract?id=putting-your-code-on-the-blockchain>`_, as if the contract was written in ink!.
+
+Using solang with Solana
+------------------------
+
+The `Solana <https://www.solana.com/>`_ target is new and is limited right now, not all types are implemented
+and other functionality is incomplete. However, the
+`flipper example <https://github.com/hyperledger-labs/solang/tree/master/examples/flipper.sol>`_
+can be used.
+
+.. code-block:: bash
+
+  solang --target solana flipper.sol -v
+
+This will produce two files called `flipper.abi` and `flipper.so`. The first is an ethereum style abi file and the latter being
+the ELF BPF shared object which can be deployed on Solana.
+
+Solana has execution model which allows one program to interact with multiple accounts. Those accounts can
+be used for different purposes. In Solang's case, each time the contract is executed, it needs two accounts.
+The first account is for the `return data`, i.e. either the ABI encoded
+return values or the revert buffer. The second account is to hold the contract storage variables.
+
+Before any function on a smart contract can be used, the constructor must be first be called. This ensures that
+the constructor as declared in the solidity code is executed, and that the contract storage account is
+correctly initialized. To call the constructor, abi encode (using ethereum abi encoding) the constructor
+arguments, and pass in two accounts to the call, the 2nd being the contract storage account.
+
+Once that is done, any function on the contract can be called. To do that, abi encode the function call,
+pass this as input, and provide two accounts on the call. The second account must be the same contract
+storage account as used in the constructor. If there are any return values for the function, they
+are stored in the first return data account. The first 8 bytes is a 64 bits length, followed by the
+data itself. You can pass this into an ethereum abi decoder to get the expected return values.
+
+There is `an example of this written in node <https://github.com/hyperledger-labs/solang/tree/master/integration/solana>`_.
 
 Using Solang with Sawtooth Sabre
 --------------------------------
