@@ -4,8 +4,7 @@
 
 #include "solana_sdk.h"
 
-extern int solang_constructor(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
-extern int solang_function(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
+extern int solang_dispatch(const uint8_t *input, uint64_t input_len, SolAccountInfo *ka);
 
 uint64_t
 entrypoint(const uint8_t *input)
@@ -17,16 +16,7 @@ entrypoint(const uint8_t *input)
         return ERROR_INVALID_ARGUMENT;
     }
 
-    if ((params.data_len % 32) == 0)
-    {
-        return solang_constructor(params.data, params.data_len, ka);
-    }
-    else
-    {
-        return solang_function(params.data, params.data_len, ka);
-    }
-
-    return SUCCESS;
+    return solang_dispatch(params.data, params.data_len, ka);
 }
 
 /*

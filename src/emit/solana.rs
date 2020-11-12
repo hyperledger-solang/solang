@@ -9,12 +9,14 @@ use inkwell::types::IntType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
 use inkwell::AddressSpace;
 use inkwell::OptimizationLevel;
+use tiny_keccak::{Hasher, Keccak};
 
 use super::ethabiencoder;
 use super::{Contract, TargetRuntime, Variable};
 
 pub struct SolanaTarget {
     abi: ethabiencoder::EthAbiEncoder,
+    magic: u64,
 }
 
 // Implement the Solana target which uses BPF
@@ -26,8 +28,19 @@ impl SolanaTarget {
         filename: &'a str,
         opt: OptimizationLevel,
     ) -> Contract<'a> {
+        // We need a magic number for our contract. This is used to check if the contract storage
+        // account is initialized for the correct contract
+        let mut hasher = Keccak::v256();
+        let mut hash = [0u8; 32];
+        hasher.update(contract.name.as_bytes());
+        hasher.finalize(&mut hash);
+        let mut magic = [0u8; 8];
+
+        magic.copy_from_slice(&hash[0..8]);
+
         let mut target = SolanaTarget {
             abi: ethabiencoder::EthAbiEncoder { bswap: true },
+            magic: u64::from_le_bytes(magic),
         };
 
         let mut con = Contract::new(context, contract, ns, filename, opt, None);
@@ -37,8 +50,7 @@ impl SolanaTarget {
 
         target.emit_functions(&mut con);
 
-        target.emit_constructor(&mut con);
-        target.emit_function(&mut con);
+        target.emit_dispatch(&mut con);
 
         con.internalize(&["entrypoint", "sol_log_", "sol_alloc_free_"]);
 
@@ -69,10 +81,10 @@ impl SolanaTarget {
             .set_unnamed_address(UnnamedAddress::Local);
     }
 
-    fn emit_constructor(&mut self, contract: &mut Contract) {
+    fn emit_dispatch(&mut self, contract: &mut Contract) {
         let initializer = self.emit_initializer(contract);
 
-        let function = contract.module.get_function("solang_constructor").unwrap();
+        let function = contract.module.get_function("solang_dispatch").unwrap();
 
         let entry = contract.context.append_basic_block(function, "entry");
 
@@ -80,12 +92,80 @@ impl SolanaTarget {
 
         let input = function.get_nth_param(0).unwrap().into_pointer_value();
         let input_len = function.get_nth_param(1).unwrap().into_int_value();
-        let accounts = function.get_nth_param(2).unwrap();
-        contract.accounts = Some(accounts.into_pointer_value());
+        let accounts = function.get_nth_param(2).unwrap().into_pointer_value();
 
-        // FIXME: write magic to data contract
+        // load magic value of contract storage
+        let contract_data = contract
+            .builder
+            .build_load(
+                unsafe {
+                    contract.builder.build_gep(
+                        accounts,
+                        &[
+                            contract.context.i32_type().const_int(1, false),
+                            contract.context.i32_type().const_int(3, false),
+                        ],
+                        "contract_data",
+                    )
+                },
+                "contract_data",
+            )
+            .into_pointer_value();
 
-        contract.builder.build_call(initializer, &[accounts], "");
+        let magic_value_ptr = contract.builder.build_pointer_cast(
+            contract_data,
+            contract.context.i64_type().ptr_type(AddressSpace::Generic),
+            "magic_value_ptr",
+        );
+
+        let magic_value = contract
+            .builder
+            .build_load(magic_value_ptr, "magic")
+            .into_int_value();
+
+        let function_block = contract
+            .context
+            .append_basic_block(function, "function_call");
+        let constructor_block = contract
+            .context
+            .append_basic_block(function, "constructor_call");
+        let badmagic_block = contract.context.append_basic_block(function, "bad_magic");
+
+        // if the magic is zero it's a virgin contract
+        // if the magic is our magic value, it's a function call
+        // if the magic is another magic value, it is an error
+        contract.builder.build_switch(
+            magic_value,
+            badmagic_block,
+            &[
+                (contract.context.i64_type().const_zero(), constructor_block),
+                (
+                    contract.context.i64_type().const_int(self.magic, false),
+                    function_block,
+                ),
+            ],
+        );
+
+        contract.builder.position_at_end(badmagic_block);
+
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(7, false)));
+
+        contract.accounts = Some(accounts);
+
+        // generate constructor code
+        contract.builder.position_at_end(constructor_block);
+
+        // write our magic value to the contract
+        contract.builder.build_store(
+            magic_value_ptr,
+            contract.context.i64_type().const_int(self.magic, false),
+        );
+
+        contract
+            .builder
+            .build_call(initializer, &[accounts.into()], "");
 
         // There is only one possible constructor
         let ret = if let Some((cfg_no, cfg)) = contract
@@ -101,7 +181,7 @@ impl SolanaTarget {
             self.abi
                 .decode(contract, function, &mut args, input, input_len, &cfg.params);
 
-            args.push(accounts);
+            args.push(accounts.into());
 
             contract
                 .builder
@@ -115,20 +195,11 @@ impl SolanaTarget {
         };
 
         contract.builder.build_return(Some(&ret));
-    }
 
-    // emit function dispatch
-    fn emit_function(&mut self, contract: &mut Contract) {
-        let function = contract.module.get_function("solang_function").unwrap();
+        // Generate function call dispatch
+        contract.builder.position_at_end(function_block);
 
-        let entry = contract.context.append_basic_block(function, "entry");
-
-        contract.builder.position_at_end(entry);
-
-        let input = function.get_nth_param(0).unwrap().into_pointer_value();
-        let input_len = function.get_nth_param(1).unwrap().into_int_value();
-
-        contract.accounts = Some(function.get_nth_param(2).unwrap().into_pointer_value());
+        contract.accounts = Some(accounts);
 
         let input = contract.builder.build_pointer_cast(
             input,
@@ -312,8 +383,17 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_load(data, "data")
             .into_pointer_value();
 
-        // slot is simply the offset
-        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
+        // the slot is simply the offset after the magic
+        let offset = contract.builder.build_int_add(
+            contract
+                .context
+                .i32_type()
+                .const_int(std::mem::size_of::<u64>() as u64, false),
+            *slot,
+            "offset",
+        );
+
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
 
         contract.builder.build_load(
             contract.builder.build_pointer_cast(
@@ -352,8 +432,17 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_load(data, "data")
             .into_pointer_value();
 
-        // the slot is simply the offset
-        let member = unsafe { contract.builder.build_gep(data, &[*slot], "data") };
+        // the slot is simply the offset after the magic
+        let offset = contract.builder.build_int_add(
+            contract
+                .context
+                .i32_type()
+                .const_int(std::mem::size_of::<u64>() as u64, false),
+            *slot,
+            "offset",
+        );
+
+        let member = unsafe { contract.builder.build_gep(data, &[offset], "data") };
 
         contract.builder.build_store(
             contract.builder.build_pointer_cast(
