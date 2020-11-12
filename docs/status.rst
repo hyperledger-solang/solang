@@ -49,6 +49,13 @@ ________________
 
 Solang works with Parity Substrate 2.0. This target is the most mature and has received the most testing so far.
 
+Solana
+______
+
+Solang has a new target for `Solana <https://www.solana.com/>`_. This is early stages right now, however it is
+under active development.
+
+
 ewasm
 _____
 

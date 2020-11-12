@@ -11,6 +11,7 @@ Welcome to the Solang Solidity compiler, the portable Solidity compiler.
 Using Solang, you can compile smart contracts written in
 `Solidity <https://en.wikipedia.org/wiki/Solidity>`_
 for `Parity Substrate <https://substrate.dev/>`_,
+`Solana <https://www.solana.com/>`_,
 `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_, and
 `Ethereum ewasm <https://github.com/ewasm/design>`_. It uses the
 `llvm <https://www.llvm.org/>`_ compiler framework to produce WebAssembly
