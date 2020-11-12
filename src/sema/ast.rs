@@ -1,11 +1,11 @@
 use super::symtable::Symtable;
-use codegen::cfg::ControlFlowGraph;
+use crate::codegen::cfg::ControlFlowGraph;
+use crate::parser::pt;
+use crate::Target;
 use num_bigint::BigInt;
-use parser::pt;
 use std::collections::HashMap;
 use std::fmt;
 use tiny_keccak::{Hasher, Keccak};
-use Target;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {

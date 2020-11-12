@@ -2,10 +2,10 @@ use std::str::FromStr;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
 use num_traits::Pow;
-use parser::pt::*;
 use std::ops::Mul;
-use parser::box_option;
 use lalrpop_util::ParseError;
+use super::pt::*;
+use super::box_option;
 use super::lexer::{Token, LexicalError, CommentType};
 use super::doc::tags;
 

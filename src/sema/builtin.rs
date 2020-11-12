@@ -2,10 +2,10 @@ use super::ast::{Builtin, Diagnostic, Expression, Namespace, Type};
 use super::eval::eval_const_number;
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
+use crate::parser::pt;
 use crate::Target;
 use num_bigint::BigInt;
 use num_traits::One;
-use parser::pt;
 
 pub struct Prototype {
     pub builtin: Builtin,

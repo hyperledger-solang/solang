@@ -1,5 +1,6 @@
-use blake2_rfc;
-use codegen::cfg::HashTy;
+use crate::codegen::cfg::HashTy;
+use crate::parser::pt;
+use crate::sema::ast;
 use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::types::{BasicType, IntType};
@@ -8,8 +9,6 @@ use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use inkwell::OptimizationLevel;
 use num_traits::ToPrimitive;
-use parser::pt;
-use sema::ast;
 use std::collections::HashMap;
 
 use super::{Contract, TargetRuntime, Variable};

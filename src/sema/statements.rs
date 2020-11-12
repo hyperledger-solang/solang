@@ -5,8 +5,8 @@ use super::expression::{
     match_constructor_to_args, named_function_call_expr, new, try_cast,
 };
 use super::symtable::{LoopScopes, Symtable};
+use crate::parser::pt;
 use num_bigint::BigInt;
-use parser::pt;
 use std::collections::HashMap;
 
 pub fn resolve_function_body(

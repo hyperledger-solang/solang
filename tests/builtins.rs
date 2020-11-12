@@ -1,5 +1,3 @@
-extern crate solang;
-
 use solang::sema::ast;
 use solang::sema::builtin;
 

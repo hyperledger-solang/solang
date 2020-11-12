@@ -1,6 +1,3 @@
-extern crate cc;
-extern crate lalrpop;
-
 use std::process::Command;
 
 fn main() {

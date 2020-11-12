@@ -1,9 +1,9 @@
+use crate::sema::ast;
 use inkwell::types::BasicType;
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue};
 use inkwell::AddressSpace;
 use inkwell::IntPredicate;
 use num_traits::ToPrimitive;
-use sema::ast;
 
 use super::Contract;
 

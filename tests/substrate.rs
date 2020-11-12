@@ -1,19 +1,4 @@
 // Create WASM virtual machine like substrate
-extern crate blake2_rfc;
-extern crate ethabi;
-extern crate ethereum_types;
-extern crate num_bigint;
-extern crate num_derive;
-extern crate num_traits;
-extern crate parity_scale_codec;
-extern crate parity_scale_codec_derive;
-extern crate rand;
-extern crate serde_derive;
-extern crate sha2;
-extern crate solang;
-extern crate tiny_keccak;
-extern crate wasmi;
-
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
@@ -30,31 +15,7 @@ use solang::sema::ast;
 use solang::sema::diagnostics;
 use solang::{compile, Target};
 
-mod substrate_enums;
-
-#[allow(clippy::unreadable_literal, clippy::naive_bytecount)]
-mod substrate_expressions;
-
-mod substrate_arrays;
-mod substrate_builtins;
-mod substrate_calls;
-mod substrate_contracts;
-mod substrate_events;
-mod substrate_first;
-mod substrate_function_types;
-mod substrate_functions;
-mod substrate_imports;
-mod substrate_inheritance;
-mod substrate_libraries;
-mod substrate_loops;
-mod substrate_mappings;
-mod substrate_modifier;
-mod substrate_primitives;
-mod substrate_strings;
-mod substrate_structs;
-mod substrate_tags;
-mod substrate_value;
-mod substrate_variables;
+mod substrate_tests;
 
 type StorageKey = [u8; 32];
 type Address = [u8; 32];

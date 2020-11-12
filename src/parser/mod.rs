@@ -6,8 +6,8 @@ pub mod pt;
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub mod solidity;
 
+use crate::sema::ast::Diagnostic;
 use lalrpop_util::ParseError;
-use sema::ast::Diagnostic;
 
 pub fn parse(src: &str, file_no: usize) -> Result<pt::SourceUnit, Vec<Diagnostic>> {
     // parse phase
@@ -62,9 +62,9 @@ pub fn box_option<T>(o: Option<T>) -> Option<Box<T>> {
 
 #[cfg(test)]
 mod test {
-    use parser::lexer;
-    use parser::pt::*;
-    use parser::solidity;
+    use super::lexer;
+    use super::pt::*;
+    use super::solidity;
 
     #[test]
     fn parse_test() {

@@ -1,9 +1,9 @@
+use crate::parser::{parse, pt};
+use crate::Target;
 use num_bigint::BigInt;
 use num_traits::Signed;
 use num_traits::Zero;
-use parser::{parse, pt};
 use std::collections::HashMap;
-use Target;
 
 mod address;
 pub mod ast;
@@ -26,7 +26,7 @@ use self::eval::eval_const_number;
 use self::expression::expression;
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
-use file_cache::FileCache;
+use crate::file_cache::FileCache;
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 

@@ -1,6 +1,6 @@
 // ethereum style ABIs
-use parser::pt;
-use sema::ast::{Namespace, Parameter, Type};
+use crate::parser::pt;
+use crate::sema::ast::{Namespace, Parameter, Type};
 use serde::Serialize;
 
 #[derive(Serialize)]

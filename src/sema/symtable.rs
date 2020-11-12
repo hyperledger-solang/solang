@@ -4,7 +4,7 @@ use std::collections::LinkedList;
 use std::str;
 
 use super::ast::{Diagnostic, Namespace, Type};
-use parser::pt;
+use crate::parser::pt;
 
 #[derive(Clone)]
 pub struct Variable {

@@ -1,5 +1,5 @@
 use super::ast::{Diagnostic, Namespace, Parameter, Tag};
-use parser::pt;
+use crate::parser::pt;
 
 /// Resolve the tags for a type
 pub fn resolve_tags(

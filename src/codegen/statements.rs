@@ -3,11 +3,11 @@ use std::collections::LinkedList;
 
 use super::cfg::{ControlFlowGraph, Instr, Vartable};
 use super::expression::{assign_single, emit_function_call, expression};
-use parser::pt;
-use sema::ast::{
+use crate::parser::pt;
+use crate::sema::ast::{
     CallTy, DestructureField, Expression, Function, Namespace, Parameter, Statement, Type,
 };
-use sema::expression::try_cast;
+use crate::sema::expression::try_cast;
 
 /// Resolve a statement, which might be a block of statements or an entire body of a function
 pub fn statement(
