@@ -100,6 +100,7 @@ pub fn resolve(
         for (contract_no, _) in contracts {
             check_base_args(*contract_no, ns);
             missing_overrides(*contract_no, ns);
+            inherited_libraries(*contract_no, ns);
         }
     }
 }
@@ -628,6 +629,15 @@ fn missing_overrides(contract_no: usize, ns: &mut ast::Namespace) {
                 format!("contract ‘{}’ is missing function overrides", contract.name),
                 notes,
             ));
+        }
+    }
+}
+
+// Add libraries used by base contracts
+fn inherited_libraries(contract_no: usize, ns: &mut ast::Namespace) {
+    for base_no in visit_bases(contract_no, ns) {
+        for library_no in ns.contracts[base_no].libraries.to_owned() {
+            import_library(contract_no, library_no, ns);
         }
     }
 }

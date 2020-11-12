@@ -348,3 +348,38 @@ fn using() {
         "cannot find overloaded library function which matches signature"
     );
 }
+
+#[test]
+fn using_in_base() {
+    let mut runtime = build_solidity(
+        r#"
+        contract r is base {
+            function baz(uint64 arg) public returns (bool) {
+                    bar(arg);
+
+                    return x;
+            }
+        }
+
+        library Lib {
+                function foo(uint64 a, uint64 b) internal returns (bool) {
+                        return a == b;
+                }
+        }
+
+        contract base {
+                using Lib for *;
+                bool x;
+
+                function bar(uint64 arg) internal {
+                        x = arg.foo(102);
+                }
+        }
+        "#,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("baz", 102u64.encode());
+
+    assert_eq!(runtime.vm.output, true.encode());
+}
