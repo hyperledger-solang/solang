@@ -2,6 +2,11 @@
 All notable changes to [Solang](https://github.com/hyperledger-labs/solang/)
 will be documented here.
 
+## [Unreleased]
+
+### Added
+- Added language server for use in vscode extension
+
 ## [0.1.5]
 
 ### Added
