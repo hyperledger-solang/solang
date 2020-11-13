@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct FileCache {
     /// Set of import paths search for imports
@@ -10,7 +10,7 @@ pub struct FileCache {
     /// List file by import path
     cached_paths: HashMap<PathBuf, usize>,
     /// The actual file contents
-    files: Vec<Rc<String>>,
+    files: Vec<Arc<String>>,
 }
 
 /// When we resolve a file, we need to know its base compared to the import so
@@ -54,14 +54,14 @@ impl FileCache {
     pub fn set_file_contents(&mut self, path: &str, contents: String) {
         let pos = self.files.len();
 
-        self.files.push(Rc::new(contents));
+        self.files.push(Arc::new(contents));
 
         self.cached_paths.insert(PathBuf::from(path), pos);
     }
 
     /// Get file with contents. This must be a file which was previously
     /// add to the cache
-    pub fn get_file_contents(&mut self, file: &PathBuf) -> Rc<String> {
+    pub fn get_file_contents(&mut self, file: &PathBuf) -> Arc<String> {
         let file_no = self.cached_paths[file];
 
         self.files[file_no].clone()
@@ -96,7 +96,7 @@ impl FileCache {
 
         let pos = self.files.len();
 
-        self.files.push(Rc::new(contents));
+        self.files.push(Arc::new(contents));
 
         self.cached_paths.insert(path.clone(), pos);
 

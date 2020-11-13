@@ -1,5 +1,5 @@
-use jsonrpc_core::Result;
 use serde_json::Value;
+use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 use tower_lsp::{LspService, Server};
@@ -8,7 +8,7 @@ use solang::file_cache::FileCache;
 use solang::parse_and_resolve;
 use solang::Target;
 
-use lsp_types::{Diagnostic, DiagnosticSeverity, Position, Range};
+use lsp_types::{Diagnostic, DiagnosticSeverity, HoverProviderCapability, Position, Range};
 use solang::sema::*;
 
 use std::collections::HashMap;
@@ -26,8 +26,9 @@ use solang::sema::tags::*;
 
 use solang::sema::builtin::get_prototype;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SolangServer {
+    client: Client,
     state: Vec<usize>,
 }
 
@@ -37,7 +38,10 @@ pub fn start_server() {
         let stdin = tokio::io::stdin();
         let stdout = tokio::io::stdout();
 
-        let (service, messages) = LspService::new(SolangServer::default());
+        let (service, messages) = LspService::new(|client| SolangServer {
+            client,
+            state: Vec::new(),
+        });
 
         Server::new(stdin, stdout)
             .interleave(messages)
@@ -968,14 +972,14 @@ impl SolangServer {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for SolangServer {
-    async fn initialize(&self, _: &Client, _: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         Ok(InitializeResult {
             server_info: None,
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::Incremental,
                 )),
-                hover_provider: Some(true),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
                     trigger_characters: Some(vec![".".to_string()]),
@@ -1005,41 +1009,45 @@ impl LanguageServer for SolangServer {
         })
     }
 
-    async fn initialized(&self, client: &Client, _: InitializedParams) {
-        client.log_message(MessageType::Info, "server initialized!");
+    async fn initialized(&self, _: InitializedParams) {
+        self.client
+            .log_message(MessageType::Info, "server initialized!")
+            .await;
     }
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn did_change_workspace_folders(
-        &self,
-        client: &Client,
-        _: DidChangeWorkspaceFoldersParams,
-    ) {
-        client.log_message(MessageType::Info, "workspace folders changed!");
+    async fn did_change_workspace_folders(&self, _: DidChangeWorkspaceFoldersParams) {
+        self.client
+            .log_message(MessageType::Info, "workspace folders changed!")
+            .await;
     }
 
-    async fn did_change_configuration(&self, client: &Client, _: DidChangeConfigurationParams) {
-        client.log_message(MessageType::Info, "configuration changed!");
+    async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
+        self.client
+            .log_message(MessageType::Info, "configuration changed!")
+            .await;
     }
 
-    async fn did_change_watched_files(&self, client: &Client, _: DidChangeWatchedFilesParams) {
-        client.log_message(MessageType::Info, "watched files have changed!");
+    async fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {
+        self.client
+            .log_message(MessageType::Info, "watched files have changed!")
+            .await;
     }
 
-    async fn execute_command(
-        &self,
-        client: &Client,
-        _: ExecuteCommandParams,
-    ) -> Result<Option<Value>> {
-        client.log_message(MessageType::Info, "command executed!");
+    async fn execute_command(&self, _: ExecuteCommandParams) -> Result<Option<Value>> {
+        self.client
+            .log_message(MessageType::Info, "command executed!")
+            .await;
         Ok(None)
     }
 
-    async fn did_open(&self, client: &Client, params: DidOpenTextDocumentParams) {
-        client.log_message(MessageType::Info, "file opened!");
+    async fn did_open(&self, params: DidOpenTextDocumentParams) {
+        self.client
+            .log_message(MessageType::Info, "file opened!")
+            .await;
 
         let uri = params.text_document.uri;
 
@@ -1058,7 +1066,9 @@ impl LanguageServer for SolangServer {
 
             let uri_string = uri.to_string();
 
-            client.log_message(MessageType::Info, &uri_string);
+            self.client
+                .log_message(MessageType::Info, &uri_string)
+                .await;
 
             let os_str = path.file_name().unwrap();
 
@@ -1066,12 +1076,14 @@ impl LanguageServer for SolangServer {
 
             let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
 
-            client.publish_diagnostics(uri, d, None);
+            self.client.publish_diagnostics(uri, d, None).await;
         }
     }
 
-    async fn did_change(&self, client: &Client, params: DidChangeTextDocumentParams) {
-        client.log_message(MessageType::Info, "file changed!");
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        self.client
+            .log_message(MessageType::Info, "file changed!")
+            .await;
 
         let uri = params.text_document.uri;
 
@@ -1090,7 +1102,9 @@ impl LanguageServer for SolangServer {
 
             let uri_string = uri.to_string();
 
-            client.log_message(MessageType::Info, &uri_string);
+            self.client
+                .log_message(MessageType::Info, &uri_string)
+                .await;
 
             let os_str = path.file_name().unwrap();
 
@@ -1098,12 +1112,14 @@ impl LanguageServer for SolangServer {
 
             let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
 
-            client.publish_diagnostics(uri, d, None);
+            self.client.publish_diagnostics(uri, d, None).await;
         }
     }
 
-    async fn did_save(&self, client: &Client, params: DidSaveTextDocumentParams) {
-        client.log_message(MessageType::Info, "file saved!");
+    async fn did_save(&self, params: DidSaveTextDocumentParams) {
+        self.client
+            .log_message(MessageType::Info, "file saved!")
+            .await;
 
         let uri = params.text_document.uri;
 
@@ -1122,7 +1138,9 @@ impl LanguageServer for SolangServer {
 
             let uri_string = uri.to_string();
 
-            client.log_message(MessageType::Info, &uri_string);
+            self.client
+                .log_message(MessageType::Info, &uri_string)
+                .await;
 
             let os_str = path.file_name().unwrap();
 
@@ -1130,12 +1148,14 @@ impl LanguageServer for SolangServer {
 
             let d = SolangServer::convert_to_diagnostics(ns, &mut filecache);
 
-            client.publish_diagnostics(uri, d, None);
+            self.client.publish_diagnostics(uri, d, None).await;
         }
     }
 
-    async fn did_close(&self, client: &Client, _: DidCloseTextDocumentParams) {
-        client.log_message(MessageType::Info, "file closed!");
+    async fn did_close(&self, _: DidCloseTextDocumentParams) {
+        self.client
+            .log_message(MessageType::Info, "file closed!")
+            .await;
     }
 
     async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
