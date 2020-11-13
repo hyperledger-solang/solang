@@ -11,6 +11,7 @@ use solang::file_cache::FileCache;
 use solang::sema::diagnostics;
 
 mod doc;
+mod languageserver;
 
 #[derive(Serialize)]
 pub struct EwasmContract {
@@ -38,6 +39,7 @@ fn main() {
             Arg::with_name("INPUT")
                 .help("Solidity input files")
                 .required(true)
+                .conflicts_with("LANGUAGESERVER")
                 .multiple(true),
         )
         .arg(
@@ -90,11 +92,21 @@ fn main() {
                 .multiple(true),
         )
         .arg(
+            Arg::with_name("LANGUAGESERVER")
+                .help("Start language server")
+                .conflicts_with_all(&["STD-JSON", "OUTPUT", "EMIT", "OPT", "INPUT"])
+                .long("language-server"),
+        )
+        .arg(
             Arg::with_name("DOC")
                 .help("Generate documention for contracts using doc comments")
                 .long("doc"),
         )
         .get_matches();
+
+    if matches.is_present("LANGUAGESERVER") {
+        languageserver::start_server();
+    }
 
     let mut json = JsonResult {
         errors: Vec::new(),
