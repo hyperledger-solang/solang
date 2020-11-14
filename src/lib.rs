@@ -104,17 +104,19 @@ pub fn parse_and_resolve(filename: &str, cache: &mut FileCache, target: Target) 
         },
     );
 
-    if let Err(message) = cache.populate_cache(filename) {
-        ns.diagnostics.push(ast::Diagnostic {
-            ty: ast::ErrorType::ParserError,
-            level: ast::Level::Error,
-            message,
-            pos: None,
-            notes: Vec::new(),
-        });
-    } else {
-        // resolve
-        sema::sema(filename, cache, &mut ns);
+    match cache.resolve_file(None, filename) {
+        Err(message) => {
+            ns.diagnostics.push(ast::Diagnostic {
+                ty: ast::ErrorType::ParserError,
+                level: ast::Level::Error,
+                message,
+                pos: None,
+                notes: Vec::new(),
+            });
+        }
+        Ok(file) => {
+            sema::sema(file, cache, &mut ns);
+        }
     }
 
     ns

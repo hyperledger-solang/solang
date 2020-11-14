@@ -7,7 +7,7 @@ fn enum_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -19,7 +19,7 @@ fn enum_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         enum enum_b { b1 }
         "#
@@ -33,7 +33,7 @@ fn enum_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import { enum_b } from "b.sol";
 
@@ -45,7 +45,7 @@ fn enum_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         enum enum_b { b1 }
         "#
@@ -59,7 +59,7 @@ fn enum_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import { enum_b as foobar } from "b.sol";
 
@@ -71,7 +71,7 @@ fn enum_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         enum enum_b { b1 }
         "#
@@ -85,7 +85,7 @@ fn enum_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import { enum_c } from "b.sol";
         "#
@@ -93,7 +93,7 @@ fn enum_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         enum enum_b { b1 }
         "#
@@ -111,7 +111,7 @@ fn enum_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import { enum_c } frum "b.sol";
         "#
@@ -128,7 +128,7 @@ fn enum_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import * as foo frum "b.sol";
         "#
@@ -148,7 +148,7 @@ fn struct_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -160,7 +160,7 @@ fn struct_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         struct struct_a { uint32 f1; }
         "#
@@ -174,7 +174,7 @@ fn struct_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import { struct_a as not_struct_a } from "b.sol";
 
@@ -186,7 +186,7 @@ fn struct_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         struct struct_a { uint32 f1; }
         "#
@@ -203,7 +203,7 @@ fn contract_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -219,7 +219,7 @@ fn contract_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         contract b {
             function test() public returns (uint32) {
@@ -238,7 +238,7 @@ fn contract_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -254,7 +254,7 @@ fn contract_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         import "c.sol";
         "#
@@ -262,7 +262,7 @@ fn contract_import() {
     );
 
     cache.set_file_contents(
-        "c.sol".to_string(),
+        "c.sol",
         r#"
         contract c {
             function test() public returns (uint32) {
@@ -281,7 +281,7 @@ fn contract_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -297,7 +297,7 @@ fn contract_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         import { c as mr_c } from "c.sol";
         "#
@@ -305,7 +305,7 @@ fn contract_import() {
     );
 
     cache.set_file_contents(
-        "c.sol".to_string(),
+        "c.sol",
         r#"
         contract c {
             function test() public returns (uint32) {
@@ -326,7 +326,7 @@ fn circular_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "self.sol".to_string(),
+        "self.sol",
         r#"
         import { foo } from "self.sol";
 
@@ -346,7 +346,7 @@ fn circular_import() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -364,7 +364,7 @@ fn circular_import() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         import "a.sol";
         contract b {
@@ -391,7 +391,7 @@ fn import_symbol() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as foo;
 
@@ -405,7 +405,7 @@ fn import_symbol() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         struct b_struct {
             uint32 f1;
@@ -422,7 +422,7 @@ fn import_symbol() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as foo;
 
@@ -438,7 +438,7 @@ fn import_symbol() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         contract b {
             function test() public returns (uint32) {
@@ -457,7 +457,7 @@ fn import_symbol() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as foo;
 
@@ -471,7 +471,7 @@ fn import_symbol() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         contract b {
             enum c { c1, c2 }
@@ -492,7 +492,7 @@ fn import_symbol() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as foo;
 
@@ -506,7 +506,7 @@ fn import_symbol() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         import "c.sol" as bar;
         "#
@@ -514,7 +514,7 @@ fn import_symbol() {
     );
 
     cache.set_file_contents(
-        "c.sol".to_string(),
+        "c.sol",
         r#"
         contract c {
             struct k {
@@ -540,7 +540,7 @@ fn enum_import_chain() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as foo;
 
@@ -554,7 +554,7 @@ fn enum_import_chain() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         import "c.sol" as c_import;
         "#
@@ -562,7 +562,7 @@ fn enum_import_chain() {
     );
 
     cache.set_file_contents(
-        "c.sol".to_string(),
+        "c.sol",
         r#"
         import "d.sol" as d_import;
         "#
@@ -570,7 +570,7 @@ fn enum_import_chain() {
     );
 
     cache.set_file_contents(
-        "d.sol".to_string(),
+        "d.sol",
         r#"
         contract d {
             enum enum_d { d1, d2, d3 }
@@ -587,7 +587,7 @@ fn enum_import_chain() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as foo;
 
@@ -601,7 +601,7 @@ fn enum_import_chain() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         import "c.sol" as c_import;
         "#
@@ -609,7 +609,7 @@ fn enum_import_chain() {
     );
 
     cache.set_file_contents(
-        "c.sol".to_string(),
+        "c.sol",
         r#"
         import "d.sol" as d_import;
         "#
@@ -617,7 +617,7 @@ fn enum_import_chain() {
     );
 
     cache.set_file_contents(
-        "d.sol".to_string(),
+        "d.sol",
         r#"
         contract d {
             enum enum_d { d1, d2, d3 }
@@ -632,4 +632,50 @@ fn enum_import_chain() {
         first_error(ns.diagnostics),
         "enum d.enum_d does not have value d4"
     );
+}
+
+#[test]
+fn import_base_dir() {
+    // if a imports x/b.sol then when x/b.sol imports, it should use x/ as a base
+    let mut cache = FileCache::new();
+
+    cache.set_file_contents(
+        "a.sol",
+        r#"
+        import "x/b.sol";
+
+        contract a {
+            function go() public {
+                c x = new c();
+
+                assert(x.test() == 102);
+            }
+        }
+         "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "x/b.sol",
+        r#"
+        import "c.sol";
+        "#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "x/c.sol",
+        r#"
+        contract c {
+            function test() public returns (uint32) {
+                return 102;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    let ns = solang::parse_and_resolve("a.sol", &mut cache, Target::Substrate);
+
+    no_errors(ns.diagnostics);
 }

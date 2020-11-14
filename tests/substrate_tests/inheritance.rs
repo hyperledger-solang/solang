@@ -97,7 +97,7 @@ fn test_abstract() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         abstract contract foo {
             constructor(int arg1) public {

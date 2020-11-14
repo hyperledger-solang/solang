@@ -2,6 +2,7 @@ use super::ast::{Diagnostic, ErrorType, Level, Namespace, Note};
 use crate::file_cache::FileCache;
 use crate::parser::pt::Loc;
 use serde::Serialize;
+use std::path::PathBuf;
 
 impl Level {
     pub fn to_string(&self) -> &'static str {
@@ -131,13 +132,17 @@ impl Diagnostic {
         }
     }
 
-    fn formated_message(&self, filename: &str, offset_converter: &OffsetToLineColumn) -> String {
+    fn formated_message(
+        &self,
+        filename: &PathBuf,
+        offset_converter: &OffsetToLineColumn,
+    ) -> String {
         let mut s = if let Some(pos) = self.pos {
             let loc = offset_converter.to_string(pos);
 
             format!(
                 "{}:{}: {}: {}",
-                filename,
+                filename.display(),
                 loc,
                 self.level.to_string(),
                 self.message
@@ -151,7 +156,10 @@ impl Diagnostic {
 
             s.push_str(&format!(
                 "\n\t{}:{}: {}: {}",
-                filename, loc, "note", note.message
+                filename.display(),
+                loc,
+                "note",
+                note.message
             ));
         }
 
@@ -162,7 +170,7 @@ impl Diagnostic {
 pub fn print_messages(cache: &mut FileCache, ns: &Namespace, debug: bool) {
     let mut current_file_no = None;
     let mut offset_converter = OffsetToLineColumn(Vec::new());
-    let mut filename = "";
+    let mut filename = &PathBuf::new();
 
     for msg in &ns.diagnostics {
         if !debug && msg.level == Level::Debug {
@@ -211,7 +219,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
 
     let mut current_file_no = None;
     let mut offset_converter = OffsetToLineColumn(Vec::new());
-    let mut filename = "";
+    let mut filename = &PathBuf::new();
 
     for msg in &ns.diagnostics {
         if msg.level == Level::Info {
@@ -229,7 +237,7 @@ pub fn message_as_json(cache: &mut FileCache, ns: &Namespace) -> Vec<OutputJson>
 
         let loc_json = if let Some(pos) = msg.pos {
             Some(LocJson {
-                file: filename.to_string(),
+                file: format!("{}", filename.display()),
                 start: pos.1,
                 end: pos.2,
             })

@@ -214,7 +214,7 @@ fn process_filename(
     }
 
     if ns.contracts.is_empty() || diagnostics::any_errors(&ns.diagnostics) {
-        eprintln!("{}: error: no contracts found", filename);
+        eprintln!("{}: error: no valid contracts found", filename);
         std::process::exit(1);
     }
 

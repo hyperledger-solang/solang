@@ -18,7 +18,7 @@ use std::mem::{align_of, size_of};
 fn build_solidity(src: &'static str) -> VM {
     let mut cache = FileCache::new();
 
-    cache.set_file_contents("test.sol".to_string(), src.to_string());
+    cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
         "test.sol",
