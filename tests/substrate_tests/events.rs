@@ -255,7 +255,7 @@ fn event_imported() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -269,7 +269,7 @@ fn event_imported() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         event bar (uint32 indexed f1, bool x);
         "#
@@ -283,7 +283,7 @@ fn event_imported() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol";
 
@@ -297,7 +297,7 @@ fn event_imported() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         contract baz {
             event bar (uint32 indexed f1, bool x);
@@ -313,7 +313,7 @@ fn event_imported() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as X;
 
@@ -327,7 +327,7 @@ fn event_imported() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         contract baz {
             event bar (uint32 indexed f1, bool x);
@@ -343,7 +343,7 @@ fn event_imported() {
     let mut cache = FileCache::new();
 
     cache.set_file_contents(
-        "a.sol".to_string(),
+        "a.sol",
         r#"
         import "b.sol" as X;
 
@@ -357,7 +357,7 @@ fn event_imported() {
     );
 
     cache.set_file_contents(
-        "b.sol".to_string(),
+        "b.sol",
         r#"
         event bar (uint32 indexed f1, bool x);
         "#

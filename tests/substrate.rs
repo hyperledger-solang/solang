@@ -1086,7 +1086,7 @@ impl TestRuntime {
 pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
     let mut cache = FileCache::new();
 
-    cache.set_file_contents("test.sol".to_string(), src.to_string());
+    cache.set_file_contents("test.sol", src.to_string());
 
     solang::parse_and_resolve("test.sol", &mut cache, target)
 }
@@ -1094,7 +1094,7 @@ pub fn parse_and_resolve(src: &'static str, target: Target) -> ast::Namespace {
 pub fn build_solidity(src: &'static str) -> TestRuntime {
     let mut cache = FileCache::new();
 
-    cache.set_file_contents("test.sol".to_string(), src.to_string());
+    cache.set_file_contents("test.sol", src.to_string());
 
     let (res, ns) = compile(
         "test.sol",

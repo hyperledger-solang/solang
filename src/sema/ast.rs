@@ -5,6 +5,7 @@ use crate::Target;
 use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::fmt;
+use std::path::PathBuf;
 use tiny_keccak::{Hasher, Keccak};
 
 #[derive(PartialEq, Clone, Debug)]
@@ -319,7 +320,7 @@ impl Symbol {
 /// When resolving a Solidity file, this holds all the resolved items
 pub struct Namespace {
     pub target: Target,
-    pub files: Vec<String>,
+    pub files: Vec<PathBuf>,
     pub enums: Vec<EnumDecl>,
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,

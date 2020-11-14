@@ -26,18 +26,18 @@ use self::eval::eval_const_number;
 use self::expression::expression;
 use self::functions::{resolve_params, resolve_returns};
 use self::symtable::Symtable;
-use crate::file_cache::FileCache;
+use crate::file_cache::{FileCache, ResolvedFile};
 
 pub type ArrayDimension = Option<(pt::Loc, BigInt)>;
 
 /// Load a file file from the cache, parse and resolve it. The file must be present in
 /// the cache. This function is recursive for imports.
-pub fn sema(filename: &str, cache: &mut FileCache, ns: &mut ast::Namespace) {
+pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) {
     let file_no = ns.files.len();
 
-    ns.files.push(filename.to_string());
+    let source_code = cache.get_file_contents(&file.full_path);
 
-    let source_code = cache.get_file_contents(filename);
+    ns.files.push(file.full_path.clone());
 
     let pt = match parse(&source_code, file_no) {
         Ok(s) => s,
@@ -73,7 +73,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, ns: &mut ast::Namespace) {
                 resolve_pragma(name, value, ns);
             }
             pt::SourceUnitPart::ImportDirective(import) => {
-                resolve_import(import, file_no, cache, ns);
+                resolve_import(import, Some(&file), file_no, cache, ns);
             }
             _ => (),
         }
@@ -98,6 +98,7 @@ pub fn sema(filename: &str, cache: &mut FileCache, ns: &mut ast::Namespace) {
 /// Find import file, resolve it by calling sema and add it to the namespace
 fn resolve_import(
     import: &pt::Import,
+    parent: Option<&ResolvedFile>,
     file_no: usize,
     cache: &mut FileCache,
     ns: &mut ast::Namespace,
@@ -108,28 +109,29 @@ fn resolve_import(
         pt::Import::Rename(f, _) => f,
     };
 
-    // We may already have resolved it
-    if !ns.files.contains(&filename.string) {
-        if let Err(message) = cache.populate_cache(&filename.string) {
+    let import_file_no = match cache.resolve_file(parent, &filename.string) {
+        Err(message) => {
             ns.diagnostics
                 .push(ast::Diagnostic::error(filename.loc, message));
 
             return;
         }
+        Ok(file) => {
+            if !ns.files.iter().any(|f| *f == file.full_path) {
+                sema(file.clone(), cache, ns);
 
-        sema(&filename.string, cache, ns);
+                // give up if we failed
+                if diagnostics::any_errors(&ns.diagnostics) {
+                    return;
+                }
+            }
 
-        // give up if we failed
-        if diagnostics::any_errors(&ns.diagnostics) {
-            return;
+            ns.files
+                .iter()
+                .position(|f| *f == file.full_path)
+                .expect("import should be loaded by now")
         }
-    }
-
-    let import_file_no = ns
-        .files
-        .iter()
-        .position(|f| f == &filename.string)
-        .expect("import should be loaded by now");
+    };
 
     match import {
         pt::Import::Rename(_, renames) => {
