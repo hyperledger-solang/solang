@@ -869,7 +869,18 @@ impl SubstrateTarget {
                         },
                     );
 
-                    v.into()
+                    contract
+                        .builder
+                        .build_pointer_cast(
+                            v,
+                            contract
+                                .module
+                                .get_struct_type("struct.vector")
+                                .unwrap()
+                                .ptr_type(AddressSpace::Generic),
+                            "string",
+                        )
+                        .into()
                 }
             }
             ast::Type::String | ast::Type::DynamicBytes => {
