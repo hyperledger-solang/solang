@@ -151,6 +151,7 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
             Statement::VariableDecl(_, _, _, Some(expr)) => {
                 expr.recurse(state, read_expression);
             }
+            Statement::VariableDecl(_, _, _, None) => (),
             Statement::If(_, _, expr, then_, else_) => {
                 expr.recurse(state, read_expression);
                 recurse_statements(then_, state);
@@ -207,7 +208,8 @@ fn recurse_statements(stmts: &[Statement], state: &mut StateCheck) {
                 }
                 recurse_statements(catch_stmt, state);
             }
-            _ => (),
+            Statement::Emit { loc, .. } => state.write(loc),
+            Statement::Break(_) | Statement::Continue(_) | Statement::Underscore(_) => (),
         }
     }
 }
