@@ -245,6 +245,11 @@ pub trait TargetRuntime<'a> {
         length: IntValue<'b>,
     ) -> IntValue<'b>;
 
+    /// Integer to prefix events with
+    fn event_id<'b>(&self, _contract: &Contract<'b>, _event_no: usize) -> Option<IntValue<'b>> {
+        None
+    }
+
     /// Send event
     fn send_event<'b>(
         &self,
@@ -4005,7 +4010,7 @@ pub trait TargetRuntime<'a> {
                     } => {
                         let (data_ptr, data_len) = self.abi_encode(
                             contract,
-                            None,
+                            self.event_id(contract, *event_no),
                             false,
                             function,
                             &data

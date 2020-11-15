@@ -2910,13 +2910,13 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             );
         }
 
-        if selector.is_some() {
+        if let Some(selector) = selector {
             length = contract.builder.build_int_add(
                 length,
-                contract
-                    .context
-                    .i32_type()
-                    .const_int(std::mem::size_of::<u32>() as u64, false),
+                selector
+                    .get_type()
+                    .size_of()
+                    .const_cast(contract.context.i32_type(), false),
                 "",
             );
         }
@@ -2940,7 +2940,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             contract.builder.build_store(
                 contract.builder.build_pointer_cast(
                     data,
-                    contract.context.i32_type().ptr_type(AddressSpace::Generic),
+                    selector.get_type().ptr_type(AddressSpace::Generic),
                     "",
                 ),
                 selector,
@@ -2949,10 +2949,10 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             argsdata = unsafe {
                 contract.builder.build_gep(
                     data,
-                    &[contract
-                        .context
-                        .i32_type()
-                        .const_int(std::mem::size_of::<u32>() as u64, false)],
+                    &[selector
+                        .get_type()
+                        .size_of()
+                        .const_cast(contract.context.i32_type(), false)],
                     "",
                 )
             };
@@ -3499,6 +3499,18 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         );
 
         contract.builder.build_load(temp, "hash").into_int_value()
+    }
+
+    /// Substrate events should be prefixed with the index of the event in the metadata
+    fn event_id<'b>(&self, contract: &Contract<'b>, event_no: usize) -> Option<IntValue<'b>> {
+        let event_id = contract
+            .contract
+            .sends_events
+            .iter()
+            .position(|e| *e == event_no)
+            .unwrap();
+
+        Some(contract.context.i8_type().const_int(event_id as u64, false))
     }
 
     /// Send event
