@@ -1282,6 +1282,7 @@ impl ast::Namespace {
         );
 
         func.body = vec![ast::Statement::Return(pt::Loc(0, 0, 0), Vec::new())];
+        func.has_body = true;
 
         func
     }

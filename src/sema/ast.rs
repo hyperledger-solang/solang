@@ -127,6 +127,7 @@ pub struct Function {
     pub modifiers: Vec<Expression>,
     pub is_virtual: bool,
     pub is_override: Option<(pt::Loc, Vec<usize>)>,
+    pub has_body: bool,
     pub body: Vec<Statement>,
     pub symtable: Symtable,
 }
@@ -162,6 +163,7 @@ impl Function {
             bases: HashMap::new(),
             modifiers: Vec::new(),
             is_virtual: false,
+            has_body: false,
             is_override: None,
             body: Vec::new(),
             symtable: Symtable::new(),

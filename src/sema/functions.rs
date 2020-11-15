@@ -416,6 +416,7 @@ pub fn function_decl(
 
     fdecl.is_virtual = is_virtual;
     fdecl.is_override = is_override;
+    fdecl.has_body = func.body.is_some();
 
     if func.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
