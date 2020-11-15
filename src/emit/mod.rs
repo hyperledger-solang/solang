@@ -1869,9 +1869,22 @@ pub trait TargetRuntime<'a> {
                     .into_pointer_value();
 
                 let ty = contract.llvm_var(elem_ty);
+
+                let mut array_index = self
+                    .expression(contract, i, vartab, function)
+                    .into_int_value();
+
+                // bounds checking already done; we can down-cast if necessary
+                if array_index.get_type().get_bit_width() > 32 {
+                    array_index = contract.builder.build_int_truncate(
+                        array_index,
+                        contract.context.i32_type(),
+                        "index",
+                    );
+                }
+
                 let index = contract.builder.build_int_mul(
-                    self.expression(contract, i, vartab, function)
-                        .into_int_value(),
+                    array_index,
                     ty.into_pointer_type()
                         .get_element_type()
                         .size_of()

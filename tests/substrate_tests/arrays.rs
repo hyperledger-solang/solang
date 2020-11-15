@@ -1873,3 +1873,24 @@ fn abi_encode_dynamic_array4() {
         .encode()
     );
 }
+
+#[test]
+fn large_index_ty_in_bounds() {
+    let mut runtime = build_solidity(
+        r#"
+        contract foo {
+            function test(uint128 index) public pure returns (uint16) {
+                uint16[] memory a = new uint16[](16);
+
+                return a[index];
+            }
+        }"#,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("test", 15u128.encode());
+
+    runtime.function_expect_return("test", 17u128.encode(), 1);
+
+    runtime.function_expect_return("test", 0xfffffffffffffu128.encode(), 1);
+}
