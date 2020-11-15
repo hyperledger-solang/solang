@@ -206,6 +206,22 @@ fn emit() {
         "event ‘foo’ cannot emitted by argument name since argument 0 has no name"
     );
 
+    let ns = parse_and_resolve(
+        r#"
+        contract c {
+            event foo(bool,uint32);
+            function f() view public {
+                emit foo (true, 102);
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘view’ but this expression writes to state"
+    );
+
     let mut runtime = build_solidity(
         r##"
         contract a {
