@@ -222,17 +222,19 @@ fn emit() {
     assert_eq!(runtime.events.len(), 1);
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 0);
-    assert_eq!(event.data, true.encode());
+    assert_eq!(event.data, (0u8, true).encode());
 
     #[derive(Debug, PartialEq, Encode, Decode)]
-    struct Foo(bool, u32);
+    struct Foo(u8, bool, u32);
 
     let mut runtime = build_solidity(
         r##"
         contract a {
             event foo(bool,uint32);
+            event bar(uint32,uint64);
             function emit_event() public {
                 emit foo(true, 102);
+                emit bar(0xdeadcafe, 102);
             }
         }"##,
     );
@@ -240,14 +242,22 @@ fn emit() {
     runtime.constructor(0, Vec::new());
     runtime.function("emit_event", Vec::new());
 
-    assert_eq!(runtime.events.len(), 1);
+    assert_eq!(runtime.events.len(), 2);
     let event = &runtime.events[0];
     assert_eq!(event.topics.len(), 1);
     assert_eq!(
         event.topics[0],
         blake2_rfc::blake2b::blake2b(32, &[], b"foo(bool,uint32)").as_bytes()
     );
-    assert_eq!(event.data, Foo(true, 102).encode());
+    assert_eq!(event.data, Foo(0, true, 102).encode());
+
+    let event = &runtime.events[1];
+    assert_eq!(event.topics.len(), 1);
+    assert_eq!(
+        event.topics[0],
+        blake2_rfc::blake2b::blake2b(32, &[], b"bar(uint32,uint64)").as_bytes()
+    );
+    assert_eq!(event.data, (1u8, 0xdeadcafeu32, 102u64).encode());
 }
 
 #[test]
