@@ -99,7 +99,6 @@ pub fn resolve(
         // only if we could resolve all the bodies
         for (contract_no, _) in contracts {
             check_base_args(*contract_no, ns);
-            missing_overrides(*contract_no, ns);
             inherited_libraries(*contract_no, ns);
         }
     }
@@ -371,7 +370,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                     .join(",");
 
                 if let Some((loc, override_specified)) = &cur.is_override {
-                    if override_specified.is_empty() {
+                    if override_specified.is_empty() && entry.len() > 1 {
                         ns.diagnostics.push(ast::Diagnostic::error(
                             *loc,
                             format!(
@@ -391,7 +390,7 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                             .map(|contract_no| ns.contracts[*contract_no].name.to_owned())
                             .collect();
 
-                        if !missing.is_empty() {
+                        if !missing.is_empty() && override_needed.len() >= 2 {
                             ns.diagnostics.push(ast::Diagnostic::error(
                                 *loc,
                                 format!(
@@ -423,6 +422,11 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                     }
 
                     override_needed.remove(&signature);
+                } else if entry.len() == 1 {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        cur.loc,
+                        format!("function ‘{}’ should specify ‘override’", cur.name),
+                    ));
                 } else {
                     ns.diagnostics.push(ast::Diagnostic::error(
                         cur.loc,
@@ -449,6 +453,13 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
                         cur.loc,
                         format!("function ‘{}’ does not override anything", cur.name),
                     ));
+                    continue;
+                }
+
+                // a function without body needs an override
+                if previous_defs.is_empty() && !cur.has_body {
+                    override_needed
+                        .insert(signature.clone(), vec![(base_contract_no, function_no)]);
                     continue;
                 }
 
@@ -574,6 +585,29 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     for list in override_needed.values() {
         let func = &ns.contracts[list[0].0].functions[list[0].1];
 
+        // interface or abstract contracts are allowed to have virtual function which are not overriden
+        if func.is_virtual && !ns.contracts[contract_no].is_concrete() {
+            continue;
+        }
+
+        // virtual functions without a body
+        if list.len() == 1 {
+            match func.ty {
+                pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
+                    ns.diagnostics.push(ast::Diagnostic::error(
+                        func.loc,
+                        format!("missing override for ‘{}’ function", func.ty),
+                    ));
+                }
+                _ => ns.diagnostics.push(ast::Diagnostic::error(
+                    func.loc,
+                    format!("missing override for function ‘{}’", func.name),
+                )),
+            }
+
+            continue;
+        }
+
         let notes = list
             .iter()
             .skip(1)
@@ -595,41 +629,6 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
             ),
             notes,
         ));
-    }
-}
-
-// are we missing any function overrides
-fn missing_overrides(contract_no: usize, ns: &mut ast::Namespace) {
-    if ns.contracts[contract_no].is_concrete() {
-        let mut notes = Vec::new();
-        for (base_contract_no, function_no) in ns.contracts[contract_no].all_functions.keys() {
-            let func = &ns.contracts[*base_contract_no].functions[*function_no];
-
-            if func.body.is_empty() {
-                match func.ty {
-                    pt::FunctionTy::Fallback | pt::FunctionTy::Receive => {
-                        notes.push(ast::Note {
-                            pos: func.loc,
-                            message: format!("missing override for ‘{}’ function", func.ty),
-                        });
-                    }
-                    _ => notes.push(ast::Note {
-                        pos: func.loc,
-                        message: format!("missing override for function ‘{}’", func.name),
-                    }),
-                }
-            }
-        }
-
-        if !notes.is_empty() {
-            let contract = &ns.contracts[contract_no];
-
-            ns.diagnostics.push(ast::Diagnostic::error_with_notes(
-                contract.loc,
-                format!("contract ‘{}’ is missing function overrides", contract.name),
-                notes,
-            ));
-        }
     }
 }
 

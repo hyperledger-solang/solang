@@ -1075,7 +1075,7 @@ fn test_override() {
 
     assert_eq!(
         first_error(ns.diagnostics),
-        "contract ‘a’ is missing function overrides"
+        "missing override for function ‘bar’"
     );
 
     let ns = parse_and_resolve(
@@ -1727,4 +1727,44 @@ fn call_base_function_via_basename() {
     runtime.function("bar", Vec::new());
 
     assert_eq!(runtime.vm.output, Val64(101).encode());
+}
+
+#[test]
+fn simple_interface() {
+    let ns = parse_and_resolve(
+        r#"
+        interface IFoo {
+            function bar(uint32) external pure returns (uint32);
+        }
+
+        contract foo is IFoo {
+            function bar(uint32 a) public pure returns (uint32) {
+                return a * 2;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function ‘bar’ should specify ‘override’"
+    );
+
+    let mut runtime = build_solidity(
+        r##"
+        contract foo is IFoo {
+            function bar(uint32 a) public pure override returns (uint32) {
+                return a * 2;
+            }
+        }
+
+        interface IFoo {
+            function bar(uint32) external pure returns (uint32);
+        }"##,
+    );
+
+    runtime.constructor(0, Vec::new());
+    runtime.function("bar", 100u32.encode());
+
+    assert_eq!(runtime.vm.output, 200u32.encode());
 }
