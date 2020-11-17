@@ -711,7 +711,7 @@ pub enum StringLocation {
     RunTime(Box<Expression>),
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Builtin {
     GetAddress,
     Balance,

@@ -1,4 +1,5 @@
 use super::ast::*;
+use super::builtin::{get_prototype, Prototype};
 use crate::parser::pt;
 use crate::Target;
 
@@ -56,6 +57,13 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
         Expression::CodeLiteral(_, contract_no, false) => {
             Tree::Leaf(format!("code deploy {}", ns.contracts[*contract_no].name))
         }
+        // TODO does not format negative constants correctly
+        Expression::NumberLiteral(_, ty @ Type::Address(_), b) => Tree::Leaf(format!(
+            "literal {} {:#02$x}",
+            ty.to_string(ns),
+            b,
+            ns.address_length * 2 + 2,
+        )),
         Expression::NumberLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), b))
         }
@@ -270,6 +278,25 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             ns.contracts[*contract_no].name,
             ns.contracts[*contract_no].functions[*function_no].name,
         )),
+        Expression::Builtin(_, _, builtin, args) => {
+            let title = match get_prototype(*builtin) {
+                Some(Prototype {
+                    namespace: None,
+                    name,
+                    ..
+                }) => format!("builtin {}", name),
+                Some(Prototype {
+                    namespace: Some(namespace),
+                    name,
+                    ..
+                }) => format!("builtin {}.{}", namespace, name),
+                _ => String::from("unknown builtin"),
+            };
+            Tree::Branch(
+                title,
+                args.iter().map(|e| print_expr(e, func, ns)).collect(),
+            )
+        }
         _ => Tree::Leaf(String::from("not implemented")),
     }
 }
