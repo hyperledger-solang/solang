@@ -387,7 +387,7 @@ pub fn builtin_var(
                     ),
                 ));
             }
-            return Some((p.builtin.clone(), p.ret[0].clone()));
+            return Some((p.builtin, p.ret[0].clone()));
         }
     }
 
@@ -485,7 +485,7 @@ pub fn resolve_call(
             return Ok(Expression::Builtin(
                 *loc,
                 func.ret.to_vec(),
-                func.builtin.clone(),
+                func.builtin,
                 cast_args,
             ));
         }

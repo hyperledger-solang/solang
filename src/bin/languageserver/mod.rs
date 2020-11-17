@@ -153,7 +153,7 @@ impl SolangServer {
         fnc_map: &HashMap<String, String>,
     ) -> String {
         let mut msg = "[built-in] ".to_string();
-        let prot = get_prototype(bltn.clone());
+        let prot = get_prototype(*bltn);
 
         if let Some(protval) = prot {
             for ret in protval.ret {
