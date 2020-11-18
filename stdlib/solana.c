@@ -121,3 +121,129 @@ void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
         *to++ = *--from;
     } while (--length);
 }
+
+// This function is for used for abi encoding integers
+// ABI encoding is big endian.
+void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
+{
+    to += 31;
+
+    do
+    {
+        *to-- = *from++;
+    } while (--length);
+}
+
+void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
+{
+    uint64_t val1 = 0, carry = 0;
+
+    int left_len = len, right_len = len;
+
+    while (left_len > 0 && !left[left_len - 1])
+        left_len--;
+
+    while (right_len > 0 && !right[right_len - 1])
+        right_len--;
+
+    int right_start = 0, right_end = 0;
+    int left_start = 0;
+
+    for (int l = 0; l < len; l++)
+    {
+        int i = 0;
+
+        if (l >= left_len)
+            right_start++;
+
+        if (l >= right_len)
+            left_start++;
+
+        if (right_end < right_len)
+            right_end++;
+
+        for (int r = right_end - 1; r >= right_start; r--)
+        {
+            uint64_t m = (uint64_t)left[left_start + i] * (uint64_t)right[r];
+            i++;
+            if (__builtin_add_overflow(val1, m, &val1))
+                carry += 0x100000000;
+        }
+
+        out[l] = val1;
+
+        val1 = (val1 >> 32) | carry;
+        carry = 0;
+    }
+}
+
+// Some compiler runtime builtins we need.
+
+// 128 bit shift left.
+typedef union
+{
+    __uint128_t all;
+    struct
+    {
+        uint64_t low;
+        uint64_t high;
+    };
+} two64;
+
+// This assumes r >= 0 && r <= 127
+__uint128_t __ashlti3(__uint128_t val, int r)
+{
+    two64 in;
+    two64 result;
+
+    in.all = val;
+
+    if (r == 0)
+    {
+        // nothing to do
+        result.all = in.all;
+    }
+    else if (r & 64)
+    {
+        // Shift more than or equal 64
+        result.low = 0;
+        result.high = in.low << (r & 63);
+    }
+    else
+    {
+        // Shift less than 64
+        result.low = in.low << r;
+        result.high = (in.high << r) | (in.low >> (64 - r));
+    }
+
+    return result.all;
+}
+
+// This assumes r >= 0 && r <= 127
+__uint128_t __lshrti3(__uint128_t val, int r)
+{
+    two64 in;
+    two64 result;
+
+    in.all = val;
+
+    if (r == 0)
+    {
+        // nothing to do
+        result.all = in.all;
+    }
+    else if (r & 64)
+    {
+        // Shift more than or equal 64
+        result.low = in.high >> (r & 63);
+        result.high = 0;
+    }
+    else
+    {
+        // Shift less than 64
+        result.low = (in.low >> r) | (in.high << (64 - r));
+        result.high = in.high >> r;
+    }
+
+    return result.all;
+}

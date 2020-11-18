@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::str;
 
 use inkwell::context::Context;
-use inkwell::types::IntType;
+use inkwell::types::{BasicType, IntType};
 use inkwell::values::{BasicValueEnum, FunctionValue, IntValue, PointerValue, UnnamedAddress};
 use inkwell::AddressSpace;
 use inkwell::OptimizationLevel;
@@ -398,15 +398,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         contract.builder.build_load(
             contract.builder.build_pointer_cast(
                 member,
-                contract
-                    .llvm_type(ty)
-                    .into_int_type()
-                    .ptr_type(AddressSpace::Generic),
+                contract.llvm_type(ty).ptr_type(AddressSpace::Generic),
                 "",
             ),
             "",
         )
     }
+
     fn storage_store(
         &self,
         contract: &Contract<'a>,
@@ -447,9 +445,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         contract.builder.build_store(
             contract.builder.build_pointer_cast(
                 member,
-                val.get_type()
-                    .into_int_type()
-                    .ptr_type(AddressSpace::Generic),
+                val.get_type().ptr_type(AddressSpace::Generic),
                 "",
             ),
             val,
@@ -512,8 +508,13 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
             .build_return(Some(&contract.context.i32_type().const_int(0, false)));
     }
 
-    fn assert_failure<'b>(&self, _contract: &'b Contract, _data: PointerValue, _length: IntValue) {
-        unimplemented!();
+    fn assert_failure<'b>(&self, contract: &'b Contract, _data: PointerValue, _length: IntValue) {
+        // the reason code should be null (and already printed)
+
+        // return 1 for failure
+        contract
+            .builder
+            .build_return(Some(&contract.context.i32_type().const_int(1, false)));
     }
 
     /// ABI encode into a vector for abi.encode* style builtin functions
@@ -614,7 +615,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
     fn abi_decode<'b>(
         &self,
         contract: &Contract<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,

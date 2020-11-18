@@ -53,7 +53,7 @@ pub trait TargetRuntime<'a> {
     fn abi_decode<'b>(
         &self,
         contract: &Contract<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         args: &mut Vec<BasicValueEnum<'b>>,
         data: PointerValue<'b>,
         length: IntValue<'b>,

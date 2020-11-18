@@ -966,7 +966,7 @@ impl EthAbiEncoder {
     fn decode_primitive<'a>(
         &self,
         contract: &Contract<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         ty: &ast::Type,
         to: Option<PointerValue<'a>>,
         offset: &mut IntValue<'a>,
@@ -1049,7 +1049,7 @@ impl EthAbiEncoder {
                 let type_size = int_type.size_of();
 
                 let store =
-                    to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "address"));
+                    to.unwrap_or_else(|| contract.build_alloca(function, int_type, "address"));
 
                 contract.builder.build_call(
                     contract.module.get_function("__be32toleN").unwrap(),
@@ -1169,7 +1169,8 @@ impl EthAbiEncoder {
                 let int_type = contract.context.custom_width_int_type(*n as u32);
                 let type_size = int_type.size_of();
 
-                let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
+                let store =
+                    to.unwrap_or_else(|| contract.build_alloca(function, int_type, "stack"));
 
                 contract.builder.build_call(
                     contract.module.get_function("__be32toleN").unwrap(),
@@ -1245,7 +1246,7 @@ impl EthAbiEncoder {
     fn decode_ty<'b>(
         &self,
         contract: &Contract<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         ty: &ast::Type,
         to: Option<PointerValue<'b>>,
         offset: &mut IntValue<'b>,
@@ -1592,7 +1593,7 @@ impl EthAbiEncoder {
     pub fn decode<'a>(
         &self,
         contract: &Contract<'a>,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         args: &mut Vec<BasicValueEnum<'a>>,
         data: PointerValue<'a>,
         datalength: IntValue<'a>,

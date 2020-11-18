@@ -702,7 +702,10 @@ impl Type {
     pub fn to_signature_string(&self, ns: &Namespace) -> String {
         match self {
             Type::Bool => "bool".to_string(),
-            Type::Contract(_) | Type::Address(_) => "address".to_string(),
+            Type::Contract(_) | Type::Address(_) if ns.address_length == 20 => {
+                "address".to_string()
+            }
+            Type::Contract(_) | Type::Address(_) => format!("bytes{}", ns.address_length),
             Type::Int(n) => format!("int{}", n),
             Type::Uint(n) => format!("uint{}", n),
             Type::Bytes(n) => format!("bytes{}", n),
