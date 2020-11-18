@@ -667,7 +667,15 @@ pub fn expression(
                 .get(1)
                 .map(|s| expression(s, cfg, contract_no, ns, vartab));
 
-            cfg.add(vartab, Instr::AssertFailure { expr });
+            if ns.target == Target::Solana {
+                // On Solana, print the reason, do not abi encoding it
+                if let Some(expr) = expr {
+                    cfg.add(vartab, Instr::Print { expr });
+                }
+                cfg.add(vartab, Instr::AssertFailure { expr: None });
+            } else {
+                cfg.add(vartab, Instr::AssertFailure { expr });
+            }
 
             cfg.set_basic_block(true_);
 
