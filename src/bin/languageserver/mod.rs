@@ -18,8 +18,6 @@ use solang::*;
 
 use solang::sema::ast::*;
 
-use solang::parser::pt;
-
 use solang::sema::ast::Expression::*;
 
 use solang::sema::tags::*;
@@ -122,29 +120,6 @@ impl SolangServer {
         }
 
         diagnostics_vec
-    }
-
-    // Constructs the function type message which is returned as a String
-    fn construct_fnc(fnc_ty: &pt::FunctionTy) -> String {
-        let msg;
-        match fnc_ty {
-            pt::FunctionTy::Constructor => {
-                msg = String::from("Constructor");
-            }
-            pt::FunctionTy::Function => {
-                msg = String::from("Function");
-            }
-            pt::FunctionTy::Fallback => {
-                msg = String::from("Fallback");
-            }
-            pt::FunctionTy::Receive => {
-                msg = String::from("Recieve");
-            }
-            pt::FunctionTy::Modifier => {
-                msg = String::from("Modifier");
-            }
-        }
-        msg
     }
 
     fn construct_builtins(
@@ -599,8 +574,7 @@ impl SolangServer {
                     let fnc = &ns.contracts[base_contract_no].functions[function_no];
                     let msg_tg = render(&fnc.tags[..]);
 
-                    let fnc_msg_type = SolangServer::construct_fnc(&fnc.ty);
-                    let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc_msg_type, fnc.name);
+                    let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
                     for parm in &fnc.params {
                         let msg = format!(
@@ -648,8 +622,7 @@ impl SolangServer {
                     // modifiers do not have mutability, bases or modifiers itself
                     let fnc = &ns.contracts[*contract_no].functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
-                    let fnc_msg_type = SolangServer::construct_fnc(&fnc.ty);
-                    let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc_msg_type, fnc.name);
+                    let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
                     for parm in &fnc.params {
                         let msg = format!(
