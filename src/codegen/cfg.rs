@@ -899,16 +899,13 @@ impl ControlFlowGraph {
         let mut s = format!("bb{}: # {}\n", pos, self.bb[pos].name);
 
         if let Some(ref phis) = self.bb[pos].phis {
-            s.push_str("# phis: ");
-            let mut first = true;
-            for p in phis {
-                if !first {
-                    s.push_str(", ");
-                }
-                first = false;
-                s.push_str(&self.vars[p].id.name);
-            }
-            s.push_str("\n");
+            s.push_str(&format!(
+                "# phis: {}\n",
+                phis.iter()
+                    .map(|p| -> &str { &self.vars[p].id.name })
+                    .collect::<Vec<&str>>()
+                    .join(",")
+            ));
         }
 
         for ins in &self.bb[pos].instr {
