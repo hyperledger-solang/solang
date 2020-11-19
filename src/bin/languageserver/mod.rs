@@ -93,7 +93,7 @@ impl SolangServer {
             let mut file_str = "".to_owned();
             for fils in ns.files.iter() {
                 let file_cont = filecache.get_file_contents(fils);
-                file_str.push_str(file_cont.as_str());
+                file_str.push_str(&file_cont);
             }
 
             let l1 = SolangServer::file_offset_to_line_column(&file_str, pos.1);
@@ -1171,7 +1171,7 @@ impl LanguageServer for SolangServer {
             let mut file_str = "".to_owned();
             for fils in ns.files.iter() {
                 let file_cont = filecache.get_file_contents(fils);
-                file_str.push_str(file_cont.as_str());
+                file_str.push_str(&file_cont);
             }
 
             let offst = SolangServer::line_char_to_offset(pos.line, pos.character, &file_str); // 0 based offset
