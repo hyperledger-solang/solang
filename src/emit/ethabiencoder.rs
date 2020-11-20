@@ -18,7 +18,7 @@ impl EthAbiEncoder {
         &self,
         contract: &Contract<'a>,
         load: bool,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         ty: &ast::Type,
         arg: BasicValueEnum<'a>,
         fixed: &mut PointerValue<'a>,
@@ -32,7 +32,7 @@ impl EthAbiEncoder {
             | ast::Type::Int(_)
             | ast::Type::Uint(_)
             | ast::Type::Bytes(_) => {
-                self.encode_primitive(contract, load, ty, *fixed, arg);
+                self.encode_primitive(contract, load, function, ty, *fixed, arg);
 
                 *fixed = unsafe {
                     contract.builder.build_gep(
@@ -43,7 +43,14 @@ impl EthAbiEncoder {
                 };
             }
             ast::Type::Enum(n) => {
-                self.encode_primitive(contract, load, &contract.ns.enums[*n].ty, *fixed, arg);
+                self.encode_primitive(
+                    contract,
+                    load,
+                    function,
+                    &contract.ns.enums[*n].ty,
+                    *fixed,
+                    arg,
+                );
             }
             ast::Type::Array(_, dim) => {
                 let arg = if load {
@@ -89,6 +96,7 @@ impl EthAbiEncoder {
                     self.encode_primitive(
                         contract,
                         false,
+                        function,
                         &ast::Type::Uint(32),
                         *fixed,
                         (*offset).into(),
@@ -123,6 +131,7 @@ impl EthAbiEncoder {
                     self.encode_primitive(
                         contract,
                         false,
+                        function,
                         &ast::Type::Uint(32),
                         *dynamic,
                         len.into(),
@@ -254,6 +263,7 @@ impl EthAbiEncoder {
                 self.encode_primitive(
                     contract,
                     false,
+                    function,
                     &ast::Type::Uint(32),
                     *fixed,
                     (*offset).into(),
@@ -291,7 +301,14 @@ impl EthAbiEncoder {
                     .into_int_value();
 
                 // write the current offset to fixed
-                self.encode_primitive(contract, false, &ast::Type::Uint(32), *dynamic, len.into());
+                self.encode_primitive(
+                    contract,
+                    false,
+                    function,
+                    &ast::Type::Uint(32),
+                    *dynamic,
+                    len.into(),
+                );
 
                 *dynamic = unsafe {
                     contract.builder.build_gep(
@@ -363,13 +380,14 @@ impl EthAbiEncoder {
     }
 
     /// ABI encode a single primitive
-    fn encode_primitive(
+    fn encode_primitive<'a>(
         &self,
-        contract: &Contract,
+        contract: &Contract<'a>,
         load: bool,
+        function: FunctionValue<'a>,
         ty: &ast::Type,
         dest: PointerValue,
-        arg: BasicValueEnum,
+        arg: BasicValueEnum<'a>,
     ) {
         match ty {
             ast::Type::Bool => {
@@ -463,6 +481,41 @@ impl EthAbiEncoder {
                     arg
                 };
 
+                let dest8 = contract.builder.build_pointer_cast(
+                    dest,
+                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                    "dest8",
+                );
+
+                if let ast::Type::Int(_) = ty {
+                    let negative = contract.builder.build_int_compare(
+                        IntPredicate::SLT,
+                        arg.into_int_value(),
+                        arg.into_int_value().get_type().const_zero(),
+                        "neg",
+                    );
+
+                    let signval = contract
+                        .builder
+                        .build_select(
+                            negative,
+                            contract.context.i64_type().const_int(std::u64::MAX, true),
+                            contract.context.i64_type().const_zero(),
+                            "val",
+                        )
+                        .into_int_value();
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__memset8").unwrap(),
+                        &[
+                            dest8.into(),
+                            signval.into(),
+                            contract.context.i32_type().const_int(4, false).into(),
+                        ],
+                        "",
+                    );
+                }
+
                 // now convert to be
                 let bswap = contract.llvm_bswap(*n as u32);
 
@@ -473,12 +526,6 @@ impl EthAbiEncoder {
                     .left()
                     .unwrap()
                     .into_int_value();
-
-                let dest8 = contract.builder.build_pointer_cast(
-                    dest,
-                    contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                    "dest8",
-                );
 
                 // our value is big endian, 32 bytes. So, find the offset within the 32 bytes
                 // where our value starts
@@ -690,9 +737,11 @@ impl EthAbiEncoder {
                 let val = if load {
                     arg.into_pointer_value()
                 } else {
-                    let temp = contract
-                        .builder
-                        .build_alloca(arg.into_int_value().get_type(), &format!("bytes{}", n));
+                    let temp = contract.build_alloca(
+                        function,
+                        arg.into_int_value().get_type(),
+                        &format!("bytes{}", n),
+                    );
 
                     contract.builder.build_store(temp, arg.into_int_value());
 
@@ -1208,9 +1257,9 @@ impl EthAbiEncoder {
             }
             ast::Type::Bytes(b) => {
                 let int_type = contract.context.custom_width_int_type(*b as u32 * 8);
-                let type_size = int_type.size_of();
 
-                let store = to.unwrap_or_else(|| contract.builder.build_alloca(int_type, "stack"));
+                let store =
+                    to.unwrap_or_else(|| contract.build_alloca(function, int_type, "stack"));
 
                 contract.builder.build_call(
                     contract.module.get_function("__beNtoleN").unwrap(),
@@ -1225,8 +1274,9 @@ impl EthAbiEncoder {
                             )
                             .into(),
                         contract
-                            .builder
-                            .build_int_truncate(type_size, contract.context.i32_type(), "size")
+                            .context
+                            .i32_type()
+                            .const_int(*b as u64, false)
                             .into(),
                     ],
                     "",

@@ -535,7 +535,7 @@ impl<'a> TargetRuntime<'a> for SolanaTarget {
         contract: &Contract<'a>,
         selector: Option<IntValue<'a>>,
         load: bool,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'a>, IntValue<'a>) {
