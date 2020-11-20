@@ -46,6 +46,16 @@ void __bzero8(void *_dest, uint32_t length)
     while (--length);
 }
 
+void __memset8(void *_dest, uint64_t val, uint32_t length)
+{
+    uint64_t *dest = _dest;
+
+    do
+    {
+        *dest++ = val;
+    } while (--length);
+}
+
 // Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
 struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
@@ -119,6 +129,16 @@ void __beNtoleN(uint8_t *from, uint8_t *to, uint32_t length)
     do
     {
         *to++ = *--from;
+    } while (--length);
+}
+
+void __leNtobeN(uint8_t *from, uint8_t *to, uint32_t length)
+{
+    to += length;
+
+    do
+    {
+        *--to = *from++;
     } while (--length);
 }
 

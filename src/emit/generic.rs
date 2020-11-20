@@ -540,7 +540,7 @@ impl<'a> TargetRuntime<'a> for GenericTarget {
         contract: &Contract<'b>,
         selector: Option<IntValue<'b>>,
         load: bool,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {

@@ -67,7 +67,7 @@ pub trait TargetRuntime<'a> {
         contract: &Contract<'a>,
         selector: Option<IntValue<'a>>,
         load: bool,
-        function: FunctionValue,
+        function: FunctionValue<'a>,
         args: &[BasicValueEnum<'a>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'a>, IntValue<'a>);
@@ -193,7 +193,7 @@ pub trait TargetRuntime<'a> {
     fn create_contract<'b>(
         &mut self,
         contract: &Contract<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: Option<usize>,

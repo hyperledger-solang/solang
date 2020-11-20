@@ -672,7 +672,7 @@ impl EwasmTarget {
         selector: Option<IntValue<'b>>,
         constant: Option<(PointerValue<'b>, u64)>,
         load: bool,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
@@ -1151,7 +1151,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         contract: &Contract<'b>,
         selector: Option<IntValue<'b>>,
         load: bool,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         args: &[BasicValueEnum<'b>],
         spec: &[ast::Parameter],
     ) -> (PointerValue<'b>, IntValue<'b>) {
@@ -1182,7 +1182,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
     fn create_contract<'b>(
         &mut self,
         contract: &Contract<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: Option<usize>,

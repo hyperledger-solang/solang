@@ -17,7 +17,7 @@ use std::mem::{align_of, size_of};
 
 mod solana_tests;
 
-fn build_solidity(src: &'static str) -> VM {
+fn build_solidity(src: &str) -> VM {
     let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol", src.to_string());

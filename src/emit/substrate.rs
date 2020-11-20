@@ -2995,7 +2995,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
     fn create_contract<'b>(
         &mut self,
         contract: &Contract<'b>,
-        function: FunctionValue,
+        function: FunctionValue<'b>,
         success: Option<&mut BasicValueEnum<'b>>,
         contract_no: usize,
         constructor_no: Option<usize>,
