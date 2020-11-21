@@ -11,6 +11,8 @@ use solang::file_cache::FileCache;
 use solang::sema::diagnostics;
 use solang::{compile, Target};
 
+mod ewasm_tests;
+
 type Address = [u8; 20];
 
 fn address_new() -> Address {
@@ -742,7 +744,7 @@ impl TestRuntime {
     }
 }
 
-fn build_solidity(src: &'static str) -> TestRuntime {
+fn build_solidity(src: &str) -> TestRuntime {
     let mut cache = FileCache::new();
 
     cache.set_file_contents("test.sol", src.to_string());
