@@ -1298,6 +1298,55 @@ pub trait TargetRuntime<'a> {
                     contract.builder.position_at_end(success_block);
 
                     contract.builder.build_load(quotient, "quotient")
+                } else if contract.ns.target == Target::Solana {
+                    // no signed div on BPF; do abs udev and then negate if needed
+                    let left = left.into_int_value();
+                    let left_negative = contract.builder.build_int_compare(
+                        IntPredicate::SLT,
+                        left,
+                        left.get_type().const_zero(),
+                        "left_negative",
+                    );
+
+                    let left = contract.builder.build_select(
+                        left_negative,
+                        contract.builder.build_int_neg(left, "signed_left"),
+                        left,
+                        "left_abs",
+                    );
+
+                    let right = right.into_int_value();
+                    let right_negative = contract.builder.build_int_compare(
+                        IntPredicate::SLT,
+                        right,
+                        right.get_type().const_zero(),
+                        "right_negative",
+                    );
+
+                    let right = contract.builder.build_select(
+                        right_negative,
+                        contract.builder.build_int_neg(right, "signed_right"),
+                        right,
+                        "right_abs",
+                    );
+
+                    let res = contract.builder.build_int_unsigned_div(
+                        left.into_int_value(),
+                        right.into_int_value(),
+                        "",
+                    );
+
+                    let negate_result =
+                        contract
+                            .builder
+                            .build_xor(left_negative, right_negative, "negate_result");
+
+                    contract.builder.build_select(
+                        negate_result,
+                        contract.builder.build_int_neg(res, "unsigned_res"),
+                        res,
+                        "res",
+                    )
                 } else {
                     contract
                         .builder
@@ -1391,6 +1440,50 @@ pub trait TargetRuntime<'a> {
                     contract.builder.position_at_end(success_block);
 
                     contract.builder.build_load(rem, "srem")
+                } else if contract.ns.target == Target::Solana {
+                    // no signed rem on BPF; do abs udev and then negate if needed
+                    let left = left.into_int_value();
+                    let left_negative = contract.builder.build_int_compare(
+                        IntPredicate::SLT,
+                        left,
+                        left.get_type().const_zero(),
+                        "left_negative",
+                    );
+
+                    let left = contract.builder.build_select(
+                        left_negative,
+                        contract.builder.build_int_neg(left, "signed_left"),
+                        left,
+                        "left_abs",
+                    );
+
+                    let right = right.into_int_value();
+                    let right_negative = contract.builder.build_int_compare(
+                        IntPredicate::SLT,
+                        right,
+                        right.get_type().const_zero(),
+                        "right_negative",
+                    );
+
+                    let right = contract.builder.build_select(
+                        right_negative,
+                        contract.builder.build_int_neg(right, "signed_right"),
+                        right,
+                        "right_abs",
+                    );
+
+                    let res = contract.builder.build_int_unsigned_rem(
+                        left.into_int_value(),
+                        right.into_int_value(),
+                        "",
+                    );
+
+                    contract.builder.build_select(
+                        left_negative,
+                        contract.builder.build_int_neg(res, "unsigned_res"),
+                        res,
+                        "res",
+                    )
                 } else {
                     contract
                         .builder
