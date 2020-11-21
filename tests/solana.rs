@@ -6,9 +6,9 @@ use libc::c_char;
 use solana_helpers::allocator_bump::BPFAllocator;
 use solana_rbpf::{
     error::EbpfError,
-    memory_region::{translate_addr, MemoryRegion},
+    memory_region::{AccessType, MemoryMapping, MemoryRegion},
     user_error::UserError,
-    vm::{Config, EbpfVm, SyscallObject},
+    vm::{Config, DefaultInstructionMeter, EbpfVm, Executable, Syscall, SyscallObject},
 };
 use solang::{compile, file_cache::FileCache, sema::diagnostics, Target};
 use std::alloc::Layout;
@@ -157,10 +157,9 @@ impl<'a> SyscallObject<UserError> for Printer<'a> {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        ro_regions: &[MemoryRegion],
-        _rw_regions: &[MemoryRegion],
+        memory_mapping: &MemoryMapping,
     ) -> Result<u64, EbpfError<UserError>> {
-        let host_addr = translate_addr(vm_addr, len as usize, "Load", 0, ro_regions)?;
+        let host_addr = memory_mapping.map(AccessType::Load, vm_addr, len)?;
         let c_buf: *const c_char = host_addr as *const c_char;
         unsafe {
             for i in 0..len {
@@ -205,8 +204,7 @@ impl SyscallObject<UserError> for SyscallAllocFree {
         _arg3: u64,
         _arg4: u64,
         _arg5: u64,
-        _ro_regions: &[MemoryRegion],
-        _rw_regions: &[MemoryRegion],
+        _memory_mapping: &MemoryMapping,
     ) -> Result<u64, EbpfError<UserError>> {
         let align = align_of::<u128>();
         let layout = match Layout::from_size_align(size as usize, align) {
@@ -226,27 +224,32 @@ impl VM {
     fn execute(&mut self, buf: &mut String, calldata: &[u8]) {
         println!("running bpf with calldata:{}", hex::encode(calldata));
 
-        let executable =
-            EbpfVm::<UserError>::create_executable_from_elf(&self.code, None).expect("should work");
-        let mut vm = EbpfVm::<UserError>::new(executable.as_ref(), Config::default()).unwrap();
-
-        vm.register_syscall_with_context_ex("sol_log_", Box::new(Printer { buf }))
-            .unwrap();
-
+        let parameter_bytes = serialize_parameters(&calldata, &self.data);
         let heap = vec![0_u8; DEFAULT_HEAP_SIZE];
-        let heap_region = MemoryRegion::new_from_slice(&heap, MM_HEAP_START);
-        vm.register_syscall_with_context_ex(
-            "sol_alloc_free_",
-            Box::new(SyscallAllocFree {
-                allocator: BPFAllocator::new(heap, MM_HEAP_START),
-            }),
+        let heap_region = MemoryRegion::new_from_slice(&heap, MM_HEAP_START, true);
+
+        let executable = Executable::<UserError>::from_elf(&self.code, None).expect("should work");
+        let mut vm = EbpfVm::<UserError, DefaultInstructionMeter>::new(
+            executable.as_ref(),
+            Config::default(),
+            &parameter_bytes,
+            &[heap_region],
         )
         .unwrap();
 
-        let parameter_bytes = serialize_parameters(&calldata, &self.data);
+        vm.register_syscall_ex("sol_log_", Syscall::Object(Box::new(Printer { buf })))
+            .unwrap();
+
+        vm.register_syscall_ex(
+            "sol_alloc_free_",
+            Syscall::Object(Box::new(SyscallAllocFree {
+                allocator: BPFAllocator::new(heap, MM_HEAP_START),
+            })),
+        )
+        .unwrap();
 
         let res = vm
-            .execute_program(&parameter_bytes, &[], &[heap_region])
+            .execute_program_interpreted(&mut DefaultInstructionMeter {})
             .unwrap();
 
         let mut accounts = deserialize_parameters(&parameter_bytes);
