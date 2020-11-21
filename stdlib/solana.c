@@ -190,6 +190,17 @@ typedef union
     };
 } two64;
 
+// 128 bit shift left.
+typedef union
+{
+    __int128_t all;
+    struct
+    {
+        uint64_t low;
+        int64_t high;
+    };
+} two64s;
+
 // This assumes r >= 0 && r <= 127
 __uint128_t __ashlti3(__uint128_t val, int r)
 {
@@ -237,6 +248,34 @@ __uint128_t __lshrti3(__uint128_t val, int r)
         // Shift more than or equal 64
         result.low = in.high >> (r & 63);
         result.high = 0;
+    }
+    else
+    {
+        // Shift less than 64
+        result.low = (in.low >> r) | (in.high << (64 - r));
+        result.high = in.high >> r;
+    }
+
+    return result.all;
+}
+
+__uint128_t __ashrti3(__uint128_t val, int r)
+{
+    two64s in;
+    two64s result;
+
+    in.all = val;
+
+    if (r == 0)
+    {
+        // nothing to do
+        result.all = in.all;
+    }
+    else if (r & 64)
+    {
+        // Shift more than or equal 64
+        result.high = in.high >> 63;
+        result.low = in.high >> (r & 63);
     }
     else
     {

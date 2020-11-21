@@ -4989,6 +4989,7 @@ impl<'a> Contract<'a> {
         let mut export_list = export_list.to_vec();
         export_list.push("__ashlti3");
         export_list.push("__lshrti3");
+        export_list.push("__ashrti3");
 
         while let Some(f) = func {
             let name = f.get_name().to_str().unwrap();
