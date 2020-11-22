@@ -260,6 +260,9 @@ impl ControlFlowGraph {
             Expression::FunctionArg(_, _, pos) => format!("(arg #{})", pos),
             Expression::BoolLiteral(_, false) => "false".to_string(),
             Expression::BoolLiteral(_, true) => "true".to_string(),
+            Expression::BytesLiteral(_, Type::String, s) => {
+                format!("{}", String::from_utf8_lossy(s))
+            }
             Expression::BytesLiteral(_, _, s) => format!("hex\"{}\"", hex::encode(s)),
             Expression::NumberLiteral(_, ty, n) => {
                 format!("{} {}", ty.to_string(ns), n.to_str_radix(10))
@@ -345,9 +348,13 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::Variable(_, _, res) => format!("%{}", self.vars[res].id.name),
-            Expression::ConstantVariable(_, _, Some(var_contract_no), var_no) | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
-                format!("${}.{}", ns.contracts[*var_contract_no].name,
-                ns.contracts[*var_contract_no].variables[*var_no].name)
+            Expression::ConstantVariable(_, _, Some(var_contract_no), var_no)
+            | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
+                format!(
+                    "${}.{}",
+                    ns.contracts[*var_contract_no].name,
+                    ns.contracts[*var_contract_no].variables[*var_no].name
+                )
             }
             Expression::ConstantVariable(_, _, None, var_no) => {
                 format!("${}", ns.constants[*var_no].name)
@@ -493,7 +500,11 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunction {function_no, signature, ..} => {
+            Expression::InternalFunction {
+                function_no,
+                signature,
+                ..
+            } => {
                 let function_no = if let Some(signature) = signature {
                     contract.virtual_functions[signature]
                 } else {
@@ -502,23 +513,30 @@ impl ControlFlowGraph {
 
                 ns.functions[function_no].print_name(ns)
             }
-            Expression::ExternalFunction {address, function_no, ..} => {
-                format!("external {} address {}",
+            Expression::ExternalFunction {
+                address,
+                function_no,
+                ..
+            } => {
+                format!(
+                    "external {} address {}",
                     self.expr_to_string(contract, ns, address),
-                    ns.functions[*function_no].print_name(ns))
+                    ns.functions[*function_no].print_name(ns)
+                )
             }
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
             Expression::InternalFunctionCall { function, args, .. } => {
                 format!(
-                "(call {} ({})",
-                self.expr_to_string(contract, ns, function),
-                args.iter()
-                    .map(|a| self.expr_to_string(contract, ns, &a))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            )},
+                    "(call {} ({})",
+                    self.expr_to_string(contract, ns, function),
+                    args.iter()
+                        .map(|a| self.expr_to_string(contract, ns, &a))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
             Expression::Constructor {
                 contract_no,
                 constructor_no: Some(constructor_no),
@@ -555,11 +573,7 @@ impl ControlFlowGraph {
                 },
                 ns.contracts[*contract_no].name,
             ),
-            Expression::ExternalFunctionCall {
-                function,
-                args,
-                ..
-            } => format!(
+            Expression::ExternalFunctionCall { function, args, .. } => format!(
                 "(external call {} ({})",
                 self.expr_to_string(contract, ns, function),
                 args.iter()
@@ -590,12 +604,27 @@ impl ControlFlowGraph {
                 ty.to_string(ns),
                 self.expr_to_string(contract, ns, e)
             ),
-            Expression::Builtin(_, _, builtin, args) =>
-                format!("(builtin {:?} ({}))", builtin,
-                     args.iter().map(|a| self.expr_to_string(contract, ns, &a)).collect::<Vec<String>>().join(", ")
-            )
-            ,
-            // FIXME BEFORE MERGE
+            Expression::Builtin(_, _, builtin, args) => format!(
+                "(builtin {:?} ({}))",
+                builtin,
+                args.iter()
+                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
+            Expression::FormatString(_, args) => {
+                format!(
+                    "(format string {})",
+                    args.iter()
+                        .map(|(spec, a)| format!(
+                            "({} {})",
+                            spec,
+                            self.expr_to_string(contract, ns, &a)
+                        ))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            }
             _ => panic!("{:?}", expr),
         }
     }

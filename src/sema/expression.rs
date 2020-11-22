@@ -20,6 +20,7 @@ use super::ast::{
 use super::builtin;
 use super::contracts::is_base;
 use super::eval::eval_const_number;
+use super::format::string_format;
 use super::symtable::Symtable;
 use crate::parser::pt;
 use crate::Target;
@@ -96,6 +97,7 @@ impl Expression {
             | Expression::Builtin(loc, _, _, _)
             | Expression::Assign(loc, _, _, _)
             | Expression::List(loc, _)
+            | Expression::FormatString(loc, _)
             | Expression::And(loc, _, _) => *loc,
             Expression::InternalFunctionCfg(_) | Expression::Poison => unreachable!(),
         }
@@ -186,6 +188,7 @@ impl Expression {
             }
             Expression::Constructor { contract_no, .. } => Type::Contract(*contract_no),
             Expression::Poison => unreachable!(),
+            Expression::FormatString(_, _) => Type::String,
             // codegen Expressions
             Expression::ReturnData(_) => Type::DynamicBytes,
             Expression::StorageBytesPush(_, _, _) | Expression::StorageBytesPop(_, _) => {
@@ -220,6 +223,7 @@ impl Expression {
                     _ => unreachable!(),
                 }
             }
+            Expression::FormatString(_, _) => vec![Type::String],
             _ => unreachable!(),
         }
     }
@@ -4134,6 +4138,26 @@ fn method_call_pos_args(
 
     let var_expr = expression(var, file_no, contract_no, ns, symtable, false)?;
     let var_ty = var_expr.ty();
+
+    if matches!(var_ty, Type::Bytes(_) | Type::String) && func.name == "format" {
+        return if let pt::Expression::StringLiteral(bs) = var {
+            if let Some(loc) = call_args_loc {
+                ns.diagnostics.push(Diagnostic::error(
+                    loc,
+                    "call arguments not allowed on builtins".to_string(),
+                ));
+                return Err(());
+            }
+
+            string_format(loc, bs, args, file_no, contract_no, ns, symtable)
+        } else {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                "format only allowed on string literals".to_string(),
+            ));
+            Err(())
+        };
+    }
 
     if let Type::StorageRef(ty) = &var_ty {
         match ty.as_ref() {

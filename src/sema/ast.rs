@@ -566,6 +566,7 @@ pub enum Expression {
         value: Option<Box<Expression>>,
         salt: Option<Box<Expression>>,
     },
+    FormatString(pt::Loc, Vec<(FormatArg, Expression)>),
     Keccak256(pt::Loc, Type, Vec<Expression>),
 
     ReturnData(pt::Loc),
@@ -725,6 +726,25 @@ impl Expression {
                 }
                 _ => (),
             }
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum FormatArg {
+    StringLiteral,
+    Default,
+    Binary,
+    Hex,
+}
+
+impl fmt::Display for FormatArg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FormatArg::StringLiteral => write!(f, ""),
+            FormatArg::Default => write!(f, ""),
+            FormatArg::Binary => write!(f, ":b"),
+            FormatArg::Hex => write!(f, ":x"),
         }
     }
 }

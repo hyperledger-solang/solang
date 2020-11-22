@@ -27,6 +27,27 @@ fn simple() {
 }
 
 #[test]
+fn format() {
+    let mut vm = build_solidity(
+        r#"
+        contract foo {
+            constructor() {
+                int x = 21847450052839212624230656502990235142567050104912751880812823948662932355201;
+
+                print("x = {}".format(x));
+            }
+        }"#,
+    );
+
+    vm.constructor(&[]);
+
+    assert_eq!(
+        vm.printbuf,
+        "x = 21847450052839212624230656502990235142567050104912751880812823948662932355201"
+    );
+}
+
+#[test]
 fn parameters() {
     let mut vm = build_solidity(
         r#"

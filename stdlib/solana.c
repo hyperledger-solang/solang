@@ -56,6 +56,17 @@ void __memset8(void *_dest, uint64_t val, uint32_t length)
     } while (--length);
 }
 
+void __memcpy(void *_dest, const void *_src, uint32_t length)
+{
+    uint8_t *dest = _dest;
+    const uint8_t *src = _src;
+
+    while (length--)
+    {
+        *dest++ = *src++;
+    }
+}
+
 // Create a new vector. If initial is -1 then clear the data. This is done since a null pointer valid in wasm
 struct vector *vector_new(uint32_t members, uint32_t size, uint8_t *initial)
 {
@@ -152,157 +163,4 @@ void __leNtobe32(uint8_t *from, uint8_t *to, uint32_t length)
     {
         *to-- = *from++;
     } while (--length);
-}
-
-void __mul32(uint32_t left[], uint32_t right[], uint32_t out[], int len)
-{
-    uint64_t val1 = 0, carry = 0;
-
-    int left_len = len, right_len = len;
-
-    while (left_len > 0 && !left[left_len - 1])
-        left_len--;
-
-    while (right_len > 0 && !right[right_len - 1])
-        right_len--;
-
-    int right_start = 0, right_end = 0;
-    int left_start = 0;
-
-    for (int l = 0; l < len; l++)
-    {
-        int i = 0;
-
-        if (l >= left_len)
-            right_start++;
-
-        if (l >= right_len)
-            left_start++;
-
-        if (right_end < right_len)
-            right_end++;
-
-        for (int r = right_end - 1; r >= right_start; r--)
-        {
-            uint64_t m = (uint64_t)left[left_start + i] * (uint64_t)right[r];
-            i++;
-            if (__builtin_add_overflow(val1, m, &val1))
-                carry += 0x100000000;
-        }
-
-        out[l] = val1;
-
-        val1 = (val1 >> 32) | carry;
-        carry = 0;
-    }
-}
-
-// Some compiler runtime builtins we need.
-
-// 128 bit shift left.
-typedef union
-{
-    __uint128_t all;
-    struct
-    {
-        uint64_t low;
-        uint64_t high;
-    };
-} two64;
-
-// 128 bit shift left.
-typedef union
-{
-    __int128_t all;
-    struct
-    {
-        uint64_t low;
-        int64_t high;
-    };
-} two64s;
-
-// This assumes r >= 0 && r <= 127
-__uint128_t __ashlti3(__uint128_t val, int r)
-{
-    two64 in;
-    two64 result;
-
-    in.all = val;
-
-    if (r == 0)
-    {
-        // nothing to do
-        result.all = in.all;
-    }
-    else if (r & 64)
-    {
-        // Shift more than or equal 64
-        result.low = 0;
-        result.high = in.low << (r & 63);
-    }
-    else
-    {
-        // Shift less than 64
-        result.low = in.low << r;
-        result.high = (in.high << r) | (in.low >> (64 - r));
-    }
-
-    return result.all;
-}
-
-// This assumes r >= 0 && r <= 127
-__uint128_t __lshrti3(__uint128_t val, int r)
-{
-    two64 in;
-    two64 result;
-
-    in.all = val;
-
-    if (r == 0)
-    {
-        // nothing to do
-        result.all = in.all;
-    }
-    else if (r & 64)
-    {
-        // Shift more than or equal 64
-        result.low = in.high >> (r & 63);
-        result.high = 0;
-    }
-    else
-    {
-        // Shift less than 64
-        result.low = (in.low >> r) | (in.high << (64 - r));
-        result.high = in.high >> r;
-    }
-
-    return result.all;
-}
-
-__uint128_t __ashrti3(__uint128_t val, int r)
-{
-    two64s in;
-    two64s result;
-
-    in.all = val;
-
-    if (r == 0)
-    {
-        // nothing to do
-        result.all = in.all;
-    }
-    else if (r & 64)
-    {
-        // Shift more than or equal 64
-        result.high = in.high >> 63;
-        result.low = in.high >> (r & 63);
-    }
-    else
-    {
-        // Shift less than 64
-        result.low = (in.low >> r) | (in.high << (64 - r));
-        result.high = in.high >> r;
-    }
-
-    return result.all;
 }

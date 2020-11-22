@@ -38,7 +38,8 @@ Unique features to Solang:
   to be overloaded.
 - Events can be declared outside of contracts
 - Base contracts can be declared in any order
-- There is a ``print()`` function for debugging.
+- There is a ``print()`` function for debugging
+- Strings can be formatted with python style format string, which is useful for debugging: ``print("x = {}".format(x));``
 
 Target Status
 -------------
