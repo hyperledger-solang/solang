@@ -948,6 +948,14 @@ pub fn expression(
 
             Expression::Multiply(*loc, ty, Box::new(units), Box::new(gasprice))
         }
+        Expression::FormatString(loc, args) => {
+            let args = args
+                .iter()
+                .map(|(spec, arg)| (*spec, expression(arg, cfg, contract_no, ns, vartab)))
+                .collect();
+
+            Expression::FormatString(*loc, args)
+        }
         _ => expr.clone(),
     }
 }

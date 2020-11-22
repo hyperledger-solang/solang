@@ -2977,6 +2977,45 @@ The ``selfdestruct()`` function causes the current contract to be deleted, and a
 remaining balance to be sent to `recipient`. This functions does not return, as the
 contract no longer exists.
 
+String formatting using ``"{}".format()``
++++++++++++++++++++++++++++++++++++++++++
+
+Sometimes it is useful to convert an integer to a string, e.g. for debugging purposes. There is
+a format builtin function for this, which is a method on string literals. Each ``{}`` in the
+string will be replaced with the value of an argument to format().
+
+.. code-block:: javascript
+
+    function foo(int arg1, bool arg2) public {
+        print("foo entry arg1:{} arg2:{}".format(arg1, arg2));
+    }
+
+Assuming `arg1` is 5355 and `arg2` is true, the output to the log will be ``foo entry arg1:5355 arg2:true``.
+
+The types accepted by format are ``bool``, ``uint``, ``int`` (any size, e.g. ``int128`` or ``uint64``), ``address``,
+``bytes`` (fixed and dynamic), and ``string``. Enums are also supported, but will print the ordinal value
+of the enum. The ``uint`` and ``int`` types can have a format specifier. This allows you to convert to
+hexadecimal ``{:x}`` or binary ``{:b}``, rather than decimals. No other types
+have a format specifier. To include a literal ``{`` or ``}``, replace it with ``{{`` or ``}}``.
+
+
+.. code-block:: javascript
+
+    function foo(int arg1, uint arg2) public {
+        // print arg1 in hex, and arg2 in binary
+        print("foo entry {{arg1:{:x},arg2:{:b}}}".format(arg1, arg2));
+    }
+
+Assuming `arg1` is 512 and `arg2` is 196, the output to the log will be ``foo entry {arg1:0x200,arg2:0b11000100}``.
+
+.. warning::
+
+    Each time you call the ``format()`` some specialized code is generated, to format the string at
+    runtime. This requires loops and so on to do the conversion.
+
+    When formatting integers in to decimals, types larger than 64 bits require expensive division.
+    Be mindful this will increase the gas cost. Larger values will incur a higher gas cost.
+    Alternatively,u se a hexadecimal ``{:x}`` format specifier to reduce the cost.
 
 .. _tags:
 

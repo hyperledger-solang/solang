@@ -955,6 +955,8 @@ impl TestRuntime {
 
         self.vm.input = m.selector().into_iter().chain(args).collect();
 
+        println!("input:{}", hex::encode(&self.vm.input));
+
         if let Some(RuntimeValue::I32(ret)) = self.invoke_call(module) {
             if ret != 0 {
                 panic!(format!("non zero return: {}", ret));

@@ -9,6 +9,7 @@ mod calls;
 mod contracts;
 mod events;
 mod first;
+mod format;
 mod function_types;
 mod functions;
 mod imports;

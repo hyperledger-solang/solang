@@ -12,6 +12,7 @@ pub mod contracts;
 pub mod diagnostics;
 pub mod eval;
 pub mod expression;
+mod format;
 mod functions;
 mod mutability;
 pub mod printer;

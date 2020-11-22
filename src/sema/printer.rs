@@ -48,6 +48,10 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             "literal bool {}",
             if *b { "true" } else { "false" }
         )),
+        Expression::BytesLiteral(_, Type::String, bs) => Tree::Leaf(format!(
+            "literal string \"{}\"",
+            String::from_utf8_lossy(&bs)
+        )),
         Expression::BytesLiteral(_, ty, b) => {
             Tree::Leaf(format!("literal {} {}", ty.to_string(ns), hex::encode(b)))
         }
@@ -295,6 +299,12 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
                 args.iter().map(|e| print_expr(e, func, ns)).collect(),
             )
         }
+        Expression::FormatString(_, args) => Tree::Branch(
+            String::from("format"),
+            args.iter()
+                .map(|(_, arg)| print_expr(arg, func, ns))
+                .collect(),
+        ),
         _ => Tree::Leaf(String::from("not implemented")),
     }
 }

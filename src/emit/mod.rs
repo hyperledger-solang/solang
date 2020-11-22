@@ -1,6 +1,6 @@
 use crate::parser::pt;
 use crate::sema::ast;
-use crate::sema::ast::{Builtin, Expression, StringLocation};
+use crate::sema::ast::{Builtin, Expression, FormatArg, StringLocation};
 use std::cell::RefCell;
 use std::path::Path;
 use std::str;
@@ -2272,57 +2272,14 @@ pub trait TargetRuntime<'a> {
                     .unwrap()
                     .const_cast(contract.context.i32_type(), false);
 
-                let init = match init {
-                    None => contract.builder.build_int_to_ptr(
-                        contract.context.i32_type().const_all_ones(),
-                        contract.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "invalid",
-                    ),
-                    Some(s) => contract.emit_global_string("const_string", s, true),
-                };
-
-                let v = contract
-                    .builder
-                    .build_call(
-                        contract.module.get_function("vector_new").unwrap(),
-                        &[size.into(), elem_size.into(), init.into()],
-                        "",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap();
-
-                contract
-                    .builder
-                    .build_pointer_cast(
-                        v.into_pointer_value(),
-                        contract
-                            .module
-                            .get_struct_type("struct.vector")
-                            .unwrap()
-                            .ptr_type(AddressSpace::Generic),
-                        "vector",
-                    )
-                    .into()
+                contract.vector_new(size, elem_size, init.as_ref()).into()
             }
             Expression::DynamicArrayLength(_, a) => {
                 let array = self
                     .expression(contract, a, vartab, function)
                     .into_pointer_value();
 
-                // field 0 is the length
-                let len = unsafe {
-                    contract.builder.build_gep(
-                        array,
-                        &[
-                            contract.context.i32_type().const_zero(),
-                            contract.context.i32_type().const_zero(),
-                        ],
-                        "array_len",
-                    )
-                };
-
-                contract.builder.build_load(len, "array_len")
+                contract.vector_len(array).into()
             }
             Expression::Keccak256(_, _, exprs) => {
                 let mut length = contract.context.i32_type().const_zero();
@@ -2835,6 +2792,9 @@ pub trait TargetRuntime<'a> {
                 .as_global_value()
                 .as_pointer_value()
                 .into(),
+            Expression::FormatString(_, args) => {
+                self.format_string(contract, args, vartab, function)
+            }
             _ => panic!("{:?} not implemented", e),
         }
     }
@@ -4590,8 +4550,568 @@ pub trait TargetRuntime<'a> {
             self.emit_cfg(contract, cfg, func_decl);
         }
     }
-}
 
+    /// Implement "...{}...{}".format(a, b)
+    fn format_string(
+        &self,
+        contract: &Contract<'a>,
+        args: &[(FormatArg, Expression)],
+        vartab: &HashMap<usize, Variable<'a>>,
+        function: FunctionValue<'a>,
+    ) -> BasicValueEnum<'a> {
+        // first we need to calculate the space we need
+        let mut length = contract.context.i32_type().const_zero();
+
+        let mut evaluated_arg = Vec::new();
+
+        evaluated_arg.resize(args.len(), None);
+
+        for (i, (spec, arg)) in args.iter().enumerate() {
+            let len = if *spec == FormatArg::StringLiteral {
+                if let Expression::BytesLiteral(_, _, bs) = arg {
+                    contract
+                        .context
+                        .i32_type()
+                        .const_int(bs.len() as u64, false)
+                } else {
+                    unreachable!();
+                }
+            } else {
+                match arg.ty() {
+                    // bool: "true" or "false"
+                    ast::Type::Bool => contract.context.i32_type().const_int(5, false),
+                    // hex encode bytes
+                    ast::Type::Contract(_) | ast::Type::Address(_) => contract
+                        .context
+                        .i32_type()
+                        .const_int(contract.ns.address_length as u64 * 2, false),
+                    ast::Type::Bytes(size) => contract
+                        .context
+                        .i32_type()
+                        .const_int(size as u64 * 2, false),
+                    ast::Type::String => {
+                        let val = self.expression(contract, arg, vartab, function);
+
+                        evaluated_arg[i] = Some(val);
+
+                        contract.vector_len(val.into_pointer_value())
+                    }
+                    ast::Type::DynamicBytes => {
+                        let val = self.expression(contract, arg, vartab, function);
+
+                        evaluated_arg[i] = Some(val);
+
+                        // will be hex encoded, so double
+                        let len = contract.vector_len(val.into_pointer_value());
+
+                        contract.builder.build_int_add(len, len, "hex_len")
+                    }
+                    ast::Type::Uint(bits) if *spec == FormatArg::Hex => contract
+                        .context
+                        .i32_type()
+                        .const_int(bits as u64 / 8 + 2, false),
+                    ast::Type::Int(bits) if *spec == FormatArg::Hex => contract
+                        .context
+                        .i32_type()
+                        .const_int(bits as u64 / 8 + 3, false),
+                    ast::Type::Uint(bits) if *spec == FormatArg::Binary => contract
+                        .context
+                        .i32_type()
+                        .const_int(bits as u64 + 2, false),
+                    ast::Type::Int(bits) if *spec == FormatArg::Binary => contract
+                        .context
+                        .i32_type()
+                        .const_int(bits as u64 + 3, false),
+                    // bits / 3 is a rough over-estimate of how many decimals we need
+                    ast::Type::Uint(bits) if *spec == FormatArg::Default => contract
+                        .context
+                        .i32_type()
+                        .const_int(bits as u64 / 3, false),
+                    ast::Type::Int(bits) if *spec == FormatArg::Default => contract
+                        .context
+                        .i32_type()
+                        .const_int(bits as u64 / 3 + 1, false),
+                    ast::Type::Enum(enum_no) => contract.context.i32_type().const_int(
+                        contract.ns.enums[enum_no].ty.bits(contract.ns) as u64 / 3,
+                        false,
+                    ),
+                    _ => unimplemented!(),
+                }
+            };
+
+            length = contract.builder.build_int_add(length, len, "");
+        }
+
+        // allocate the string and
+        let vector = contract.vector_new(
+            length,
+            contract.context.i32_type().const_int(1, false),
+            None,
+        );
+
+        let output_start = contract.vector_bytes(vector);
+
+        // now encode each of the arguments
+        let mut output = output_start;
+
+        // format it
+        for (i, (spec, arg)) in args.iter().enumerate() {
+            if *spec == FormatArg::StringLiteral {
+                if let Expression::BytesLiteral(_, _, bs) = arg {
+                    let s = contract.emit_global_string("format_arg", &bs, true);
+                    let len = contract
+                        .context
+                        .i32_type()
+                        .const_int(bs.len() as u64, false);
+
+                    contract.builder.build_call(
+                        contract.module.get_function("__memcpy").unwrap(),
+                        &[output.into(), s.into(), len.into()],
+                        "",
+                    );
+
+                    output = unsafe { contract.builder.build_gep(output, &[len], "") };
+                }
+            } else {
+                let val = evaluated_arg[i]
+                    .unwrap_or_else(|| self.expression(contract, arg, vartab, function));
+                let arg_ty = arg.ty();
+
+                match arg_ty {
+                    ast::Type::Bool => {
+                        let len = contract
+                            .builder
+                            .build_select(
+                                val.into_int_value(),
+                                contract.context.i32_type().const_int(4, false),
+                                contract.context.i32_type().const_int(5, false),
+                                "bool_length",
+                            )
+                            .into_int_value();
+
+                        let s = contract.builder.build_select(
+                            val.into_int_value(),
+                            contract.emit_global_string("bool_true", b"true", true),
+                            contract.emit_global_string("bool_false", b"false", true),
+                            "bool_value",
+                        );
+
+                        contract.builder.build_call(
+                            contract.module.get_function("__memcpy").unwrap(),
+                            &[output.into(), s, len.into()],
+                            "",
+                        );
+
+                        output = unsafe { contract.builder.build_gep(output, &[len], "") };
+                    }
+                    ast::Type::String => {
+                        let s = contract.vector_bytes(val.into_pointer_value());
+                        let len = contract.vector_len(val.into_pointer_value());
+
+                        contract.builder.build_call(
+                            contract.module.get_function("__memcpy").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        );
+
+                        output = unsafe { contract.builder.build_gep(output, &[len], "") };
+                    }
+                    ast::Type::DynamicBytes => {
+                        let s = contract.vector_bytes(val.into_pointer_value());
+                        let len = contract.vector_len(val.into_pointer_value());
+
+                        contract.builder.build_call(
+                            contract.module.get_function("hex_encode").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        );
+
+                        let hex_len = contract.builder.build_int_add(len, len, "hex_len");
+
+                        output = unsafe { contract.builder.build_gep(output, &[hex_len], "") };
+                    }
+                    ast::Type::Address(_) | ast::Type::Contract(_) => {
+                        let buf =
+                            contract.build_alloca(function, contract.address_type(), "address");
+
+                        contract.builder.build_store(buf, val.into_int_value());
+
+                        let len = contract
+                            .context
+                            .i32_type()
+                            .const_int(contract.ns.address_length as u64, false);
+
+                        let s = contract.builder.build_pointer_cast(
+                            buf,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address_bytes",
+                        );
+
+                        contract.builder.build_call(
+                            contract.module.get_function("hex_encode").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        );
+
+                        let hex_len = contract.builder.build_int_add(len, len, "hex_len");
+
+                        output = unsafe { contract.builder.build_gep(output, &[hex_len], "") };
+                    }
+                    ast::Type::Bytes(size) => {
+                        let buf =
+                            contract.build_alloca(function, contract.llvm_type(&arg_ty), "bytesN");
+
+                        contract.builder.build_store(buf, val.into_int_value());
+
+                        let len = contract.context.i32_type().const_int(size as u64, false);
+
+                        let s = contract.builder.build_pointer_cast(
+                            buf,
+                            contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "bytes",
+                        );
+
+                        contract.builder.build_call(
+                            contract.module.get_function("hex_encode_rev").unwrap(),
+                            &[output.into(), s.into(), len.into()],
+                            "",
+                        );
+
+                        let hex_len = contract.builder.build_int_add(len, len, "hex_len");
+
+                        output = unsafe { contract.builder.build_gep(output, &[hex_len], "") };
+                    }
+                    ast::Type::Enum(_) => {
+                        let val = contract.builder.build_int_z_extend(
+                            val.into_int_value(),
+                            contract.context.i64_type(),
+                            "val_64bits",
+                        );
+
+                        output = contract
+                            .builder
+                            .build_call(
+                                contract.module.get_function("uint2dec").unwrap(),
+                                &[output.into(), val.into()],
+                                "",
+                            )
+                            .try_as_basic_value()
+                            .left()
+                            .unwrap()
+                            .into_pointer_value();
+                    }
+                    ast::Type::Uint(bits) => {
+                        if *spec == FormatArg::Default && bits <= 64 {
+                            let val = if bits == 64 {
+                                val.into_int_value()
+                            } else {
+                                contract.builder.build_int_z_extend(
+                                    val.into_int_value(),
+                                    contract.context.i64_type(),
+                                    "val_64bits",
+                                )
+                            };
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function("uint2dec").unwrap(),
+                                    &[output.into(), val.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        } else if *spec == FormatArg::Default && bits <= 128 {
+                            let val = if bits == 128 {
+                                val.into_int_value()
+                            } else {
+                                contract.builder.build_int_z_extend(
+                                    val.into_int_value(),
+                                    contract.context.custom_width_int_type(128),
+                                    "val_128bits",
+                                )
+                            };
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function("uint128dec").unwrap(),
+                                    &[output.into(), val.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        } else if *spec == FormatArg::Default {
+                            let val = if bits == 256 {
+                                val.into_int_value()
+                            } else {
+                                contract.builder.build_int_z_extend(
+                                    val.into_int_value(),
+                                    contract.context.custom_width_int_type(256),
+                                    "val_256bits",
+                                )
+                            };
+
+                            let pval = contract.build_alloca(
+                                function,
+                                contract.context.custom_width_int_type(256),
+                                "int",
+                            );
+
+                            contract.builder.build_store(pval, val);
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function("uint256dec").unwrap(),
+                                    &[output.into(), pval.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        } else {
+                            let buf = contract.build_alloca(
+                                function,
+                                contract.llvm_type(&arg_ty),
+                                "uint",
+                            );
+
+                            contract.builder.build_store(buf, val.into_int_value());
+
+                            let s = contract.builder.build_pointer_cast(
+                                buf,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "uint",
+                            );
+
+                            let len = contract
+                                .context
+                                .i32_type()
+                                .const_int(bits as u64 / 8, false);
+
+                            let func_name = if *spec == FormatArg::Hex {
+                                "uint2hex"
+                            } else {
+                                "uint2bin"
+                            };
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function(&func_name).unwrap(),
+                                    &[output.into(), s.into(), len.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        }
+                    }
+                    ast::Type::Int(bits) => {
+                        let val = val.into_int_value();
+
+                        let is_negative = contract.builder.build_int_compare(
+                            IntPredicate::SLT,
+                            val,
+                            val.get_type().const_zero(),
+                            "negative",
+                        );
+
+                        let entry = contract.builder.get_insert_block().unwrap();
+                        let positive = contract
+                            .context
+                            .append_basic_block(function, "int_positive");
+                        let negative = contract
+                            .context
+                            .append_basic_block(function, "int_negative");
+
+                        contract
+                            .builder
+                            .build_conditional_branch(is_negative, negative, positive);
+
+                        contract.builder.position_at_end(negative);
+
+                        // add "-" to output and negate our val
+                        contract.builder.build_store(
+                            output,
+                            contract.context.i8_type().const_int('-' as u64, false),
+                        );
+
+                        let minus_len = contract.context.i32_type().const_int(1, false);
+
+                        let neg_data =
+                            unsafe { contract.builder.build_gep(output, &[minus_len], "") };
+                        let neg_val = contract.builder.build_int_neg(val, "negative_int");
+
+                        contract.builder.build_unconditional_branch(positive);
+
+                        contract.builder.position_at_end(positive);
+
+                        let data_phi = contract.builder.build_phi(output.get_type(), "data");
+                        let val_phi = contract.builder.build_phi(val.get_type(), "val");
+
+                        data_phi.add_incoming(&[(&neg_data, negative), (&output, entry)]);
+                        val_phi.add_incoming(&[(&neg_val, negative), (&val, entry)]);
+
+                        if *spec == FormatArg::Default && bits <= 64 {
+                            let val = if bits == 64 {
+                                val_phi.as_basic_value().into_int_value()
+                            } else {
+                                contract.builder.build_int_z_extend(
+                                    val_phi.as_basic_value().into_int_value(),
+                                    contract.context.i64_type(),
+                                    "val_64bits",
+                                )
+                            };
+
+                            let output_after_minus = data_phi.as_basic_value().into_pointer_value();
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function("uint2dec").unwrap(),
+                                    &[output_after_minus.into(), val.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        } else if *spec == FormatArg::Default && bits <= 128 {
+                            let val = if bits == 128 {
+                                val_phi.as_basic_value().into_int_value()
+                            } else {
+                                contract.builder.build_int_z_extend(
+                                    val_phi.as_basic_value().into_int_value(),
+                                    contract.context.custom_width_int_type(128),
+                                    "val_128bits",
+                                )
+                            };
+
+                            let output_after_minus = data_phi.as_basic_value().into_pointer_value();
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function("uint128dec").unwrap(),
+                                    &[output_after_minus.into(), val.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        } else if *spec == FormatArg::Default {
+                            let val = if bits == 256 {
+                                val_phi.as_basic_value().into_int_value()
+                            } else {
+                                contract.builder.build_int_z_extend(
+                                    val_phi.as_basic_value().into_int_value(),
+                                    contract.context.custom_width_int_type(256),
+                                    "val_256bits",
+                                )
+                            };
+
+                            let pval = contract.build_alloca(
+                                function,
+                                contract.context.custom_width_int_type(256),
+                                "int",
+                            );
+
+                            contract.builder.build_store(pval, val);
+
+                            let output_after_minus = data_phi.as_basic_value().into_pointer_value();
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function("uint256dec").unwrap(),
+                                    &[output_after_minus.into(), pval.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        } else {
+                            let buf =
+                                contract.build_alloca(function, contract.llvm_type(&arg_ty), "int");
+
+                            contract
+                                .builder
+                                .build_store(buf, val_phi.as_basic_value().into_int_value());
+
+                            let s = contract.builder.build_pointer_cast(
+                                buf,
+                                contract.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "int",
+                            );
+
+                            let len = contract
+                                .context
+                                .i32_type()
+                                .const_int(bits as u64 / 8, false);
+
+                            let func_name = if *spec == FormatArg::Hex {
+                                "uint2hex"
+                            } else {
+                                "uint2bin"
+                            };
+
+                            let output_after_minus = data_phi.as_basic_value().into_pointer_value();
+
+                            output = contract
+                                .builder
+                                .build_call(
+                                    contract.module.get_function(&func_name).unwrap(),
+                                    &[output_after_minus.into(), s.into(), len.into()],
+                                    "",
+                                )
+                                .try_as_basic_value()
+                                .left()
+                                .unwrap()
+                                .into_pointer_value();
+                        }
+                    }
+                    _ => unimplemented!(),
+                }
+            }
+        }
+
+        // write the final length into the vector
+        let length = contract.builder.build_int_sub(
+            contract
+                .builder
+                .build_ptr_to_int(output, contract.context.i32_type(), "end"),
+            contract
+                .builder
+                .build_ptr_to_int(output_start, contract.context.i32_type(), "begin"),
+            "datalength",
+        );
+
+        let data_len = unsafe {
+            contract.builder.build_gep(
+                vector,
+                &[
+                    contract.context.i32_type().const_zero(),
+                    contract.context.i32_type().const_zero(),
+                ],
+                "data_len",
+            )
+        };
+
+        contract.builder.build_store(data_len, length);
+
+        vector.into()
+    }
+}
 pub struct Contract<'a> {
     pub name: String,
     pub module: Module<'a>,
@@ -5470,6 +5990,80 @@ impl<'a> Contract<'a> {
 
         true
     }
+
+    /// Allocate vector
+    fn vector_new(
+        &self,
+        size: IntValue<'a>,
+        elem_size: IntValue<'a>,
+        init: Option<&Vec<u8>>,
+    ) -> PointerValue<'a> {
+        let init = match init {
+            None => self.builder.build_int_to_ptr(
+                self.context.i32_type().const_all_ones(),
+                self.context.i8_type().ptr_type(AddressSpace::Generic),
+                "invalid",
+            ),
+            Some(s) => self.emit_global_string("const_string", s, true),
+        };
+
+        let v = self
+            .builder
+            .build_call(
+                self.module.get_function("vector_new").unwrap(),
+                &[size.into(), elem_size.into(), init.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap();
+
+        self.builder.build_pointer_cast(
+            v.into_pointer_value(),
+            self.module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "vector",
+        )
+    }
+
+    /// Number of element in a vector
+    fn vector_len(&self, vector: PointerValue<'a>) -> IntValue<'a> {
+        // field 0 is the length
+        let len = unsafe {
+            self.builder.build_gep(
+                vector,
+                &[
+                    self.context.i32_type().const_zero(),
+                    self.context.i32_type().const_zero(),
+                ],
+                "vector_len",
+            )
+        };
+
+        self.builder.build_load(len, "vector_len").into_int_value()
+    }
+
+    /// Return the pointer to the actual bytes in the vector
+    fn vector_bytes(&self, vector: PointerValue<'a>) -> PointerValue<'a> {
+        let data = unsafe {
+            self.builder.build_gep(
+                vector,
+                &[
+                    self.context.i32_type().const_zero(),
+                    self.context.i32_type().const_int(2, false),
+                ],
+                "data",
+            )
+        };
+
+        self.builder.build_pointer_cast(
+            data,
+            self.context.i8_type().ptr_type(AddressSpace::Generic),
+            "data",
+        )
+    }
 }
 
 static STDLIB_IR: &[u8] = include_bytes!("../../stdlib/wasm/stdlib.bc");
@@ -5478,6 +6072,8 @@ static RIPEMD160_IR: &[u8] = include_bytes!("../../stdlib/wasm/ripemd160.bc");
 static SUBSTRATE_IR: &[u8] = include_bytes!("../../stdlib/wasm/substrate.bc");
 static BIGINT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/bigint.bc");
 static BIGINT_BPF_IR: &[u8] = include_bytes!("../../stdlib/bpf/bigint.bc");
+static FORMAT_WASM_IR: &[u8] = include_bytes!("../../stdlib/wasm/format.bc");
+static FORMAT_BPF_IR: &[u8] = include_bytes!("../../stdlib/bpf/format.bc");
 static SOLANA_IR: &[u8] = include_bytes!("../../stdlib/bpf/solana.bc");
 
 /// Return the stdlib as parsed llvm module. The solidity standard library is hardcoded into
@@ -5493,6 +6089,13 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
         module
             .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
             .unwrap();
+
+        let memory = MemoryBuffer::create_from_memory_range(FORMAT_BPF_IR, "format");
+
+        module
+            .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+            .unwrap();
+
         return module;
     }
 
@@ -5501,6 +6104,12 @@ fn load_stdlib<'a>(context: &'a Context, target: &Target) -> Module<'a> {
     let module = Module::parse_bitcode_from_buffer(&memory, context).unwrap();
 
     let memory = MemoryBuffer::create_from_memory_range(BIGINT_WASM_IR, "bigint");
+
+    module
+        .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
+        .unwrap();
+
+    let memory = MemoryBuffer::create_from_memory_range(FORMAT_WASM_IR, "format");
 
     module
         .link_in_module(Module::parse_bitcode_from_buffer(&memory, context).unwrap())
