@@ -1022,6 +1022,21 @@ fn cast_types(
                 Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
             }
         }
+        // Conversion between contracts is allowed if it is a base
+        (Type::Contract(contract_no_from), Type::Contract(contract_no_to)) => {
+            if implicit && !is_base(*contract_no_to, *contract_no_from, ns) {
+                Err(Diagnostic::type_error(
+                    *loc,
+                    format!(
+                        "implicit conversion not allowed since {} is not a base contract of {}",
+                        to.to_string(ns),
+                        from.to_string(ns)
+                    ),
+                ))
+            } else {
+                Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
+            }
+        }
         // conversion from address payable to address is implicitly allowed (not vice versa)
         (Type::Address(true), Type::Address(false)) => {
             Ok(Expression::Cast(*loc, to.clone(), Box::new(expr)))
