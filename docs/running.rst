@@ -3,7 +3,7 @@ Running Solang
 
 The Solang compiler is run on the command line. The solidity source file
 names are provided as command line arguments; the output is an optimized
-wasm file which is ready for deployment on a chain, and an abi file.
+wasm or bpf ` file which is ready for deployment on a chain, and an abi file.
 
 The following targets are supported right now:
 `Ethereum ewasm <https://github.com/ewasm/design>`_,
@@ -96,25 +96,25 @@ First pull the last Solang image from
 
 .. code-block:: bash
 
-        docker pull hyperledgerlabs/solang
+    docker pull hyperledgerlabs/solang
 
 And if you are using podman:
 
 .. code-block:: bash
 
-        podman image pull hyperlederlabs/solang
+    podman image pull hyperlederlabs/solang
 
 Now you can run Solang like so:
 
 .. code-block:: bash
 
-	docker run --rm -it hyperledgerlabs/solang --version
+	  docker run --rm -it hyperledgerlabs/solang --version
 
 Or podman:
 
 .. code-block:: bash
 
-	podman container run --rm -it hyperledgerlabs/solang --version
+	  podman container run --rm -it hyperledgerlabs/solang --version
 
 If you want to compile some solidity files, the source file needs to be
 available inside the container. You can do this via the -v command line.
@@ -123,17 +123,17 @@ to your solidity files:
 
 .. code-block:: bash
 
-	docker run --rm -it -v /local/path:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
+	  docker run --rm -it -v /local/path:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
 
 On podman you might need to add ``:Z`` to your volume argument if SELinux is used, like on Fedora. Also, podman allows relative paths:
 
 .. code-block:: bash
 
-	podman container run --rm -it -v .:/sources:Z hyperledgerlabs/solang -o /sources /sources/flipper.sol
+	  podman container run --rm -it -v .:/sources:Z hyperledgerlabs/solang -o /sources /sources/flipper.sol
 
 On Windows, you need to specify absolute paths:
 
-.. code-block::
+.. code-block:: text
 
 	docker run --rm -it -v C:\Users\User:/sources hyperledgerlabs/solang -o /sources /sources/flipper.sol
 

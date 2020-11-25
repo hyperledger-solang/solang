@@ -1,7 +1,7 @@
 Installing Solang
 =================
 
-The Solang compiler is a single binary. It can be installed in different ways.
+The Solang compiler is a single binary. It can be used in different ways.
 
 Download release binaries
 -------------------------
@@ -87,10 +87,10 @@ A pre-built version of llvm, specifically configured for Solang, is available at
 `dockerfile for building llvm on Windows <https://github.com/hyperledger-labs/solang/blob/master/scripts/build-llvm-windows.dockerfile>`_.
 
 If you want to use the dockerfile yourself rather than download the binaries above, then this
-requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ and switch to
+requires `Docker Desktop <https://www.docker.com/products/docker-desktop>`_ installed, and then switched to
 `windows containers <https://docs.docker.com/docker-for-windows/#switch-between-windows-and-linux-containers>`_.
-Docker on Windows needs Hyper-V. The result will be an image with llvm compressed in ``c:\llvm10.0-win.zip``.
-If you are running Windows 10 in a virtual machine, be sure to check
+The result will be an image with llvm compressed in the file ``c:\llvm10.0-win.zip``. Docker on Windows needs Hyper-V
+enabled. If you are running Windows 10 in a virtual machine, be sure to check
 `this blog post <https://www.mess.org/2020/06/22/Hyper-V-in-KVM/>`_.
 
 After unzipping the file, add the bin directory to your path.
