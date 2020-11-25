@@ -1768,3 +1768,72 @@ fn simple_interface() {
 
     assert_eq!(runtime.vm.output, 200u32.encode());
 }
+
+#[test]
+fn cast_contract() {
+    let ns = parse_and_resolve(
+        r#"
+        interface operator {
+            function op1(int32 a, int32 b) external returns (int32);
+            function op2(int32 a, int32 b) external returns (int32);
+        }
+
+        contract ferqu {
+            operator op;
+
+            constructor(bool do_adds) {
+                if (do_adds) {
+                    op = new m1();
+                } else {
+                    op = new m2();
+                }
+            }
+
+            function x(int32 b) public returns (int32) {
+                return op.op1(102, b);
+            }
+        }
+
+        contract m1 is operator {
+            function op1(int32 a, int32 b) public override returns (int32) {
+                return a + b;
+            }
+
+            function op2(int32 a, int32 b) public override returns (int32) {
+                return a - b;
+            }
+        }
+
+        contract m2 is operator {
+            function op1(int32 a, int32 b) public override returns (int32) {
+                return a * b;
+            }
+
+            function op2(int32 a, int32 b) public override returns (int32) {
+                return a / b;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    let ns = parse_and_resolve(
+        r#"
+        interface IFoo {
+            function bar(uint32) external pure returns (uint32);
+        }
+
+        contract foo  {
+            function bar(IFoo x) public pure returns (uint32) {
+                foo y = x;
+            }
+        }"#,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "implicit conversion not allowed since contract foo is not a base contract of contract IFoo"
+    );
+}
