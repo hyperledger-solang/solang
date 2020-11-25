@@ -15,10 +15,11 @@ for `Parity Substrate <https://substrate.dev/>`_,
 `Sawtooth Sabre <https://github.com/hyperledger/sawtooth-sabre>`_, and
 `Ethereum ewasm <https://github.com/ewasm/design>`_. It uses the
 `llvm <https://www.llvm.org/>`_ compiler framework to produce WebAssembly
-(wasm). As result, the output is highly optimized, which saves you in gas costs.
+(wasm) or BPF contract code. As result, the output is highly optimized, which saves you in gas costs.
 
 Solang aims for source file compatibility with the Ethereum EVM Solidity compiler.
-Where differences exists, this is noted in the documentation. Also, check our :ref:`language_status` page.
+Where differences exists, this is noted in the :ref:`language documentation <language>`.
+Also, check our :ref:`language_status` page.
 The repository can be found on `github <https://github.com/hyperledger-labs/solang>`_
 and we have a `channel on chat.hyperledger.org <https://chat.hyperledger.org/channel/solang>`_.
 

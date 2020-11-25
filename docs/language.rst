@@ -1,3 +1,5 @@
+.. _language:
+
 Solidity Language
 =================
 
@@ -13,40 +15,38 @@ some caveats, please check out our :ref:`language_status` page.
 Solidity Source File Structure
 ------------------------------
 
-A Solidity source file may have multiple contracts in them. A contract is defined
+A single Solidity source file may define multiple contracts. A contract is defined
 with the ``contract`` keyword, following by the contract name and then the definition
-of the contract in curly braces ``{ }``. Multiple contracts maybe defined in one solidity
-source file. The name of the contract does not have to match the name of the file,
-although it this might be convenient.
+of the contract in between curly braces ``{`` and ``}``.
 
 .. code-block:: javascript
 
-    import "foo.sol";
-
     contract A {
         /// foo simply returns true
-        function foo() public return (bool) {
+        function foo() public returns (bool) {
             return true;
         }
     }
 
     contract B {
         /// bar simply returns false
-        function bar() public return (bool) {
+        function bar() public returns (bool) {
             return false;
         }
     }
 
-When compiling this, Solang will output ``A.wasm`` and ``B.wasm``, along with the ABI
-files for each contract.
+When compiling this, Solang will output contract code for both `A` and `B`, irrespective of
+the name of source file. Although multiple contracts maybe defined in one solidity source
+file, it might be convenient to define a single contract in each file with the same name
+as the file name.
 
 Imports
 _______
 
-The ``import`` directive is used to import types by name from other Solidity files; this means that
+The ``import`` directive is used to import types from other Solidity files;
 structs, enums, events, contracts, abstract contract, libraries, and interfaces can be used from another
 Solidity file. This can be useful to keep a single definition in one file, which can be used
-in multiple other files.
+in multiple files.
 
 There are a few different flavours of import. You can specify if you want all types imported,
 or a just a select few. You can also rename the types. The simplest form is:
@@ -58,13 +58,13 @@ or a just a select few. You can also rename the types. The simplest form is:
 Solang will look for the file `foo.sol` in the same directory as the current file. You can specify
 more directories to search with the ``--importpath`` commandline option.
 
-This means that every type defined in `foo.sol` is now usable in your Solidity file, actually
-also on the lines before the import statement. However, if a type with the same name is defined
+Every type defined in `foo.sol` is now usable in your Solidity file, and in fact even before the
+import statement. However, if a type with the same name is defined
 in `foo.sol` and also in the current file, you will get a warning. Note that if the same file
 gets imported more than once, the duplicate types are removed.
 
 It is also possible to import only types with a specific name, or to rename them. In this case,
-this means only type `foo` will be imported, and `bar` will be imported as `baz`.
+only type `foo` will be imported, and `bar` will be imported as `baz`.
 
 .. code-block:: javascript
 
@@ -72,8 +72,8 @@ this means only type `foo` will be imported, and `bar` will be imported as `baz`
 
 Rather than renaming individual types, it is also possible to make all the types in a file
 available under a special import type. In this case, the `bar` defined in `foo.sol` can is
-now visible as `foo.bar`. As long as there is no previous type `foo`, this means there can be
-no naming conflicts.
+now visible as `foo.bar`. As long as there is no previous type `foo`, there can be no naming
+conflicts.
 
 .. code-block:: javascript
 
@@ -127,7 +127,7 @@ _____________
 
 ``uint64``, ``uint32``, ``uint16``, ``uint8``
   These represent shorter single unsigned integers of the given width. These widths are
-  most efficient in WebAssembly and should be used whenever possible.
+  most efficient and should be used whenever possible.
 
 ``uintN``
   These represent shorter single unsigned integers of width ``N``. ``N`` can be anything
@@ -139,14 +139,14 @@ _____________
 
 ``int64``, ``int32``, ``int16``, ``int8``
   These represent shorter single signed integers of the given width. These widths are
-  most efficient in WebAssembly and should be used whenever possible.
+  most efficient and should be used whenever possible.
 
 ``intN``
   These represent shorter single signed integers of width ``N``. ``N`` can be anything
   between 8 and 256 bits and a multiple of 8, e.g. ``int128``.
 
 Underscores ``_`` are allowed in numbers, as long as the number does not start with
-an underscore. This means that ``1_000`` is allowed but ``_1000`` is not. Similarly
+an underscore.  ``1_000`` is allowed but ``_1000`` is not. Similarly
 ``0xffff_0000`` is fine, but ``0x_f`` is not.
 
 Scientific notation is supported, e.g. ``1e6`` is one million. Only integer values
@@ -173,8 +173,8 @@ The largest value an ``uint8`` can hold is (2 :superscript:`8`) - 1 = 255. So, t
   for such large types, and any EVM virtual machine implementation has to do bigint
   calculations, which are expensive.
 
-  WebAssembly does not support this. This means that Solang has to emulate larger types with
-  many WebAssembly instructions, resulting in larger contract code and higher gas cost.
+  WebAssembly or BPF do not support this. As a result that Solang has to emulate larger types with
+  many instructions, resulting in larger contract code and higher gas cost.
 
 Fixed Length byte arrays
 ________________________
@@ -526,8 +526,8 @@ Any array subscript which is out of bounds (either an negative array index, or a
 last element) will cause a runtime exception. In this example, calling ``primenumber(10)`` will
 fail; the first prime number is indexed by 0, and the last by 9.
 
-Arrays are passed by reference. This means that if you modify the array in another function,
-those changes will be reflected in the current function. For example:
+Arrays are passed by reference. If you modify the array in another function, those changes will
+be reflected in the current function. For example:
 
 .. code-block:: javascript
 
@@ -820,7 +820,7 @@ ______________
 
 Function types are references to functions. You can use function types to pass functions
 for callbacks for example. Function types come in two flavours, ``internal`` and ``external``.
-An internal function is a reference to a function in same contract or one of its base contracts.
+An internal function is a reference to a function in the same contract or one of its base contracts.
 An external function is a reference to a public or external function on any contract.
 
 When declaring a function type, you must specify the parameters types, return types, mutability,
@@ -854,13 +854,16 @@ and whether it is external or internal. The parameters or return types cannot ha
         }
     }
 
+If the ``internal`` or ``external`` keyword is omitted, the type defaults to internal.
+
 Just like any other type, a function type can be a function argument, function return type, or a
 contract storage variable. Internal function types cannot be used in public functions parameters or
-return types. If the ``internal`` or ``external`` keyword is omitted, the type defaults to internal.
+return types.
 
 An external function type is a reference to a function in a particular contract. It stores the address of
-the contract, and the function selector. An internal function type only stores the function selector. When
-assigning a value to an external function selector, the contract and function must be specified.
+the contract, and the function selector. An internal function type only stores the function reference. When
+assigning a value to an external function selector, the contract and function must be specified, by using
+a function on particular contract instance.
 
 .. code-block:: javascript
 
@@ -1903,7 +1906,7 @@ be specified here.
         function func1() public {}
     }
 
-In this case, contract ``a`` inherits both ``b`` and ``c``. This means that both ``func1()`` and ``func2()``
+In this case, contract ``a`` inherits from both ``b`` and ``c``. Both ``func1()`` and ``func2()``
 are visible in contract ``a``, and will be part of its public interface if they are declared ``public`` or
 ``external``. In addition, the contract storage variables ``foo`` and ``bar`` are also availabe in ``a``.
 
@@ -1932,7 +1935,7 @@ through ``b``. This means that contract ``b`` also has a variable ``bar``.
 Virtual Functions
 _________________
 
-When inheriting a base contract, it is possible to override a function with a newer function with the same name.
+When inheriting from a base contract, it is possible to override a function with a newer function with the same name.
 For this to be possible, the base contract must have specified the function as ``virtual``. The
 inheriting contract must then specify the same function with the same name, arguments and return values, and
 add the ``override`` keyword.
@@ -2105,6 +2108,49 @@ __________
 
 An interface is a contract sugar type with restrictions. This type cannot be instantiated; it can only define the
 functions prototypes for a contract. This is useful as a generic interface.
+
+.. code-block:: javascript
+
+    interface operator {
+        function op1(int32 a, int32 b) external returns (int32);
+        function op2(int32 a, int32 b) external returns (int32);
+    }
+
+    contract ferqu {
+        operator op;
+
+        constructor(bool do_adds) {
+            if (do_adds) {
+                op = new m1();
+            } else {
+                op = new m2();
+            }
+        }
+
+        function x(int32 b) public returns (int32) {
+            return op.op1(102, b);
+        }
+    }
+
+    contract m1 is operator {
+        function op1(int32 a, int32 b) public override returns (int32) {
+            return a + b;
+        }
+
+        function op2(int32 a, int32 b) public override returns (int32) {
+            return a - b;
+        }
+    }
+
+    contract m2 is operator {
+        function op1(int32 a, int32 b) public override returns (int32) {
+            return a * b;
+        }
+
+        function op2(int32 a, int32 b) public override returns (int32) {
+            return a / b;
+        }
+    }
 
 - Interfaces can only have other interfaces as a base contract
 - All functions must the ``external`` visibilty

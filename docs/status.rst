@@ -19,17 +19,17 @@ Solidity Language completeness
 ------------------------------
 
 Solang wants to be compatible with the latest version of
-`Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_. The
-project is under active development, and new language features are being added
+`Ethereum Foundation Solidity Compiler <https://github.com/ethereum/solidity/>`_, version 0.7.
+The project is under active development, and new language features are being added
 on a continuous basis.
 
 Missing features:
 
-- ``immutable`` is not supported. Note this is impossible to implement on Parity Substrate or Hyperledger Sawtooth; this is purely an ethereum feature
-- libraries functions are always statically linked into the contract wasm
-- Solang generates WebAssembly rather than EVM. This means that the ``assembly {}``
+- ``immutable`` is not supported. Note this is impossible to implement on any than chain other than Ethereum; this is purely an ethereum feature
+- libraries functions are always statically linked into the contract code
+- Solang generates WebAssembly or BPF rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported
-- Defining functions outside of contracts (solc 0.7.1)
+- Defining functions outside of contracts
 - Calling parent contract via ``super``
 
 Unique features to Solang:
@@ -52,7 +52,7 @@ Solang works with Parity Substrate 2.0. This target is the most mature and has r
 Solana
 ______
 
-Solang has a new target for `Solana <https://www.solana.com/>`_. This is early stages right now, however it is
+Solang has a new target for `Solana <https://www.solana.com/>`_. This is in early stages right now, however it is
 under active development.
 
 
