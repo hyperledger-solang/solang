@@ -1,5 +1,5 @@
-// auto-generated: "lalrpop 0.19.1"
-// sha256: c1a758427bd0bd88a580a61f4a19cb7d57b966a8fb335e8e9b2170878113d21d
+// auto-generated: "lalrpop 0.19.4"
+// sha3: 527dcc8958c490bbe826ae4acc91ed3eb8d7a5ce1f8bc36b9eb237f9988bb2dc
 use std::str::FromStr;
 use num_bigint::BigInt;
 use num_bigint::BigUint;
@@ -14,6 +14,8 @@ use super::doc::tags;
 extern crate lalrpop_util as __lalrpop_util;
 #[allow(unused_imports)]
 use self::__lalrpop_util::state_machine as __state_machine;
+extern crate core;
+extern crate alloc;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 mod __parse__SourceUnit {
@@ -33,6 +35,8 @@ mod __parse__SourceUnit {
     extern crate lalrpop_util as __lalrpop_util;
     #[allow(unused_imports)]
     use self::__lalrpop_util::state_machine as __state_machine;
+    extern crate core;
+    extern crate alloc;
     use super::__ToTriple;
     #[allow(dead_code)]
     pub enum __Symbol<'input>
@@ -43,39 +47,39 @@ mod __parse__SourceUnit {
         Variant3(u16),
         Variant4(&'input str),
         Variant5((&'input str, &'input str)),
-        Variant6(::std::option::Option<Token<'input>>),
+        Variant6(core::option::Option<Token<'input>>),
         Variant7(Vec<Expression>),
-        Variant8(::std::option::Option<Vec<Expression>>),
+        Variant8(core::option::Option<Vec<Expression>>),
         Variant9(Base),
-        Variant10(::std::vec::Vec<Base>),
+        Variant10(alloc::vec::Vec<Base>),
         Variant11(EventParameter),
-        Variant12(::std::vec::Vec<EventParameter>),
+        Variant12(alloc::vec::Vec<EventParameter>),
         Variant13(Expression),
-        Variant14(::std::vec::Vec<Expression>),
+        Variant14(alloc::vec::Vec<Expression>),
         Variant15(Identifier),
-        Variant16(::std::vec::Vec<Identifier>),
+        Variant16(alloc::vec::Vec<Identifier>),
         Variant17((Identifier, Option<Identifier>)),
-        Variant18(::std::vec::Vec<(Identifier, Option<Identifier>)>),
+        Variant18(alloc::vec::Vec<(Identifier, Option<Identifier>)>),
         Variant19(NamedArgument),
-        Variant20(::std::vec::Vec<NamedArgument>),
+        Variant20(alloc::vec::Vec<NamedArgument>),
         Variant21((Loc, Option<Parameter>)),
-        Variant22(::std::vec::Vec<(Loc, Option<Parameter>)>),
-        Variant23(::std::option::Option<Expression>),
-        Variant24((Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)),
-        Variant25(::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>),
+        Variant22(alloc::vec::Vec<(Loc, Option<Parameter>)>),
+        Variant23(core::option::Option<Expression>),
+        Variant24((Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)),
+        Variant25(core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>),
         Variant26(ContractPart),
-        Variant27(::std::vec::Vec<ContractPart>),
+        Variant27(alloc::vec::Vec<ContractPart>),
         Variant28(VariableDeclaration),
-        Variant29(::std::vec::Vec<VariableDeclaration>),
+        Variant29(alloc::vec::Vec<VariableDeclaration>),
         Variant30((Option<Loc>, Vec<(Loc, Option<Parameter>)>)),
-        Variant31(::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>),
+        Variant31(core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>),
         Variant32(usize),
         Variant33(Option<Expression>),
         Variant34(Vec<Base>),
         Variant35(Statement),
         Variant36(Option<Statement>),
         Variant37((Identifier, Parameter, Statement)),
-        Variant38(::std::option::Option<(Identifier, Parameter, Statement)>),
+        Variant38(core::option::Option<(Identifier, Parameter, Statement)>),
         Variant39(Vec<EventParameter>),
         Variant40(Vec<Identifier>),
         Variant41(Vec<NamedArgument>),
@@ -88,36 +92,36 @@ mod __parse__SourceUnit {
         Variant48(Box<EnumDefinition>),
         Variant49(Box<EventDefinition>),
         Variant50(FunctionAttribute),
-        Variant51(::std::vec::Vec<FunctionAttribute>),
+        Variant51(alloc::vec::Vec<FunctionAttribute>),
         Variant52(FunctionTy),
         Variant53(Type),
         Variant54(HexLiteral),
-        Variant55(::std::vec::Vec<HexLiteral>),
-        Variant56(::std::option::Option<Identifier>),
+        Variant55(alloc::vec::Vec<HexLiteral>),
+        Variant56(core::option::Option<Identifier>),
         Variant57(Import),
         Variant58(Parameter),
-        Variant59(::std::option::Option<Parameter>),
-        Variant60(::std::option::Option<Vec<(Loc, Option<Parameter>)>>),
+        Variant59(core::option::Option<Parameter>),
+        Variant60(core::option::Option<Vec<(Loc, Option<Parameter>)>>),
         Variant61((Identifier, StringLiteral)),
-        Variant62(::std::option::Option<Statement>),
+        Variant62(core::option::Option<Statement>),
         Variant63((usize, CommentType, &'input str)),
-        Variant64(::std::vec::Vec<(usize, CommentType, &'input str)>),
+        Variant64(alloc::vec::Vec<(usize, CommentType, &'input str)>),
         Variant65(SourceUnit),
         Variant66(SourceUnitPart),
-        Variant67(::std::vec::Vec<SourceUnitPart>),
+        Variant67(alloc::vec::Vec<SourceUnitPart>),
         Variant68(StateMutability),
-        Variant69(::std::vec::Vec<Statement>),
+        Variant69(alloc::vec::Vec<Statement>),
         Variant70(StorageLocation),
-        Variant71(::std::option::Option<StorageLocation>),
+        Variant71(core::option::Option<StorageLocation>),
         Variant72(StringLiteral),
-        Variant73(::std::vec::Vec<StringLiteral>),
+        Variant73(alloc::vec::Vec<StringLiteral>),
         Variant74(Box<StructDefinition>),
         Variant75((Vec<(Loc, Option<Parameter>)>, Box<Statement>)),
-        Variant76(::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>),
+        Variant76(core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>),
         Variant77(Unit),
         Variant78(Box<Using>),
         Variant79(VariableAttribute),
-        Variant80(::std::vec::Vec<VariableAttribute>),
+        Variant80(alloc::vec::Vec<VariableAttribute>),
         Variant81(Box<VariableDefinition>),
         Variant82(Visibility),
         Variant83(Option<Loc>),
@@ -2953,7 +2957,7 @@ mod __parse__SourceUnit {
             _ => 0,
         }
     }
-    fn __expected_tokens(__state: i16) -> Vec<::std::string::String> {
+    fn __expected_tokens(__state: i16) -> alloc::vec::Vec<alloc::string::String> {
         const __TERMINAL: &[&str] = &[
             r###""!""###,
             r###""!=""###,
@@ -3090,7 +3094,7 @@ mod __parse__SourceUnit {
     {
         input: &'input str,
         file_no: usize,
-        __phantom: ::std::marker::PhantomData<(&'input ())>,
+        __phantom: core::marker::PhantomData<(&'input ())>,
     }
     impl<'input> __state_machine::ParserDefinition for __StateMachine<'input>
     where 
@@ -3118,7 +3122,7 @@ mod __parse__SourceUnit {
 
         #[inline]
         fn token_to_index(&self, token: &Self::Token) -> Option<usize> {
-            __token_to_integer(token, ::std::marker::PhantomData::<(&())>)
+            __token_to_integer(token, core::marker::PhantomData::<(&())>)
         }
 
         #[inline]
@@ -3142,7 +3146,7 @@ mod __parse__SourceUnit {
         }
 
         fn token_to_symbol(&self, token_index: usize, token: Self::Token) -> Self::Symbol {
-            __token_to_symbol(token_index, token, ::std::marker::PhantomData::<(&())>)
+            __token_to_symbol(token_index, token, core::marker::PhantomData::<(&())>)
         }
 
         fn expected_tokens(&self, state: i16) -> Vec<String> {
@@ -3176,7 +3180,7 @@ mod __parse__SourceUnit {
                 start_location,
                 states,
                 symbols,
-                ::std::marker::PhantomData::<(&())>,
+                core::marker::PhantomData::<(&())>,
             )
         }
 
@@ -3188,7 +3192,7 @@ mod __parse__SourceUnit {
         'input,
     >(
         __token: &Token<'input>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> Option<usize>
     {
         match *__token {
@@ -3320,7 +3324,7 @@ mod __parse__SourceUnit {
     >(
         __token_index: usize,
         __token: Token<'input>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> __Symbol<'input>
     {
         match __token_index {
@@ -3377,7 +3381,7 @@ mod __parse__SourceUnit {
                 __StateMachine {
                     input,
                     file_no,
-                    __phantom: ::std::marker::PhantomData::<(&())>,
+                    __phantom: core::marker::PhantomData::<(&())>,
                 },
                 __tokens,
             )
@@ -3390,593 +3394,593 @@ mod __parse__SourceUnit {
         file_no: usize,
         __action: i16,
         __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __states: &mut alloc::vec::Vec<i16>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> Option<Result<SourceUnit,__lalrpop_util::ParseError<usize, Token<'input>, LexicalError>>>
     {
         let (__pop_states, __nonterminal) = match __action {
             0 => {
-                __reduce0(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce0(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             1 => {
-                __reduce1(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce1(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             2 => {
-                __reduce2(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce2(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             3 => {
-                __reduce3(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce3(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             4 => {
-                __reduce4(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce4(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             5 => {
-                __reduce5(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce5(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             6 => {
-                __reduce6(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce6(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             7 => {
-                __reduce7(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce7(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             8 => {
-                __reduce8(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce8(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             9 => {
-                __reduce9(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce9(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             10 => {
-                __reduce10(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce10(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             11 => {
-                __reduce11(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce11(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             12 => {
-                __reduce12(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce12(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             13 => {
-                __reduce13(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce13(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             14 => {
-                __reduce14(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce14(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             15 => {
-                __reduce15(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce15(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             16 => {
-                __reduce16(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce16(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             17 => {
-                __reduce17(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce17(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             18 => {
-                __reduce18(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce18(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             19 => {
-                __reduce19(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce19(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             20 => {
-                __reduce20(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce20(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             21 => {
-                __reduce21(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce21(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             22 => {
-                __reduce22(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce22(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             23 => {
-                __reduce23(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce23(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             24 => {
-                __reduce24(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce24(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             25 => {
-                __reduce25(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce25(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             26 => {
-                __reduce26(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce26(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             27 => {
-                __reduce27(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce27(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             28 => {
-                __reduce28(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce28(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             29 => {
-                __reduce29(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce29(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             30 => {
-                __reduce30(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce30(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             31 => {
-                __reduce31(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce31(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             32 => {
-                __reduce32(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce32(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             33 => {
-                __reduce33(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce33(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             34 => {
-                __reduce34(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce34(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             35 => {
-                __reduce35(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce35(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             36 => {
-                __reduce36(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce36(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             37 => {
-                __reduce37(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce37(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             38 => {
-                __reduce38(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce38(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             39 => {
-                __reduce39(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce39(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             40 => {
-                __reduce40(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce40(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             41 => {
-                __reduce41(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce41(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             42 => {
-                __reduce42(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce42(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             43 => {
-                __reduce43(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce43(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             44 => {
-                __reduce44(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce44(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             45 => {
-                __reduce45(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce45(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             46 => {
-                __reduce46(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce46(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             47 => {
-                __reduce47(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce47(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             48 => {
-                __reduce48(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce48(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             49 => {
-                __reduce49(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce49(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             50 => {
-                __reduce50(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce50(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             51 => {
-                __reduce51(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce51(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             52 => {
-                __reduce52(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce52(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             53 => {
-                __reduce53(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce53(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             54 => {
-                __reduce54(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce54(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             55 => {
-                __reduce55(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce55(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             56 => {
-                __reduce56(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce56(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             57 => {
-                __reduce57(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce57(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             58 => {
-                __reduce58(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce58(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             59 => {
-                __reduce59(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce59(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             60 => {
-                __reduce60(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce60(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             61 => {
-                __reduce61(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce61(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             62 => {
-                __reduce62(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce62(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             63 => {
-                __reduce63(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce63(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             64 => {
-                __reduce64(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce64(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             65 => {
-                __reduce65(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce65(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             66 => {
-                __reduce66(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce66(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             67 => {
-                __reduce67(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce67(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             68 => {
-                __reduce68(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce68(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             69 => {
-                __reduce69(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce69(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             70 => {
-                __reduce70(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce70(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             71 => {
-                __reduce71(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce71(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             72 => {
-                __reduce72(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce72(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             73 => {
-                __reduce73(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce73(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             74 => {
-                __reduce74(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce74(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             75 => {
-                __reduce75(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce75(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             76 => {
-                __reduce76(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce76(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             77 => {
-                __reduce77(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce77(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             78 => {
-                __reduce78(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce78(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             79 => {
-                __reduce79(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce79(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             80 => {
-                __reduce80(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce80(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             81 => {
-                __reduce81(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce81(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             82 => {
-                __reduce82(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce82(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             83 => {
-                __reduce83(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce83(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             84 => {
-                __reduce84(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce84(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             85 => {
-                __reduce85(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce85(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             86 => {
-                __reduce86(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce86(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             87 => {
-                __reduce87(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce87(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             88 => {
-                __reduce88(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce88(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             89 => {
-                __reduce89(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce89(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             90 => {
-                __reduce90(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce90(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             91 => {
-                __reduce91(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce91(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             92 => {
-                __reduce92(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce92(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             93 => {
-                __reduce93(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce93(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             94 => {
-                __reduce94(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce94(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             95 => {
-                __reduce95(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce95(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             96 => {
-                __reduce96(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce96(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             97 => {
-                __reduce97(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce97(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             98 => {
-                __reduce98(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce98(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             99 => {
-                __reduce99(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce99(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             100 => {
-                __reduce100(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce100(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             101 => {
-                __reduce101(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce101(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             102 => {
-                __reduce102(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce102(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             103 => {
-                __reduce103(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce103(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             104 => {
-                __reduce104(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce104(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             105 => {
-                __reduce105(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce105(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             106 => {
-                __reduce106(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce106(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             107 => {
-                __reduce107(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce107(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             108 => {
-                __reduce108(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce108(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             109 => {
-                __reduce109(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce109(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             110 => {
-                __reduce110(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce110(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             111 => {
-                __reduce111(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce111(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             112 => {
-                __reduce112(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce112(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             113 => {
-                __reduce113(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce113(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             114 => {
-                __reduce114(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce114(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             115 => {
-                __reduce115(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce115(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             116 => {
-                __reduce116(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce116(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             117 => {
-                __reduce117(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce117(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             118 => {
-                __reduce118(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce118(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             119 => {
-                __reduce119(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce119(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             120 => {
-                __reduce120(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce120(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             121 => {
-                __reduce121(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce121(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             122 => {
-                __reduce122(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce122(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             123 => {
-                __reduce123(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce123(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             124 => {
-                __reduce124(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce124(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             125 => {
-                __reduce125(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce125(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             126 => {
-                __reduce126(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce126(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             127 => {
-                __reduce127(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce127(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             128 => {
-                __reduce128(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce128(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             129 => {
-                __reduce129(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce129(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             130 => {
-                __reduce130(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce130(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             131 => {
-                __reduce131(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce131(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             132 => {
-                __reduce132(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce132(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             133 => {
-                __reduce133(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce133(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             134 => {
-                __reduce134(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce134(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             135 => {
-                __reduce135(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce135(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             136 => {
-                __reduce136(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce136(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             137 => {
-                __reduce137(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce137(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             138 => {
-                __reduce138(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce138(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             139 => {
-                __reduce139(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce139(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             140 => {
-                __reduce140(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce140(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             141 => {
-                __reduce141(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce141(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             142 => {
-                __reduce142(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce142(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             143 => {
-                __reduce143(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce143(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             144 => {
-                __reduce144(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce144(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             145 => {
-                __reduce145(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce145(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             146 => {
-                __reduce146(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce146(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             147 => {
-                __reduce147(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce147(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             148 => {
-                __reduce148(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce148(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             149 => {
-                __reduce149(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce149(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             150 => {
-                __reduce150(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce150(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             151 => {
-                __reduce151(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce151(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             152 => {
-                __reduce152(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce152(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             153 => {
-                __reduce153(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce153(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             154 => {
-                __reduce154(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce154(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             155 => {
-                __reduce155(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce155(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             156 => {
-                __reduce156(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce156(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             157 => {
-                __reduce157(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce157(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             158 => {
-                __reduce158(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce158(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             159 => {
-                __reduce159(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce159(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             160 => {
-                __reduce160(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce160(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             161 => {
-                __reduce161(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce161(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             162 => {
-                __reduce162(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce162(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             163 => {
-                __reduce163(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce163(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             164 => {
-                __reduce164(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce164(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             165 => {
-                __reduce165(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce165(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             166 => {
-                __reduce166(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce166(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             167 => {
-                __reduce167(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce167(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             168 => {
-                __reduce168(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce168(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             169 => {
-                __reduce169(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce169(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             170 => {
-                __reduce170(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce170(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             171 => {
-                __reduce171(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce171(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             172 => {
-                __reduce172(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce172(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             173 => {
-                __reduce173(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce173(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             174 => {
-                __reduce174(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce174(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             175 => {
-                __reduce175(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce175(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             176 => {
-                __reduce176(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce176(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             177 => {
-                __reduce177(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce177(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             178 => {
-                __reduce178(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce178(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             179 => {
-                __reduce179(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce179(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             180 => {
-                __reduce180(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce180(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             181 => {
-                __reduce181(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce181(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             182 => {
-                __reduce182(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce182(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             183 => {
-                __reduce183(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce183(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             184 => {
-                __reduce184(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce184(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             185 => {
-                __reduce185(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce185(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             186 => {
-                __reduce186(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce186(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             187 => {
-                __reduce187(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce187(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             188 => {
-                __reduce188(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce188(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             189 => {
-                __reduce189(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce189(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             190 => {
-                __reduce190(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce190(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             191 => {
-                __reduce191(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce191(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             192 => {
-                __reduce192(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce192(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             193 => {
-                __reduce193(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce193(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             194 => {
                 // ImportDirective = "import", "*", "as", Identifier, Identifier, StringLiteral, ";" => ActionFn(13);
@@ -4017,622 +4021,622 @@ mod __parse__SourceUnit {
                 (7, 82)
             }
             196 => {
-                __reduce196(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce196(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             197 => {
-                __reduce197(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce197(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             198 => {
-                __reduce198(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce198(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             199 => {
-                __reduce199(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce199(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             200 => {
-                __reduce200(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce200(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             201 => {
-                __reduce201(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce201(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             202 => {
-                __reduce202(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce202(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             203 => {
-                __reduce203(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce203(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             204 => {
-                __reduce204(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce204(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             205 => {
-                __reduce205(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce205(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             206 => {
-                __reduce206(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce206(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             207 => {
-                __reduce207(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce207(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             208 => {
-                __reduce208(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce208(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             209 => {
-                __reduce209(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce209(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             210 => {
-                __reduce210(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce210(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             211 => {
-                __reduce211(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce211(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             212 => {
-                __reduce212(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce212(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             213 => {
-                __reduce213(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce213(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             214 => {
-                __reduce214(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce214(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             215 => {
-                __reduce215(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce215(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             216 => {
-                __reduce216(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce216(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             217 => {
-                __reduce217(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce217(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             218 => {
-                __reduce218(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce218(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             219 => {
-                __reduce219(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce219(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             220 => {
-                __reduce220(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce220(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             221 => {
-                __reduce221(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce221(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             222 => {
-                __reduce222(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce222(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             223 => {
-                __reduce223(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce223(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             224 => {
-                __reduce224(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce224(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             225 => {
-                __reduce225(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce225(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             226 => {
-                __reduce226(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce226(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             227 => {
-                __reduce227(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce227(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             228 => {
-                __reduce228(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce228(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             229 => {
-                __reduce229(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce229(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             230 => {
-                __reduce230(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce230(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             231 => {
-                __reduce231(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce231(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             232 => {
-                __reduce232(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce232(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             233 => {
-                __reduce233(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce233(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             234 => {
-                __reduce234(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce234(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             235 => {
-                __reduce235(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce235(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             236 => {
-                __reduce236(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce236(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             237 => {
-                __reduce237(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce237(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             238 => {
-                __reduce238(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce238(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             239 => {
-                __reduce239(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce239(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             240 => {
-                __reduce240(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce240(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             241 => {
-                __reduce241(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce241(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             242 => {
-                __reduce242(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce242(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             243 => {
-                __reduce243(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce243(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             244 => {
-                __reduce244(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce244(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             245 => {
-                __reduce245(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce245(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             246 => {
-                __reduce246(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce246(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             247 => {
-                __reduce247(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce247(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             248 => {
-                __reduce248(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce248(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             249 => {
-                __reduce249(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce249(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             250 => {
-                __reduce250(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce250(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             251 => {
-                __reduce251(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce251(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             252 => {
-                __reduce252(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce252(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             253 => {
-                __reduce253(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce253(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             254 => {
-                __reduce254(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce254(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             255 => {
-                __reduce255(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce255(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             256 => {
-                __reduce256(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce256(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             257 => {
-                __reduce257(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce257(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             258 => {
-                __reduce258(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce258(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             259 => {
-                __reduce259(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce259(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             260 => {
-                __reduce260(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce260(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             261 => {
-                __reduce261(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce261(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             262 => {
-                __reduce262(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce262(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             263 => {
-                __reduce263(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce263(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             264 => {
-                __reduce264(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce264(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             265 => {
-                __reduce265(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce265(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             266 => {
-                __reduce266(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce266(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             267 => {
-                __reduce267(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce267(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             268 => {
-                __reduce268(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce268(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             269 => {
-                __reduce269(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce269(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             270 => {
-                __reduce270(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce270(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             271 => {
-                __reduce271(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce271(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             272 => {
-                __reduce272(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce272(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             273 => {
-                __reduce273(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce273(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             274 => {
-                __reduce274(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce274(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             275 => {
-                __reduce275(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce275(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             276 => {
-                __reduce276(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce276(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             277 => {
-                __reduce277(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce277(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             278 => {
-                __reduce278(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce278(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             279 => {
-                __reduce279(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce279(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             280 => {
-                __reduce280(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce280(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             281 => {
-                __reduce281(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce281(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             282 => {
-                __reduce282(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce282(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             283 => {
-                __reduce283(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce283(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             284 => {
-                __reduce284(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce284(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             285 => {
-                __reduce285(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce285(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             286 => {
-                __reduce286(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce286(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             287 => {
-                __reduce287(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce287(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             288 => {
-                __reduce288(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce288(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             289 => {
-                __reduce289(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce289(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             290 => {
-                __reduce290(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce290(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             291 => {
-                __reduce291(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce291(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             292 => {
-                __reduce292(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce292(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             293 => {
-                __reduce293(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce293(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             294 => {
-                __reduce294(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce294(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             295 => {
-                __reduce295(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce295(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             296 => {
-                __reduce296(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce296(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             297 => {
-                __reduce297(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce297(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             298 => {
-                __reduce298(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce298(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             299 => {
-                __reduce299(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce299(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             300 => {
-                __reduce300(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce300(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             301 => {
-                __reduce301(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce301(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             302 => {
-                __reduce302(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce302(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             303 => {
-                __reduce303(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce303(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             304 => {
-                __reduce304(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce304(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             305 => {
-                __reduce305(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce305(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             306 => {
-                __reduce306(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce306(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             307 => {
-                __reduce307(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce307(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             308 => {
-                __reduce308(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce308(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             309 => {
-                __reduce309(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce309(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             310 => {
-                __reduce310(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce310(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             311 => {
-                __reduce311(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce311(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             312 => {
-                __reduce312(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce312(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             313 => {
-                __reduce313(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce313(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             314 => {
-                __reduce314(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce314(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             315 => {
-                __reduce315(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce315(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             316 => {
-                __reduce316(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce316(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             317 => {
-                __reduce317(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce317(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             318 => {
-                __reduce318(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce318(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             319 => {
-                __reduce319(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce319(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             320 => {
-                __reduce320(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce320(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             321 => {
-                __reduce321(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce321(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             322 => {
-                __reduce322(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce322(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             323 => {
-                __reduce323(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce323(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             324 => {
-                __reduce324(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce324(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             325 => {
-                __reduce325(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce325(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             326 => {
-                __reduce326(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce326(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             327 => {
-                __reduce327(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce327(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             328 => {
-                __reduce328(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce328(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             329 => {
-                __reduce329(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce329(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             330 => {
-                __reduce330(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce330(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             331 => {
-                __reduce331(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce331(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             332 => {
-                __reduce332(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce332(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             333 => {
-                __reduce333(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce333(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             334 => {
-                __reduce334(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce334(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             335 => {
-                __reduce335(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce335(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             336 => {
-                __reduce336(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce336(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             337 => {
-                __reduce337(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce337(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             338 => {
-                __reduce338(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce338(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             339 => {
-                __reduce339(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce339(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             340 => {
-                __reduce340(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce340(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             341 => {
-                __reduce341(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce341(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             342 => {
-                __reduce342(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce342(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             343 => {
-                __reduce343(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce343(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             344 => {
-                __reduce344(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce344(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             345 => {
-                __reduce345(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce345(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             346 => {
-                __reduce346(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce346(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             347 => {
-                __reduce347(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce347(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             348 => {
-                __reduce348(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce348(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             349 => {
-                __reduce349(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce349(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             350 => {
-                __reduce350(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce350(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             351 => {
-                __reduce351(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce351(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             352 => {
-                __reduce352(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce352(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             353 => {
-                __reduce353(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce353(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             354 => {
-                __reduce354(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce354(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             355 => {
-                __reduce355(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce355(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             356 => {
-                __reduce356(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce356(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             357 => {
-                __reduce357(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce357(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             358 => {
-                __reduce358(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce358(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             359 => {
-                __reduce359(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce359(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             360 => {
-                __reduce360(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce360(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             361 => {
-                __reduce361(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce361(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             362 => {
-                __reduce362(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce362(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             363 => {
-                __reduce363(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce363(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             364 => {
-                __reduce364(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce364(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             365 => {
-                __reduce365(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce365(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             366 => {
-                __reduce366(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce366(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             367 => {
-                __reduce367(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce367(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             368 => {
-                __reduce368(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce368(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             369 => {
-                __reduce369(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce369(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             370 => {
-                __reduce370(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce370(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             371 => {
-                __reduce371(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce371(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             372 => {
-                __reduce372(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce372(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             373 => {
-                __reduce373(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce373(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             374 => {
-                __reduce374(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce374(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             375 => {
-                __reduce375(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce375(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             376 => {
-                __reduce376(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce376(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             377 => {
-                __reduce377(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce377(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             378 => {
-                __reduce378(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce378(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             379 => {
-                __reduce379(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce379(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             380 => {
-                __reduce380(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce380(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             381 => {
-                __reduce381(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce381(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             382 => {
-                __reduce382(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce382(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             383 => {
-                __reduce383(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce383(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             384 => {
-                __reduce384(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce384(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             385 => {
-                __reduce385(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce385(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             386 => {
-                __reduce386(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce386(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             387 => {
-                __reduce387(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce387(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             388 => {
-                __reduce388(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce388(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             389 => {
-                __reduce389(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce389(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             390 => {
-                __reduce390(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce390(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             391 => {
-                __reduce391(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce391(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             392 => {
-                __reduce392(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce392(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             393 => {
-                __reduce393(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce393(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             394 => {
-                __reduce394(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce394(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             395 => {
-                __reduce395(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce395(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             396 => {
-                __reduce396(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce396(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             397 => {
-                __reduce397(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce397(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             398 => {
-                __reduce398(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce398(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             399 => {
-                __reduce399(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce399(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             400 => {
-                __reduce400(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce400(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             401 => {
-                __reduce401(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce401(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             402 => {
                 // __SourceUnit = SourceUnit => ActionFn(0);
@@ -4643,10 +4647,10 @@ mod __parse__SourceUnit {
                 return Some(Ok(__nt));
             }
             403 => {
-                __reduce403(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce403(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             404 => {
-                __reduce404(input, file_no, __lookahead_start, __symbols, ::std::marker::PhantomData::<(&())>)
+                __reduce404(input, file_no, __lookahead_start, __symbols, core::marker::PhantomData::<(&())>)
             }
             _ => panic!("invalid action code {}", __action)
         };
@@ -4664,7 +4668,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant2<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (CommentType, &'input str), usize)
      {
         match __symbols.pop() {
@@ -4675,7 +4679,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant17<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (Identifier, Option<Identifier>), usize)
      {
         match __symbols.pop() {
@@ -4686,7 +4690,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant37<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (Identifier, Parameter, Statement), usize)
      {
         match __symbols.pop() {
@@ -4697,7 +4701,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant61<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (Identifier, StringLiteral), usize)
      {
         match __symbols.pop() {
@@ -4708,7 +4712,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant21<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (Loc, Option<Parameter>), usize)
      {
         match __symbols.pop() {
@@ -4719,7 +4723,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant30<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (Option<Loc>, Vec<(Loc, Option<Parameter>)>), usize)
      {
         match __symbols.pop() {
@@ -4730,7 +4734,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant75<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (Vec<(Loc, Option<Parameter>)>, Box<Statement>), usize)
      {
         match __symbols.pop() {
@@ -4741,8 +4745,8 @@ mod __parse__SourceUnit {
     fn __pop_Variant24<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, (Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>), usize)
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, (Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>), usize)
      {
         match __symbols.pop() {
             Some((__l, __Symbol::Variant24(__v), __r)) => (__l, __v, __r),
@@ -4752,7 +4756,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant63<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (usize, CommentType, &'input str), usize)
      {
         match __symbols.pop() {
@@ -4763,7 +4767,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant5<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, (&'input str, &'input str), usize)
      {
         match __symbols.pop() {
@@ -4774,7 +4778,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant9<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Base, usize)
      {
         match __symbols.pop() {
@@ -4785,7 +4789,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant45<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<ContractDefinition>, usize)
      {
         match __symbols.pop() {
@@ -4796,7 +4800,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant48<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<EnumDefinition>, usize)
      {
         match __symbols.pop() {
@@ -4807,7 +4811,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant49<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<EventDefinition>, usize)
      {
         match __symbols.pop() {
@@ -4818,7 +4822,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant44<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<FunctionDefinition>, usize)
      {
         match __symbols.pop() {
@@ -4829,7 +4833,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant74<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<StructDefinition>, usize)
      {
         match __symbols.pop() {
@@ -4840,7 +4844,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant78<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<Using>, usize)
      {
         match __symbols.pop() {
@@ -4851,7 +4855,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant81<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Box<VariableDefinition>, usize)
      {
         match __symbols.pop() {
@@ -4862,7 +4866,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant26<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, ContractPart, usize)
      {
         match __symbols.pop() {
@@ -4873,7 +4877,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant46<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, ContractTy, usize)
      {
         match __symbols.pop() {
@@ -4884,7 +4888,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant11<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, EventParameter, usize)
      {
         match __symbols.pop() {
@@ -4895,7 +4899,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant13<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Expression, usize)
      {
         match __symbols.pop() {
@@ -4906,7 +4910,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant50<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, FunctionAttribute, usize)
      {
         match __symbols.pop() {
@@ -4917,7 +4921,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant52<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, FunctionTy, usize)
      {
         match __symbols.pop() {
@@ -4928,7 +4932,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant54<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, HexLiteral, usize)
      {
         match __symbols.pop() {
@@ -4939,7 +4943,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant15<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Identifier, usize)
      {
         match __symbols.pop() {
@@ -4950,7 +4954,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant57<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Import, usize)
      {
         match __symbols.pop() {
@@ -4961,7 +4965,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant19<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, NamedArgument, usize)
      {
         match __symbols.pop() {
@@ -4972,7 +4976,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant33<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Option<Expression>, usize)
      {
         match __symbols.pop() {
@@ -4983,7 +4987,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant83<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Option<Loc>, usize)
      {
         match __symbols.pop() {
@@ -4994,7 +4998,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant36<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Option<Statement>, usize)
      {
         match __symbols.pop() {
@@ -5005,7 +5009,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant58<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Parameter, usize)
      {
         match __symbols.pop() {
@@ -5016,7 +5020,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant65<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, SourceUnit, usize)
      {
         match __symbols.pop() {
@@ -5027,7 +5031,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant66<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, SourceUnitPart, usize)
      {
         match __symbols.pop() {
@@ -5038,7 +5042,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant68<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, StateMutability, usize)
      {
         match __symbols.pop() {
@@ -5049,7 +5053,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant35<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Statement, usize)
      {
         match __symbols.pop() {
@@ -5060,7 +5064,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant70<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, StorageLocation, usize)
      {
         match __symbols.pop() {
@@ -5071,7 +5075,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant72<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, StringLiteral, usize)
      {
         match __symbols.pop() {
@@ -5082,7 +5086,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant0<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Token<'input>, usize)
      {
         match __symbols.pop() {
@@ -5093,7 +5097,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant53<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Type, usize)
      {
         match __symbols.pop() {
@@ -5104,7 +5108,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant77<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Unit, usize)
      {
         match __symbols.pop() {
@@ -5115,7 +5119,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant79<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, VariableAttribute, usize)
      {
         match __symbols.pop() {
@@ -5126,7 +5130,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant28<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, VariableDeclaration, usize)
      {
         match __symbols.pop() {
@@ -5137,7 +5141,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant42<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<(Identifier, Option<Identifier>)>, usize)
      {
         match __symbols.pop() {
@@ -5148,7 +5152,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant43<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<(Loc, Option<Parameter>)>, usize)
      {
         match __symbols.pop() {
@@ -5159,7 +5163,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant34<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<Base>, usize)
      {
         match __symbols.pop() {
@@ -5170,7 +5174,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant47<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<DocComment>, usize)
      {
         match __symbols.pop() {
@@ -5181,7 +5185,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant39<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<EventParameter>, usize)
      {
         match __symbols.pop() {
@@ -5192,7 +5196,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant7<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<Expression>, usize)
      {
         match __symbols.pop() {
@@ -5203,7 +5207,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant40<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<Identifier>, usize)
      {
         match __symbols.pop() {
@@ -5214,7 +5218,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant41<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Vec<NamedArgument>, usize)
      {
         match __symbols.pop() {
@@ -5225,7 +5229,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant82<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, Visibility, usize)
      {
         match __symbols.pop() {
@@ -5233,10 +5237,318 @@ mod __parse__SourceUnit {
             _ => __symbol_type_mismatch()
         }
     }
+    fn __pop_Variant18<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<(Identifier, Option<Identifier>)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant18(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant22<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<(Loc, Option<Parameter>)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant22(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant64<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<(usize, CommentType, &'input str)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant64(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant10<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<Base>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant10(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant27<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<ContractPart>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant27(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant12<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<EventParameter>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant12(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant14<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<Expression>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant14(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant51<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<FunctionAttribute>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant51(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant55<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<HexLiteral>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant55(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant16<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<Identifier>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant16(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant20<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<NamedArgument>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant20(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant67<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<SourceUnitPart>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant67(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant69<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<Statement>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant69(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant73<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<StringLiteral>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant73(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant80<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<VariableAttribute>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant80(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant29<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, alloc::vec::Vec<VariableDeclaration>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant29(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant38<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<(Identifier, Parameter, Statement)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant38(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant31<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant31(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant76<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant76(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant25<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant25(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant23<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Expression>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant23(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant56<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Identifier>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant56(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant59<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Parameter>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant59(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant62<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Statement>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant62(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant71<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<StorageLocation>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant71(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant6<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Token<'input>>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant6(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant60<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant60(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
+    fn __pop_Variant8<
+      'input,
+    >(
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
+    ) -> (usize, core::option::Option<Vec<Expression>>, usize)
+     {
+        match __symbols.pop() {
+            Some((__l, __Symbol::Variant8(__v), __r)) => (__l, __v, __r),
+            _ => __symbol_type_mismatch()
+        }
+    }
     fn __pop_Variant3<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, u16, usize)
      {
         match __symbols.pop() {
@@ -5247,7 +5559,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant1<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, u8, usize)
      {
         match __symbols.pop() {
@@ -5258,7 +5570,7 @@ mod __parse__SourceUnit {
     fn __pop_Variant32<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, usize, usize)
      {
         match __symbols.pop() {
@@ -5266,318 +5578,10 @@ mod __parse__SourceUnit {
             _ => __symbol_type_mismatch()
         }
     }
-    fn __pop_Variant38<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<(Identifier, Parameter, Statement)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant38(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant31<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant31(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant76<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant76(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant25<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant25(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant23<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Expression>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant23(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant56<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Identifier>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant56(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant59<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Parameter>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant59(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant62<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Statement>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant62(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant71<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<StorageLocation>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant71(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant6<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Token<'input>>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant6(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant60<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant60(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant8<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::option::Option<Vec<Expression>>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant8(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant18<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant18(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant22<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant22(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant64<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<(usize, CommentType, &'input str)>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant64(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant10<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Base>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant10(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant27<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<ContractPart>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant27(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant12<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<EventParameter>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant12(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant14<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Expression>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant14(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant51<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<FunctionAttribute>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant51(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant55<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<HexLiteral>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant55(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant16<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Identifier>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant16(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant20<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<NamedArgument>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant20(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant67<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<SourceUnitPart>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant67(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant69<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<Statement>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant69(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant73<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<StringLiteral>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant73(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant80<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<VariableAttribute>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant80(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
-    fn __pop_Variant29<
-      'input,
-    >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
-    ) -> (usize, ::std::vec::Vec<VariableDeclaration>, usize)
-     {
-        match __symbols.pop() {
-            Some((__l, __Symbol::Variant29(__v), __r)) => (__l, __v, __r),
-            _ => __symbol_type_mismatch()
-        }
-    }
     fn __pop_Variant4<
       'input,
     >(
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>
     ) -> (usize, &'input str, usize)
      {
         match __symbols.pop() {
@@ -5591,8 +5595,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // "anonymous"? = "anonymous" => ActionFn(253);
@@ -5609,8 +5613,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // "anonymous"? =  => ActionFn(254);
@@ -5626,8 +5630,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // "indexed"? = "indexed" => ActionFn(259);
@@ -5644,8 +5648,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // "indexed"? =  => ActionFn(260);
@@ -5661,8 +5665,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("(" <Comma<Expression>> ")") = "(", Comma<Expression>, ")" => ActionFn(266);
@@ -5682,8 +5686,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("(" <Comma<Expression>> ")")? = "(", Comma<Expression>, ")" => ActionFn(341);
@@ -5703,8 +5707,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("(" <Comma<Expression>> ")")? =  => ActionFn(265);
@@ -5720,8 +5724,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Base>) = ",", Base => ActionFn(300);
@@ -5740,8 +5744,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Base>)* =  => ActionFn(298);
@@ -5757,8 +5761,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Base>)* = ("," <Base>)+ => ActionFn(299);
@@ -5775,8 +5779,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Base>)+ = ",", Base => ActionFn(344);
@@ -5795,8 +5799,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Base>)+ = ("," <Base>)+, ",", Base => ActionFn(345);
@@ -5816,8 +5820,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <EventParameter>) = ",", EventParameter => ActionFn(330);
@@ -5836,8 +5840,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <EventParameter>)* =  => ActionFn(328);
@@ -5853,8 +5857,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <EventParameter>)* = ("," <EventParameter>)+ => ActionFn(329);
@@ -5871,8 +5875,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <EventParameter>)+ = ",", EventParameter => ActionFn(348);
@@ -5891,8 +5895,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <EventParameter>)+ = ("," <EventParameter>)+, ",", EventParameter => ActionFn(349);
@@ -5912,8 +5916,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Expression>) = ",", Expression => ActionFn(308);
@@ -5932,8 +5936,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Expression>)* =  => ActionFn(306);
@@ -5949,8 +5953,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Expression>)* = ("," <Expression>)+ => ActionFn(307);
@@ -5967,8 +5971,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Expression>)+ = ",", Expression => ActionFn(352);
@@ -5987,8 +5991,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Expression>)+ = ("," <Expression>)+, ",", Expression => ActionFn(353);
@@ -6008,8 +6012,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Identifier>) = ",", Identifier => ActionFn(314);
@@ -6028,8 +6032,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Identifier>)* =  => ActionFn(312);
@@ -6045,8 +6049,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Identifier>)* = ("," <Identifier>)+ => ActionFn(313);
@@ -6063,8 +6067,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Identifier>)+ = ",", Identifier => ActionFn(356);
@@ -6083,8 +6087,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <Identifier>)+ = ("," <Identifier>)+, ",", Identifier => ActionFn(357);
@@ -6104,8 +6108,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <ImportRename>) = ",", ImportRename => ActionFn(291);
@@ -6124,8 +6128,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <ImportRename>)* =  => ActionFn(289);
@@ -6141,8 +6145,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <ImportRename>)* = ("," <ImportRename>)+ => ActionFn(290);
@@ -6159,8 +6163,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <ImportRename>)+ = ",", ImportRename => ActionFn(360);
@@ -6179,8 +6183,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <ImportRename>)+ = ("," <ImportRename>)+, ",", ImportRename => ActionFn(361);
@@ -6200,8 +6204,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <NamedArgument>) = ",", NamedArgument => ActionFn(321);
@@ -6220,8 +6224,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <NamedArgument>)* =  => ActionFn(319);
@@ -6237,8 +6241,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <NamedArgument>)* = ("," <NamedArgument>)+ => ActionFn(320);
@@ -6255,8 +6259,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <NamedArgument>)+ = ",", NamedArgument => ActionFn(364);
@@ -6275,8 +6279,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <NamedArgument>)+ = ("," <NamedArgument>)+, ",", NamedArgument => ActionFn(365);
@@ -6296,8 +6300,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <OptParameter>) = ",", OptParameter => ActionFn(311);
@@ -6316,8 +6320,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <OptParameter>)+ = ",", OptParameter => ActionFn(368);
@@ -6336,8 +6340,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("," <OptParameter>)+ = ("," <OptParameter>)+, ",", OptParameter => ActionFn(369);
@@ -6357,8 +6361,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("=" <Expression>) = "=", Expression => ActionFn(248);
@@ -6377,8 +6381,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("=" <Expression>)? = "=", Expression => ActionFn(370);
@@ -6397,8 +6401,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("=" <Expression>)? =  => ActionFn(247);
@@ -6414,8 +6418,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList> <FunctionTypeAttribute*>) = "returns", ParameterList => ActionFn(377);
@@ -6434,8 +6438,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList> <FunctionTypeAttribute*>) = "returns", ParameterList, FunctionTypeAttribute+ => ActionFn(378);
@@ -6455,8 +6459,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList> <FunctionTypeAttribute*>)? = "returns", ParameterList => ActionFn(381);
@@ -6475,8 +6479,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList> <FunctionTypeAttribute*>)? = "returns", ParameterList, FunctionTypeAttribute+ => ActionFn(382);
@@ -6496,8 +6500,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ("returns" <ParameterList> <FunctionTypeAttribute*>)? =  => ActionFn(276);
@@ -6513,8 +6517,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<ContractPart>) = ContractPart => ActionFn(263);
@@ -6531,8 +6535,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<ContractPart>)* =  => ActionFn(261);
@@ -6548,8 +6552,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<ContractPart>)* = (<ContractPart>)+ => ActionFn(262);
@@ -6566,8 +6570,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<ContractPart>)+ = ContractPart => ActionFn(389);
@@ -6584,8 +6588,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<ContractPart>)+ = (<ContractPart>)+, ContractPart => ActionFn(390);
@@ -6604,8 +6608,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";") = VariableDeclaration, ";" => ActionFn(272);
@@ -6624,8 +6628,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";")* =  => ActionFn(270);
@@ -6641,8 +6645,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";")* = (<VariableDeclaration> ";")+ => ActionFn(271);
@@ -6659,8 +6663,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";")+ = VariableDeclaration, ";" => ActionFn(393);
@@ -6679,8 +6683,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (<VariableDeclaration> ";")+ = (<VariableDeclaration> ";")+, VariableDeclaration, ";" => ActionFn(394);
@@ -6700,8 +6704,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (returns ParameterList) = returns, ParameterList => ActionFn(228);
@@ -6720,8 +6724,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (returns ParameterList)? = returns, ParameterList => ActionFn(397);
@@ -6740,8 +6744,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // (returns ParameterList)? =  => ActionFn(227);
@@ -6757,8 +6761,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // @L =  => ActionFn(284);
@@ -6774,8 +6778,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // @R =  => ActionFn(283);
@@ -6791,8 +6795,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ArrayDimension = "[", "]" => ActionFn(35);
@@ -6811,8 +6815,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ArrayDimension = "[", Expression, "]" => ActionFn(36);
@@ -6832,8 +6836,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Base = Identifier, "(", Comma<Expression>, ")" => ActionFn(549);
@@ -6854,8 +6858,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Base = Identifier => ActionFn(550);
@@ -6872,8 +6876,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Bases =  => ActionFn(56);
@@ -6889,8 +6893,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Bases = "is", CommaOne<Base> => ActionFn(57);
@@ -6909,8 +6913,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatement = "{", "}" => ActionFn(757);
@@ -6929,8 +6933,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatement = "{", Statement+, "}" => ActionFn(758);
@@ -6950,8 +6954,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatement = "{", CommaOne<NamedArgument>, "}" => ActionFn(552);
@@ -6971,8 +6975,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatementOrSemiColon = ";" => ActionFn(553);
@@ -6989,8 +6993,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // BlockStatementOrSemiColon = BlockStatement => ActionFn(181);
@@ -7007,8 +7011,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CatchError = "catch", Identifier, "(", Parameter, ")", BlockStatement => ActionFn(204);
@@ -7031,8 +7035,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CatchError? = CatchError => ActionFn(217);
@@ -7049,8 +7053,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CatchError? =  => ActionFn(218);
@@ -7066,8 +7070,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = NonIfStatement => ActionFn(195);
@@ -7084,8 +7088,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "if", "(", Expression, ")", ClosedStatement, "else", ClosedStatement => ActionFn(554);
@@ -7109,8 +7113,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "while", "(", Expression, ")", ClosedStatement => ActionFn(555);
@@ -7132,8 +7136,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(737);
@@ -7159,8 +7163,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ClosedStatement => ActionFn(738);
@@ -7185,8 +7189,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ClosedStatement => ActionFn(739);
@@ -7211,8 +7215,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", ")", ClosedStatement => ActionFn(740);
@@ -7236,8 +7240,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(741);
@@ -7262,8 +7266,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ClosedStatement => ActionFn(742);
@@ -7287,8 +7291,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ClosedStatement => ActionFn(743);
@@ -7312,8 +7316,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", ")", ClosedStatement => ActionFn(744);
@@ -7336,8 +7340,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(745);
@@ -7363,8 +7367,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", Expression, ";", ")", ";" => ActionFn(746);
@@ -7389,8 +7393,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", SimpleStatement, ")", ";" => ActionFn(747);
@@ -7415,8 +7419,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", Expression, ";", ")", ";" => ActionFn(748);
@@ -7440,8 +7444,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", SimpleStatement, ")", ";" => ActionFn(749);
@@ -7466,8 +7470,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", SimpleStatement, ";", ";", ")", ";" => ActionFn(750);
@@ -7491,8 +7495,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", SimpleStatement, ")", ";" => ActionFn(751);
@@ -7516,8 +7520,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ClosedStatement = "for", "(", ";", ";", ")", ";" => ActionFn(752);
@@ -7540,8 +7544,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<EventParameter> =  => ActionFn(255);
@@ -7557,8 +7561,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<EventParameter> = CommaOne<EventParameter> => ActionFn(256);
@@ -7575,8 +7579,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<Expression> =  => ActionFn(267);
@@ -7592,8 +7596,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<Expression> = CommaOne<Expression> => ActionFn(268);
@@ -7610,8 +7614,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<Identifier> =  => ActionFn(251);
@@ -7627,8 +7631,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<Identifier> = CommaOne<Identifier> => ActionFn(252);
@@ -7645,8 +7649,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<NamedArgument> =  => ActionFn(244);
@@ -7662,8 +7666,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Comma<NamedArgument> = CommaOne<NamedArgument> => ActionFn(245);
@@ -7680,8 +7684,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<Base> = Base => ActionFn(346);
@@ -7698,8 +7702,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<Base> = Base, ("," <Base>)+ => ActionFn(347);
@@ -7718,8 +7722,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<EventParameter> = EventParameter => ActionFn(350);
@@ -7736,8 +7740,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<EventParameter> = EventParameter, ("," <EventParameter>)+ => ActionFn(351);
@@ -7756,8 +7760,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<Expression> = Expression => ActionFn(354);
@@ -7774,8 +7778,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<Expression> = Expression, ("," <Expression>)+ => ActionFn(355);
@@ -7794,8 +7798,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<Identifier> = Identifier => ActionFn(358);
@@ -7812,8 +7816,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<Identifier> = Identifier, ("," <Identifier>)+ => ActionFn(359);
@@ -7832,8 +7836,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<ImportRename> = ImportRename => ActionFn(362);
@@ -7850,8 +7854,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<ImportRename> = ImportRename, ("," <ImportRename>)+ => ActionFn(363);
@@ -7870,8 +7874,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<NamedArgument> = NamedArgument => ActionFn(366);
@@ -7888,8 +7892,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaOne<NamedArgument> = NamedArgument, ("," <NamedArgument>)+ => ActionFn(367);
@@ -7908,8 +7912,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // CommaTwo<OptParameter> = OptParameter, ("," <OptParameter>)+ => ActionFn(234);
@@ -7928,8 +7932,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, Identifier, ParameterList, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(713);
@@ -7953,8 +7957,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, ParameterList, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(714);
@@ -7977,8 +7981,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, Identifier, ParameterList, FunctionAttribute+, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(715);
@@ -8003,8 +8007,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, ParameterList, FunctionAttribute+, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(716);
@@ -8028,8 +8032,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, Identifier, ParameterList, BlockStatementOrSemiColon => ActionFn(717);
@@ -8051,8 +8055,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, ParameterList, BlockStatementOrSemiColon => ActionFn(718);
@@ -8073,8 +8077,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, Identifier, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(719);
@@ -8097,8 +8101,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ConstructorDefinition = DocComments, FunctionTy, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(720);
@@ -8120,8 +8124,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractDefinition = DocComments, ContractTy, Identifier, Bases, "{", "}" => ActionFn(560);
@@ -8144,8 +8148,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractDefinition = DocComments, ContractTy, Identifier, Bases, "{", (<ContractPart>)+, "}" => ActionFn(561);
@@ -8169,8 +8173,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = StructDefinition => ActionFn(47);
@@ -8187,8 +8191,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = EventDefinition => ActionFn(48);
@@ -8205,8 +8209,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = EnumDefinition => ActionFn(49);
@@ -8223,8 +8227,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = VariableDefinition => ActionFn(50);
@@ -8241,8 +8245,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = FunctionDefinition => ActionFn(51);
@@ -8259,8 +8263,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = ModifierDefinition => ActionFn(52);
@@ -8277,8 +8281,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = ConstructorDefinition => ActionFn(53);
@@ -8295,8 +8299,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = ";" => ActionFn(562);
@@ -8313,8 +8317,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractPart = Using => ActionFn(55);
@@ -8331,8 +8335,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractTy = "abstract", "contract" => ActionFn(563);
@@ -8351,8 +8355,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractTy = "contract" => ActionFn(564);
@@ -8369,8 +8373,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractTy = "interface" => ActionFn(565);
@@ -8387,8 +8391,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ContractTy = "library" => ActionFn(566);
@@ -8405,8 +8409,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // DocComments =  => ActionFn(753);
@@ -8422,8 +8426,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // DocComments = SingleDocComment+ => ActionFn(754);
@@ -8440,8 +8444,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EnumDefinition = DocComments, "enum", Identifier, "{", Comma<Identifier>, "}" => ActionFn(567);
@@ -8464,8 +8468,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventDefinition = DocComments, "event", Identifier, "(", Comma<EventParameter>, ")", "anonymous", ";" => ActionFn(568);
@@ -8490,8 +8494,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventDefinition = DocComments, "event", Identifier, "(", Comma<EventParameter>, ")", ";" => ActionFn(569);
@@ -8515,8 +8519,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Precedence0, "indexed", Identifier => ActionFn(721);
@@ -8536,8 +8540,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Precedence0, "indexed" => ActionFn(722);
@@ -8556,8 +8560,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Precedence0, Identifier => ActionFn(723);
@@ -8576,8 +8580,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // EventParameter = Precedence0 => ActionFn(724);
@@ -8594,8 +8598,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Expression = Precedence15 => ActionFn(71);
@@ -8612,8 +8616,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Expression? = Expression => ActionFn(242);
@@ -8630,8 +8634,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Expression? =  => ActionFn(243);
@@ -8647,8 +8651,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute = StateMutability => ActionFn(171);
@@ -8665,8 +8669,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute = Visibility => ActionFn(172);
@@ -8683,8 +8687,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute = "virtual" => ActionFn(572);
@@ -8701,8 +8705,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute = "override" => ActionFn(573);
@@ -8719,8 +8723,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute = "override", "(", CommaOne<Identifier>, ")" => ActionFn(574);
@@ -8741,8 +8745,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute = Base => ActionFn(575);
@@ -8759,8 +8763,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute* =  => ActionFn(229);
@@ -8776,8 +8780,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute* = FunctionAttribute+ => ActionFn(230);
@@ -8794,8 +8798,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute+ = FunctionAttribute => ActionFn(315);
@@ -8812,8 +8816,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionAttribute+ = FunctionAttribute+, FunctionAttribute => ActionFn(316);
@@ -8832,8 +8836,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionCall = NoFunctionTyPrecedence0, "(", Comma<Expression>, ")" => ActionFn(576);
@@ -8854,8 +8858,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionCall = NoFunctionTyPrecedence0, BlockStatement => ActionFn(577);
@@ -8874,8 +8878,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionCall = NoFunctionTyPrecedence0, "(", "{", Comma<NamedArgument>, "}", ")" => ActionFn(578);
@@ -8898,8 +8902,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(705);
@@ -8923,8 +8927,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(706);
@@ -8949,8 +8953,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, BlockStatementOrSemiColon => ActionFn(707);
@@ -8972,8 +8976,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, "function", Identifier, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(708);
@@ -8996,8 +9000,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionDefinition = DocComments, FunctionType, BlockStatementOrSemiColon => ActionFn(581);
@@ -9017,8 +9021,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTy = "fallback" => ActionFn(177);
@@ -9035,8 +9039,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTy = "receive" => ActionFn(178);
@@ -9053,8 +9057,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTy = "constructor" => ActionFn(179);
@@ -9071,8 +9075,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTyPrecedence0 = FunctionType => ActionFn(582);
@@ -9089,8 +9093,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionType = "function", ParameterList, "returns", ParameterList => ActionFn(383);
@@ -9111,8 +9115,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionType = "function", ParameterList, "returns", ParameterList, FunctionTypeAttribute+ => ActionFn(384);
@@ -9134,8 +9138,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionType = "function", ParameterList => ActionFn(385);
@@ -9154,8 +9158,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionType = "function", ParameterList, FunctionTypeAttribute+, "returns", ParameterList => ActionFn(386);
@@ -9177,8 +9181,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionType = "function", ParameterList, FunctionTypeAttribute+, "returns", ParameterList, FunctionTypeAttribute+ => ActionFn(387);
@@ -9201,8 +9205,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionType = "function", ParameterList, FunctionTypeAttribute+ => ActionFn(388);
@@ -9222,8 +9226,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTypeAttribute = StateMutability => ActionFn(33);
@@ -9240,8 +9244,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTypeAttribute = Visibility => ActionFn(34);
@@ -9258,8 +9262,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTypeAttribute* =  => ActionFn(278);
@@ -9275,8 +9279,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTypeAttribute* = FunctionTypeAttribute+ => ActionFn(279);
@@ -9293,8 +9297,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTypeAttribute+ = FunctionTypeAttribute => ActionFn(294);
@@ -9311,8 +9315,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // FunctionTypeAttribute+ = FunctionTypeAttribute+, FunctionTypeAttribute => ActionFn(295);
@@ -9331,8 +9335,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // HexLiteral = hexstring => ActionFn(583);
@@ -9349,8 +9353,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // HexLiteral+ = HexLiteral => ActionFn(238);
@@ -9367,8 +9371,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // HexLiteral+ = HexLiteral+, HexLiteral => ActionFn(239);
@@ -9387,8 +9391,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Identifier = identifier => ActionFn(584);
@@ -9405,8 +9409,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Identifier? = Identifier => ActionFn(257);
@@ -9423,8 +9427,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Identifier? =  => ActionFn(258);
@@ -9440,8 +9444,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ImportDirective = "import", StringLiteral, ";" => ActionFn(11);
@@ -9461,8 +9465,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ImportDirective = "import", StringLiteral, "as", Identifier, ";" => ActionFn(12);
@@ -9484,8 +9488,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ImportRename = Identifier => ActionFn(15);
@@ -9502,8 +9506,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ImportRename = Identifier, "as", Identifier => ActionFn(16);
@@ -9523,8 +9527,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, ParameterList, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(729);
@@ -9548,8 +9552,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(730);
@@ -9572,8 +9576,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, ParameterList, FunctionAttribute+, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(731);
@@ -9598,8 +9602,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, FunctionAttribute+, returns, ParameterList, BlockStatementOrSemiColon => ActionFn(732);
@@ -9623,8 +9627,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, ParameterList, BlockStatementOrSemiColon => ActionFn(733);
@@ -9646,8 +9650,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, BlockStatementOrSemiColon => ActionFn(734);
@@ -9668,8 +9672,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, ParameterList, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(735);
@@ -9692,8 +9696,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ModifierDefinition = DocComments, "modifier", Identifier, FunctionAttribute+, BlockStatementOrSemiColon => ActionFn(736);
@@ -9715,8 +9719,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NamedArgument = Identifier, ":", Expression => ActionFn(587);
@@ -9736,8 +9740,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, "++" => ActionFn(588);
@@ -9756,8 +9760,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, "--" => ActionFn(589);
@@ -9776,8 +9780,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = FunctionCall => ActionFn(134);
@@ -9794,8 +9798,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, "[", Expression, "]" => ActionFn(699);
@@ -9816,8 +9820,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, "[", "]" => ActionFn(700);
@@ -9837,8 +9841,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, ".", Identifier => ActionFn(591);
@@ -9858,8 +9862,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, ".", "address" => ActionFn(592);
@@ -9879,8 +9883,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = "true" => ActionFn(593);
@@ -9897,8 +9901,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = "false" => ActionFn(594);
@@ -9915,8 +9919,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = StringLiteral+ => ActionFn(140);
@@ -9933,8 +9937,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = HexLiteral+ => ActionFn(141);
@@ -9951,8 +9955,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = address => ActionFn(595);
@@ -9969,8 +9973,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = NoFunctionType => ActionFn(596);
@@ -9987,8 +9991,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = "[", CommaOne<Expression>, "]" => ActionFn(597);
@@ -10008,8 +10012,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Identifier => ActionFn(145);
@@ -10026,8 +10030,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = Precedence0, Unit => ActionFn(598);
@@ -10046,8 +10050,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = number => ActionFn(599);
@@ -10064,8 +10068,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = hexnumber => ActionFn(600);
@@ -10082,8 +10086,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = ParameterList => ActionFn(601);
@@ -10100,8 +10104,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionTyPrecedence0 = "this" => ActionFn(602);
@@ -10118,8 +10122,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "bool" => ActionFn(22);
@@ -10136,8 +10140,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "address" => ActionFn(23);
@@ -10154,8 +10158,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "address", "payable" => ActionFn(24);
@@ -10174,8 +10178,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "payable" => ActionFn(25);
@@ -10192,8 +10196,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "string" => ActionFn(26);
@@ -10210,8 +10214,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "bytes" => ActionFn(27);
@@ -10228,8 +10232,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = Uint => ActionFn(28);
@@ -10246,8 +10250,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = Int => ActionFn(29);
@@ -10264,8 +10268,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = Bytes => ActionFn(30);
@@ -10282,8 +10286,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NoFunctionType = "mapping", "(", Precedence0, "=>", Precedence0, ")" => ActionFn(603);
@@ -10306,8 +10310,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = BlockStatement => ActionFn(208);
@@ -10324,8 +10328,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = SimpleStatement, ";" => ActionFn(209);
@@ -10344,8 +10348,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "do", Statement, "while", "(", Expression, ")", ";" => ActionFn(604);
@@ -10369,8 +10373,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "continue", ";" => ActionFn(605);
@@ -10389,8 +10393,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "break", ";" => ActionFn(606);
@@ -10409,8 +10413,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "return", ";" => ActionFn(607);
@@ -10429,8 +10433,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "return", Expression, ";" => ActionFn(608);
@@ -10450,8 +10454,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "try", TryExpression, TryReturns, CatchError, "catch", "(", Parameter, ")", BlockStatement => ActionFn(765);
@@ -10477,8 +10481,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "try", TryExpression, CatchError, "catch", "(", Parameter, ")", BlockStatement => ActionFn(766);
@@ -10503,8 +10507,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "try", TryExpression, TryReturns, "catch", "(", Parameter, ")", BlockStatement => ActionFn(767);
@@ -10529,8 +10533,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "try", TryExpression, "catch", "(", Parameter, ")", BlockStatement => ActionFn(768);
@@ -10554,8 +10558,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // NonIfStatement = "emit", FunctionCall, ";" => ActionFn(610);
@@ -10575,8 +10579,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OpenStatement = "if", "(", Expression, ")", Statement => ActionFn(611);
@@ -10598,8 +10602,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OpenStatement = "if", "(", Expression, ")", ClosedStatement, "else", OpenStatement => ActionFn(612);
@@ -10623,8 +10627,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OpenStatement = "while", "(", Expression, ")", OpenStatement => ActionFn(613);
@@ -10646,8 +10650,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OptParameter = Parameter => ActionFn(727);
@@ -10664,8 +10668,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // OptParameter =  => ActionFn(728);
@@ -10681,8 +10685,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Expression, StorageLocation, Identifier => ActionFn(759);
@@ -10702,8 +10706,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Expression, Identifier => ActionFn(760);
@@ -10722,8 +10726,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Expression, StorageLocation => ActionFn(761);
@@ -10742,8 +10746,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter = Expression => ActionFn(762);
@@ -10760,8 +10764,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter? = Parameter => ActionFn(235);
@@ -10778,8 +10782,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Parameter? =  => ActionFn(236);
@@ -10795,8 +10799,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList = "(", ")" => ActionFn(164);
@@ -10815,8 +10819,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList = "(", Parameter, ")" => ActionFn(616);
@@ -10836,8 +10840,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList = "(", CommaTwo<OptParameter>, ")" => ActionFn(166);
@@ -10857,8 +10861,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList? = ParameterList => ActionFn(231);
@@ -10875,8 +10879,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // ParameterList? =  => ActionFn(232);
@@ -10892,8 +10896,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // PragmaDirective = "pragma", Identifier, StringLiteral, ";" => ActionFn(17);
@@ -10914,8 +10918,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = NoFunctionTyPrecedence0 => ActionFn(129);
@@ -10932,8 +10936,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence0 = FunctionTyPrecedence0 => ActionFn(130);
@@ -10950,8 +10954,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, "<", Precedence9 => ActionFn(617);
@@ -10971,8 +10975,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, ">", Precedence9 => ActionFn(618);
@@ -10992,8 +10996,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, "<=", Precedence9 => ActionFn(619);
@@ -11013,8 +11017,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence10, ">=", Precedence9 => ActionFn(620);
@@ -11034,8 +11038,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence10 = Precedence9 => ActionFn(97);
@@ -11052,8 +11056,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence11 = Precedence11, "==", Precedence10 => ActionFn(621);
@@ -11073,8 +11077,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence11 = Precedence11, "!=", Precedence10 => ActionFn(622);
@@ -11094,8 +11098,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence11 = Precedence10 => ActionFn(92);
@@ -11112,8 +11116,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence12 = Precedence12, "&&", Precedence11 => ActionFn(623);
@@ -11133,8 +11137,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence12 = Precedence11 => ActionFn(89);
@@ -11151,8 +11155,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence13 = Precedence13, "||", Precedence12 => ActionFn(624);
@@ -11172,8 +11176,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence13 = Precedence12 => ActionFn(87);
@@ -11190,8 +11194,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence14 = Precedence14, "?", Precedence13, ":", Precedence13 => ActionFn(625);
@@ -11213,8 +11217,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence14 = Precedence13 => ActionFn(85);
@@ -11231,8 +11235,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "=", Precedence15 => ActionFn(626);
@@ -11252,8 +11256,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "|=", Precedence15 => ActionFn(627);
@@ -11273,8 +11277,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "^=", Precedence15 => ActionFn(628);
@@ -11294,8 +11298,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "&=", Precedence15 => ActionFn(629);
@@ -11315,8 +11319,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "<<=", Precedence15 => ActionFn(630);
@@ -11336,8 +11340,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, ">>=", Precedence15 => ActionFn(631);
@@ -11357,8 +11361,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "+=", Precedence15 => ActionFn(632);
@@ -11378,8 +11382,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "-=", Precedence15 => ActionFn(633);
@@ -11399,8 +11403,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "*=", Precedence15 => ActionFn(634);
@@ -11420,8 +11424,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "/=", Precedence15 => ActionFn(635);
@@ -11441,8 +11445,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14, "%=", Precedence15 => ActionFn(636);
@@ -11462,8 +11466,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence15 = Precedence14 => ActionFn(83);
@@ -11480,8 +11484,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "!", Precedence2 => ActionFn(637);
@@ -11500,8 +11504,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "~", Precedence2 => ActionFn(638);
@@ -11520,8 +11524,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "delete", Precedence2 => ActionFn(639);
@@ -11540,8 +11544,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "new", FunctionCall => ActionFn(640);
@@ -11560,8 +11564,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "++", Precedence2 => ActionFn(641);
@@ -11580,8 +11584,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "--", Precedence2 => ActionFn(642);
@@ -11600,8 +11604,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "+", Precedence2 => ActionFn(643);
@@ -11620,8 +11624,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = "-", Precedence2 => ActionFn(644);
@@ -11640,8 +11644,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence2 = Precedence0 => ActionFn(124);
@@ -11658,8 +11662,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence3 = Precedence3, "**", Precedence2 => ActionFn(645);
@@ -11679,8 +11683,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence3 = Precedence2 => ActionFn(115);
@@ -11697,8 +11701,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence4, "*", Precedence3 => ActionFn(646);
@@ -11718,8 +11722,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence4, "/", Precedence3 => ActionFn(647);
@@ -11739,8 +11743,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence4, "%", Precedence3 => ActionFn(648);
@@ -11760,8 +11764,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence4 = Precedence3 => ActionFn(113);
@@ -11778,8 +11782,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence5 = Precedence5, "+", Precedence4 => ActionFn(649);
@@ -11799,8 +11803,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence5 = Precedence5, "-", Precedence4 => ActionFn(650);
@@ -11820,8 +11824,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence5 = Precedence4 => ActionFn(109);
@@ -11838,8 +11842,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence6 = Precedence6, "<<", Precedence5 => ActionFn(651);
@@ -11859,8 +11863,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence6 = Precedence6, ">>", Precedence5 => ActionFn(652);
@@ -11880,8 +11884,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence6 = Precedence5 => ActionFn(106);
@@ -11898,8 +11902,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence7 = Precedence7, "&", Precedence6 => ActionFn(653);
@@ -11919,8 +11923,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence7 = Precedence6 => ActionFn(103);
@@ -11937,8 +11941,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence8 = Precedence8, "^", Precedence7 => ActionFn(654);
@@ -11958,8 +11962,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence8 = Precedence7 => ActionFn(101);
@@ -11976,8 +11980,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence9 = Precedence9, "|", Precedence8 => ActionFn(655);
@@ -11997,8 +12001,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Precedence9 = Precedence8 => ActionFn(99);
@@ -12015,8 +12019,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SimpleStatement = VariableDeclaration, "=", Expression => ActionFn(656);
@@ -12036,8 +12040,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SimpleStatement = VariableDeclaration => ActionFn(657);
@@ -12054,8 +12058,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SimpleStatement = Expression => ActionFn(658);
@@ -12072,8 +12076,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SimpleStatement? = SimpleStatement => ActionFn(221);
@@ -12090,8 +12094,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SimpleStatement? =  => ActionFn(222);
@@ -12107,8 +12111,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SingleDocComment = DocComment => ActionFn(514);
@@ -12125,8 +12129,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SingleDocComment* =  => ActionFn(280);
@@ -12142,8 +12146,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SingleDocComment* = SingleDocComment+ => ActionFn(281);
@@ -12160,8 +12164,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SingleDocComment+ = SingleDocComment => ActionFn(292);
@@ -12178,8 +12182,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SingleDocComment+ = SingleDocComment+, SingleDocComment => ActionFn(293);
@@ -12198,8 +12202,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnit =  => ActionFn(755);
@@ -12215,8 +12219,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnit = SourceUnitPart+ => ActionFn(756);
@@ -12233,8 +12237,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = ContractDefinition => ActionFn(2);
@@ -12251,8 +12255,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = PragmaDirective => ActionFn(3);
@@ -12269,8 +12273,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = ImportDirective => ActionFn(4);
@@ -12287,8 +12291,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = EnumDefinition => ActionFn(5);
@@ -12305,8 +12309,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = StructDefinition => ActionFn(6);
@@ -12323,8 +12327,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = EventDefinition => ActionFn(7);
@@ -12341,8 +12345,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = FunctionDefinition => ActionFn(8);
@@ -12359,8 +12363,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = VariableDefinition => ActionFn(9);
@@ -12377,8 +12381,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart = ";" => ActionFn(659);
@@ -12395,8 +12399,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart* =  => ActionFn(285);
@@ -12412,8 +12416,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart* = SourceUnitPart+ => ActionFn(286);
@@ -12430,8 +12434,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart+ = SourceUnitPart => ActionFn(287);
@@ -12448,8 +12452,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // SourceUnitPart+ = SourceUnitPart+, SourceUnitPart => ActionFn(288);
@@ -12468,8 +12472,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StateMutability = "pure" => ActionFn(660);
@@ -12486,8 +12490,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StateMutability = "constant" => ActionFn(661);
@@ -12504,8 +12508,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StateMutability = "view" => ActionFn(662);
@@ -12522,8 +12526,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StateMutability = "payable" => ActionFn(663);
@@ -12540,8 +12544,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement = OpenStatement => ActionFn(200);
@@ -12558,8 +12562,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement = ClosedStatement => ActionFn(201);
@@ -12576,8 +12580,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement* =  => ActionFn(224);
@@ -12593,8 +12597,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement* = Statement+ => ActionFn(225);
@@ -12611,8 +12615,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement+ = Statement => ActionFn(317);
@@ -12629,8 +12633,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Statement+ = Statement+, Statement => ActionFn(318);
@@ -12649,8 +12653,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StorageLocation = "memory" => ActionFn(664);
@@ -12667,8 +12671,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StorageLocation = "storage" => ActionFn(665);
@@ -12685,8 +12689,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StorageLocation = "calldata" => ActionFn(666);
@@ -12703,8 +12707,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StorageLocation? = StorageLocation => ActionFn(273);
@@ -12721,8 +12725,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StorageLocation? =  => ActionFn(274);
@@ -12738,8 +12742,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StringLiteral = string => ActionFn(667);
@@ -12756,8 +12760,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StringLiteral+ = StringLiteral => ActionFn(240);
@@ -12774,8 +12778,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StringLiteral+ = StringLiteral+, StringLiteral => ActionFn(241);
@@ -12794,8 +12798,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StructDefinition = DocComments, "struct", Identifier, "{", "}" => ActionFn(668);
@@ -12817,8 +12821,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // StructDefinition = DocComments, "struct", Identifier, "{", (<VariableDeclaration> ";")+, "}" => ActionFn(669);
@@ -12841,8 +12845,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // TryExpression = "new", FunctionCall => ActionFn(670);
@@ -12861,8 +12865,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // TryExpression = FunctionCall => ActionFn(207);
@@ -12879,8 +12883,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // TryReturns = "returns", ParameterList, BlockStatement => ActionFn(205);
@@ -12900,8 +12904,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // TryReturns? = TryReturns => ActionFn(219);
@@ -12918,8 +12922,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // TryReturns? =  => ActionFn(220);
@@ -12935,8 +12939,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Type = NoFunctionType => ActionFn(20);
@@ -12953,8 +12957,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Type = FunctionType => ActionFn(21);
@@ -12971,8 +12975,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "seconds" => ActionFn(671);
@@ -12989,8 +12993,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "minutes" => ActionFn(672);
@@ -13007,8 +13011,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "hours" => ActionFn(673);
@@ -13025,8 +13029,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "days" => ActionFn(674);
@@ -13043,8 +13047,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "weeks" => ActionFn(675);
@@ -13061,8 +13065,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "wei" => ActionFn(676);
@@ -13079,8 +13083,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "szabo" => ActionFn(677);
@@ -13097,8 +13101,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "finney" => ActionFn(678);
@@ -13115,8 +13119,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Unit = "ether" => ActionFn(679);
@@ -13133,8 +13137,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Using = "using", Identifier, "for", Precedence0, ";" => ActionFn(680);
@@ -13156,8 +13160,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Using = "using", Identifier, "for", "*", ";" => ActionFn(681);
@@ -13179,8 +13183,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute = Visibility => ActionFn(69);
@@ -13197,8 +13201,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute = "constant" => ActionFn(682);
@@ -13215,8 +13219,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute* =  => ActionFn(249);
@@ -13232,8 +13236,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute* = VariableAttribute+ => ActionFn(250);
@@ -13250,8 +13254,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute+ = VariableAttribute => ActionFn(304);
@@ -13268,8 +13272,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableAttribute+ = VariableAttribute+, VariableAttribute => ActionFn(305);
@@ -13288,8 +13292,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDeclaration = Precedence0, StorageLocation, Identifier => ActionFn(763);
@@ -13309,8 +13313,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDeclaration = Precedence0, Identifier => ActionFn(764);
@@ -13329,8 +13333,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDefinition = DocComments, NoFunctionTyPrecedence0, Identifier, "=", Expression, ";" => ActionFn(769);
@@ -13353,8 +13357,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDefinition = DocComments, NoFunctionTyPrecedence0, VariableAttribute+, Identifier, "=", Expression, ";" => ActionFn(770);
@@ -13378,8 +13382,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDefinition = DocComments, NoFunctionTyPrecedence0, Identifier, ";" => ActionFn(771);
@@ -13400,8 +13404,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDefinition = DocComments, NoFunctionTyPrecedence0, VariableAttribute+, Identifier, ";" => ActionFn(772);
@@ -13423,8 +13427,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDefinition = DocComments, FunctionTyPrecedence0, Identifier, "=", Expression, ";" => ActionFn(686);
@@ -13447,8 +13451,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // VariableDefinition = DocComments, FunctionTyPrecedence0, Identifier, ";" => ActionFn(687);
@@ -13469,8 +13473,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Visibility = "public" => ActionFn(688);
@@ -13487,8 +13491,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Visibility = "external" => ActionFn(689);
@@ -13505,8 +13509,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Visibility = "internal" => ActionFn(690);
@@ -13523,8 +13527,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // Visibility = "private" => ActionFn(691);
@@ -13541,8 +13545,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // returns = "returns" => ActionFn(182);
@@ -13559,8 +13563,8 @@ mod __parse__SourceUnit {
         input: &'input str,
         file_no: usize,
         __lookahead_start: Option<&usize>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<(&'input ())>,
+        __symbols: &mut alloc::vec::Vec<(usize,__Symbol<'input>,usize)>,
+        _: core::marker::PhantomData<(&'input ())>,
     ) -> (usize, usize)
     {
         // returns = "return" => ActionFn(692);
@@ -13592,7 +13596,7 @@ fn __action1<
 >(
     input: &'input str,
     file_no: usize,
-    (_, __0, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
+    (_, __0, _): (usize, alloc::vec::Vec<SourceUnitPart>, usize),
 ) -> SourceUnit
 {
     SourceUnit(__0)
@@ -13833,7 +13837,7 @@ fn __action18<
 >(
     input: &'input str,
     file_no: usize,
-    (_, __0, _): (usize, ::std::vec::Vec<(usize, CommentType, &'input str)>, usize),
+    (_, __0, _): (usize, alloc::vec::Vec<(usize, CommentType, &'input str)>, usize),
 ) -> Vec<DocComment>
 {
     tags(&__0)
@@ -14014,8 +14018,8 @@ fn __action32<
     file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, params, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    (_, returns, _): (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>, usize),
+    (_, attributes, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+    (_, returns, _): (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>, usize),
 ) -> Type
 {
     {
@@ -14148,7 +14152,7 @@ fn __action41<
     file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
-    (_, storage, _): (usize, ::std::option::Option<StorageLocation>, usize),
+    (_, storage, _): (usize, core::option::Option<StorageLocation>, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, r, _): (usize, usize, usize),
 ) -> VariableDeclaration
@@ -14169,7 +14173,7 @@ fn __action42<
     (_, _, _): (usize, Token<'input>, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, fields, _): (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    (_, fields, _): (usize, alloc::vec::Vec<VariableDeclaration>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Box<StructDefinition>
@@ -14380,7 +14384,7 @@ fn __action58<
     file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, name, _): (usize, Identifier, usize),
-    (_, args, _): (usize, ::std::option::Option<Vec<Expression>>, usize),
+    (_, args, _): (usize, core::option::Option<Vec<Expression>>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Base
 {
@@ -14404,7 +14408,7 @@ fn __action59<
     (_, base, _): (usize, Vec<Base>, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, parts, _): (usize, ::std::vec::Vec<ContractPart>, usize),
+    (_, parts, _): (usize, alloc::vec::Vec<ContractPart>, usize),
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
@@ -14421,8 +14425,8 @@ fn __action60<
     file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
-    (_, i, _): (usize, ::std::option::Option<Token<'input>>, usize),
-    (_, name, _): (usize, ::std::option::Option<Identifier>, usize),
+    (_, i, _): (usize, core::option::Option<Token<'input>>, usize),
+    (_, name, _): (usize, core::option::Option<Identifier>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> EventParameter
 {
@@ -14444,7 +14448,7 @@ fn __action61<
     (_, _, _): (usize, Token<'input>, usize),
     (_, v, _): (usize, Vec<EventParameter>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, a, _): (usize, ::std::option::Option<Token<'input>>, usize),
+    (_, a, _): (usize, core::option::Option<Token<'input>>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Box<EventDefinition>
@@ -14486,9 +14490,9 @@ fn __action63<
     (_, doc, _): (usize, Vec<DocComment>, usize),
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
-    (_, attrs, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    (_, attrs, _): (usize, alloc::vec::Vec<VariableAttribute>, usize),
     (_, name, _): (usize, Identifier, usize),
-    (_, e, _): (usize, ::std::option::Option<Expression>, usize),
+    (_, e, _): (usize, core::option::Option<Expression>, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Box<VariableDefinition>
@@ -14510,7 +14514,7 @@ fn __action64<
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
     (_, name, _): (usize, Identifier, usize),
-    (_, e, _): (usize, ::std::option::Option<Expression>, usize),
+    (_, e, _): (usize, core::option::Option<Expression>, usize),
     (_, r, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
 ) -> Box<VariableDefinition>
@@ -15566,7 +15570,7 @@ fn __action135<
     (_, a, _): (usize, usize, usize),
     (_, e, _): (usize, Expression, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, i, _): (usize, ::std::option::Option<Expression>, usize),
+    (_, i, _): (usize, core::option::Option<Expression>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, b, _): (usize, usize, usize),
 ) -> Expression
@@ -15644,7 +15648,7 @@ fn __action140<
 >(
     input: &'input str,
     file_no: usize,
-    (_, __0, _): (usize, ::std::vec::Vec<StringLiteral>, usize),
+    (_, __0, _): (usize, alloc::vec::Vec<StringLiteral>, usize),
 ) -> Expression
 {
     Expression::StringLiteral(__0)
@@ -15656,7 +15660,7 @@ fn __action141<
 >(
     input: &'input str,
     file_no: usize,
-    (_, __0, _): (usize, ::std::vec::Vec<HexLiteral>, usize),
+    (_, __0, _): (usize, alloc::vec::Vec<HexLiteral>, usize),
 ) -> Expression
 {
     Expression::HexLiteral(__0)
@@ -15990,8 +15994,8 @@ fn __action162<
     file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, Expression, usize),
-    (_, storage, _): (usize, ::std::option::Option<StorageLocation>, usize),
-    (_, name, _): (usize, ::std::option::Option<Identifier>, usize),
+    (_, storage, _): (usize, core::option::Option<StorageLocation>, usize),
+    (_, name, _): (usize, core::option::Option<Identifier>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Parameter
 {
@@ -16008,7 +16012,7 @@ fn __action163<
     input: &'input str,
     file_no: usize,
     (_, l, _): (usize, usize, usize),
-    (_, p, _): (usize, ::std::option::Option<Parameter>, usize),
+    (_, p, _): (usize, core::option::Option<Parameter>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> (Loc, Option<Parameter>)
 {
@@ -16297,9 +16301,9 @@ fn __action184<
     (_, nl, _): (usize, usize, usize),
     (_, name, _): (usize, Identifier, usize),
     (_, nr, _): (usize, usize, usize),
-    (_, params, _): (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    (_, returns, _): (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
+    (_, params, _): (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    (_, attributes, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+    (_, returns, _): (usize, core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
     (_, r, _): (usize, usize, usize),
     (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -16333,11 +16337,11 @@ fn __action185<
     (_, l, _): (usize, usize, usize),
     (_, ty, _): (usize, FunctionTy, usize),
     (_, nl, _): (usize, usize, usize),
-    (_, name, _): (usize, ::std::option::Option<Identifier>, usize),
+    (_, name, _): (usize, core::option::Option<Identifier>, usize),
     (_, nr, _): (usize, usize, usize),
     (_, params, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    (_, returns, _): (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
+    (_, attributes, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+    (_, returns, _): (usize, core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
     (_, r, _): (usize, usize, usize),
     (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -16373,8 +16377,8 @@ fn __action186<
     (_, name, _): (usize, Identifier, usize),
     (_, nr, _): (usize, usize, usize),
     (_, params, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    (_, attributes, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    (_, returns, _): (usize, ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
+    (_, attributes, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+    (_, returns, _): (usize, core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>, usize),
     (_, r, _): (usize, usize, usize),
     (_, body, _): (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -16485,7 +16489,7 @@ fn __action190<
     file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, s, _): (usize, ::std::vec::Vec<Statement>, usize),
+    (_, s, _): (usize, alloc::vec::Vec<Statement>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Statement
@@ -16634,11 +16638,11 @@ fn __action198<
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, b, _): (usize, ::std::option::Option<Statement>, usize),
+    (_, b, _): (usize, core::option::Option<Statement>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, c, _): (usize, ::std::option::Option<Expression>, usize),
+    (_, c, _): (usize, core::option::Option<Expression>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, n, _): (usize, ::std::option::Option<Statement>, usize),
+    (_, n, _): (usize, core::option::Option<Statement>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, block, _): (usize, Statement, usize),
     (_, r, _): (usize, usize, usize),
@@ -16658,11 +16662,11 @@ fn __action199<
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, b, _): (usize, ::std::option::Option<Statement>, usize),
+    (_, b, _): (usize, core::option::Option<Statement>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, c, _): (usize, ::std::option::Option<Expression>, usize),
+    (_, c, _): (usize, core::option::Option<Expression>, usize),
     (_, _, _): (usize, Token<'input>, usize),
-    (_, n, _): (usize, ::std::option::Option<Statement>, usize),
+    (_, n, _): (usize, core::option::Option<Statement>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, r, _): (usize, usize, usize),
@@ -16705,7 +16709,7 @@ fn __action202<
     file_no: usize,
     (_, l, _): (usize, usize, usize),
     (_, v, _): (usize, VariableDeclaration, usize),
-    (_, e, _): (usize, ::std::option::Option<Expression>, usize),
+    (_, e, _): (usize, core::option::Option<Expression>, usize),
     (_, r, _): (usize, usize, usize),
 ) -> Statement
 {
@@ -16915,8 +16919,8 @@ fn __action215<
     (_, l, _): (usize, usize, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, e, _): (usize, Expression, usize),
-    (_, returns, _): (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
-    (_, error, _): (usize, ::std::option::Option<(Identifier, Parameter, Statement)>, usize),
+    (_, returns, _): (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
+    (_, error, _): (usize, core::option::Option<(Identifier, Parameter, Statement)>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, _, _): (usize, Token<'input>, usize),
     (_, p, _): (usize, Parameter, usize),
@@ -16957,7 +16961,7 @@ fn __action217<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, (Identifier, Parameter, Statement), usize),
-) -> ::std::option::Option<(Identifier, Parameter, Statement)>
+) -> core::option::Option<(Identifier, Parameter, Statement)>
 {
     Some(__0)
 }
@@ -16970,7 +16974,7 @@ fn __action218<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<(Identifier, Parameter, Statement)>
+) -> core::option::Option<(Identifier, Parameter, Statement)>
 {
     None
 }
@@ -16982,7 +16986,7 @@ fn __action219<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, (Vec<(Loc, Option<Parameter>)>, Box<Statement>), usize),
-) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>
+) -> core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>
 {
     Some(__0)
 }
@@ -16995,7 +16999,7 @@ fn __action220<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>
+) -> core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>
 {
     None
 }
@@ -17007,7 +17011,7 @@ fn __action221<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Statement, usize),
-) -> ::std::option::Option<Statement>
+) -> core::option::Option<Statement>
 {
     Some(__0)
 }
@@ -17020,7 +17024,7 @@ fn __action222<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Statement>
+) -> core::option::Option<Statement>
 {
     None
 }
@@ -17032,7 +17036,7 @@ fn __action223<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, NamedArgument, usize),
-    (_, v, _): (usize, ::std::vec::Vec<NamedArgument>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<NamedArgument>, usize),
 ) -> Vec<NamedArgument>
 {
     {
@@ -17050,7 +17054,7 @@ fn __action224<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Statement>
+) -> alloc::vec::Vec<Statement>
 {
     vec![]
 }
@@ -17061,8 +17065,8 @@ fn __action225<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Statement>, usize),
-) -> ::std::vec::Vec<Statement>
+    (_, v, _): (usize, alloc::vec::Vec<Statement>, usize),
+) -> alloc::vec::Vec<Statement>
 {
     v
 }
@@ -17074,7 +17078,7 @@ fn __action226<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, (Option<Loc>, Vec<(Loc, Option<Parameter>)>), usize),
-) -> ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>
+) -> core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>
 {
     Some(__0)
 }
@@ -17087,7 +17091,7 @@ fn __action227<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>
+) -> core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>
 {
     None
 }
@@ -17113,7 +17117,7 @@ fn __action229<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<FunctionAttribute>
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     vec![]
 }
@@ -17124,8 +17128,8 @@ fn __action230<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
+    (_, v, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     v
 }
@@ -17137,7 +17141,7 @@ fn __action231<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
-) -> ::std::option::Option<Vec<(Loc, Option<Parameter>)>>
+) -> core::option::Option<Vec<(Loc, Option<Parameter>)>>
 {
     Some(__0)
 }
@@ -17150,7 +17154,7 @@ fn __action232<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Vec<(Loc, Option<Parameter>)>>
+) -> core::option::Option<Vec<(Loc, Option<Parameter>)>>
 {
     None
 }
@@ -17162,7 +17166,7 @@ fn __action233<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, Identifier, usize),
-    (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Identifier>, usize),
 ) -> Vec<Identifier>
 {
     {
@@ -17179,7 +17183,7 @@ fn __action234<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, (Loc, Option<Parameter>), usize),
-    (_, v, _): (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<(Loc, Option<Parameter>)>, usize),
 ) -> Vec<(Loc, Option<Parameter>)>
 {
     {
@@ -17196,7 +17200,7 @@ fn __action235<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Parameter, usize),
-) -> ::std::option::Option<Parameter>
+) -> core::option::Option<Parameter>
 {
     Some(__0)
 }
@@ -17209,7 +17213,7 @@ fn __action236<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Parameter>
+) -> core::option::Option<Parameter>
 {
     None
 }
@@ -17221,7 +17225,7 @@ fn __action237<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, Expression, usize),
-    (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Expression>, usize),
 ) -> Vec<Expression>
 {
     {
@@ -17238,7 +17242,7 @@ fn __action238<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, HexLiteral, usize),
-) -> ::std::vec::Vec<HexLiteral>
+) -> alloc::vec::Vec<HexLiteral>
 {
     vec![__0]
 }
@@ -17249,9 +17253,9 @@ fn __action239<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<HexLiteral>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<HexLiteral>, usize),
     (_, e, _): (usize, HexLiteral, usize),
-) -> ::std::vec::Vec<HexLiteral>
+) -> alloc::vec::Vec<HexLiteral>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -17263,7 +17267,7 @@ fn __action240<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, StringLiteral, usize),
-) -> ::std::vec::Vec<StringLiteral>
+) -> alloc::vec::Vec<StringLiteral>
 {
     vec![__0]
 }
@@ -17274,9 +17278,9 @@ fn __action241<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<StringLiteral>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<StringLiteral>, usize),
     (_, e, _): (usize, StringLiteral, usize),
-) -> ::std::vec::Vec<StringLiteral>
+) -> alloc::vec::Vec<StringLiteral>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -17288,7 +17292,7 @@ fn __action242<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Expression, usize),
-) -> ::std::option::Option<Expression>
+) -> core::option::Option<Expression>
 {
     Some(__0)
 }
@@ -17301,7 +17305,7 @@ fn __action243<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Expression>
+) -> core::option::Option<Expression>
 {
     None
 }
@@ -17338,7 +17342,7 @@ fn __action246<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Expression, usize),
-) -> ::std::option::Option<Expression>
+) -> core::option::Option<Expression>
 {
     Some(__0)
 }
@@ -17351,7 +17355,7 @@ fn __action247<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Expression>
+) -> core::option::Option<Expression>
 {
     None
 }
@@ -17377,7 +17381,7 @@ fn __action249<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<VariableAttribute>
+) -> alloc::vec::Vec<VariableAttribute>
 {
     vec![]
 }
@@ -17388,8 +17392,8 @@ fn __action250<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
-) -> ::std::vec::Vec<VariableAttribute>
+    (_, v, _): (usize, alloc::vec::Vec<VariableAttribute>, usize),
+) -> alloc::vec::Vec<VariableAttribute>
 {
     v
 }
@@ -17426,7 +17430,7 @@ fn __action253<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
-) -> ::std::option::Option<Token<'input>>
+) -> core::option::Option<Token<'input>>
 {
     Some(__0)
 }
@@ -17439,7 +17443,7 @@ fn __action254<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Token<'input>>
+) -> core::option::Option<Token<'input>>
 {
     None
 }
@@ -17476,7 +17480,7 @@ fn __action257<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Identifier, usize),
-) -> ::std::option::Option<Identifier>
+) -> core::option::Option<Identifier>
 {
     Some(__0)
 }
@@ -17489,7 +17493,7 @@ fn __action258<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Identifier>
+) -> core::option::Option<Identifier>
 {
     None
 }
@@ -17501,7 +17505,7 @@ fn __action259<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Token<'input>, usize),
-) -> ::std::option::Option<Token<'input>>
+) -> core::option::Option<Token<'input>>
 {
     Some(__0)
 }
@@ -17514,7 +17518,7 @@ fn __action260<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Token<'input>>
+) -> core::option::Option<Token<'input>>
 {
     None
 }
@@ -17527,7 +17531,7 @@ fn __action261<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<ContractPart>
+) -> alloc::vec::Vec<ContractPart>
 {
     vec![]
 }
@@ -17538,8 +17542,8 @@ fn __action262<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<ContractPart>, usize),
-) -> ::std::vec::Vec<ContractPart>
+    (_, v, _): (usize, alloc::vec::Vec<ContractPart>, usize),
+) -> alloc::vec::Vec<ContractPart>
 {
     v
 }
@@ -17563,7 +17567,7 @@ fn __action264<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Vec<Expression>, usize),
-) -> ::std::option::Option<Vec<Expression>>
+) -> core::option::Option<Vec<Expression>>
 {
     Some(__0)
 }
@@ -17576,7 +17580,7 @@ fn __action265<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<Vec<Expression>>
+) -> core::option::Option<Vec<Expression>>
 {
     None
 }
@@ -17627,7 +17631,7 @@ fn __action269<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, Base, usize),
-    (_, v, _): (usize, ::std::vec::Vec<Base>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Base>, usize),
 ) -> Vec<Base>
 {
     {
@@ -17645,7 +17649,7 @@ fn __action270<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<VariableDeclaration>
+) -> alloc::vec::Vec<VariableDeclaration>
 {
     vec![]
 }
@@ -17656,8 +17660,8 @@ fn __action271<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<VariableDeclaration>, usize),
-) -> ::std::vec::Vec<VariableDeclaration>
+    (_, v, _): (usize, alloc::vec::Vec<VariableDeclaration>, usize),
+) -> alloc::vec::Vec<VariableDeclaration>
 {
     v
 }
@@ -17682,7 +17686,7 @@ fn __action273<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, StorageLocation, usize),
-) -> ::std::option::Option<StorageLocation>
+) -> core::option::Option<StorageLocation>
 {
     Some(__0)
 }
@@ -17695,7 +17699,7 @@ fn __action274<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<StorageLocation>
+) -> core::option::Option<StorageLocation>
 {
     None
 }
@@ -17706,8 +17710,8 @@ fn __action275<
 >(
     input: &'input str,
     file_no: usize,
-    (_, __0, _): (usize, (Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>), usize),
-) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>
+    (_, __0, _): (usize, (Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>), usize),
+) -> core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>
 {
     Some(__0)
 }
@@ -17720,7 +17724,7 @@ fn __action276<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>
+) -> core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>
 {
     None
 }
@@ -17733,8 +17737,8 @@ fn __action277<
     file_no: usize,
     (_, _, _): (usize, Token<'input>, usize),
     (_, __0, _): (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    (_, __1, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-) -> (Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)
+    (_, __1, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+) -> (Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)
 {
     (__0, __1)
 }
@@ -17747,7 +17751,7 @@ fn __action278<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<FunctionAttribute>
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     vec![]
 }
@@ -17758,8 +17762,8 @@ fn __action279<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
+    (_, v, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     v
 }
@@ -17772,7 +17776,7 @@ fn __action280<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<(usize, CommentType, &'input str)>
+) -> alloc::vec::Vec<(usize, CommentType, &'input str)>
 {
     vec![]
 }
@@ -17783,8 +17787,8 @@ fn __action281<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<(usize, CommentType, &'input str)>, usize),
-) -> ::std::vec::Vec<(usize, CommentType, &'input str)>
+    (_, v, _): (usize, alloc::vec::Vec<(usize, CommentType, &'input str)>, usize),
+) -> alloc::vec::Vec<(usize, CommentType, &'input str)>
 {
     v
 }
@@ -17796,7 +17800,7 @@ fn __action282<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, (Identifier, Option<Identifier>), usize),
-    (_, v, _): (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<(Identifier, Option<Identifier>)>, usize),
 ) -> Vec<(Identifier, Option<Identifier>)>
 {
     {
@@ -17840,7 +17844,7 @@ fn __action285<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<SourceUnitPart>
+) -> alloc::vec::Vec<SourceUnitPart>
 {
     vec![]
 }
@@ -17851,8 +17855,8 @@ fn __action286<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
-) -> ::std::vec::Vec<SourceUnitPart>
+    (_, v, _): (usize, alloc::vec::Vec<SourceUnitPart>, usize),
+) -> alloc::vec::Vec<SourceUnitPart>
 {
     v
 }
@@ -17864,7 +17868,7 @@ fn __action287<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, SourceUnitPart, usize),
-) -> ::std::vec::Vec<SourceUnitPart>
+) -> alloc::vec::Vec<SourceUnitPart>
 {
     vec![__0]
 }
@@ -17875,9 +17879,9 @@ fn __action288<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<SourceUnitPart>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<SourceUnitPart>, usize),
     (_, e, _): (usize, SourceUnitPart, usize),
-) -> ::std::vec::Vec<SourceUnitPart>
+) -> alloc::vec::Vec<SourceUnitPart>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -17890,7 +17894,7 @@ fn __action289<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
+) -> alloc::vec::Vec<(Identifier, Option<Identifier>)>
 {
     vec![]
 }
@@ -17901,8 +17905,8 @@ fn __action290<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
-) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
+    (_, v, _): (usize, alloc::vec::Vec<(Identifier, Option<Identifier>)>, usize),
+) -> alloc::vec::Vec<(Identifier, Option<Identifier>)>
 {
     v
 }
@@ -17927,7 +17931,7 @@ fn __action292<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, (usize, CommentType, &'input str), usize),
-) -> ::std::vec::Vec<(usize, CommentType, &'input str)>
+) -> alloc::vec::Vec<(usize, CommentType, &'input str)>
 {
     vec![__0]
 }
@@ -17938,9 +17942,9 @@ fn __action293<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<(usize, CommentType, &'input str)>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<(usize, CommentType, &'input str)>, usize),
     (_, e, _): (usize, (usize, CommentType, &'input str), usize),
-) -> ::std::vec::Vec<(usize, CommentType, &'input str)>
+) -> alloc::vec::Vec<(usize, CommentType, &'input str)>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -17952,7 +17956,7 @@ fn __action294<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, FunctionAttribute, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     vec![__0]
 }
@@ -17963,9 +17967,9 @@ fn __action295<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     (_, e, _): (usize, FunctionAttribute, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -17977,7 +17981,7 @@ fn __action296<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, VariableDeclaration, usize),
-) -> ::std::vec::Vec<VariableDeclaration>
+) -> alloc::vec::Vec<VariableDeclaration>
 {
     vec![__0]
 }
@@ -17988,9 +17992,9 @@ fn __action297<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<VariableDeclaration>, usize),
     (_, e, _): (usize, VariableDeclaration, usize),
-) -> ::std::vec::Vec<VariableDeclaration>
+) -> alloc::vec::Vec<VariableDeclaration>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18003,7 +18007,7 @@ fn __action298<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Base>
+) -> alloc::vec::Vec<Base>
 {
     vec![]
 }
@@ -18014,8 +18018,8 @@ fn __action299<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Base>, usize),
-) -> ::std::vec::Vec<Base>
+    (_, v, _): (usize, alloc::vec::Vec<Base>, usize),
+) -> alloc::vec::Vec<Base>
 {
     v
 }
@@ -18040,7 +18044,7 @@ fn __action301<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
+) -> alloc::vec::Vec<ContractPart>
 {
     vec![__0]
 }
@@ -18051,9 +18055,9 @@ fn __action302<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<ContractPart>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<ContractPart>, usize),
     (_, e, _): (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
+) -> alloc::vec::Vec<ContractPart>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18065,7 +18069,7 @@ fn __action303<
     input: &'input str,
     file_no: usize,
     (_, e, _): (usize, EventParameter, usize),
-    (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<EventParameter>, usize),
 ) -> Vec<EventParameter>
 {
     {
@@ -18082,7 +18086,7 @@ fn __action304<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, VariableAttribute, usize),
-) -> ::std::vec::Vec<VariableAttribute>
+) -> alloc::vec::Vec<VariableAttribute>
 {
     vec![__0]
 }
@@ -18093,9 +18097,9 @@ fn __action305<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<VariableAttribute>, usize),
     (_, e, _): (usize, VariableAttribute, usize),
-) -> ::std::vec::Vec<VariableAttribute>
+) -> alloc::vec::Vec<VariableAttribute>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18108,7 +18112,7 @@ fn __action306<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Expression>
+) -> alloc::vec::Vec<Expression>
 {
     vec![]
 }
@@ -18119,8 +18123,8 @@ fn __action307<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
-) -> ::std::vec::Vec<Expression>
+    (_, v, _): (usize, alloc::vec::Vec<Expression>, usize),
+) -> alloc::vec::Vec<Expression>
 {
     v
 }
@@ -18145,7 +18149,7 @@ fn __action309<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, (Loc, Option<Parameter>), usize),
-) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
+) -> alloc::vec::Vec<(Loc, Option<Parameter>)>
 {
     vec![__0]
 }
@@ -18156,9 +18160,9 @@ fn __action310<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<(Loc, Option<Parameter>)>, usize),
     (_, e, _): (usize, (Loc, Option<Parameter>), usize),
-) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
+) -> alloc::vec::Vec<(Loc, Option<Parameter>)>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18184,7 +18188,7 @@ fn __action312<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<Identifier>
+) -> alloc::vec::Vec<Identifier>
 {
     vec![]
 }
@@ -18195,8 +18199,8 @@ fn __action313<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
-) -> ::std::vec::Vec<Identifier>
+    (_, v, _): (usize, alloc::vec::Vec<Identifier>, usize),
+) -> alloc::vec::Vec<Identifier>
 {
     v
 }
@@ -18221,7 +18225,7 @@ fn __action315<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, FunctionAttribute, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     vec![__0]
 }
@@ -18232,9 +18236,9 @@ fn __action316<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     (_, e, _): (usize, FunctionAttribute, usize),
-) -> ::std::vec::Vec<FunctionAttribute>
+) -> alloc::vec::Vec<FunctionAttribute>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18246,7 +18250,7 @@ fn __action317<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Statement, usize),
-) -> ::std::vec::Vec<Statement>
+) -> alloc::vec::Vec<Statement>
 {
     vec![__0]
 }
@@ -18257,9 +18261,9 @@ fn __action318<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Statement>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Statement>, usize),
     (_, e, _): (usize, Statement, usize),
-) -> ::std::vec::Vec<Statement>
+) -> alloc::vec::Vec<Statement>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18272,7 +18276,7 @@ fn __action319<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<NamedArgument>
+) -> alloc::vec::Vec<NamedArgument>
 {
     vec![]
 }
@@ -18283,8 +18287,8 @@ fn __action320<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<NamedArgument>, usize),
-) -> ::std::vec::Vec<NamedArgument>
+    (_, v, _): (usize, alloc::vec::Vec<NamedArgument>, usize),
+) -> alloc::vec::Vec<NamedArgument>
 {
     v
 }
@@ -18309,7 +18313,7 @@ fn __action322<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, NamedArgument, usize),
-) -> ::std::vec::Vec<NamedArgument>
+) -> alloc::vec::Vec<NamedArgument>
 {
     vec![__0]
 }
@@ -18320,9 +18324,9 @@ fn __action323<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<NamedArgument>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<NamedArgument>, usize),
     (_, e, _): (usize, NamedArgument, usize),
-) -> ::std::vec::Vec<NamedArgument>
+) -> alloc::vec::Vec<NamedArgument>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18334,7 +18338,7 @@ fn __action324<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
+) -> alloc::vec::Vec<Identifier>
 {
     vec![__0]
 }
@@ -18345,9 +18349,9 @@ fn __action325<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Identifier>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Identifier>, usize),
     (_, e, _): (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
+) -> alloc::vec::Vec<Identifier>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18359,7 +18363,7 @@ fn __action326<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Expression, usize),
-) -> ::std::vec::Vec<Expression>
+) -> alloc::vec::Vec<Expression>
 {
     vec![__0]
 }
@@ -18370,9 +18374,9 @@ fn __action327<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Expression>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Expression>, usize),
     (_, e, _): (usize, Expression, usize),
-) -> ::std::vec::Vec<Expression>
+) -> alloc::vec::Vec<Expression>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18385,7 +18389,7 @@ fn __action328<
     file_no: usize,
     __lookbehind: &usize,
     __lookahead: &usize,
-) -> ::std::vec::Vec<EventParameter>
+) -> alloc::vec::Vec<EventParameter>
 {
     vec![]
 }
@@ -18396,8 +18400,8 @@ fn __action329<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
-) -> ::std::vec::Vec<EventParameter>
+    (_, v, _): (usize, alloc::vec::Vec<EventParameter>, usize),
+) -> alloc::vec::Vec<EventParameter>
 {
     v
 }
@@ -18422,7 +18426,7 @@ fn __action331<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, Base, usize),
-) -> ::std::vec::Vec<Base>
+) -> alloc::vec::Vec<Base>
 {
     vec![__0]
 }
@@ -18433,9 +18437,9 @@ fn __action332<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<Base>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<Base>, usize),
     (_, e, _): (usize, Base, usize),
-) -> ::std::vec::Vec<Base>
+) -> alloc::vec::Vec<Base>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18447,7 +18451,7 @@ fn __action333<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, (Identifier, Option<Identifier>), usize),
-) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
+) -> alloc::vec::Vec<(Identifier, Option<Identifier>)>
 {
     vec![__0]
 }
@@ -18458,9 +18462,9 @@ fn __action334<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<(Identifier, Option<Identifier>)>, usize),
     (_, e, _): (usize, (Identifier, Option<Identifier>), usize),
-) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
+) -> alloc::vec::Vec<(Identifier, Option<Identifier>)>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18472,7 +18476,7 @@ fn __action335<
     input: &'input str,
     file_no: usize,
     (_, __0, _): (usize, EventParameter, usize),
-) -> ::std::vec::Vec<EventParameter>
+) -> alloc::vec::Vec<EventParameter>
 {
     vec![__0]
 }
@@ -18483,9 +18487,9 @@ fn __action336<
 >(
     input: &'input str,
     file_no: usize,
-    (_, v, _): (usize, ::std::vec::Vec<EventParameter>, usize),
+    (_, v, _): (usize, alloc::vec::Vec<EventParameter>, usize),
     (_, e, _): (usize, EventParameter, usize),
-) -> ::std::vec::Vec<EventParameter>
+) -> alloc::vec::Vec<EventParameter>
 {
     { let mut v = v; v.push(e); v }
 }
@@ -18583,7 +18587,7 @@ fn __action339<
     __0: (usize, usize, usize),
     __1: (usize, Expression, usize),
     __2: (usize, Token<'input>, usize),
-    __3: (usize, ::std::option::Option<Identifier>, usize),
+    __3: (usize, core::option::Option<Identifier>, usize),
     __4: (usize, usize, usize),
 ) -> EventParameter
 {
@@ -18614,7 +18618,7 @@ fn __action340<
     file_no: usize,
     __0: (usize, usize, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, usize, usize),
 ) -> EventParameter
 {
@@ -18647,7 +18651,7 @@ fn __action341<
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<Expression>, usize),
     __2: (usize, Token<'input>, usize),
-) -> ::std::option::Option<Vec<Expression>>
+) -> core::option::Option<Vec<Expression>>
 {
     let __start0 = __0.0.clone();
     let __end0 = __2.2.clone();
@@ -18738,7 +18742,7 @@ fn __action344<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Base, usize),
-) -> ::std::vec::Vec<Base>
+) -> alloc::vec::Vec<Base>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -18762,10 +18766,10 @@ fn __action345<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<Base>, usize),
+    __0: (usize, alloc::vec::Vec<Base>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Base, usize),
-) -> ::std::vec::Vec<Base>
+) -> alloc::vec::Vec<Base>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -18817,7 +18821,7 @@ fn __action347<
     input: &'input str,
     file_no: usize,
     __0: (usize, Base, usize),
-    __1: (usize, ::std::vec::Vec<Base>, usize),
+    __1: (usize, alloc::vec::Vec<Base>, usize),
 ) -> Vec<Base>
 {
     let __start0 = __1.0.clone();
@@ -18844,7 +18848,7 @@ fn __action348<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, EventParameter, usize),
-) -> ::std::vec::Vec<EventParameter>
+) -> alloc::vec::Vec<EventParameter>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -18868,10 +18872,10 @@ fn __action349<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<EventParameter>, usize),
+    __0: (usize, alloc::vec::Vec<EventParameter>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, EventParameter, usize),
-) -> ::std::vec::Vec<EventParameter>
+) -> alloc::vec::Vec<EventParameter>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -18923,7 +18927,7 @@ fn __action351<
     input: &'input str,
     file_no: usize,
     __0: (usize, EventParameter, usize),
-    __1: (usize, ::std::vec::Vec<EventParameter>, usize),
+    __1: (usize, alloc::vec::Vec<EventParameter>, usize),
 ) -> Vec<EventParameter>
 {
     let __start0 = __1.0.clone();
@@ -18950,7 +18954,7 @@ fn __action352<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
-) -> ::std::vec::Vec<Expression>
+) -> alloc::vec::Vec<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -18974,10 +18978,10 @@ fn __action353<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<Expression>, usize),
+    __0: (usize, alloc::vec::Vec<Expression>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Expression, usize),
-) -> ::std::vec::Vec<Expression>
+) -> alloc::vec::Vec<Expression>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -19029,7 +19033,7 @@ fn __action355<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::vec::Vec<Expression>, usize),
+    __1: (usize, alloc::vec::Vec<Expression>, usize),
 ) -> Vec<Expression>
 {
     let __start0 = __1.0.clone();
@@ -19056,7 +19060,7 @@ fn __action356<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
+) -> alloc::vec::Vec<Identifier>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -19080,10 +19084,10 @@ fn __action357<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<Identifier>, usize),
+    __0: (usize, alloc::vec::Vec<Identifier>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-) -> ::std::vec::Vec<Identifier>
+) -> alloc::vec::Vec<Identifier>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -19135,7 +19139,7 @@ fn __action359<
     input: &'input str,
     file_no: usize,
     __0: (usize, Identifier, usize),
-    __1: (usize, ::std::vec::Vec<Identifier>, usize),
+    __1: (usize, alloc::vec::Vec<Identifier>, usize),
 ) -> Vec<Identifier>
 {
     let __start0 = __1.0.clone();
@@ -19162,7 +19166,7 @@ fn __action360<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, (Identifier, Option<Identifier>), usize),
-) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
+) -> alloc::vec::Vec<(Identifier, Option<Identifier>)>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -19186,10 +19190,10 @@ fn __action361<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
+    __0: (usize, alloc::vec::Vec<(Identifier, Option<Identifier>)>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, (Identifier, Option<Identifier>), usize),
-) -> ::std::vec::Vec<(Identifier, Option<Identifier>)>
+) -> alloc::vec::Vec<(Identifier, Option<Identifier>)>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -19241,7 +19245,7 @@ fn __action363<
     input: &'input str,
     file_no: usize,
     __0: (usize, (Identifier, Option<Identifier>), usize),
-    __1: (usize, ::std::vec::Vec<(Identifier, Option<Identifier>)>, usize),
+    __1: (usize, alloc::vec::Vec<(Identifier, Option<Identifier>)>, usize),
 ) -> Vec<(Identifier, Option<Identifier>)>
 {
     let __start0 = __1.0.clone();
@@ -19268,7 +19272,7 @@ fn __action364<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, NamedArgument, usize),
-) -> ::std::vec::Vec<NamedArgument>
+) -> alloc::vec::Vec<NamedArgument>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -19292,10 +19296,10 @@ fn __action365<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<NamedArgument>, usize),
+    __0: (usize, alloc::vec::Vec<NamedArgument>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, NamedArgument, usize),
-) -> ::std::vec::Vec<NamedArgument>
+) -> alloc::vec::Vec<NamedArgument>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -19347,7 +19351,7 @@ fn __action367<
     input: &'input str,
     file_no: usize,
     __0: (usize, NamedArgument, usize),
-    __1: (usize, ::std::vec::Vec<NamedArgument>, usize),
+    __1: (usize, alloc::vec::Vec<NamedArgument>, usize),
 ) -> Vec<NamedArgument>
 {
     let __start0 = __1.0.clone();
@@ -19374,7 +19378,7 @@ fn __action368<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, (Loc, Option<Parameter>), usize),
-) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
+) -> alloc::vec::Vec<(Loc, Option<Parameter>)>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -19398,10 +19402,10 @@ fn __action369<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<(Loc, Option<Parameter>)>, usize),
+    __0: (usize, alloc::vec::Vec<(Loc, Option<Parameter>)>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, (Loc, Option<Parameter>), usize),
-) -> ::std::vec::Vec<(Loc, Option<Parameter>)>
+) -> alloc::vec::Vec<(Loc, Option<Parameter>)>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -19428,7 +19432,7 @@ fn __action370<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
-) -> ::std::option::Option<Expression>
+) -> core::option::Option<Expression>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -19517,7 +19521,7 @@ fn __action373<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-    __3: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __3: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __4: (usize, Identifier, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Expression, usize),
@@ -19557,7 +19561,7 @@ fn __action374<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, usize, usize),
     __2: (usize, Expression, usize),
-    __3: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __3: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __4: (usize, Identifier, usize),
     __5: (usize, usize, usize),
     __6: (usize, Token<'input>, usize),
@@ -19668,7 +19672,7 @@ fn __action377<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-) -> (Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)
+) -> (Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)
 {
     let __start0 = __1.2.clone();
     let __end0 = __1.2.clone();
@@ -19696,8 +19700,8 @@ fn __action378<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-) -> (Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)
+    __2: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+) -> (Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)
 {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
@@ -19724,7 +19728,7 @@ fn __action379<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>, usize),
+    __2: (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>, usize),
 ) -> Type
 {
     let __start0 = __1.2.clone();
@@ -19754,8 +19758,8 @@ fn __action380<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-    __3: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>, usize),
+    __2: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>, usize),
 ) -> Type
 {
     let __start0 = __2.0.clone();
@@ -19784,7 +19788,7 @@ fn __action381<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>
+) -> core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -19810,8 +19814,8 @@ fn __action382<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
-) -> ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, ::std::vec::Vec<FunctionAttribute>)>
+    __2: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
+) -> core::option::Option<(Vec<(Loc, Option<Parameter>)>, alloc::vec::Vec<FunctionAttribute>)>
 {
     let __start0 = __0.0.clone();
     let __end0 = __2.2.clone();
@@ -19870,7 +19874,7 @@ fn __action384<
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
 ) -> Type
 {
     let __start0 = __2.0.clone();
@@ -19928,7 +19932,7 @@ fn __action386<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
 ) -> Type
@@ -19960,10 +19964,10 @@ fn __action387<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
 ) -> Type
 {
     let __start0 = __3.0.clone();
@@ -19994,7 +19998,7 @@ fn __action388<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __2: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
 ) -> Type
 {
     let __start0 = __2.2.clone();
@@ -20023,7 +20027,7 @@ fn __action389<
     input: &'input str,
     file_no: usize,
     __0: (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
+) -> alloc::vec::Vec<ContractPart>
 {
     let __start0 = __0.0.clone();
     let __end0 = __0.2.clone();
@@ -20046,9 +20050,9 @@ fn __action390<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<ContractPart>, usize),
+    __0: (usize, alloc::vec::Vec<ContractPart>, usize),
     __1: (usize, ContractPart, usize),
-) -> ::std::vec::Vec<ContractPart>
+) -> alloc::vec::Vec<ContractPart>
 {
     let __start0 = __1.0.clone();
     let __end0 = __1.2.clone();
@@ -20119,7 +20123,7 @@ fn __action392<
     __4: (usize, Vec<Base>, usize),
     __5: (usize, usize, usize),
     __6: (usize, Token<'input>, usize),
-    __7: (usize, ::std::vec::Vec<ContractPart>, usize),
+    __7: (usize, alloc::vec::Vec<ContractPart>, usize),
     __8: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
@@ -20154,7 +20158,7 @@ fn __action393<
     file_no: usize,
     __0: (usize, VariableDeclaration, usize),
     __1: (usize, Token<'input>, usize),
-) -> ::std::vec::Vec<VariableDeclaration>
+) -> alloc::vec::Vec<VariableDeclaration>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -20178,10 +20182,10 @@ fn __action394<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __0: (usize, alloc::vec::Vec<VariableDeclaration>, usize),
     __1: (usize, VariableDeclaration, usize),
     __2: (usize, Token<'input>, usize),
-) -> ::std::vec::Vec<VariableDeclaration>
+) -> alloc::vec::Vec<VariableDeclaration>
 {
     let __start0 = __1.0.clone();
     let __end0 = __2.2.clone();
@@ -20249,7 +20253,7 @@ fn __action396<
     __2: (usize, Token<'input>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __5: (usize, alloc::vec::Vec<VariableDeclaration>, usize),
     __6: (usize, Token<'input>, usize),
     __7: (usize, usize, usize),
 ) -> Box<StructDefinition>
@@ -20284,7 +20288,7 @@ fn __action397<
     file_no: usize,
     __0: (usize, Option<Loc>, usize),
     __1: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-) -> ::std::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>
+) -> core::option::Option<(Option<Loc>, Vec<(Loc, Option<Parameter>)>)>
 {
     let __start0 = __0.0.clone();
     let __end0 = __1.2.clone();
@@ -20312,10 +20316,10 @@ fn __action398<
     __1: (usize, usize, usize),
     __2: (usize, FunctionTy, usize),
     __3: (usize, usize, usize),
-    __4: (usize, ::std::option::Option<Identifier>, usize),
+    __4: (usize, core::option::Option<Identifier>, usize),
     __5: (usize, usize, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __7: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, Option<Loc>, usize),
     __9: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __10: (usize, usize, usize),
@@ -20358,10 +20362,10 @@ fn __action399<
     __1: (usize, usize, usize),
     __2: (usize, FunctionTy, usize),
     __3: (usize, usize, usize),
-    __4: (usize, ::std::option::Option<Identifier>, usize),
+    __4: (usize, core::option::Option<Identifier>, usize),
     __5: (usize, usize, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __7: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, usize, usize),
     __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -20405,7 +20409,7 @@ fn __action400<
     __4: (usize, Identifier, usize),
     __5: (usize, usize, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __7: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, Option<Loc>, usize),
     __9: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __10: (usize, usize, usize),
@@ -20451,7 +20455,7 @@ fn __action401<
     __4: (usize, Identifier, usize),
     __5: (usize, usize, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __7: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, usize, usize),
     __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -20494,8 +20498,8 @@ fn __action402<
     __3: (usize, usize, usize),
     __4: (usize, Identifier, usize),
     __5: (usize, usize, usize),
-    __6: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __6: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __7: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, Option<Loc>, usize),
     __9: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __10: (usize, usize, usize),
@@ -20540,8 +20544,8 @@ fn __action403<
     __3: (usize, usize, usize),
     __4: (usize, Identifier, usize),
     __5: (usize, usize, usize),
-    __6: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __7: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __6: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __7: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __8: (usize, usize, usize),
     __9: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -20641,7 +20645,7 @@ fn __action406<
     input: &'input str,
     file_no: usize,
     __0: (usize, Token<'input>, usize),
-    __1: (usize, ::std::vec::Vec<Statement>, usize),
+    __1: (usize, alloc::vec::Vec<Statement>, usize),
     __2: (usize, Token<'input>, usize),
     __3: (usize, usize, usize),
 ) -> Statement
@@ -20810,11 +20814,11 @@ fn __action411<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::option::Option<Expression>, usize),
+    __4: (usize, core::option::Option<Expression>, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, core::option::Option<Statement>, usize),
     __7: (usize, Token<'input>, usize),
     __8: (usize, Statement, usize),
     __9: (usize, usize, usize),
@@ -20854,11 +20858,11 @@ fn __action412<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::option::Option<Expression>, usize),
+    __4: (usize, core::option::Option<Expression>, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, core::option::Option<Statement>, usize),
     __7: (usize, Token<'input>, usize),
     __8: (usize, Token<'input>, usize),
     __9: (usize, usize, usize),
@@ -20898,10 +20902,10 @@ fn __action413<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, usize, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, Option<Loc>, usize),
     __7: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __8: (usize, usize, usize),
@@ -20952,10 +20956,10 @@ fn __action414<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, usize, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, usize, usize),
     __7: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -21044,7 +21048,7 @@ fn __action416<
     __3: (usize, Vec<Base>, usize),
     __4: (usize, usize, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::vec::Vec<ContractPart>, usize),
+    __6: (usize, alloc::vec::Vec<ContractPart>, usize),
     __7: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
@@ -21342,7 +21346,7 @@ fn __action425<
     file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, usize, usize),
 ) -> EventParameter
 {
@@ -21373,7 +21377,7 @@ fn __action426<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<Identifier>, usize),
+    __1: (usize, core::option::Option<Identifier>, usize),
     __2: (usize, usize, usize),
 ) -> EventParameter
 {
@@ -21627,7 +21631,7 @@ fn __action434<
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, Option<Loc>, usize),
     __7: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __8: (usize, usize, usize),
@@ -21681,7 +21685,7 @@ fn __action435<
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
     __4: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, usize, usize),
     __7: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -21846,8 +21850,8 @@ fn __action440<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
-    __4: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, Option<Loc>, usize),
     __7: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __8: (usize, usize, usize),
@@ -21900,8 +21904,8 @@ fn __action441<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
-    __4: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __5: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __5: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __6: (usize, usize, usize),
     __7: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -22040,7 +22044,7 @@ fn __action445<
     file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Expression>, usize),
+    __2: (usize, core::option::Option<Expression>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, usize, usize),
 ) -> Expression
@@ -22634,8 +22638,8 @@ fn __action464<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
-    __3: (usize, ::std::option::Option<(Identifier, Parameter, Statement)>, usize),
+    __2: (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
+    __3: (usize, core::option::Option<(Identifier, Parameter, Statement)>, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Parameter, usize),
@@ -22820,7 +22824,7 @@ fn __action469<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::option::Option<Parameter>, usize),
+    __0: (usize, core::option::Option<Parameter>, usize),
     __1: (usize, usize, usize),
 ) -> (Loc, Option<Parameter>)
 {
@@ -22849,8 +22853,8 @@ fn __action470<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __1: (usize, core::option::Option<StorageLocation>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, usize, usize),
 ) -> Parameter
 {
@@ -24554,7 +24558,7 @@ fn __action525<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __4: (usize, alloc::vec::Vec<VariableDeclaration>, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, usize, usize),
 ) -> Box<StructDefinition>
@@ -24971,7 +24975,7 @@ fn __action539<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __1: (usize, core::option::Option<StorageLocation>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, usize, usize),
 ) -> VariableDeclaration
@@ -25004,7 +25008,7 @@ fn __action540<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Expression, usize),
@@ -25044,7 +25048,7 @@ fn __action541<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, usize, usize),
     __5: (usize, Token<'input>, usize),
@@ -25349,7 +25353,7 @@ fn __action551<
     input: &'input str,
     file_no: usize,
     __0: (usize, Token<'input>, usize),
-    __1: (usize, ::std::vec::Vec<Statement>, usize),
+    __1: (usize, alloc::vec::Vec<Statement>, usize),
     __2: (usize, Token<'input>, usize),
 ) -> Statement
 {
@@ -25508,11 +25512,11 @@ fn __action556<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::option::Option<Expression>, usize),
+    __4: (usize, core::option::Option<Expression>, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, core::option::Option<Statement>, usize),
     __7: (usize, Token<'input>, usize),
     __8: (usize, Statement, usize),
 ) -> Statement
@@ -25550,11 +25554,11 @@ fn __action557<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::option::Option<Expression>, usize),
+    __4: (usize, core::option::Option<Expression>, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, core::option::Option<Statement>, usize),
     __7: (usize, Token<'input>, usize),
     __8: (usize, Token<'input>, usize),
 ) -> Statement
@@ -25592,9 +25596,9 @@ fn __action558<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -25642,9 +25646,9 @@ fn __action559<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -25727,7 +25731,7 @@ fn __action561<
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<Base>, usize),
     __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::vec::Vec<ContractPart>, usize),
+    __5: (usize, alloc::vec::Vec<ContractPart>, usize),
     __6: (usize, Token<'input>, usize),
 ) -> Box<ContractDefinition>
 {
@@ -26008,7 +26012,7 @@ fn __action570<
     file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
 ) -> EventParameter
 {
     let __start0 = __2.2.clone();
@@ -26037,7 +26041,7 @@ fn __action571<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<Identifier>, usize),
+    __1: (usize, core::option::Option<Identifier>, usize),
 ) -> EventParameter
 {
     let __start0 = __1.2.clone();
@@ -26274,7 +26278,7 @@ fn __action579<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -26324,7 +26328,7 @@ fn __action580<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -26477,8 +26481,8 @@ fn __action585<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -26527,8 +26531,8 @@ fn __action586<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -26658,7 +26662,7 @@ fn __action590<
     file_no: usize,
     __0: (usize, Expression, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Expression>, usize),
+    __2: (usize, core::option::Option<Expression>, usize),
     __3: (usize, Token<'input>, usize),
 ) -> Expression
 {
@@ -27204,8 +27208,8 @@ fn __action609<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
-    __3: (usize, ::std::option::Option<(Identifier, Parameter, Statement)>, usize),
+    __2: (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
+    __3: (usize, core::option::Option<(Identifier, Parameter, Statement)>, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Token<'input>, usize),
     __6: (usize, Parameter, usize),
@@ -27380,7 +27384,7 @@ fn __action614<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::option::Option<Parameter>, usize),
+    __0: (usize, core::option::Option<Parameter>, usize),
 ) -> (Loc, Option<Parameter>)
 {
     let __start0 = __0.2.clone();
@@ -27407,8 +27411,8 @@ fn __action615<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __1: (usize, core::option::Option<StorageLocation>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
 ) -> Parameter
 {
     let __start0 = __2.2.clone();
@@ -28978,7 +28982,7 @@ fn __action669<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Token<'input>, usize),
-    __4: (usize, ::std::vec::Vec<VariableDeclaration>, usize),
+    __4: (usize, alloc::vec::Vec<VariableDeclaration>, usize),
     __5: (usize, Token<'input>, usize),
 ) -> Box<StructDefinition>
 {
@@ -29367,7 +29371,7 @@ fn __action683<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __1: (usize, core::option::Option<StorageLocation>, usize),
     __2: (usize, Identifier, usize),
 ) -> VariableDeclaration
 {
@@ -29398,7 +29402,7 @@ fn __action684<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Expression, usize),
@@ -29436,7 +29440,7 @@ fn __action685<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
 ) -> Box<VariableDefinition>
@@ -29668,7 +29672,7 @@ fn __action693<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
+    __2: (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
     __3: (usize, (Identifier, Parameter, Statement), usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Token<'input>, usize),
@@ -29708,7 +29712,7 @@ fn __action694<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
+    __2: (usize, core::option::Option<(Vec<(Loc, Option<Parameter>)>, Box<Statement>)>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Parameter, usize),
@@ -29748,11 +29752,11 @@ fn __action695<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Expression, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, core::option::Option<Statement>, usize),
     __7: (usize, Token<'input>, usize),
     __8: (usize, Statement, usize),
 ) -> Statement
@@ -29788,10 +29792,10 @@ fn __action696<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::option::Option<Statement>, usize),
+    __5: (usize, core::option::Option<Statement>, usize),
     __6: (usize, Token<'input>, usize),
     __7: (usize, Statement, usize),
 ) -> Statement
@@ -29828,11 +29832,11 @@ fn __action697<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Expression, usize),
     __5: (usize, Token<'input>, usize),
-    __6: (usize, ::std::option::Option<Statement>, usize),
+    __6: (usize, core::option::Option<Statement>, usize),
     __7: (usize, Token<'input>, usize),
     __8: (usize, Token<'input>, usize),
 ) -> Statement
@@ -29868,10 +29872,10 @@ fn __action698<
     file_no: usize,
     __0: (usize, Token<'input>, usize),
     __1: (usize, Token<'input>, usize),
-    __2: (usize, ::std::option::Option<Statement>, usize),
+    __2: (usize, core::option::Option<Statement>, usize),
     __3: (usize, Token<'input>, usize),
     __4: (usize, Token<'input>, usize),
-    __5: (usize, ::std::option::Option<Statement>, usize),
+    __5: (usize, core::option::Option<Statement>, usize),
     __6: (usize, Token<'input>, usize),
     __7: (usize, Token<'input>, usize),
 ) -> Statement
@@ -29968,7 +29972,7 @@ fn __action701<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __4: (usize, Option<Loc>, usize),
     __5: (usize, Vec<(Loc, Option<Parameter>)>, usize),
@@ -30006,9 +30010,9 @@ fn __action702<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -30044,7 +30048,7 @@ fn __action703<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __4: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
@@ -30078,9 +30082,9 @@ fn __action704<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
-    __2: (usize, ::std::option::Option<Identifier>, usize),
+    __2: (usize, core::option::Option<Identifier>, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -30152,7 +30156,7 @@ fn __action706<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -30224,7 +30228,7 @@ fn __action708<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -30257,7 +30261,7 @@ fn __action709<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __3: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
     __4: (usize, Option<Loc>, usize),
     __5: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __6: (usize, Option<Statement>, usize),
@@ -30295,8 +30299,8 @@ fn __action710<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -30333,7 +30337,7 @@ fn __action711<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __3: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
     __4: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -30367,8 +30371,8 @@ fn __action712<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, core::option::Option<Vec<(Loc, Option<Parameter>)>>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -30474,7 +30478,7 @@ fn __action715<
     __1: (usize, FunctionTy, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -30511,7 +30515,7 @@ fn __action716<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, Option<Loc>, usize),
     __5: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __6: (usize, Option<Statement>, usize),
@@ -30614,7 +30618,7 @@ fn __action719<
     __1: (usize, FunctionTy, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -30647,7 +30651,7 @@ fn __action720<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, FunctionTy, usize),
     __2: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -30787,7 +30791,7 @@ fn __action725<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __1: (usize, core::option::Option<StorageLocation>, usize),
     __2: (usize, Identifier, usize),
 ) -> Parameter
 {
@@ -30815,7 +30819,7 @@ fn __action726<
     input: &'input str,
     file_no: usize,
     __0: (usize, Expression, usize),
-    __1: (usize, ::std::option::Option<StorageLocation>, usize),
+    __1: (usize, core::option::Option<StorageLocation>, usize),
 ) -> Parameter
 {
     let __start0 = __1.2.clone();
@@ -30968,7 +30972,7 @@ fn __action731<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Loc>, usize),
     __6: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __7: (usize, Option<Statement>, usize),
@@ -31005,7 +31009,7 @@ fn __action732<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, Option<Loc>, usize),
     __5: (usize, Vec<(Loc, Option<Parameter>)>, usize),
     __6: (usize, Option<Statement>, usize),
@@ -31108,7 +31112,7 @@ fn __action735<
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
     __3: (usize, Vec<(Loc, Option<Parameter>)>, usize),
-    __4: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __4: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __5: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -31141,7 +31145,7 @@ fn __action736<
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Token<'input>, usize),
     __2: (usize, Identifier, usize),
-    __3: (usize, ::std::vec::Vec<FunctionAttribute>, usize),
+    __3: (usize, alloc::vec::Vec<FunctionAttribute>, usize),
     __4: (usize, Option<Statement>, usize),
 ) -> Box<FunctionDefinition>
 {
@@ -31950,7 +31954,7 @@ fn __action754<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<(usize, CommentType, &'input str)>, usize),
+    __0: (usize, alloc::vec::Vec<(usize, CommentType, &'input str)>, usize),
 ) -> Vec<DocComment>
 {
     let __start0 = __0.0.clone();
@@ -32000,7 +32004,7 @@ fn __action756<
 >(
     input: &'input str,
     file_no: usize,
-    __0: (usize, ::std::vec::Vec<SourceUnitPart>, usize),
+    __0: (usize, alloc::vec::Vec<SourceUnitPart>, usize),
 ) -> SourceUnit
 {
     let __start0 = __0.0.clone();
@@ -32053,7 +32057,7 @@ fn __action758<
     input: &'input str,
     file_no: usize,
     __0: (usize, Token<'input>, usize),
-    __1: (usize, ::std::vec::Vec<Statement>, usize),
+    __1: (usize, alloc::vec::Vec<Statement>, usize),
     __2: (usize, Token<'input>, usize),
 ) -> Statement
 {
@@ -32438,7 +32442,7 @@ fn __action770<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
     __5: (usize, Expression, usize),
@@ -32506,7 +32510,7 @@ fn __action772<
     file_no: usize,
     __0: (usize, Vec<DocComment>, usize),
     __1: (usize, Expression, usize),
-    __2: (usize, ::std::vec::Vec<VariableAttribute>, usize),
+    __2: (usize, alloc::vec::Vec<VariableAttribute>, usize),
     __3: (usize, Identifier, usize),
     __4: (usize, Token<'input>, usize),
 ) -> Box<VariableDefinition>

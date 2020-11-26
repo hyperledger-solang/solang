@@ -29,12 +29,21 @@ impl EwasmTarget {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
     ) -> Contract<'a> {
         // first emit runtime code
         let mut b = EwasmTarget {
             abi: ethabiencoder::EthAbiEncoder { bswap: false },
         };
-        let mut runtime_code = Contract::new(context, contract, ns, filename, opt, None);
+        let mut runtime_code = Contract::new(
+            context,
+            contract,
+            ns,
+            filename,
+            opt,
+            math_overflow_check,
+            None,
+        );
 
         // externals
         b.declare_externals(&mut runtime_code);
@@ -59,6 +68,7 @@ impl EwasmTarget {
             ns,
             filename,
             opt,
+            math_overflow_check,
             Some(Box::new(runtime_code)),
         );
 
@@ -1201,6 +1211,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             contract.ns,
             "",
             contract.opt,
+            contract.math_overflow_check,
         );
 
         // wasm

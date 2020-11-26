@@ -43,8 +43,9 @@ impl ast::Contract {
         context: &'a inkwell::context::Context,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
     ) -> emit::Contract {
-        emit::Contract::build(context, self, ns, filename, opt)
+        emit::Contract::build(context, self, ns, filename, opt, math_overflow_check)
     }
 
     /// Print the entire contract; storage initializers, constructors and functions and their CFGs

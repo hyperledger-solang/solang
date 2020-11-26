@@ -121,6 +121,7 @@ fn test_abstract() {
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Substrate,
+        false,
     );
 
     no_errors(ns.diagnostics);
@@ -158,6 +159,7 @@ fn test_abstract() {
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Substrate,
+        false,
     );
 
     no_errors(ns.diagnostics);

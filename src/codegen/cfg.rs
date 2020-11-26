@@ -336,13 +336,11 @@ impl ControlFlowGraph {
             ),
             Expression::Variable(_, _, res) => format!("%{}", self.vars[res].id.name),
             Expression::ConstantVariable(_, _, Some(var_contract_no), var_no)
-            | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
-                format!(
-                    "${}.{}",
-                    ns.contracts[*var_contract_no].name,
-                    ns.contracts[*var_contract_no].variables[*var_no].name
-                )
-            }
+            | Expression::StorageVariable(_, _, var_contract_no, var_no) => format!(
+                "${}.{}",
+                ns.contracts[*var_contract_no].name,
+                ns.contracts[*var_contract_no].variables[*var_no].name
+            ),
             Expression::ConstantVariable(_, _, None, var_no) => {
                 format!("${}", ns.constants[*var_no].name)
             }
@@ -504,26 +502,22 @@ impl ControlFlowGraph {
                 address,
                 function_no,
                 ..
-            } => {
-                format!(
-                    "external {} address {}",
-                    self.expr_to_string(contract, ns, address),
-                    ns.functions[*function_no].print_name(ns)
-                )
-            }
+            } => format!(
+                "external {} address {}",
+                self.expr_to_string(contract, ns, address),
+                ns.functions[*function_no].print_name(ns)
+            ),
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
             }
-            Expression::InternalFunctionCall { function, args, .. } => {
-                format!(
-                    "(call {} ({})",
-                    self.expr_to_string(contract, ns, function),
-                    args.iter()
-                        .map(|a| self.expr_to_string(contract, ns, &a))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )
-            }
+            Expression::InternalFunctionCall { function, args, .. } => format!(
+                "(call {} ({})",
+                self.expr_to_string(contract, ns, function),
+                args.iter()
+                    .map(|a| self.expr_to_string(contract, ns, &a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Expression::Constructor {
                 contract_no,
                 constructor_no: Some(constructor_no),
@@ -599,19 +593,17 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::FormatString(_, args) => {
-                format!(
-                    "(format string {})",
-                    args.iter()
-                        .map(|(spec, a)| format!(
-                            "({} {})",
-                            spec,
-                            self.expr_to_string(contract, ns, &a)
-                        ))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )
-            }
+            Expression::FormatString(_, args) => format!(
+                "(format string {})",
+                args.iter()
+                    .map(|(spec, a)| format!(
+                        "({} {})",
+                        spec,
+                        self.expr_to_string(contract, ns, &a)
+                    ))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             _ => panic!("{:?}", expr),
         }
     }
@@ -1056,13 +1048,11 @@ fn function_cfg(
         pt::FunctionTy::Function => {
             format!("sol::function{}::{}", contract_name, func.llvm_symbol(ns))
         }
-        pt::FunctionTy::Constructor => {
-            format!(
-                "sol::constructor{}::{}",
-                contract_name,
-                func.llvm_symbol(ns)
-            )
-        }
+        pt::FunctionTy::Constructor => format!(
+            "sol::constructor{}::{}",
+            contract_name,
+            func.llvm_symbol(ns)
+        ),
         _ => format!("sol{}::{}", contract_name, func.ty),
     };
 

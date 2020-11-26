@@ -1116,6 +1116,43 @@ pub fn build_solidity(src: &'static str) -> TestRuntime {
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Substrate,
+        false,
+    );
+
+    diagnostics::print_messages(&mut cache, &ns, false);
+
+    assert!(!res.is_empty());
+
+    let abistr = res[0].1.clone();
+    let code = res[0].0.clone();
+    let address = address_new();
+
+    let mut t = TestRuntime {
+        accounts: HashMap::new(),
+        printbuf: String::new(),
+        store: HashMap::new(),
+        contracts: res,
+        vm: VM::new(address, address_new(), 0),
+        abi: abi::substrate::load(&abistr).unwrap(),
+        events: Vec::new(),
+    };
+
+    t.accounts.insert(address, (code, 0));
+
+    t
+}
+
+pub fn build_solidity_with_overflow_check(src: &'static str) -> TestRuntime {
+    let mut cache = FileCache::new();
+
+    cache.set_file_contents("test.sol", src.to_string());
+
+    let (res, ns) = compile(
+        "test.sol",
+        &mut cache,
+        inkwell::OptimizationLevel::Default,
+        Target::Substrate,
+        true,
     );
 
     diagnostics::print_messages(&mut cache, &ns, false);

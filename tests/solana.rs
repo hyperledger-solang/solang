@@ -27,6 +27,7 @@ fn build_solidity(src: &str) -> VM {
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Solana,
+        false,
     );
 
     diagnostics::print_messages(&mut cache, &ns, false);
