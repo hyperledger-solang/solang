@@ -56,6 +56,7 @@ pub fn compile(
     cache: &mut FileCache,
     opt: OptimizationLevel,
     target: Target,
+    math_overflow_check: bool,
 ) -> (Vec<(Vec<u8>, String)>, ast::Namespace) {
     let ctx = inkwell::context::Context::create();
 
@@ -74,7 +75,14 @@ pub fn compile(
         .filter(|c| ns.contracts[*c].is_concrete())
         .map(|c| {
             // codegen
-            let contract = emit::Contract::build(&ctx, &ns.contracts[c], &ns, filename, opt);
+            let contract = emit::Contract::build(
+                &ctx,
+                &ns.contracts[c],
+                &ns,
+                filename,
+                opt,
+                math_overflow_check,
+            );
 
             let bc = contract.code(true).expect("llvm code emit should work");
 

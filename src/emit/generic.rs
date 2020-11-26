@@ -26,12 +26,21 @@ impl GenericTarget {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
     ) -> Contract<'a> {
         let mut b = GenericTarget {
             abi: ethabiencoder::EthAbiEncoder { bswap: false },
         };
 
-        let mut c = Contract::new(context, contract, ns, filename, opt, None);
+        let mut c = Contract::new(
+            context,
+            contract,
+            ns,
+            filename,
+            opt,
+            math_overflow_check,
+            None,
+        );
 
         // externals
         b.declare_externals(&mut c);

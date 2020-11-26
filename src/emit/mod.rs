@@ -1079,6 +1079,7 @@ pub trait TargetRuntime<'a> {
                     contract.ns,
                     "",
                     contract.opt,
+                    contract.math_overflow_check,
                 );
 
                 let code = if *runtime && target_contract.runtime.is_some() {
@@ -5122,6 +5123,7 @@ pub struct Contract<'a> {
     pub runtime: Option<Box<Contract<'a>>>,
     function_abort_value_transfers: bool,
     constructor_abort_value_transfers: bool,
+    math_overflow_check: bool,
     builder: Builder<'a>,
     context: &'a Context,
     triple: TargetTriple,
@@ -5147,15 +5149,39 @@ impl<'a> Contract<'a> {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
     ) -> Self {
         match ns.target {
-            Target::Substrate => {
-                substrate::SubstrateTarget::build(context, contract, ns, filename, opt)
+            Target::Substrate => substrate::SubstrateTarget::build(
+                context,
+                contract,
+                ns,
+                filename,
+                opt,
+                math_overflow_check,
+            ),
+            Target::Ewasm => {
+                ewasm::EwasmTarget::build(context, contract, ns, filename, opt, math_overflow_check)
             }
-            Target::Ewasm => ewasm::EwasmTarget::build(context, contract, ns, filename, opt),
-            Target::Sabre => sabre::SabreTarget::build(context, contract, ns, filename, opt),
-            Target::Generic => generic::GenericTarget::build(context, contract, ns, filename, opt),
-            Target::Solana => solana::SolanaTarget::build(context, contract, ns, filename, opt),
+            Target::Sabre => {
+                sabre::SabreTarget::build(context, contract, ns, filename, opt, math_overflow_check)
+            }
+            Target::Generic => generic::GenericTarget::build(
+                context,
+                contract,
+                ns,
+                filename,
+                opt,
+                math_overflow_check,
+            ),
+            Target::Solana => solana::SolanaTarget::build(
+                context,
+                contract,
+                ns,
+                filename,
+                opt,
+                math_overflow_check,
+            ),
         }
     }
 
@@ -5271,6 +5297,7 @@ impl<'a> Contract<'a> {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
         runtime: Option<Box<Contract<'a>>>,
     ) -> Self {
         lazy_static::initialize(&LLVM_INIT);
@@ -5329,6 +5356,7 @@ impl<'a> Contract<'a> {
             runtime,
             function_abort_value_transfers,
             constructor_abort_value_transfers,
+            math_overflow_check,
             builder: context.create_builder(),
             triple,
             context,

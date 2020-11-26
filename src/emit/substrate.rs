@@ -27,8 +27,17 @@ impl SubstrateTarget {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
     ) -> Contract<'a> {
-        let mut c = Contract::new(context, contract, ns, filename, opt, None);
+        let mut c = Contract::new(
+            context,
+            contract,
+            ns,
+            filename,
+            opt,
+            math_overflow_check,
+            None,
+        );
 
         let scratch_len = c.module.add_global(
             context.i32_type(),
@@ -3114,6 +3123,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
             contract.ns,
             "",
             contract.opt,
+            contract.math_overflow_check,
         );
 
         let wasm = target_contract.code(true).expect("compile should succeeed");

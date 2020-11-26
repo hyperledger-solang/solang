@@ -102,6 +102,11 @@ fn main() {
                 .help("Generate documention for contracts using doc comments")
                 .long("doc"),
         )
+        .arg(
+            Arg::with_name("MATHOVERFLOW")
+                .help("Enable math overflow checking")
+                .long("math-overflow"),
+        )
         .get_matches();
 
     let target = match matches.value_of("TARGET") {
@@ -125,6 +130,8 @@ fn main() {
     if matches.is_present("VERBOSE") {
         eprintln!("info: Solang version {}", env!("GIT_HASH"));
     }
+
+    let math_overflow_check = matches.is_present("MATHOVERFLOW");
 
     let mut cache = FileCache::new();
 
@@ -184,7 +191,14 @@ fn main() {
         }
     } else {
         for filename in matches.values_of("INPUT").unwrap() {
-            process_filename(filename, &mut cache, target, &matches, &mut json);
+            process_filename(
+                filename,
+                &mut cache,
+                target,
+                &matches,
+                &mut json,
+                math_overflow_check,
+            );
         }
 
         if matches.is_present("STD-JSON") {
@@ -199,6 +213,7 @@ fn process_filename(
     target: solang::Target,
     matches: &ArgMatches,
     json: &mut JsonResult,
+    math_overflow_check: bool,
 ) {
     let output_file = |stem: &str, ext: &str| -> PathBuf {
         Path::new(matches.value_of("OUTPUT").unwrap_or(".")).join(format!("{}.{}", stem, ext))
@@ -260,7 +275,7 @@ fn process_filename(
             );
         }
 
-        let contract = resolved_contract.emit(&ns, &context, &filename, opt);
+        let contract = resolved_contract.emit(&ns, &context, &filename, opt, math_overflow_check);
 
         if let Some("llvm-ir") = matches.value_of("EMIT") {
             if let Some(runtime) = &contract.runtime {

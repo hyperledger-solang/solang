@@ -754,6 +754,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         &mut cache,
         inkwell::OptimizationLevel::Default,
         Target::Ewasm,
+        false,
     );
 
     diagnostics::print_messages(&mut cache, &ns, false);

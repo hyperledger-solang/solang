@@ -27,6 +27,7 @@ impl SolanaTarget {
         ns: &'a ast::Namespace,
         filename: &'a str,
         opt: OptimizationLevel,
+        math_overflow_check: bool,
     ) -> Contract<'a> {
         // We need a magic number for our contract. This is used to check if the contract storage
         // account is initialized for the correct contract
@@ -43,7 +44,15 @@ impl SolanaTarget {
             magic: u64::from_le_bytes(magic),
         };
 
-        let mut con = Contract::new(context, contract, ns, filename, opt, None);
+        let mut con = Contract::new(
+            context,
+            contract,
+            ns,
+            filename,
+            opt,
+            math_overflow_check,
+            None,
+        );
 
         // externals
         target.declare_externals(&mut con);
