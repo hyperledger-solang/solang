@@ -108,10 +108,10 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Build Solang contract
-      run: npm run build:bpf-solang
+      run: npm run build
       working-directory: ./integration/solana
     - name: Set github env
       run: echo "RPC_URL=http://solana:8899/" >> $GITHUB_ENV
     - name: Deploy and test contract
-      run: npm run start
+      run: npm run test
       working-directory: ./integration/solana
