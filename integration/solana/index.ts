@@ -11,7 +11,7 @@ import {
     sendAndConfirmTransaction,
 } from '@solana/web3.js';
 import fs from 'fs';
-import { AbiItem } from 'web3-utils';
+import { AbiItem, AbiInput } from 'web3-utils';
 const Web3EthAbi = require('web3-eth-abi');
 
 const default_url: string = "http://localhost:8899";
@@ -41,7 +41,7 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 async function newAccountWithLamports(
     connection: Connection,
-    lamports: number = 100000000,
+    lamports: number = 1000000000,
 ): Promise<Account> {
     const account = new Account();
 
@@ -125,11 +125,13 @@ class Program {
     constructor(private programId: PublicKey, private returnDataAccount: Account, private contractStorageAccount: Account, private abi: string) { }
 
     async call_constructor(test: TestConnection, params: string[]): Promise<void> {
-        let abi: AbiItem = JSON.parse(this.abi).find((e: AbiItem) => e.type == "constructor");
+        let abi: AbiItem | undefined = JSON.parse(this.abi).find((e: AbiItem) => e.type == "constructor");
 
-        const input = Web3EthAbi.encodeParameters(abi.inputs!, params);
+        let inputs = abi?.inputs! || [];
 
-        console.log('calling constructor ' + params);
+        const input = Web3EthAbi.encodeParameters(inputs, params);
+
+        console.log('calling constructor [' + params + ']');
 
         const instruction = new TransactionInstruction({
             keys: [
@@ -156,7 +158,7 @@ class Program {
 
         const input: string = Web3EthAbi.encodeFunctionCall(abi, params);
 
-        let debug = 'calling function ' + name + params;
+        let debug = 'calling function ' + name + ' [' + params + ']';
 
         const instruction = new TransactionInstruction({
             keys: [
