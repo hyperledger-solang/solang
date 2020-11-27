@@ -1163,9 +1163,9 @@ pub trait TargetRuntime<'a> {
                 let bits = left.get_type().get_bit_width();
 
                 if bits > 64 {
-                    let l = contract.builder.build_alloca(left.get_type(), "");
-                    let r = contract.builder.build_alloca(left.get_type(), "");
-                    let o = contract.builder.build_alloca(left.get_type(), "");
+                    let l = contract.build_alloca(function, left.get_type(), "");
+                    let r = contract.build_alloca(function, left.get_type(), "");
+                    let o = contract.build_alloca(function, left.get_type(), "");
 
                     contract.builder.build_store(l, left);
                     contract.builder.build_store(r, right);
@@ -1220,12 +1220,9 @@ pub trait TargetRuntime<'a> {
                 if bits > 64 {
                     let f = self.udivmod(contract, bits);
 
-                    let rem = contract
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
-                    let quotient = contract
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
+                    let rem = contract.build_alloca(function, left.into_int_value().get_type(), "");
+                    let quotient =
+                        contract.build_alloca(function, left.into_int_value().get_type(), "");
 
                     let ret = contract
                         .builder
@@ -1269,8 +1266,8 @@ pub trait TargetRuntime<'a> {
                 if bits > 64 {
                     let f = self.sdivmod(contract, bits);
 
-                    let rem = contract.builder.build_alloca(left.get_type(), "");
-                    let quotient = contract.builder.build_alloca(left.get_type(), "");
+                    let rem = contract.build_alloca(function, left.get_type(), "");
+                    let quotient = contract.build_alloca(function, left.get_type(), "");
 
                     let ret = contract
                         .builder
@@ -1363,12 +1360,9 @@ pub trait TargetRuntime<'a> {
                 if bits > 64 {
                     let f = self.udivmod(contract, bits);
 
-                    let rem = contract
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
-                    let quotient = contract
-                        .builder
-                        .build_alloca(left.into_int_value().get_type(), "");
+                    let rem = contract.build_alloca(function, left.into_int_value().get_type(), "");
+                    let quotient =
+                        contract.build_alloca(function, left.into_int_value().get_type(), "");
 
                     let ret = contract
                         .builder
@@ -1411,8 +1405,8 @@ pub trait TargetRuntime<'a> {
 
                 if bits > 64 {
                     let f = self.sdivmod(contract, bits);
-                    let rem = contract.builder.build_alloca(left.get_type(), "");
-                    let quotient = contract.builder.build_alloca(left.get_type(), "");
+                    let rem = contract.build_alloca(function, left.get_type(), "");
+                    let quotient = contract.build_alloca(function, left.get_type(), "");
 
                     let ret = contract
                         .builder
@@ -5240,8 +5234,11 @@ impl<'a> Contract<'a> {
             .expect("function missing entry block");
         let current = self.builder.get_insert_block().unwrap();
 
-        self.builder
-            .position_before(&entry.get_first_instruction().unwrap());
+        if let Some(instr) = entry.get_first_instruction() {
+            self.builder.position_before(&instr);
+        } else {
+            self.builder.position_at_end(entry);
+        }
 
         let res = self.builder.build_alloca(ty, name);
 
