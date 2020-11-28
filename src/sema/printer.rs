@@ -313,20 +313,25 @@ fn print_statement(stmts: &[Statement], func: &Function, ns: &Namespace) -> Vec<
                 format!("declare {} {}", p.ty.to_string(ns), p.name),
                 vec![print_expr(e, Some(func), ns)],
             ),
-            Statement::If(_, _, cond, then_stmt, else_stmt) if else_stmt.is_empty() => {
+            Statement::If(_, reachable, cond, then_stmt, else_stmt) if else_stmt.is_empty() => {
+                let reachable = Tree::Leaf(format!("reachable:{}", reachable));
                 let cond =
                     Tree::Branch(String::from("cond"), vec![print_expr(cond, Some(func), ns)]);
                 let then = Tree::Branch(String::from("then"), print_statement(then_stmt, func, ns));
-                Tree::Branch(String::from("if"), vec![cond, then])
+                Tree::Branch(String::from("if"), vec![cond, then, reachable])
             }
-            Statement::If(_, _, cond, then_stmt, else_stmt) => {
+            Statement::If(_, reachable, cond, then_stmt, else_stmt) => {
+                let reachable = Tree::Leaf(format!("reachable:{}", reachable));
                 let cond =
                     Tree::Branch(String::from("cond"), vec![print_expr(cond, Some(func), ns)]);
                 let then_tree =
                     Tree::Branch(String::from("then"), print_statement(then_stmt, func, ns));
                 let else_tree =
                     Tree::Branch(String::from("else"), print_statement(else_stmt, func, ns));
-                Tree::Branch(String::from("if"), vec![cond, then_tree, else_tree])
+                Tree::Branch(
+                    String::from("if"),
+                    vec![cond, then_tree, else_tree, reachable],
+                )
             }
             Statement::While(_, _, cond, body) => {
                 let cond =
