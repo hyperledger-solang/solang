@@ -32,7 +32,10 @@ pub fn link(input: &[u8], name: &str) -> Vec<u8> {
 
     linker_script
         .write_all(
-            br##"PHDRS
+            br##"
+ENTRY(entrypoint)
+
+PHDRS
 {
     text PT_LOAD  ;
     rodata PT_LOAD ;
@@ -68,8 +71,6 @@ SECTIONS
         )
         .unwrap(),
     );
-    command_line.push(CString::new("--entry").unwrap());
-    command_line.push(CString::new("entrypoint").unwrap());
     command_line.push(
         CString::new(
             object_filename
