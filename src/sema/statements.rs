@@ -449,7 +449,7 @@ fn statement(
             let mut else_stmts = Vec::new();
             if let Some(stmts) = else_ {
                 symtable.new_scope();
-                reachable &= statement(
+                reachable |= statement(
                     stmts,
                     &mut else_stmts,
                     file_no,

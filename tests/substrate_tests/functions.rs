@@ -596,6 +596,29 @@ fn args_and_returns() {
 
     assert_eq!(first_error(ns.diagnostics), "missing return statement");
 
+    let src = "
+    contract primitives {
+        enum oper { add, sub, mul, div, mod, pow }
+
+        function op_i64(oper op, int64 a, int64 b) pure public returns (int64) {
+            if (op == oper.add) {
+                return a + b;
+            } else if (op == oper.sub) {
+                return a - b;
+            } else if (op == oper.mul) {
+                return a * b;
+            } else if (op == oper.div) {
+                return a / b;
+            } else if (op == oper.mod) {
+                return a % b;
+            }
+        }
+    }";
+
+    let ns = parse_and_resolve(&src, Target::Substrate);
+
+    assert_eq!(first_error(ns.diagnostics), "missing return statement");
+
     let mut runtime = build_solidity(
         "
         contract foobar {
