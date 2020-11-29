@@ -6,6 +6,7 @@ will be documented here.
 
 ### Added
 - Added language server for use in vscode extension
+- Implemented primitives types and operations for Solana
 
 ## [0.1.5]
 
