@@ -28,6 +28,7 @@ pub enum SourceUnitPart {
     EnumDefinition(Box<EnumDefinition>),
     StructDefinition(Box<StructDefinition>),
     EventDefinition(Box<EventDefinition>),
+    FunctionDefinition(Box<FunctionDefinition>),
 }
 
 #[derive(Debug, PartialEq)]

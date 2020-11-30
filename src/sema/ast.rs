@@ -315,7 +315,7 @@ pub struct ContractVariable {
 #[derive(Clone, PartialEq)]
 pub enum Symbol {
     Enum(pt::Loc, usize),
-    Function(Vec<pt::Loc>),
+    Function(Vec<(pt::Loc, usize)>),
     Variable(pt::Loc, usize, usize),
     Struct(pt::Loc, usize),
     Event(Vec<(pt::Loc, usize)>),
@@ -327,7 +327,7 @@ impl Symbol {
     pub fn loc(&self) -> &pt::Loc {
         match self {
             Symbol::Enum(loc, _) => loc,
-            Symbol::Function(funcs) => &funcs[0],
+            Symbol::Function(funcs) => &funcs[0].0,
             Symbol::Variable(loc, _, _) => loc,
             Symbol::Struct(loc, _) => loc,
             Symbol::Event(events) => &events[0].0,

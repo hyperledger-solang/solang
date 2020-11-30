@@ -44,7 +44,7 @@ Imports
 _______
 
 The ``import`` directive is used to import types from other Solidity files;
-structs, enums, events, contracts, abstract contract, libraries, and interfaces can be used from another
+structs, enums, events, functions, contracts, abstract contract, libraries, and interfaces can be used from another
 Solidity file. This can be useful to keep a single definition in one file, which can be used
 in multiple files.
 
@@ -1474,33 +1474,35 @@ can use. gas is a ``uint64``.
 Functions
 ---------
 
-Functions can be declared and called as follows:
+A function can be declared inside a contract, in which case it has access to the contracts
+contract storage variables, other functions etc. Functions can be also be declared outside
+a contract.
 
 .. code-block:: javascript
 
-  contact foo {
-      uint bound = get_initial_bound();
+    /// get_initial_bound is called from the constructor
+    function get_initial_bound() returns (uint value) {
+        value = 102;
+    }
 
-      /// get_initial_bound is called from the constructor
-      function get_initial_bound() private returns (uint value) {
-          value = 102;
-      }
+    contact foo {
+        uint bound = get_initial_bound();
 
-      /** set bound for get with bound */
-      function set_bound(uint _bound) public {
-          bound = _bound;
-      }
+        /** set bound for get with bound */
+        function set_bound(uint _bound) public {
+            bound = _bound;
+        }
 
-      /// Clamp a value within a bound.
-      /// The bound can be set with set_bound().
-      function get_with_bound(uint value) view public return (uint) {
-          if (value < bound) {
-              return value;
-          } else {
-              return bound;
-          }
-      }
-  }
+        /// Clamp a value within a bound.
+        /// The bound can be set with set_bound().
+        function get_with_bound(uint value) view public return (uint) {
+            if (value < bound) {
+                return value;
+            } else {
+                return bound;
+            }
+        }
+    }
 
 Function can have any number of arguments. Function arguments may have names;
 if they do not have names then they cannot be used in the function body, but they will
@@ -1515,7 +1517,8 @@ with a return statement with some values.
 
 Functions which are declared ``public`` will be present in the ABI and are callable
 externally. If a function is declared ``private`` then it is not callable externally,
-but it can be called from within the contract.
+but it can be called from within the contract. If a function is defined outside a
+contract, then it cannot have a visibility specifier (e.g. ``public``).
 
 Any DocComment before a function will be include in the ABI. Currently only Substrate
 supports documentation in the ABI.

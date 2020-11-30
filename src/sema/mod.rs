@@ -88,8 +88,24 @@ pub fn sema(file: ResolvedFile, cache: &mut FileCache, ns: &mut ast::Namespace) 
         return;
     }
 
+    // resolve functions outside of contracts
+    let mut resolve_bodies = Vec::new();
+
+    for part in &pt.0 {
+        if let pt::SourceUnitPart::FunctionDefinition(func) = part {
+            if let Some(func_no) = functions::function(func, file_no, ns) {
+                resolve_bodies.push((func_no, func));
+            }
+        }
+    }
+
     // now resolve the contracts
     contracts::resolve(&contracts_to_resolve, file_no, ns);
+
+    // now we can resolve the body of functions outside of contracts
+    for (func_no, func) in resolve_bodies {
+        let _ = statements::resolve_function_body(func, file_no, None, func_no, ns);
+    }
 
     // now check state mutability for all contracts
     mutability::mutablity(file_no, ns);
@@ -324,11 +340,18 @@ impl ast::Namespace {
                     ));
                 }
                 ast::Symbol::Function(v) => {
-                    self.diagnostics.push(ast::Diagnostic::error_with_note(
+                    let notes = v
+                        .iter()
+                        .map(|(pos, _)| ast::Note {
+                            pos: *pos,
+                            message: "location of previous definition".to_owned(),
+                        })
+                        .collect();
+
+                    self.diagnostics.push(ast::Diagnostic::error_with_notes(
                         id.loc,
                         format!("{} is already defined as a function", id.name.to_string()),
-                        v[0],
-                        "location of previous definition".to_string(),
+                        notes,
                     ));
                 }
                 ast::Symbol::Import(loc, _) => {
@@ -397,11 +420,18 @@ impl ast::Namespace {
                         ));
                     }
                     ast::Symbol::Function(v) => {
-                        self.diagnostics.push(ast::Diagnostic::warning_with_note(
+                        let notes = v
+                            .iter()
+                            .map(|(pos, _)| ast::Note {
+                                pos: *pos,
+                                message: "location of previous definition".to_owned(),
+                            })
+                            .collect();
+
+                        self.diagnostics.push(ast::Diagnostic::warning_with_notes(
                             id.loc,
                             format!("{} is already defined as a function", id.name),
-                            v[0],
-                            "location of previous definition".to_string(),
+                            notes,
                         ));
                     }
                     ast::Symbol::Import(loc, _) => {
@@ -627,16 +657,18 @@ impl ast::Namespace {
     pub fn resolve_var(
         &mut self,
         file_no: usize,
-        contract_no: usize,
+        contract_no: Option<usize>,
         id: &pt::Identifier,
     ) -> Option<&ast::Symbol> {
         let mut s = self
             .symbols
-            .get(&(file_no, Some(contract_no), id.name.to_owned()));
+            .get(&(file_no, contract_no, id.name.to_owned()));
 
-        if s.is_none() {
-            if let Some(sym) = self.resolve_base_contract(contract_no, id) {
-                s = Some(sym);
+        if let Some(contract_no) = contract_no {
+            if s.is_none() {
+                if let Some(sym) = self.resolve_base_contract(contract_no, id) {
+                    s = Some(sym);
+                }
             }
         }
 
@@ -705,7 +737,7 @@ impl ast::Namespace {
             Some(ast::Symbol::Function(v)) => {
                 let notes = v
                     .iter()
-                    .map(|pos| ast::Note {
+                    .map(|(pos, _)| ast::Note {
                         pos: *pos,
                         message: "previous declaration of function".to_owned(),
                     })

@@ -519,6 +519,13 @@ impl Namespace {
             ));
         }
 
+        // functions
+        for func in &self.functions {
+            if func.contract_no.is_none() {
+                t.push(print_func(func, self));
+            }
+        }
+
         // contracts
         for c in &self.contracts {
             let mut members = Vec::new();
@@ -582,86 +589,9 @@ impl Namespace {
             }
 
             for function_no in &c.functions {
-                let mut list = Vec::new();
-
                 let func = &self.functions[*function_no];
 
-                list.push(Tree::Leaf(format!("visibility {}", func.visibility)));
-
-                if func.ty == pt::FunctionTy::Constructor && func.ty == pt::FunctionTy::Function {
-                    list.push(Tree::Leaf(format!("signature {}", func.signature)));
-                }
-
-                if let Some(mutability) = &func.mutability {
-                    list.push(Tree::Leaf(format!("mutability {}", mutability)));
-                }
-
-                if func.is_virtual {
-                    list.push(Tree::Leaf(String::from("virtual")));
-                }
-
-                if let Some((_, is_override)) = &func.is_override {
-                    if is_override.is_empty() {
-                        list.push(Tree::Leaf(String::from("override")));
-                    } else {
-                        list.push(Tree::Branch(
-                            String::from("override"),
-                            is_override
-                                .iter()
-                                .map(|contract_no| {
-                                    Tree::Leaf(self.contracts[*contract_no].name.clone())
-                                })
-                                .collect(),
-                        ));
-                    }
-                }
-
-                if !func.bases.is_empty() {
-                    let mut list = Vec::new();
-                    for (base_no, (_, _, args)) in &func.bases {
-                        let name = self.contracts[*base_no].name.clone();
-                        if !args.is_empty() {
-                            list.push(Tree::Branch(
-                                name,
-                                args.iter()
-                                    .map(|e| print_expr(e, Some(func), self))
-                                    .collect(),
-                            ));
-                        } else {
-                            list.push(Tree::Leaf(name));
-                        }
-                    }
-                    members.push(Tree::Branch(String::from("bases"), list));
-                }
-
-                if !func.params.is_empty() {
-                    let params = func
-                        .params
-                        .iter()
-                        .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&self), p.name)))
-                        .collect();
-
-                    list.push(Tree::Branch(String::from("params"), params));
-                }
-
-                if !func.returns.is_empty() {
-                    let returns = func
-                        .returns
-                        .iter()
-                        .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&self), p.name)))
-                        .collect();
-
-                    list.push(Tree::Branch(String::from("returns"), returns));
-                }
-
-                if !func.body.is_empty() {
-                    list.push(Tree::Branch(
-                        String::from("body"),
-                        print_statement(&func.body, func, self),
-                    ));
-                }
-
-                members.push(Tree::Branch(format!("{} {}", func.ty, func.name), list));
+                members.push(print_func(func, self));
             }
 
             t.push(Tree::Branch(format!("{} {}", c.ty, c.name), members));
@@ -678,4 +608,81 @@ impl Namespace {
             Type::Uint(256)
         }
     }
+}
+
+fn print_func(func: &Function, ns: &Namespace) -> Tree {
+    let mut list = Vec::new();
+
+    list.push(Tree::Leaf(format!("visibility {}", func.visibility)));
+
+    if func.ty == pt::FunctionTy::Constructor && func.ty == pt::FunctionTy::Function {
+        list.push(Tree::Leaf(format!("signature {}", func.signature)));
+    }
+
+    if let Some(mutability) = &func.mutability {
+        list.push(Tree::Leaf(format!("mutability {}", mutability)));
+    }
+
+    if func.is_virtual {
+        list.push(Tree::Leaf(String::from("virtual")));
+    }
+
+    if let Some((_, is_override)) = &func.is_override {
+        if is_override.is_empty() {
+            list.push(Tree::Leaf(String::from("override")));
+        } else {
+            list.push(Tree::Branch(
+                String::from("override"),
+                is_override
+                    .iter()
+                    .map(|contract_no| Tree::Leaf(ns.contracts[*contract_no].name.clone()))
+                    .collect(),
+            ));
+        }
+    }
+
+    if !func.bases.is_empty() {
+        let mut bases = Vec::new();
+        for (base_no, (_, _, args)) in &func.bases {
+            let name = ns.contracts[*base_no].name.clone();
+            if !args.is_empty() {
+                bases.push(Tree::Branch(
+                    name,
+                    args.iter().map(|e| print_expr(e, Some(func), ns)).collect(),
+                ));
+            } else {
+                bases.push(Tree::Leaf(name));
+            }
+        }
+        list.push(Tree::Branch(String::from("bases"), bases));
+    }
+
+    if !func.params.is_empty() {
+        let params = func
+            .params
+            .iter()
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&ns), p.name)))
+            .collect();
+
+        list.push(Tree::Branch(String::from("params"), params));
+    }
+
+    if !func.returns.is_empty() {
+        let returns = func
+            .returns
+            .iter()
+            .map(|p| Tree::Leaf(format!("{} {}", p.ty.to_string(&ns), p.name)))
+            .collect();
+
+        list.push(Tree::Branch(String::from("returns"), returns));
+    }
+
+    if !func.body.is_empty() {
+        list.push(Tree::Branch(
+            String::from("body"),
+            print_statement(&func.body, func, ns),
+        ));
+    }
+
+    Tree::Branch(format!("{} {}", func.ty, func.name), list)
 }

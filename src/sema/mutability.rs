@@ -5,16 +5,14 @@ use crate::parser::pt;
 
 /// check state mutablity
 pub fn mutablity(file_no: usize, ns: &mut Namespace) {
-    for contract_no in 0..ns.contracts.len() {
-        if ns.contracts[contract_no].loc.0 != file_no {
+    for func in &ns.functions {
+        if func.loc.0 != file_no {
             continue;
         }
 
-        for func_no in ns.contracts[contract_no].functions.iter() {
-            let diagnostics = check_mutability(contract_no, *func_no, ns);
+        let diagnostics = check_mutability(func, ns);
 
-            ns.diagnostics.extend(diagnostics);
-        }
+        ns.diagnostics.extend(diagnostics);
     }
 }
 
@@ -59,9 +57,7 @@ impl<'a> StateCheck<'a> {
     }
 }
 
-fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> Vec<Diagnostic> {
-    let func = &ns.functions[function_no];
-
+fn check_mutability(func: &Function, ns: &Namespace) -> Vec<Diagnostic> {
     if func.is_virtual {
         return Vec::new();
     }
@@ -93,6 +89,10 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
             for arg in args {
                 arg.recurse(&mut state, read_expression);
             }
+
+            let contract_no = func
+                .contract_no
+                .expect("only functions in contracts have modifiers");
 
             // check the modifier itself
             if let Expression::InternalFunction {

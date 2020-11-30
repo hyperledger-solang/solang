@@ -650,7 +650,9 @@ fn resolve_declarations<'a>(
     // resolve function signatures
     for parts in &def.parts {
         if let pt::ContractPart::FunctionDefinition(ref f) = parts {
-            if let Some(function_no) = functions::function_decl(def, f, file_no, contract_no, ns) {
+            if let Some(function_no) =
+                functions::contract_function(def, f, file_no, contract_no, ns)
+            {
                 if f.body.is_some() {
                     resolve_bodies.push((contract_no, function_no, f.as_ref()));
                 } else {
@@ -752,7 +754,9 @@ fn resolve_bodies(
     let mut broken = false;
 
     for (contract_no, function_no, def) in bodies {
-        if statements::resolve_function_body(def, file_no, contract_no, function_no, ns).is_err() {
+        if statements::resolve_function_body(def, file_no, Some(contract_no), function_no, ns)
+            .is_err()
+        {
             broken = true;
         }
     }

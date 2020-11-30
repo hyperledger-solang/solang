@@ -1001,3 +1001,190 @@ fn payable() {
         "all constructors should be defined ‘payable’ or not"
     );
 }
+
+#[test]
+fn global_functions() {
+    let ns = parse_and_resolve(
+        r##"
+        function() {}
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "missing function name");
+
+    let ns = parse_and_resolve(
+        r##"
+        function x();
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(first_error(ns.diagnostics), "missing function body");
+
+    let ns = parse_and_resolve(
+        r##"
+        function x() virtual {}
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "only functions in contracts can be virtual"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        function x() override {}
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "only functions in contracts can override"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        function x() feyla {}
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function modifiers or base contracts are only allowed on functions in contracts"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        function x() feyla {}
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function modifiers or base contracts are only allowed on functions in contracts"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        event foo(bool);
+
+        function x() pure { emit foo(true); }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘pure’ but this expression writes to state"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        function x(int[] storage x) pure returns (int) { return x[1]; }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘pure’ but this expression reads from state"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        struct S {
+            int32 f1;
+            int32 f2;
+        }
+
+        function x(S storage x) view { x.f1 = 102; }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "function declared ‘view’ but this expression writes to state"
+    );
+
+    let ns = parse_and_resolve(
+        r##"
+        function x(int64) pure { return 102; }
+        function x(int128) pure { return 102; }
+        function x(int128) pure { return 132; }
+        "##,
+        Target::Substrate,
+    );
+
+    assert_eq!(
+        first_error(ns.diagnostics),
+        "overloaded function with this signature already exist"
+    );
+
+    let mut runtime = build_solidity(
+        r#"
+        function global_function() pure returns (uint32) {
+            return 102;
+        }
+
+        contract c {
+            function test() public {
+                uint64 x = global_function();
+
+                assert(x == 102);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        function global_function() pure returns (uint32) {
+            return 102;
+        }
+
+        function global_function2() pure returns (uint32) {
+            return global_function() + 5;
+        }
+
+        contract c {
+            function test() public {
+                uint64 x = global_function2();
+
+                assert(x == 107);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+
+    let mut runtime = build_solidity(
+        r#"
+        function global_function() pure returns (uint32) {
+            return 102;
+        }
+
+        function global_function2() pure returns (uint32) {
+            return global_function() + 5;
+        }
+
+        contract c {
+            function test() public {
+                function() internal returns (uint32) ftype = global_function2;
+
+                uint64 x = ftype();
+
+                assert(x == 107);
+            }
+        }"#,
+    );
+
+    runtime.function("test", Vec::new());
+}
