@@ -4,8 +4,8 @@ use super::tags::resolve_tags;
 use crate::parser::pt;
 use crate::Target;
 
-/// Resolve function declaration
-pub fn function_decl(
+/// Resolve function declaration in a contract
+pub fn contract_function(
     contract: &pt::ContractDefinition,
     func: &pt::FunctionDefinition,
     file_no: usize,
@@ -584,18 +584,169 @@ pub fn function_decl(
             ns.symbols
                 .get_mut(&(file_no, Some(contract_no), id.name.to_owned()))
         {
-            v.push(func.loc);
+            v.push((func.loc, func_no));
         } else {
             ns.add_symbol(
                 file_no,
                 Some(contract_no),
                 id,
-                Symbol::Function(vec![id.loc]),
+                Symbol::Function(vec![(id.loc, func_no)]),
             );
         }
 
         Some(func_no)
     }
+}
+
+/// Resolve function declaration outside a contract
+pub fn function(
+    func: &pt::FunctionDefinition,
+    file_no: usize,
+    ns: &mut Namespace,
+) -> Option<usize> {
+    let mut success = true;
+
+    let mut mutability: Option<pt::StateMutability> = None;
+
+    for a in &func.attributes {
+        match &a {
+            pt::FunctionAttribute::StateMutability(m) => {
+                if let Some(e) = &mutability {
+                    ns.diagnostics.push(Diagnostic::error_with_note(
+                        m.loc(),
+                        format!("function redeclared `{}'", m.to_string()),
+                        e.loc(),
+                        format!("location of previous declaration of `{}'", e.to_string()),
+                    ));
+                    success = false;
+                    continue;
+                }
+
+                if let pt::StateMutability::Constant(loc) = m {
+                    ns.diagnostics.push(Diagnostic::warning(
+                        *loc,
+                        "‘constant’ is deprecated. Use ‘view’ instead".to_string(),
+                    ));
+
+                    mutability = Some(pt::StateMutability::View(*loc));
+                } else {
+                    mutability = Some(m.clone());
+                }
+            }
+            pt::FunctionAttribute::Visibility(v) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    v.loc(),
+                    format!(
+                        "‘{}’: only functions in contracts can have a visibility specifier",
+                        v
+                    ),
+                ));
+                success = false;
+            }
+            pt::FunctionAttribute::Virtual(loc) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from("only functions in contracts can be virtual"),
+                ));
+                success = false;
+            }
+            pt::FunctionAttribute::Override(loc, _) => {
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from("only functions in contracts can override"),
+                ));
+                success = false;
+            }
+            pt::FunctionAttribute::BaseOrModifier(loc, _) => {
+                // We can only fully resolve the base constructors arguments
+                // once we have resolved all the constructors, this is not done here yet
+                // so we fully resolve these along with the constructor body
+                ns.diagnostics.push(Diagnostic::error(
+                    *loc,
+                    String::from(
+                        "function modifiers or base contracts are only allowed on functions in contracts",
+                    ),
+                ));
+                success = false;
+            }
+        }
+    }
+    let (params, params_success) = resolve_params(&func.params, true, file_no, None, ns);
+
+    let (returns, returns_success) = resolve_returns(&func.returns, true, file_no, None, ns);
+
+    if func.body.is_none() {
+        ns.diagnostics.push(Diagnostic::error(
+            func.loc,
+            String::from("missing function body"),
+        ));
+        success = false;
+    }
+
+    if !success || !returns_success || !params_success {
+        return None;
+    }
+
+    let name = match &func.name {
+        Some(s) => s.name.to_owned(),
+        None => {
+            ns.diagnostics.push(Diagnostic::error(
+                func.loc,
+                String::from("missing function name"),
+            ));
+            return None;
+        }
+    };
+
+    let doc = resolve_tags(
+        func.loc.0,
+        "function",
+        &func.doc,
+        Some(&params),
+        Some(&returns),
+        None,
+        ns,
+    );
+
+    let fdecl = Function::new(
+        func.loc,
+        name,
+        None,
+        doc,
+        func.ty,
+        mutability,
+        pt::Visibility::Internal(func.loc),
+        params,
+        returns,
+        ns,
+    );
+
+    let id = func.name.as_ref().unwrap();
+
+    if let Some(prev) = ns.functions.iter().find(|f| fdecl.signature == f.signature) {
+        ns.diagnostics.push(Diagnostic::error_with_note(
+            func.loc,
+            format!("overloaded {} with this signature already exist", func.ty),
+            prev.loc,
+            "location of previous definition".to_string(),
+        ));
+
+        return None;
+    }
+
+    let func_no = ns.functions.len();
+
+    ns.functions.push(fdecl);
+
+    if let Some(Symbol::Function(ref mut v)) =
+        ns.symbols.get_mut(&(file_no, None, id.name.to_owned()))
+    {
+        v.push((func.loc, func_no));
+    } else {
+        ns.add_symbol(file_no, None, id, Symbol::Function(vec![(id.loc, func_no)]));
+    }
+
+    Some(func_no)
 }
 
 /// Resolve the parameters

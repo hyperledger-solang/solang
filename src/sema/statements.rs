@@ -1,8 +1,8 @@
 use super::ast::*;
 use super::contracts::is_base;
 use super::expression::{
-    call_position_args, cast, constructor_named_args, expression, function_call_expr,
-    match_constructor_to_args, named_function_call_expr, new, try_cast,
+    available_functions, call_position_args, cast, constructor_named_args, expression,
+    function_call_expr, match_constructor_to_args, named_function_call_expr, new, try_cast,
 };
 use super::symtable::{LoopScopes, Symtable};
 use crate::parser::pt;
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 pub fn resolve_function_body(
     def: &pt::FunctionDefinition,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
     ns: &mut Namespace,
 ) -> Result<(), ()> {
@@ -27,7 +27,7 @@ pub fn resolve_function_body(
             if let Some(pos) =
                 symtable.add(name, ns.functions[function_no].params[i].ty.clone(), ns)
             {
-                ns.check_shadowing(file_no, Some(contract_no), name);
+                ns.check_shadowing(file_no, contract_no, name);
 
                 symtable.arguments.push(Some(pos));
             }
@@ -39,6 +39,7 @@ pub fn resolve_function_body(
     // now that the function arguments have been resolved, we can resolve the bases for
     // constructors.
     if def.ty == pt::FunctionTy::Constructor {
+        let contract_no = contract_no.unwrap();
         let mut resolve_bases: HashMap<usize, pt::Loc> = HashMap::new();
         let mut all_ok = true;
 
@@ -157,9 +158,9 @@ pub fn resolve_function_body(
                     pt::FunctionTy::Modifier,
                     modifier.args.as_ref().unwrap_or(&Vec::new()),
                     file_no,
-                    contract_no,
+                    available_functions(&modifier.name.name, false, file_no, contract_no, ns),
                     true,
-                    Some(contract_no),
+                    contract_no,
                     ns,
                     &symtable,
                 ) {
@@ -184,7 +185,7 @@ pub fn resolve_function_body(
             return_required = false;
 
             if let Some(pos) = symtable.add(name, ret.ty.clone(), ns) {
-                ns.check_shadowing(file_no, Some(contract_no), name);
+                ns.check_shadowing(file_no, contract_no, name);
 
                 symtable.returns.push(pos);
             }
@@ -280,7 +281,7 @@ fn statement(
     stmt: &pt::Statement,
     res: &mut Vec<Statement>,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
@@ -292,7 +293,7 @@ fn statement(
                 resolve_var_decl_ty(&decl.ty, &decl.storage, file_no, contract_no, ns)?;
 
             let initializer = if let Some(init) = initializer {
-                let expr = expression(init, file_no, Some(contract_no), ns, symtable, false)?;
+                let expr = expression(init, file_no, contract_no, ns, symtable, false)?;
 
                 Some(cast(&decl.name.loc, expr, &var_ty, true, ns)?)
             } else {
@@ -300,7 +301,7 @@ fn statement(
             };
 
             if let Some(pos) = symtable.add(&decl.name, var_ty.clone(), ns) {
-                ns.check_shadowing(file_no, Some(contract_no), &decl.name);
+                ns.check_shadowing(file_no, contract_no, &decl.name);
 
                 res.push(Statement::VariableDecl(
                     *loc,
@@ -372,7 +373,7 @@ fn statement(
             }
         }
         pt::Statement::While(loc, cond_expr, body) => {
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(cond_expr, file_no, contract_no, ns, symtable, false)?;
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns)?;
 
@@ -397,7 +398,7 @@ fn statement(
             Ok(true)
         }
         pt::Statement::DoWhile(loc, body, cond_expr) => {
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(cond_expr, file_no, contract_no, ns, symtable, false)?;
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns)?;
 
@@ -421,7 +422,7 @@ fn statement(
             Ok(true)
         }
         pt::Statement::If(loc, cond_expr, then, else_) => {
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(cond_expr, file_no, contract_no, ns, symtable, false)?;
 
             let cond = cast(&expr.loc(), expr, &Type::Bool, true, ns)?;
 
@@ -554,7 +555,7 @@ fn statement(
                 )?;
             }
 
-            let expr = expression(cond_expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(cond_expr, file_no, contract_no, ns, symtable, false)?;
 
             let cond = cast(&cond_expr.loc(), expr, &Type::Bool, true, ns)?;
 
@@ -654,7 +655,7 @@ fn statement(
         pt::Statement::Expression(loc, expr) => {
             // delete statement
             if let pt::Expression::Delete(_, expr) = expr {
-                let expr = expression(expr, file_no, Some(contract_no), ns, symtable, false)?;
+                let expr = expression(expr, file_no, contract_no, ns, symtable, false)?;
 
                 return if let Type::StorageRef(ty) = expr.ty() {
                     if expr.ty().is_mapping() {
@@ -714,7 +715,7 @@ fn statement(
             }
 
             // the rest
-            let expr = expression(expr, file_no, Some(contract_no), ns, symtable, false)?;
+            let expr = expression(expr, file_no, contract_no, ns, symtable, false)?;
 
             let reachable = expr.ty() != Type::Unreachable;
 
@@ -755,7 +756,7 @@ fn emit_event(
     loc: &pt::Loc,
     ty: &pt::Expression,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
     symtable: &mut Symtable,
     ns: &mut Namespace,
@@ -763,12 +764,12 @@ fn emit_event(
     match ty {
         pt::Expression::FunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
-            let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
+            let event_nos = ns.resolve_event(file_no, contract_no, ty)?;
 
             let mut resolved_args = Vec::new();
 
             for arg in args {
-                let expr = expression(arg, file_no, Some(contract_no), ns, symtable, false)?;
+                let expr = expression(arg, file_no, contract_no, ns, symtable, false)?;
                 resolved_args.push(expr);
             }
 
@@ -827,7 +828,7 @@ fn emit_event(
         }
         pt::Expression::NamedFunctionCall(_, ty, args) => {
             let event_loc = ty.loc();
-            let event_nos = ns.resolve_event(file_no, Some(contract_no), ty)?;
+            let event_nos = ns.resolve_event(file_no, contract_no, ty)?;
 
             let mut arguments = HashMap::new();
 
@@ -841,7 +842,7 @@ fn emit_event(
                 }
                 arguments.insert(
                     arg.name.name.to_string(),
-                    expression(&arg.expr, file_no, Some(contract_no), ns, symtable, false)?,
+                    expression(&arg.expr, file_no, contract_no, ns, symtable, false)?,
                 );
             }
 
@@ -929,7 +930,7 @@ fn emit_event(
             }
         }
         pt::Expression::FunctionCallBlock(_, ty, block) => {
-            let _ = ns.resolve_event(file_no, Some(contract_no), ty);
+            let _ = ns.resolve_event(file_no, contract_no, ty);
 
             ns.diagnostics.push(Diagnostic::error(
                 block.loc(),
@@ -948,22 +949,22 @@ fn destructure(
     vars: &[(pt::Loc, Option<pt::Parameter>)],
     expr: &pt::Expression,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<Statement, ()> {
     let expr = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => {
-            function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+            function_call_expr(loc, ty, args, file_no, contract_no, ns, symtable)?
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            named_function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+            named_function_call_expr(loc, ty, args, file_no, contract_no, ns, symtable)?
         }
         _ => {
             let mut list = Vec::new();
 
             for e in parameter_list_to_expr_list(expr, ns)? {
-                let e = expression(e, file_no, Some(contract_no), ns, symtable, false)?;
+                let e = expression(e, file_no, contract_no, ns, symtable, false)?;
 
                 match e.ty() {
                     Type::Void | Type::Unreachable => {
@@ -1025,7 +1026,7 @@ fn destructure(
                 }
 
                 // ty will just be a normal expression, not a type
-                let e = expression(ty, file_no, Some(contract_no), ns, symtable, false)?;
+                let e = expression(ty, file_no, contract_no, ns, symtable, false)?;
 
                 match &e {
                     Expression::ConstantVariable(_, _, contract_no, var_no) => {
@@ -1080,7 +1081,7 @@ fn destructure(
                 )?;
 
                 if let Some(pos) = symtable.add(&name, ty.clone(), ns) {
-                    ns.check_shadowing(file_no, Some(contract_no), &name);
+                    ns.check_shadowing(file_no, contract_no, &name);
 
                     fields.push(DestructureField::VariableDecl(
                         pos,
@@ -1106,11 +1107,11 @@ fn resolve_var_decl_ty(
     ty: &pt::Expression,
     storage: &Option<pt::StorageLocation>,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     ns: &mut Namespace,
 ) -> Result<(Type, pt::Loc), ()> {
     let mut loc_ty = ty.loc();
-    let mut var_ty = ns.resolve_type(file_no, Some(contract_no), false, &ty)?;
+    let mut var_ty = ns.resolve_type(file_no, contract_no, false, &ty)?;
 
     if let Some(storage) = storage {
         if !var_ty.can_have_data_location() {
@@ -1157,7 +1158,7 @@ fn return_with_values(
     returns: &pt::Expression,
     loc: &pt::Loc,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
     symtable: &mut Symtable,
     ns: &mut Namespace,
@@ -1200,7 +1201,7 @@ fn return_with_values(
     let mut exprs = Vec::new();
 
     for (i, r) in returns.iter().enumerate() {
-        let e = expression(r, file_no, Some(contract_no), ns, symtable, false)?;
+        let e = expression(r, file_no, contract_no, ns, symtable, false)?;
 
         exprs.push(cast(
             &r.loc(),
@@ -1275,7 +1276,7 @@ fn try_catch(
     error_stmt: &Option<Box<(pt::Identifier, pt::Parameter, pt::Statement)>>,
     catch_stmt: &(pt::Parameter, pt::Statement),
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     function_no: usize,
     symtable: &mut Symtable,
     loops: &mut LoopScopes,
@@ -1300,10 +1301,10 @@ fn try_catch(
 
     let fcall = match expr {
         pt::Expression::FunctionCall(loc, ty, args) => {
-            function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+            function_call_expr(loc, ty, args, file_no, contract_no, ns, symtable)?
         }
         pt::Expression::NamedFunctionCall(loc, ty, args) => {
-            named_function_call_expr(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+            named_function_call_expr(loc, ty, args, file_no, contract_no, ns, symtable)?
         }
         pt::Expression::New(loc, call) => {
             let mut call = call.as_ref();
@@ -1324,10 +1325,10 @@ fn try_catch(
 
             match call {
                 pt::Expression::FunctionCall(_, ty, args) => {
-                    new(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+                    new(loc, ty, args, file_no, contract_no, ns, symtable)?
                 }
                 pt::Expression::NamedFunctionCall(_, ty, args) => {
-                    constructor_named_args(loc, ty, args, file_no, Some(contract_no), ns, symtable)?
+                    constructor_named_args(loc, ty, args, file_no, contract_no, ns, symtable)?
                 }
                 _ => unreachable!(),
             }
@@ -1449,7 +1450,7 @@ fn try_catch(
 
                 if let Some(name) = name {
                     if let Some(pos) = symtable.add(&name, ret_ty.clone(), ns) {
-                        ns.check_shadowing(file_no, Some(contract_no), &name);
+                        ns.check_shadowing(file_no, contract_no, &name);
                         params.push((
                             Some(pos),
                             Parameter {
@@ -1550,7 +1551,7 @@ fn try_catch(
 
         if let Some(name) = &error_stmt.1.name {
             if let Some(pos) = symtable.add(&name, Type::String, ns) {
-                ns.check_shadowing(file_no, Some(contract_no), &name);
+                ns.check_shadowing(file_no, contract_no, &name);
 
                 error_pos = Some(pos);
                 error_param.name = name.name.to_string();
@@ -1612,7 +1613,7 @@ fn try_catch(
 
     if let Some(name) = &catch_stmt.0.name {
         if let Some(pos) = symtable.add(&name, catch_ty, ns) {
-            ns.check_shadowing(file_no, Some(contract_no), &name);
+            ns.check_shadowing(file_no, contract_no, &name);
             catch_param_pos = Some(pos);
             catch_param.name = name.name.to_string();
             catch_param.name_loc = Some(name.loc);

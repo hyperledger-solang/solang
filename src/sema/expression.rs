@@ -1300,7 +1300,7 @@ pub fn expression(
                 return Ok(Expression::Builtin(id.loc, vec![ty], builtin, vec![]));
             }
 
-            match ns.resolve_var(file_no, contract_no.unwrap(), id) {
+            match ns.resolve_var(file_no, contract_no, id) {
                 Some(Symbol::Variable(_, var_contract_no, var_no)) => {
                     let var_contract_no = *var_contract_no;
                     let var_no = *var_no;
@@ -1336,10 +1336,11 @@ pub fn expression(
                     let mut name_matches = 0;
                     let mut expr = None;
 
-                    for function_no in ns.contracts[contract_no.unwrap()].all_functions.keys() {
-                        let func = &ns.functions[*function_no];
+                    for function_no in available_functions(&id.name, true, file_no, contract_no, ns)
+                    {
+                        let func = &ns.functions[function_no];
 
-                        if func.name != id.name || func.ty != pt::FunctionTy::Function {
+                        if func.ty != pt::FunctionTy::Function {
                             continue;
                         }
 
@@ -1353,7 +1354,7 @@ pub fn expression(
                         expr = Some(Expression::InternalFunction {
                             loc: id.loc,
                             ty,
-                            function_no: *function_no,
+                            function_no,
                             signature: if func.is_virtual || func.is_override.is_some() {
                                 Some(func.signature.clone())
                             } else {
@@ -3651,6 +3652,41 @@ fn call_function_type(
     }
 }
 
+/// Create a list of functions that can be called in this context. If global is true, then
+/// include functions outside of contracts
+pub fn available_functions(
+    name: &str,
+    global: bool,
+    file_no: usize,
+    contract_no: Option<usize>,
+    ns: &Namespace,
+) -> Vec<usize> {
+    let mut list = Vec::new();
+
+    if global {
+        if let Some(Symbol::Function(v)) = ns.symbols.get(&(file_no, None, name.to_owned())) {
+            list.extend(v.iter().map(|(_, func_no)| *func_no));
+        }
+    }
+
+    if let Some(contract_no) = contract_no {
+        list.extend(
+            ns.contracts[contract_no]
+                .all_functions
+                .keys()
+                .filter_map(|func_no| {
+                    if ns.functions[*func_no].name == name {
+                        Some(*func_no)
+                    } else {
+                        None
+                    }
+                }),
+        );
+    }
+
+    list
+}
+
 /// Resolve a function call with positional arguments
 pub fn call_position_args(
     loc: &pt::Loc,
@@ -3658,7 +3694,7 @@ pub fn call_position_args(
     func_ty: pt::FunctionTy,
     args: &[pt::Expression],
     file_no: usize,
-    call_contract_no: usize,
+    function_nos: Vec<usize>,
     virtual_call: bool,
     contract_no: Option<usize>,
     ns: &mut Namespace,
@@ -3675,10 +3711,10 @@ pub fn call_position_args(
     }
 
     // Try to resolve as a function call
-    for function_no in ns.contracts[call_contract_no].all_functions.keys() {
-        let func = &ns.functions[*function_no];
+    for function_no in function_nos {
+        let func = &ns.functions[function_no];
 
-        if func.name != id.name || func.ty != func_ty {
+        if func.ty != func_ty {
             continue;
         }
 
@@ -3738,7 +3774,7 @@ pub fn call_position_args(
             function: Box::new(Expression::InternalFunction {
                 loc: *loc,
                 ty,
-                function_no: *function_no,
+                function_no,
                 signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
                     Some(func.signature.clone())
                 } else {
@@ -3781,7 +3817,7 @@ fn function_call_with_named_args(
     id: &pt::Identifier,
     args: &[pt::NamedArgument],
     file_no: usize,
-    call_contract_no: usize,
+    function_nos: Vec<usize>,
     virtual_call: bool,
     contract_no: Option<usize>,
     ns: &mut Namespace,
@@ -3809,8 +3845,8 @@ fn function_call_with_named_args(
     let mut errors = Vec::new();
 
     // Try to resolve as a function call
-    for function_no in ns.contracts[call_contract_no].all_functions.keys() {
-        let func = &ns.functions[*function_no];
+    for function_no in function_nos {
+        let func = &ns.functions[function_no];
 
         if func.name != id.name || func.ty != pt::FunctionTy::Function {
             continue;
@@ -3888,7 +3924,7 @@ fn function_call_with_named_args(
             function: Box::new(Expression::InternalFunction {
                 loc: *loc,
                 ty,
-                function_no: *function_no,
+                function_no,
                 signature: if virtual_call && (func.is_virtual || func.is_override.is_some()) {
                     Some(func.signature.clone())
                 } else {
@@ -4027,7 +4063,7 @@ fn method_call_pos_args(
                     pt::FunctionTy::Function,
                     args,
                     file_no,
-                    call_contract_no,
+                    available_functions(&func.name, false, file_no, Some(call_contract_no), ns),
                     true,
                     contract_no,
                     ns,
@@ -4052,7 +4088,7 @@ fn method_call_pos_args(
                         pt::FunctionTy::Function,
                         args,
                         file_no,
-                        call_contract_no,
+                        available_functions(&func.name, false, file_no, Some(call_contract_no), ns),
                         false,
                         Some(contract_no),
                         ns,
@@ -4628,7 +4664,13 @@ fn method_call_named_args(
                     func_name,
                     args,
                     file_no,
-                    call_contract_no,
+                    available_functions(
+                        &func_name.name,
+                        false,
+                        file_no,
+                        Some(call_contract_no),
+                        ns,
+                    ),
                     true,
                     contract_no,
                     ns,
@@ -4652,7 +4694,13 @@ fn method_call_named_args(
                         func_name,
                         args,
                         file_no,
-                        call_contract_no,
+                        available_functions(
+                            &func_name.name,
+                            false,
+                            file_no,
+                            Some(call_contract_no),
+                            ns,
+                        ),
                         false,
                         Some(contract_no),
                         ns,
@@ -5166,7 +5214,7 @@ pub fn function_call_expr(
             // is there a local variable or contract variable with this name
             if symtable.find(&id.name).is_some()
                 || matches!(
-                    ns.resolve_var(file_no, contract_no.unwrap(), id),
+                    ns.resolve_var(file_no, contract_no, id),
                     Some(Symbol::Variable(_, _, _))
                 )
             {
@@ -5196,7 +5244,7 @@ pub fn function_call_expr(
                     pt::FunctionTy::Function,
                     args,
                     file_no,
-                    contract_no.unwrap(),
+                    available_functions(&id.name, true, file_no, contract_no, ns),
                     true,
                     contract_no,
                     ns,
@@ -5257,7 +5305,7 @@ pub fn named_function_call_expr(
                 &id,
                 args,
                 file_no,
-                contract_no.unwrap(),
+                available_functions(&id.name, true, file_no, contract_no, ns),
                 true,
                 contract_no,
                 ns,

@@ -769,6 +769,22 @@ impl SolangServer {
             ));
         }
 
+        for fnc in &ns.functions {
+            for parm in &fnc.params {
+                let msg = SolangServer::construct_defs(&parm.ty, ns, fnc_map);
+                lookup_tbl.push((parm.loc.1 as u64, parm.loc.2 as u64, msg));
+            }
+
+            for ret in &fnc.returns {
+                let msg = SolangServer::construct_defs(&ret.ty, ns, fnc_map);
+                lookup_tbl.push((ret.loc.1 as u64, ret.loc.2 as u64, msg));
+            }
+
+            for stmt in &fnc.body {
+                SolangServer::construct_stmt(&stmt, lookup_tbl, &fnc.symtable, fnc_map, ns);
+            }
+        }
+
         for contrct in &ns.contracts {
             let msg_tg = render(&contrct.tags[..]);
             lookup_tbl.push((
@@ -776,24 +792,6 @@ impl SolangServer {
                 (contrct.loc.1 + msg_tg.len()) as u64,
                 msg_tg,
             ));
-
-            for function_no in &contrct.functions {
-                let fnc = &ns.functions[*function_no];
-
-                for parm in &fnc.params {
-                    let msg = SolangServer::construct_defs(&parm.ty, ns, fnc_map);
-                    lookup_tbl.push((parm.loc.1 as u64, parm.loc.2 as u64, msg));
-                }
-
-                for ret in &fnc.returns {
-                    let msg = SolangServer::construct_defs(&ret.ty, ns, fnc_map);
-                    lookup_tbl.push((ret.loc.1 as u64, ret.loc.2 as u64, msg));
-                }
-
-                for stmt in &fnc.body {
-                    SolangServer::construct_stmt(&stmt, lookup_tbl, &fnc.symtable, fnc_map, ns);
-                }
-            }
 
             for varscont in &contrct.variables {
                 let samptb = symtable::Symtable::new();

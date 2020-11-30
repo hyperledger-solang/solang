@@ -29,7 +29,7 @@ Missing features:
 - libraries functions are always statically linked into the contract code
 - Solang generates WebAssembly or BPF rather than EVM. This means that the ``assembly {}``
   statement using EVM instructions is not supported
-- Defining functions outside of contracts
+- Defining constants outside of contracts
 - Calling parent contract via ``super``
 
 Unique features to Solang:
