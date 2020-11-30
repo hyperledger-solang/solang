@@ -180,6 +180,7 @@ impl SabreTarget {
             .functions
             .iter()
             .enumerate()
+            .map(|(cfg_no, function_no)| (cfg_no, &contract.ns.functions[*function_no]))
             .find(|(_, f)| f.is_constructor())
         {
             let mut args = Vec::new();

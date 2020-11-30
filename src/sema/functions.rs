@@ -411,7 +411,16 @@ pub fn function_decl(
     );
 
     let mut fdecl = Function::new(
-        func.loc, name, doc, func.ty, mutability, visibility, params, returns, ns,
+        func.loc,
+        name,
+        Some(contract_no),
+        doc,
+        func.ty,
+        mutability,
+        visibility,
+        params,
+        returns,
+        ns,
     );
 
     fdecl.is_virtual = is_virtual;
@@ -421,15 +430,17 @@ pub fn function_decl(
     if func.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
         if ns.target == Target::Ewasm {
-            if let Some(prev) = ns.contracts[contract_no]
+            if let Some(prev_func_no) = ns.contracts[contract_no]
                 .functions
                 .iter()
-                .find(|f| f.is_constructor())
+                .find(|func_no| ns.functions[**func_no].is_constructor())
             {
+                let prev_loc = ns.functions[*prev_func_no].loc;
+
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     func.loc,
                     "constructor already defined".to_string(),
-                    prev.loc,
+                    prev_loc,
                     "location of previous definition".to_string(),
                 ));
                 return None;
@@ -437,15 +448,17 @@ pub fn function_decl(
         } else {
             let payable = fdecl.is_payable();
 
-            if let Some(prev) = ns.contracts[contract_no]
-                .functions
-                .iter()
-                .find(|f| f.is_constructor() && f.is_payable() != payable)
-            {
+            if let Some(prev_func_no) = ns.contracts[contract_no].functions.iter().find(|func_no| {
+                let f = &ns.functions[**func_no];
+
+                f.is_constructor() && f.is_payable() != payable
+            }) {
+                let prev_loc = ns.functions[*prev_func_no].loc;
+
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     func.loc,
                     "all constructors should be defined ‘payable’ or not".to_string(),
-                    prev.loc,
+                    prev_loc,
                     "location of previous definition".to_string(),
                 ));
                 return None;
@@ -470,12 +483,10 @@ pub fn function_decl(
             _ => (),
         }
 
-        for v in ns.contracts[contract_no]
-            .functions
-            .iter()
-            .filter(|f| f.is_constructor())
-        {
-            if v.signature == fdecl.signature {
+        for prev_func_no in &ns.contracts[contract_no].functions {
+            let v = &ns.functions[*prev_func_no];
+
+            if v.is_constructor() && v.signature == fdecl.signature {
                 ns.diagnostics.push(Diagnostic::error_with_note(
                     func.loc,
                     "constructor with this signature already exists".to_string(),
@@ -487,21 +498,24 @@ pub fn function_decl(
             }
         }
 
-        let pos = ns.contracts[contract_no].functions.len();
+        let pos = ns.functions.len();
 
-        ns.contracts[contract_no].functions.push(fdecl);
+        ns.contracts[contract_no].functions.push(pos);
+        ns.functions.push(fdecl);
 
         Some(pos)
     } else if func.ty == pt::FunctionTy::Receive || func.ty == pt::FunctionTy::Fallback {
-        if let Some(prev) = ns.contracts[contract_no]
+        if let Some(prev_func_no) = ns.contracts[contract_no]
             .functions
             .iter()
-            .find(|o| o.ty == func.ty)
+            .find(|func_no| ns.functions[**func_no].ty == func.ty)
         {
+            let prev_loc = ns.functions[*prev_func_no].loc;
+
             ns.diagnostics.push(Diagnostic::error_with_note(
                 func.loc,
                 format!("{} function already defined", func.ty),
-                prev.loc,
+                prev_loc,
                 "location of previous definition".to_string(),
             ));
             return None;
@@ -533,19 +547,20 @@ pub fn function_decl(
             return None;
         }
 
-        let pos = ns.contracts[contract_no].functions.len();
+        let pos = ns.functions.len();
 
-        ns.contracts[contract_no].functions.push(fdecl);
+        ns.contracts[contract_no].functions.push(pos);
+        ns.functions.push(fdecl);
 
         Some(pos)
     } else {
         let id = func.name.as_ref().unwrap();
 
-        if let Some((func_contract_no, func_no)) = ns.contracts[contract_no]
+        if let Some(func_no) = ns.contracts[contract_no]
             .all_functions
             .keys()
-            .find(|(func_contract_no, func_no)| {
-                let func = &ns.contracts[*func_contract_no].functions[*func_no];
+            .find(|func_no| {
+                let func = &ns.functions[**func_no];
 
                 func.signature == fdecl.signature
             })
@@ -553,16 +568,17 @@ pub fn function_decl(
             ns.diagnostics.push(Diagnostic::error_with_note(
                 func.loc,
                 format!("overloaded {} with this signature already exist", func.ty),
-                ns.contracts[*func_contract_no].functions[*func_no].loc,
+                ns.functions[*func_no].loc,
                 "location of previous definition".to_string(),
             ));
 
             return None;
         }
 
-        let func_no = ns.contracts[contract_no].functions.len();
+        let func_no = ns.functions.len();
 
-        ns.contracts[contract_no].functions.push(fdecl);
+        ns.functions.push(fdecl);
+        ns.contracts[contract_no].functions.push(func_no);
 
         if let Some(Symbol::Function(ref mut v)) =
             ns.symbols
@@ -795,6 +811,7 @@ fn signatures() {
     let fdecl = Function::new(
         pt::Loc(0, 0, 0),
         "foo".to_owned(),
+        None,
         vec![],
         pt::FunctionTy::Function,
         None,

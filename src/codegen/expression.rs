@@ -321,20 +321,17 @@ pub fn expression(
             Expression::Variable(*loc, Type::Contract(*contract_no), address_res)
         }
         Expression::InternalFunction {
-            contract_no: base_contract_no,
             function_no,
             signature,
             ..
         } => {
-            let (base_contract_no, function_no) = if let Some(signature) = signature {
-                ns.contracts[contract_no].virtual_functions[signature]
+            let function_no = if let Some(signature) = signature {
+                &ns.contracts[contract_no].virtual_functions[signature]
             } else {
-                (*base_contract_no, *function_no)
+                function_no
             };
 
-            Expression::InternalFunctionCfg(
-                ns.contracts[contract_no].all_functions[&(base_contract_no, function_no)],
-            )
+            Expression::InternalFunctionCfg(ns.contracts[contract_no].all_functions[function_no])
         }
         Expression::Builtin(loc, returns, Builtin::ExternalFunctionAddress, func) => {
             if let Expression::ExternalFunction { address, .. } = &func[0] {
@@ -351,13 +348,8 @@ pub fn expression(
             }
         }
         Expression::Builtin(loc, returns, Builtin::ExternalFunctionSelector, func) => {
-            if let Expression::ExternalFunction {
-                contract_no: base_contract_no,
-                function_no,
-                ..
-            } = &func[0]
-            {
-                let selector = ns.contracts[*base_contract_no].functions[*function_no].selector();
+            if let Expression::ExternalFunction { function_no, .. } = &func[0] {
+                let selector = ns.functions[*function_no].selector();
 
                 Expression::NumberLiteral(*loc, Type::Uint(32), BigInt::from(selector))
             } else {
@@ -384,7 +376,6 @@ pub fn expression(
             loc,
             ty,
             address,
-            contract_no: base_contract_no,
             function_no,
         } => {
             let address = expression(address, cfg, contract_no, ns, vartab);
@@ -393,7 +384,6 @@ pub fn expression(
                 loc: *loc,
                 ty: ty.clone(),
                 address: Box::new(address),
-                contract_no: *base_contract_no,
                 function_no: *function_no,
             }
         }
@@ -1032,7 +1022,6 @@ pub fn emit_function_call(
     match expr {
         Expression::InternalFunctionCall { function, args, .. } => {
             if let Expression::InternalFunction {
-                contract_no,
                 function_no,
                 signature,
                 ..
@@ -1043,16 +1032,15 @@ pub fn emit_function_call(
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
                     .collect();
 
-                let (base_contract_no, function_no) = if let Some(signature) = signature {
-                    ns.contracts[callee_contract_no].virtual_functions[signature]
+                let function_no = if let Some(signature) = signature {
+                    &ns.contracts[callee_contract_no].virtual_functions[signature]
                 } else {
-                    (*contract_no, *function_no)
+                    function_no
                 };
 
-                let cfg_no = ns.contracts[callee_contract_no].all_functions
-                    [&(base_contract_no, function_no)];
+                let cfg_no = ns.contracts[callee_contract_no].all_functions[function_no];
 
-                let ftype = &ns.contracts[base_contract_no].functions[function_no];
+                let ftype = &ns.functions[*function_no];
 
                 if !ftype.returns.is_empty() {
                     let mut res = Vec::new();
@@ -1182,14 +1170,13 @@ pub fn emit_function_call(
             ..
         } => {
             if let Expression::ExternalFunction {
-                contract_no,
                 function_no,
                 address,
                 ty,
                 ..
             } = function.as_ref()
             {
-                let ftype = &ns.contracts[*contract_no].functions[*function_no];
+                let ftype = &ns.functions[*function_no];
                 let args = args
                     .iter()
                     .map(|a| expression(a, cfg, callee_contract_no, ns, vartab))
@@ -1204,7 +1191,6 @@ pub fn emit_function_call(
                         success: None,
                         address: None,
                         payload: Expression::ExternalFunction {
-                            contract_no: *contract_no,
                             function_no: *function_no,
                             address: Box::new(address),
                             loc: *loc,

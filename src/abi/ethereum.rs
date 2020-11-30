@@ -71,17 +71,29 @@ pub fn gen_abi(contract_no: usize, ns: &Namespace) -> Vec<ABI> {
     ns.contracts[contract_no]
         .functions
         .iter()
-        .filter(|f| {
-            matches!(f.visibility,
-            pt::Visibility::Public(_) | pt::Visibility::External(_))
-        })
-        .map(|f| ABI {
-            name: f.name.to_owned(),
-            mutability: f.print_mutability(),
-            ty: f.ty.to_string(),
-            inputs: f.params.iter().map(|p| parameter_to_abi(p, ns)).collect(),
-            outputs: f.returns.iter().map(|p| parameter_to_abi(p, ns)).collect(),
-            anonymous: false,
+        .filter_map(|function_no| {
+            let func = &ns.functions[*function_no];
+
+            if matches!(func.visibility, pt::Visibility::Public(_) | pt::Visibility::External(_)) {
+                Some(ABI {
+                    name: func.name.to_owned(),
+                    mutability: func.print_mutability(),
+                    ty: func.ty.to_string(),
+                    inputs: func
+                        .params
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns))
+                        .collect(),
+                    outputs: func
+                        .returns
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns))
+                        .collect(),
+                    anonymous: false,
+                })
+            } else {
+                None
+            }
         })
         .chain(
             ns.contracts[contract_no]

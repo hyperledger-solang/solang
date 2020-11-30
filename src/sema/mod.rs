@@ -246,6 +246,7 @@ impl ast::Namespace {
             structs: Vec::new(),
             events: Vec::new(),
             contracts: Vec::new(),
+            functions: Vec::new(),
             address_length,
             value_length,
             symbols: HashMap::new(),
@@ -1268,10 +1269,11 @@ impl ast::Namespace {
     }
 
     /// Phoney default constructor
-    pub fn default_constructor(&self) -> ast::Function {
+    pub fn default_constructor(&self, contract_no: usize) -> ast::Function {
         let mut func = ast::Function::new(
             pt::Loc(0, 0, 0),
             "".to_owned(),
+            Some(contract_no),
             vec![],
             pt::FunctionTy::Constructor,
             None,

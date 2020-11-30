@@ -558,20 +558,8 @@ impl SolangServer {
                 args,
                 ..
             } => {
-                if let InternalFunction {
-                    contract_no,
-                    function_no,
-                    signature,
-                    ..
-                } = function.as_ref()
-                {
-                    let (base_contract_no, function_no) = if let Some(signature) = signature {
-                        ns.contracts[*contract_no].virtual_functions[signature]
-                    } else {
-                        (*contract_no, *function_no)
-                    };
-
-                    let fnc = &ns.contracts[base_contract_no].functions[function_no];
+                if let InternalFunction { function_no, .. } = function.as_ref() {
+                    let fnc = &ns.functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
 
                     let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
@@ -613,14 +601,13 @@ impl SolangServer {
                 ..
             } => {
                 if let ExternalFunction {
-                    contract_no,
                     function_no,
                     address,
                     ..
                 } = function.as_ref()
                 {
                     // modifiers do not have mutability, bases or modifiers itself
-                    let fnc = &ns.contracts[*contract_no].functions[*function_no];
+                    let fnc = &ns.functions[*function_no];
                     let msg_tg = render(&fnc.tags[..]);
                     let mut param_msg = format!("{} \n\n {} {}(", msg_tg, fnc.ty, fnc.name);
 
@@ -790,7 +777,9 @@ impl SolangServer {
                 msg_tg,
             ));
 
-            for fnc in &contrct.functions {
+            for function_no in &contrct.functions {
+                let fnc = &ns.functions[*function_no];
+
                 for parm in &fnc.params {
                     let msg = SolangServer::construct_defs(&parm.ty, ns, fnc_map);
                     lookup_tbl.push((parm.loc.1 as u64, parm.loc.2 as u64, msg));

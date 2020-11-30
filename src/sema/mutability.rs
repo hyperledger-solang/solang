@@ -10,8 +10,8 @@ pub fn mutablity(file_no: usize, ns: &mut Namespace) {
             continue;
         }
 
-        for function_no in 0..ns.contracts[contract_no].functions.len() {
-            let diagnostics = check_mutability(contract_no, function_no, ns);
+        for func_no in ns.contracts[contract_no].functions.iter() {
+            let diagnostics = check_mutability(contract_no, *func_no, ns);
 
             ns.diagnostics.extend(diagnostics);
         }
@@ -60,7 +60,7 @@ impl<'a> StateCheck<'a> {
 }
 
 fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> Vec<Diagnostic> {
-    let func = &ns.contracts[contract_no].functions[function_no];
+    let func = &ns.functions[function_no];
 
     if func.is_virtual {
         return Vec::new();
@@ -96,20 +96,19 @@ fn check_mutability(contract_no: usize, function_no: usize, ns: &Namespace) -> V
 
             // check the modifier itself
             if let Expression::InternalFunction {
-                contract_no,
                 function_no,
                 signature,
                 ..
             } = function.as_ref()
             {
-                let (base_contract_no, function_no) = if let Some(signature) = signature {
-                    state.ns.contracts[*contract_no].virtual_functions[signature]
+                let function_no = if let Some(signature) = signature {
+                    state.ns.contracts[contract_no].virtual_functions[signature]
                 } else {
-                    (*contract_no, *function_no)
+                    *function_no
                 };
 
                 // modifiers do not have mutability, bases or modifiers itself
-                let func = &ns.contracts[base_contract_no].functions[function_no];
+                let func = &ns.functions[function_no];
 
                 recurse_statements(&func.body, &mut state);
             }

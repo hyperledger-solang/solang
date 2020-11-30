@@ -401,17 +401,15 @@ fn functions() {
 
     assert_eq!(ns.diagnostics.len(), 2);
 
-    assert_eq!(ns.contracts[0].functions[0].tags[0].tag, "param");
-    assert_eq!(ns.contracts[0].functions[0].tags[0].value, "sadad");
-    assert_eq!(ns.contracts[0].functions[0].tags[0].no, 0);
-
-    assert_eq!(ns.contracts[0].functions[0].tags[1].tag, "return");
-    assert_eq!(ns.contracts[0].functions[0].tags[1].value, "is a boolean");
-    assert_eq!(ns.contracts[0].functions[0].tags[1].no, 1);
-
-    assert_eq!(ns.contracts[0].functions[0].tags[2].tag, "inheritdoc");
-    assert_eq!(ns.contracts[0].functions[0].tags[2].value, "b");
-    assert_eq!(ns.contracts[0].functions[0].tags[2].no, 0);
+    assert_eq!(ns.functions[0].tags[0].tag, "param");
+    assert_eq!(ns.functions[0].tags[0].value, "sadad");
+    assert_eq!(ns.functions[0].tags[0].no, 0);
+    assert_eq!(ns.functions[0].tags[1].tag, "return");
+    assert_eq!(ns.functions[0].tags[1].value, "is a boolean");
+    assert_eq!(ns.functions[0].tags[1].no, 1);
+    assert_eq!(ns.functions[0].tags[2].tag, "inheritdoc");
+    assert_eq!(ns.functions[0].tags[2].value, "b");
+    assert_eq!(ns.functions[0].tags[2].no, 0);
 }
 
 #[test]

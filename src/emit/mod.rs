@@ -2585,7 +2585,6 @@ pub trait TargetRuntime<'a> {
             Expression::ExternalFunction {
                 ty,
                 address,
-                contract_no,
                 function_no,
                 ..
             } => {
@@ -2593,8 +2592,7 @@ pub trait TargetRuntime<'a> {
                     .expression(contract, address, vartab, function)
                     .into_int_value();
 
-                let selector =
-                    contract.ns.contracts[*contract_no].functions[*function_no].selector();
+                let selector = contract.ns.functions[*function_no].selector();
 
                 assert!(matches!(ty, ast::Type::ExternalFunction { .. }));
 
@@ -3652,13 +3650,11 @@ pub trait TargetRuntime<'a> {
                             ast::Type::ExternalFunction { params, .. } => {
                                 if let ast::Expression::ExternalFunction {
                                     address,
-                                    contract_no,
                                     function_no,
                                     ..
                                 } = payload
                                 {
-                                    let dest_func = &contract.ns.contracts[*contract_no].functions
-                                        [*function_no];
+                                    let dest_func = &contract.ns.functions[*function_no];
 
                                     let selector = if contract.ns.target == Target::Ewasm {
                                         dest_func.selector().to_le()
@@ -5123,15 +5119,15 @@ impl<'a> Contract<'a> {
 
         // if there is no payable function, fallback or receive then abort all value transfers at the top
         // note that receive() is always payable so this just checkes for presence.
-        let function_abort_value_transfers = !contract
-            .functions
-            .iter()
-            .any(|f| !f.is_constructor() && f.is_payable());
+        let function_abort_value_transfers = !contract.functions.iter().any(|function_no| {
+            let f = &ns.functions[*function_no];
+            !f.is_constructor() && f.is_payable()
+        });
 
-        let constructor_abort_value_transfers = !contract
-            .functions
-            .iter()
-            .any(|f| f.is_constructor() && f.is_payable());
+        let constructor_abort_value_transfers = !contract.functions.iter().any(|function_no| {
+            let f = &ns.functions[*function_no];
+            f.is_constructor() && f.is_payable()
+        });
 
         let selector =
             module.add_global(context.i32_type(), Some(AddressSpace::Generic), "selector");

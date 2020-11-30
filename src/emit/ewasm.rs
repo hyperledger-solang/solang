@@ -1212,7 +1212,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         );
 
         let params = match constructor_no {
-            Some(function_no) => resolver_contract.functions[function_no].params.as_slice(),
+            Some(function_no) => contract.ns.functions[function_no].params.as_slice(),
             None => &[],
         };
 
