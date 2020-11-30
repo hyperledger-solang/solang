@@ -3008,7 +3008,7 @@ impl<'a> TargetRuntime<'a> for SubstrateTarget {
         let resolver_contract = &contract.ns.contracts[contract_no];
 
         let constructor = match constructor_no {
-            Some(function_no) => &resolver_contract.functions[function_no],
+            Some(function_no) => &contract.ns.functions[function_no],
             None => &resolver_contract.default_constructor.as_ref().unwrap().0,
         };
 

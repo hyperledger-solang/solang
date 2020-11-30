@@ -322,8 +322,15 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             let functions = contract
                 .functions
                 .iter()
-                .filter(|f| !f.body.is_empty())
-                .map(|f| map_func(file, None, f))
+                .filter_map(|function_no| {
+                    let f = &file.functions[*function_no];
+
+                    if f.has_body {
+                        Some(map_func(file, None, f))
+                    } else {
+                        None
+                    }
+                })
                 .collect();
 
             let bases = visit_bases(contract_no, file);
@@ -346,12 +353,15 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
                     base_variables.push(var);
                 }
 
-                for func in base
-                    .functions
-                    .iter()
-                    .filter(|f| !f.body.is_empty())
-                    .map(|f| map_func(file, Some(&base.name), f))
-                {
+                for func in base.functions.iter().filter_map(|function_no| {
+                    let f = &file.functions[*function_no];
+
+                    if f.has_body {
+                        Some(map_func(file, Some(&base.name), f))
+                    } else {
+                        None
+                    }
+                }) {
                     base_functions.push(func);
                 }
             }

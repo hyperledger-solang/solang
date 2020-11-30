@@ -24,13 +24,9 @@ pub fn resolve_function_body(
     for (i, p) in def.params.iter().enumerate() {
         let p = p.1.as_ref().unwrap();
         if let Some(ref name) = p.name {
-            if let Some(pos) = symtable.add(
-                name,
-                ns.contracts[contract_no].functions[function_no].params[i]
-                    .ty
-                    .clone(),
-                ns,
-            ) {
+            if let Some(pos) =
+                symtable.add(name, ns.functions[function_no].params[i].ty.clone(), ns)
+            {
                 ns.check_shadowing(file_no, Some(contract_no), name);
 
                 symtable.arguments.push(Some(pos));
@@ -92,7 +88,7 @@ pub fn resolve_function_body(
                                 if let Ok((Some(constructor_no), args)) =
                                     match_constructor_to_args(&base.loc, resolved_args, base_no, ns)
                                 {
-                                    ns.contracts[contract_no].functions[function_no]
+                                    ns.functions[function_no]
                                         .bases
                                         .insert(base_no, (base.loc, constructor_no, args));
 
@@ -136,7 +132,7 @@ pub fn resolve_function_body(
                 }
 
                 // does the contract require arguments
-                if ns.contracts[base.contract_no].constructor_needs_arguments() {
+                if ns.contracts[base.contract_no].constructor_needs_arguments(ns) {
                     ns.diagnostics.push(Diagnostic::error(
                         def.loc,
                         format!(
@@ -172,7 +168,7 @@ pub fn resolve_function_body(
             }
         }
 
-        ns.contracts[contract_no].functions[function_no].modifiers = modifiers;
+        ns.functions[function_no].modifiers = modifiers;
     }
 
     // a function with no return values does not need a return statement
@@ -182,7 +178,7 @@ pub fn resolve_function_body(
     // the end of the function, and return values may be omitted too. Create variables to
     // store the return values
     for (i, p) in def.returns.iter().enumerate() {
-        let ret = &ns.contracts[contract_no].functions[function_no].returns[i];
+        let ret = &ns.functions[function_no].returns[i];
 
         if let Some(ref name) = p.1.as_ref().unwrap().name {
             return_required = false;
@@ -272,12 +268,9 @@ pub fn resolve_function_body(
         }
     }
 
-    ns.contracts[contract_no].functions[function_no].body = res;
+    ns.functions[function_no].body = res;
 
-    std::mem::swap(
-        &mut ns.contracts[contract_no].functions[function_no].symtable,
-        &mut symtable,
-    );
+    std::mem::swap(&mut ns.functions[function_no].symtable, &mut symtable);
 
     Ok(())
 }
@@ -617,9 +610,7 @@ fn statement(
             Ok(true)
         }
         pt::Statement::Return(loc, None) => {
-            let no_returns = ns.contracts[contract_no].functions[function_no]
-                .returns
-                .len();
+            let no_returns = ns.functions[function_no].returns.len();
 
             if symtable.returns.len() != no_returns {
                 ns.diagnostics.push(Diagnostic::error(
@@ -690,9 +681,7 @@ fn statement(
             // is it an underscore modifier statement
             if let pt::Expression::Variable(id) = expr {
                 if id.name == "_" {
-                    return if ns.contracts[contract_no].functions[function_no].ty
-                        == pt::FunctionTy::Modifier
-                    {
+                    return if ns.functions[function_no].ty == pt::FunctionTy::Modifier {
                         res.push(Statement::Underscore(*loc));
 
                         Ok(true)
@@ -1169,9 +1158,7 @@ fn return_with_values(
 ) -> Result<Vec<Expression>, ()> {
     let returns = parameter_list_to_expr_list(returns, ns)?;
 
-    let no_returns = ns.contracts[contract_no].functions[function_no]
-        .returns
-        .len();
+    let no_returns = ns.functions[function_no].returns.len();
 
     if no_returns > 0 && returns.is_empty() {
         ns.diagnostics.push(Diagnostic::error(
@@ -1212,9 +1199,7 @@ fn return_with_values(
         exprs.push(cast(
             &r.loc(),
             e,
-            &ns.contracts[contract_no].functions[function_no].returns[i]
-                .ty
-                .clone(),
+            &ns.functions[function_no].returns[i].ty.clone(),
             true,
             ns,
         )?);

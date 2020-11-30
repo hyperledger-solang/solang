@@ -259,24 +259,17 @@ fn print_expr(e: &Expression, func: Option<&Function>, ns: &Namespace) -> Tree {
             vec![print_expr(left, func, ns), print_expr(right, func, ns)],
         ),
         Expression::InternalFunction {
-            contract_no,
             function_no,
             signature,
             ..
         } => Tree::Leaf(format!(
-            "function {}.{} {:?}",
-            ns.contracts[*contract_no].name,
-            ns.contracts[*contract_no].functions[*function_no].name,
+            "function {} {:?}",
+            ns.functions[*function_no].print_name(ns),
             signature,
         )),
-        Expression::ExternalFunction {
-            contract_no,
-            function_no,
-            ..
-        } => Tree::Leaf(format!(
-            "function external {}.{}",
-            ns.contracts[*contract_no].name,
-            ns.contracts[*contract_no].functions[*function_no].name,
+        Expression::ExternalFunction { function_no, .. } => Tree::Leaf(format!(
+            "external {}",
+            ns.functions[*function_no].print_name(ns)
         )),
         Expression::Builtin(_, _, builtin, args) => {
             let title = match get_prototype(*builtin) {
@@ -588,8 +581,10 @@ impl Namespace {
                 members.push(Tree::Branch(String::from("using"), list));
             }
 
-            for func in &c.functions {
+            for function_no in &c.functions {
                 let mut list = Vec::new();
+
+                let func = &self.functions[*function_no];
 
                 list.push(Tree::Leaf(format!("visibility {}", func.visibility)));
 

@@ -387,16 +387,22 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
     let mut constructors = ns.contracts[contract_no]
         .functions
         .iter()
-        .filter(|f| f.is_constructor())
-        .map(|f| Constructor {
-            name: String::from("new"),
-            selector: render_selector(f),
-            args: f
-                .params
-                .iter()
-                .map(|p| parameter_to_abi(p, ns, &mut abi))
-                .collect(),
-            docs: vec![render(&f.tags)],
+        .filter_map(|function_no| {
+            let f = &ns.functions[*function_no];
+            if f.is_constructor() {
+                Some(Constructor {
+                    name: String::from("new"),
+                    selector: render_selector(f),
+                    args: f
+                        .params
+                        .iter()
+                        .map(|p| parameter_to_abi(p, ns, &mut abi))
+                        .collect(),
+                    docs: vec![render(&f.tags)],
+                })
+            } else {
+                None
+            }
         })
         .collect::<Vec<Constructor>>();
 
@@ -416,12 +422,16 @@ fn gen_abi(contract_no: usize, ns: &ast::Namespace) -> Abi {
     let messages = ns.contracts[contract_no]
         .all_functions
         .keys()
-        .filter_map(|(base_contract_no, function_no)| {
-            if ns.contracts[*base_contract_no].is_library() {
-                None
-            } else {
-                Some(&ns.contracts[*base_contract_no].functions[*function_no])
+        .filter_map(|function_no| {
+            let func = &ns.functions[*function_no];
+
+            if let Some(base_contract_no) = func.contract_no {
+                if ns.contracts[base_contract_no].is_library() {
+                    return None;
+                }
             }
+
+            Some(func)
         })
         .filter(|f| match f.visibility {
             pt::Visibility::Public(_) | pt::Visibility::External(_) => {

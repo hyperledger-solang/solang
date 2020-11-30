@@ -23,23 +23,14 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
         all_cfg.resize(cfg_no, ControlFlowGraph::placeholder());
 
         // clone all_functions so we can pass a mutable reference to generate_cfg
-        for (base_contract_no, function_no, cfg_no) in ns.contracts[contract_no]
+        for (function_no, cfg_no) in ns.contracts[contract_no]
             .all_functions
             .iter()
-            .map(|((base_contract_no, function_no), cfg_no)| {
-                (*base_contract_no, *function_no, *cfg_no)
-            })
-            .collect::<Vec<(usize, usize, usize)>>()
+            .map(|(function_no, cfg_no)| (*function_no, *cfg_no))
+            .collect::<Vec<(usize, usize)>>()
             .into_iter()
         {
-            cfg::generate_cfg(
-                contract_no,
-                base_contract_no,
-                Some(function_no),
-                cfg_no,
-                &mut all_cfg,
-                ns,
-            )
+            cfg::generate_cfg(contract_no, Some(function_no), cfg_no, &mut all_cfg, ns)
         }
 
         // Generate cfg for storage initializers
@@ -48,13 +39,13 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
         all_cfg.push(cfg);
         ns.contracts[contract_no].initializer = Some(pos);
 
-        if !ns.contracts[contract_no].have_constructor() {
+        if !ns.contracts[contract_no].have_constructor(ns) {
             // generate the default constructor
-            let func = ns.default_constructor();
+            let func = ns.default_constructor(contract_no);
             let cfg_no = all_cfg.len();
             all_cfg.push(ControlFlowGraph::placeholder());
 
-            cfg::generate_cfg(contract_no, contract_no, None, cfg_no, &mut all_cfg, ns);
+            cfg::generate_cfg(contract_no, None, cfg_no, &mut all_cfg, ns);
 
             ns.contracts[contract_no].default_constructor = Some((func, cfg_no));
         }

@@ -490,19 +490,19 @@ impl ControlFlowGraph {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Expression::InternalFunction {contract_no, function_no, signature, ..} => {
-                let (base_contract_no, function_no) = if let Some(signature) = signature {
+            Expression::InternalFunction {function_no, signature, ..} => {
+                let function_no = if let Some(signature) = signature {
                     contract.virtual_functions[signature]
                 } else {
-                    (*contract_no, *function_no)
+                    *function_no
                 };
 
-                format!("function {}.{}", ns.contracts[base_contract_no].name, ns.contracts[base_contract_no].functions[function_no].name)
+                ns.functions[function_no].print_name(ns)
             }
-            Expression::ExternalFunction {address, contract_no, function_no, ..} => {
-                format!("function address {} {}.{}",
+            Expression::ExternalFunction {address, function_no, ..} => {
+                format!("external {} address {}",
                     self.expr_to_string(contract, ns, address),
-                    ns.contracts[*contract_no].name, ns.contracts[*contract_no].functions[*function_no].name)
+                    ns.functions[*function_no].print_name(ns))
             }
             Expression::InternalFunctionCfg(cfg_no) => {
                 format!("function {}", contract.cfg[*cfg_no].name)
@@ -524,7 +524,7 @@ impl ControlFlowGraph {
             } => format!(
                 "(constructor:{} ({}) ({})",
                 ns.contracts[*contract_no].name,
-                ns.contracts[*contract_no].functions[*constructor_no].signature,
+                ns.functions[*constructor_no].signature,
                 args.iter()
                     .map(|a| self.expr_to_string(contract, ns, &a))
                     .collect::<Vec<String>>()
@@ -735,24 +735,22 @@ impl ControlFlowGraph {
             } => {
                 if let Expression::ExternalFunction {
                     address,
-                    contract_no,
                     function_no,
                     ..
                 } = payload
                 {
                     format!(
-                        "{} = external call::{} address:{} signature:{} value:{} gas:{} func:{}.{} {}",
+                        "{} = external call::{} address:{} signature:{} value:{} gas:{} {} {}",
                         match success {
                             Some(i) => format!("%{}", self.vars[i].id.name),
                             None => "_".to_string(),
                         },
                         callty,
                         self.expr_to_string(contract, ns, address),
-                        ns.contracts[*contract_no].functions[*function_no].signature,
+                        ns.functions[*function_no].signature,
                         self.expr_to_string(contract, ns, value),
                         self.expr_to_string(contract, ns, gas),
-                        ns.contracts[*contract_no].name,
-                        ns.contracts[*contract_no].functions[*function_no].name,
+                        ns.functions[*function_no].print_name(ns),
                         args.iter()
                             .map(|expr| self.expr_to_string(contract, ns, expr))
                             .collect::<Vec<String>>()
@@ -930,31 +928,32 @@ impl ControlFlowGraph {
 /// constructor
 pub fn generate_cfg(
     contract_no: usize,
-    base_contract_no: usize,
     function_no: Option<usize>,
     cfg_no: usize,
     all_cfgs: &mut Vec<ControlFlowGraph>,
     ns: &mut Namespace,
 ) {
-    let default_constructor = &ns.default_constructor();
+    let default_constructor = &ns.default_constructor(contract_no);
 
     let func = match function_no {
-        Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
+        Some(function_no) => &ns.functions[function_no],
         None => default_constructor,
     };
 
     // if the function is a fallback or receive, then don't bother with the overriden functions; they cannot be used
     if func.ty == pt::FunctionTy::Receive {
+        // if there is a virtual receive function, and it's not this one, ignore it
         if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@receive") {
-            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
+            if Some(*receive) != function_no {
                 return;
             }
         }
     }
 
     if func.ty == pt::FunctionTy::Fallback {
-        if let Some(receive) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
-            if !(base_contract_no == receive.0 && function_no == Some(receive.1)) {
+        // if there is a virtual fallback function, and it's not this one, ignore it
+        if let Some(fallback) = ns.contracts[contract_no].virtual_functions.get("@fallback") {
+            if Some(*fallback) != function_no {
                 return;
             }
         }
@@ -964,7 +963,7 @@ pub fn generate_cfg(
         return;
     }
 
-    let mut cfg = function_cfg(contract_no, base_contract_no, function_no, ns);
+    let mut cfg = function_cfg(contract_no, function_no, ns);
 
     // if the function is a modifier, generate the modifier chain
     if !func.modifiers.is_empty() {
@@ -980,9 +979,9 @@ pub fn generate_cfg(
 
             all_cfgs.push(cfg);
 
-            let (modifier_contract_no, modifier_no, args) =
-                resolve_modifier_call(call, &ns.contracts[contract_no]);
-            let modifier = &ns.contracts[modifier_contract_no].functions[modifier_no];
+            let (modifier_no, args) = resolve_modifier_call(call, &ns.contracts[contract_no]);
+
+            let modifier = &ns.functions[modifier_no];
 
             cfg =
                 generate_modifier_dispatch(contract_no, func, modifier, modifier_cfg_no, args, ns);
@@ -1000,23 +999,22 @@ pub fn generate_cfg(
 fn resolve_modifier_call<'a>(
     call: &'a Expression,
     contract: &Contract,
-) -> (usize, usize, &'a Vec<Expression>) {
+) -> (usize, &'a Vec<Expression>) {
     if let Expression::InternalFunctionCall { function, args, .. } = call {
         if let Expression::InternalFunction {
-            contract_no,
             function_no,
             signature,
             ..
         } = function.as_ref()
         {
             // is it a virtual function call
-            let (contract_no, function_no) = if let Some(signature) = signature {
+            let function_no = if let Some(signature) = signature {
                 contract.virtual_functions[signature]
             } else {
-                (*contract_no, *function_no)
+                *function_no
             };
 
-            return (contract_no, function_no, args);
+            return (function_no, args);
         }
     }
 
@@ -1027,39 +1025,42 @@ fn resolve_modifier_call<'a>(
 /// constructor
 fn function_cfg(
     contract_no: usize,
-    base_contract_no: usize,
     function_no: Option<usize>,
     ns: &Namespace,
 ) -> ControlFlowGraph {
     let mut vartab = match function_no {
-        Some(function_no) => Vartable::new_with_syms(
-            &ns.contracts[base_contract_no].functions[function_no].symtable,
-            ns.next_id,
-        ),
+        Some(function_no) => {
+            Vartable::new_with_syms(&ns.functions[function_no].symtable, ns.next_id)
+        }
         None => Vartable::new(ns.next_id),
     };
 
     let mut loops = LoopScopes::new();
-    let default_constructor = &ns.default_constructor();
+    let default_constructor = &ns.default_constructor(contract_no);
 
     let func = match function_no {
-        Some(function_no) => &ns.contracts[base_contract_no].functions[function_no],
+        Some(function_no) => &ns.functions[function_no],
         None => default_constructor,
     };
 
     // symbol name
-    let contract_name = &ns.contracts[base_contract_no].name;
+    let contract_name = match func.contract_no {
+        Some(contract_no) => format!("::{}", ns.contracts[contract_no].name),
+        None => String::new(),
+    };
 
     let name = match func.ty {
         pt::FunctionTy::Function => {
-            format!("sol::function::{}::{}", contract_name, func.llvm_symbol(ns))
+            format!("sol::function{}::{}", contract_name, func.llvm_symbol(ns))
         }
-        pt::FunctionTy::Constructor => format!(
-            "sol::constructor::{}{}",
-            contract_name,
-            func.llvm_symbol(ns)
-        ),
-        _ => format!("sol::{}::{}", contract_name, func.ty),
+        pt::FunctionTy::Constructor => {
+            format!(
+                "sol::constructor{}::{}",
+                contract_name,
+                func.llvm_symbol(ns)
+            )
+        }
+        _ => format!("sol{}::{}", contract_name, func.ty),
     };
 
     let mut cfg = ControlFlowGraph::new(name);
@@ -1069,9 +1070,13 @@ fn function_cfg(
     cfg.selector = func.selector();
 
     // a function is public if is not a library and not a base constructor
-    cfg.public = func.is_public()
-        && !ns.contracts[base_contract_no].is_library()
-        && !(func.is_constructor() && contract_no != base_contract_no);
+    cfg.public = if let Some(base_contract_no) = func.contract_no {
+        !ns.contracts[base_contract_no].is_library()
+            && !(func.is_constructor() && contract_no != base_contract_no)
+            && func.is_public()
+    } else {
+        false
+    };
 
     cfg.ty = func.ty;
     cfg.nonpayable = if ns.target == Target::Substrate {
@@ -1100,7 +1105,7 @@ fn function_cfg(
     // level constructor. This is done because the arguments to base constructor are only
     // known the top level constructor, since the arguments can be specified elsewhere
     // on a constructor for a superior class
-    if func.ty == pt::FunctionTy::Constructor && base_contract_no == contract_no {
+    if func.ty == pt::FunctionTy::Constructor && func.contract_no == Some(contract_no) {
         let mut all_base_args = HashMap::new();
         let mut diagnostics = HashSet::new();
 
@@ -1130,10 +1135,8 @@ fn function_cfg(
             if let Some(base_args) = all_base_args.get(base_no) {
                 // There might be some temporary variables needed from the symbol table where
                 // the constructor arguments were defined
-                if let Some((contract_no, defined_constructor_no)) =
-                    base_args.defined_constructor_no
-                {
-                    let func = &ns.contracts[contract_no].functions[defined_constructor_no];
+                if let Some(defined_constructor_no) = base_args.defined_constructor_no {
+                    let func = &ns.functions[defined_constructor_no];
                     vartab.add_symbol_table(&func.symtable);
                 }
 
@@ -1146,7 +1149,7 @@ fn function_cfg(
                 //   for the argument; this means values are passed automatically to the next
                 //   constructor. We do need the symbol table for the called constructor, therefore
                 //   we have the following two lines which look a bit odd at first
-                let func = &ns.contracts[*base_no].functions[base_args.calling_constructor_no];
+                let func = &ns.functions[base_args.calling_constructor_no];
                 vartab.add_symbol_table(&func.symtable);
 
                 let args: Vec<Expression> = base_args
@@ -1179,7 +1182,7 @@ fn function_cfg(
             }
 
             if let Some((constructor_no, args)) = gen_base_args.remove(base_no) {
-                let cfg_no = ns.contracts[contract_no].all_functions[&(*base_no, constructor_no)];
+                let cfg_no = ns.contracts[contract_no].all_functions[&constructor_no];
 
                 cfg.add(
                     &mut vartab,
@@ -1189,8 +1192,8 @@ fn function_cfg(
                         args,
                     },
                 );
-            } else if let Some(constructor_no) = ns.contracts[*base_no].no_args_constructor() {
-                let cfg_no = ns.contracts[contract_no].all_functions[&(*base_no, constructor_no)];
+            } else if let Some(constructor_no) = ns.contracts[*base_no].no_args_constructor(ns) {
+                let cfg_no = ns.contracts[contract_no].all_functions[&constructor_no];
 
                 cfg.add(
                     &mut vartab,

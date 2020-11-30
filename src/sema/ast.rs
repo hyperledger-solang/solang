@@ -115,6 +115,7 @@ pub struct Function {
     pub tags: Vec<Tag>,
     pub loc: pt::Loc,
     pub name: String,
+    pub contract_no: Option<usize>,
     pub ty: pt::FunctionTy,
     pub signature: String,
     pub mutability: Option<pt::StateMutability>,
@@ -136,6 +137,7 @@ impl Function {
     pub fn new(
         loc: pt::Loc,
         name: String,
+        contract_no: Option<usize>,
         tags: Vec<Tag>,
         ty: pt::FunctionTy,
         mutability: Option<pt::StateMutability>,
@@ -154,6 +156,7 @@ impl Function {
             tags,
             loc,
             name,
+            contract_no,
             ty,
             signature,
             mutability,
@@ -263,6 +266,18 @@ impl Function {
             Some(m) => format!("{}", m),
         }
     }
+
+    /// Print the function type, contract name, and name
+    pub fn print_name(&self, ns: &Namespace) -> String {
+        if let Some(contract_no) = &self.contract_no {
+            format!(
+                "{} {}.{}",
+                self.ty, ns.contracts[*contract_no].name, self.name
+            )
+        } else {
+            format!("{} {}", self.ty, self.name)
+        }
+    }
 }
 
 impl From<&pt::Type> for Type {
@@ -327,6 +342,8 @@ pub struct Namespace {
     pub structs: Vec<StructDecl>,
     pub events: Vec<EventDecl>,
     pub contracts: Vec<Contract>,
+    /// All functions
+    pub functions: Vec<Function>,
     /// address length in bytes
     pub address_length: usize,
     /// value length in bytes
@@ -360,9 +377,9 @@ pub struct Contract {
     pub libraries: Vec<usize>,
     pub using: Vec<(usize, Option<Type>)>,
     pub layout: Vec<Layout>,
-    pub functions: Vec<Function>,
-    pub all_functions: HashMap<(usize, usize), usize>,
-    pub virtual_functions: HashMap<String, (usize, usize)>,
+    pub functions: Vec<usize>,
+    pub all_functions: HashMap<usize, usize>,
+    pub virtual_functions: HashMap<String, usize>,
     pub variables: Vec<ContractVariable>,
     // List of contracts this contract instantiates
     pub creates: Vec<usize>,
@@ -408,20 +425,24 @@ impl Contract {
     }
 
     /// Does the constructor require arguments. Should be false is there is no constructor
-    pub fn constructor_needs_arguments(&self) -> bool {
-        self.have_constructor() && self.no_args_constructor().is_none()
+    pub fn constructor_needs_arguments(&self, ns: &Namespace) -> bool {
+        self.have_constructor(ns) && self.no_args_constructor(ns).is_none()
     }
 
     /// Does the contract have a constructor defined
-    pub fn have_constructor(&self) -> bool {
-        self.functions.iter().any(|f| f.is_constructor())
+    pub fn have_constructor(&self, ns: &Namespace) -> bool {
+        self.functions
+            .iter()
+            .any(|func_no| ns.functions[*func_no].is_constructor())
     }
 
     /// Return the constructor with no arguments
-    pub fn no_args_constructor(&self) -> Option<usize> {
-        self.functions
-            .iter()
-            .position(|f| f.is_constructor() && f.params.is_empty())
+    pub fn no_args_constructor(&self, ns: &Namespace) -> Option<usize> {
+        self.functions.iter().position(|func_no| {
+            let func = &ns.functions[*func_no];
+
+            func.is_constructor() && func.params.is_empty()
+        })
     }
 }
 
@@ -501,7 +522,6 @@ pub enum Expression {
     InternalFunction {
         loc: pt::Loc,
         ty: Type,
-        contract_no: usize,
         function_no: usize,
         signature: Option<String>,
     },
@@ -509,7 +529,6 @@ pub enum Expression {
         loc: pt::Loc,
         ty: Type,
         address: Box<Expression>,
-        contract_no: usize,
         function_no: usize,
     },
     InternalFunctionCfg(usize),
