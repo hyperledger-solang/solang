@@ -18,7 +18,7 @@ use super::ast::{
     Builtin, CallTy, Diagnostic, Expression, Function, Namespace, StringLocation, Symbol, Type,
 };
 use super::builtin;
-use super::contracts::{import_library, is_base};
+use super::contracts::is_base;
 use super::eval::eval_const_number;
 use super::symtable::Symtable;
 use crate::parser::pt;
@@ -4021,8 +4021,6 @@ fn method_call_pos_args(
                     return Err(());
                 }
 
-                import_library(contract_no.unwrap(), call_contract_no, ns);
-
                 return call_position_args(
                     loc,
                     func,
@@ -4562,8 +4560,6 @@ fn method_call_pos_args(
                 let returns = function_returns(libfunc);
                 let ty = function_type(libfunc, false);
 
-                import_library(contract_no, library_no, ns);
-
                 return Ok(Expression::InternalFunctionCall {
                     loc: *loc,
                     returns,
@@ -4626,8 +4622,6 @@ fn method_call_named_args(
                     ));
                     return Err(());
                 }
-
-                import_library(contract_no.unwrap(), call_contract_no, ns);
 
                 return function_call_with_named_args(
                     loc,
