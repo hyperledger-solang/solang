@@ -131,6 +131,8 @@ pub struct Function {
     pub has_body: bool,
     pub body: Vec<Statement>,
     pub symtable: Symtable,
+    // What events are emitted by the body of this function
+    pub emits_events: Vec<usize>,
 }
 
 impl Function {
@@ -170,6 +172,7 @@ impl Function {
             is_override: None,
             body: Vec::new(),
             symtable: Symtable::new(),
+            emits_events: Vec::new(),
         }
     }
 
@@ -373,8 +376,6 @@ pub struct Contract {
     pub ty: pt::ContractTy,
     pub name: String,
     pub bases: Vec<Base>,
-    // list of libraries used by this contract
-    pub libraries: Vec<usize>,
     pub using: Vec<(usize, Option<Type>)>,
     pub layout: Vec<Layout>,
     pub functions: Vec<usize>,
@@ -659,7 +660,9 @@ impl Expression {
                     left.recurse(cx, f);
                     right.recurse(cx, f);
                 }
-                Expression::InternalFunctionCall { args, .. } => {
+                Expression::InternalFunctionCall { function, args, .. } => {
+                    function.recurse(cx, f);
+
                     for e in args {
                         e.recurse(cx, f);
                     }
@@ -845,7 +848,7 @@ pub enum DestructureField {
 
 impl Statement {
     /// recurse over the statement
-    pub fn recurse<T>(&mut self, cx: &mut T, f: fn(stmt: &mut Statement, ctx: &mut T) -> bool) {
+    pub fn recurse<T>(&self, cx: &mut T, f: fn(stmt: &Statement, ctx: &mut T) -> bool) {
         if f(self, cx) {
             match self {
                 Statement::If(_, _, _, then_stmt, else_stmt) => {

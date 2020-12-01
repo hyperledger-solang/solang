@@ -1,5 +1,6 @@
 pub mod cfg;
 mod expression;
+mod external_functions;
 mod statements;
 mod storage;
 
@@ -13,6 +14,8 @@ pub fn codegen(contract_no: usize, ns: &mut Namespace) {
     if ns.contracts[contract_no].is_concrete() {
         let mut cfg_no = 0;
         let mut all_cfg = Vec::new();
+
+        external_functions::add_external_functions(contract_no, ns);
 
         // all the functions should have a cfg_no assigned, so we can generate call instructions to the correct function
         for (_, func_cfg) in ns.contracts[contract_no].all_functions.iter_mut() {

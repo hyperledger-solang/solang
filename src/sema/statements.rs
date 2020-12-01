@@ -247,7 +247,7 @@ pub fn resolve_function_body(
         let mut has_underscore = false;
 
         // unsure modifier has underscore
-        fn check_statement(stmt: &mut Statement, has_underscore: &mut bool) -> bool {
+        fn check_statement(stmt: &Statement, has_underscore: &mut bool) -> bool {
             if stmt.is_underscore() {
                 *has_underscore = true;
                 false
@@ -741,7 +741,7 @@ fn statement(
             Ok(reachable)
         }
         pt::Statement::Emit(loc, ty) => {
-            if let Ok(emit) = emit_event(loc, ty, file_no, contract_no, symtable, ns) {
+            if let Ok(emit) = emit_event(loc, ty, file_no, contract_no, function_no, symtable, ns) {
                 res.push(emit);
             }
 
@@ -756,6 +756,7 @@ fn emit_event(
     ty: &pt::Expression,
     file_no: usize,
     contract_no: usize,
+    function_no: usize,
     symtable: &mut Symtable,
     ns: &mut Namespace,
 ) -> Result<Statement, ()> {
@@ -802,9 +803,10 @@ fn emit_event(
                 }
 
                 if matches {
-                    if !ns.contracts[contract_no].sends_events.contains(event_no) {
-                        ns.contracts[contract_no].sends_events.push(*event_no);
+                    if !ns.functions[function_no].emits_events.contains(event_no) {
+                        ns.functions[function_no].emits_events.push(*event_no);
                     }
+
                     return Ok(Statement::Emit {
                         loc: *loc,
                         event_no: *event_no,
@@ -904,6 +906,10 @@ fn emit_event(
                 }
 
                 if matches {
+                    if !ns.functions[function_no].emits_events.contains(event_no) {
+                        ns.functions[function_no].emits_events.push(*event_no);
+                    }
+
                     return Ok(Statement::Emit {
                         loc: *loc,
                         event_no: *event_no,

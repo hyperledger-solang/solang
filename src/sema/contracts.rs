@@ -22,7 +22,6 @@ impl ast::Contract {
             loc,
             ty,
             bases: Vec::new(),
-            libraries: Vec::new(),
             using: Vec::new(),
             layout: Vec::new(),
             tags,
@@ -99,7 +98,6 @@ pub fn resolve(
         // only if we could resolve all the bodies
         for (contract_no, _) in contracts {
             check_base_args(*contract_no, ns);
-            inherited_libraries(*contract_no, ns);
         }
     }
 }
@@ -633,15 +631,6 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     }
 }
 
-// Add libraries used by base contracts
-fn inherited_libraries(contract_no: usize, ns: &mut ast::Namespace) {
-    for base_no in visit_bases(contract_no, ns) {
-        for library_no in ns.contracts[base_no].libraries.to_owned() {
-            import_library(contract_no, library_no, ns);
-        }
-    }
-}
-
 /// Resolve functions declarations, constructor declarations, and contract variables
 /// This returns a list of function bodies to resolve
 fn resolve_declarations<'a>(
@@ -931,19 +920,4 @@ fn check_base_args(contract_no: usize, ns: &mut ast::Namespace) {
     }
 
     ns.diagnostics.extend(diagnostics.into_iter());
-}
-
-/// Make it possible to use a library in a contract
-pub fn import_library(contract_no: usize, library_no: usize, ns: &mut ast::Namespace) {
-    if ns.contracts[contract_no].libraries.contains(&library_no) {
-        return;
-    }
-
-    ns.contracts[contract_no].libraries.push(library_no);
-
-    for function_no in ns.contracts[library_no].functions.clone() {
-        ns.contracts[contract_no]
-            .all_functions
-            .insert(function_no, usize::MAX);
-    }
 }
