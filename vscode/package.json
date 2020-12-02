@@ -1,0 +1,89 @@
+{
+	"name": "slang-ex",
+	"displayName": "slang_ex",
+	"description": "Solidity extension",
+	"publisher": "vscode",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.43.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onLanguage:solidity",
+		"onCommand:slang-ex.helloWorld",
+		"onCommand:slang-ex.sendfirstcode"
+	],
+	"main": "./out/client/extension.js",
+	"contributes": {
+		"capabilities": {
+			"hoverProvider": "true"
+		},
+		"languages": [
+			{
+				"id": "solidity",
+				"aliases": [
+					"Solidity",
+					"solidity"
+				],
+				"extensions": [
+					".sol"
+				],
+				"configuration": "./solidity.configuration.json"
+			}
+		],
+		"commands": [
+			{
+				"command": "slang-ex.helloWorld",
+				"title": "Hello World... initial startup"
+			},
+			{
+				"command": "slang-ex.sendfirstcode",
+				"title": "Send first code"
+			},
+			{
+				"command": "slang-ex.applyedit",
+				"title": "Apply edit"
+			}
+		],
+		"snippets": [
+			{
+				"language": "solidity",
+				"path": "./snippets/solidity.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "solidity",
+				"scopeName": "source.solidity",
+				"path": "./syntaxes/solidity.json"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"lint": "eslint src --ext ts",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"test": "node ./out/test/runTest.js"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^6.1.3",
+		"vscode-languageserver": "^6.1.1"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.1.1",
+		"@types/mocha": "^7.0.2",
+		"@types/node": "^12.12.0",
+		"@types/vscode": "^1.43.0",
+		"@typescript-eslint/eslint-plugin": "^2.30.0",
+		"@typescript-eslint/parser": "^2.30.0",
+		"eslint": "^6.8.0",
+		"glob": "^7.1.6",
+		"mocha": "^7.1.2",
+		"typescript": "^3.8.3",
+		"vscode-test": "^1.3.0"
+	}
+}
