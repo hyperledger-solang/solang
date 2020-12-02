@@ -126,6 +126,43 @@ fn test_abstract() {
     no_errors(ns.diagnostics);
 
     assert_eq!(contracts.len(), 1);
+
+    let mut cache = FileCache::new();
+
+    cache.set_file_contents(
+        "a.sol",
+        r#"
+        contract foo {
+            function f1() public {
+            }
+        }"#
+        .to_string(),
+    );
+
+    cache.set_file_contents(
+        "b.sol",
+        r#"
+        import "a.sol";
+
+        contract bar is foo {
+            function test() public returns (uint32) {
+                return 102;
+            }
+        }
+        "#
+        .to_string(),
+    );
+
+    let (contracts, ns) = solang::compile(
+        "a.sol",
+        &mut cache,
+        inkwell::OptimizationLevel::Default,
+        Target::Substrate,
+    );
+
+    no_errors(ns.diagnostics);
+
+    assert_eq!(contracts.len(), 1);
 }
 
 #[test]
