@@ -277,9 +277,12 @@ fn layout_contract(contract_no: usize, ns: &mut ast::Namespace) {
     let mut slot = BigInt::zero();
 
     for base_contract_no in visit_bases(contract_no, ns) {
+        // find file number where contract is defined
+        let contract_file_no = ns.contracts[base_contract_no].loc.0;
+
         // find all syms for this contract
-        for ((_, iter_contract_no, name), sym) in &ns.symbols {
-            if *iter_contract_no != Some(base_contract_no) {
+        for ((file_no, iter_contract_no, name), sym) in &ns.symbols {
+            if *iter_contract_no != Some(base_contract_no) || *file_no != contract_file_no {
                 continue;
             }
 
