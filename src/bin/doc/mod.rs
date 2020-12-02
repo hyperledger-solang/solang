@@ -254,7 +254,7 @@ pub fn generate_docs(outdir: &str, files: &[ast::Namespace], verbose: bool) {
             fn map_var<'a>(
                 file: &'a ast::Namespace,
                 base_contract: Option<&'a str>,
-                var: &'a ast::ContractVariable,
+                var: &'a ast::Variable,
             ) -> Variable<'a> {
                 Variable {
                     name: &var.name,

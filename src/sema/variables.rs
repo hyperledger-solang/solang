@@ -1,4 +1,4 @@
-use super::ast::{ContractVariable, Diagnostic, Namespace, Symbol};
+use super::ast::{Diagnostic, Namespace, Symbol, Variable};
 use super::expression::{cast, expression};
 use super::symtable::Symtable;
 use super::tags::resolve_tags;
@@ -209,7 +209,7 @@ pub fn var_decl(
         ns,
     );
 
-    let sdecl = ContractVariable {
+    let sdecl = Variable {
         name: s.name.name.to_string(),
         loc: s.loc,
         tags,
