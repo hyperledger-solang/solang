@@ -302,7 +302,7 @@ impl From<&pt::Type> for Type {
     }
 }
 
-pub struct ContractVariable {
+pub struct Variable {
     pub tags: Vec<Tag>,
     pub name: String,
     pub loc: pt::Loc,
@@ -348,7 +348,7 @@ pub struct Namespace {
     /// All functions
     pub functions: Vec<Function>,
     /// Global constants
-    pub constants: Vec<ContractVariable>,
+    pub constants: Vec<Variable>,
     /// address length in bytes
     pub address_length: usize,
     /// value length in bytes
@@ -383,7 +383,7 @@ pub struct Contract {
     pub functions: Vec<usize>,
     pub all_functions: HashMap<usize, usize>,
     pub virtual_functions: HashMap<String, usize>,
-    pub variables: Vec<ContractVariable>,
+    pub variables: Vec<Variable>,
     // List of contracts this contract instantiates
     pub creates: Vec<usize>,
     // List of events this contract produces
