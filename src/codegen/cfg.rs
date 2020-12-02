@@ -345,9 +345,12 @@ impl ControlFlowGraph {
                 self.expr_to_string(contract, ns, r)
             ),
             Expression::Variable(_, _, res) => format!("%{}", self.vars[res].id.name),
-            Expression::ConstantVariable(_, _, var_contract_no, var_no) | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
+            Expression::ConstantVariable(_, _, Some(var_contract_no), var_no) | Expression::StorageVariable(_, _, var_contract_no, var_no) => {
                 format!("${}.{}", ns.contracts[*var_contract_no].name,
                 ns.contracts[*var_contract_no].variables[*var_no].name)
+            }
+            Expression::ConstantVariable(_, _, None, var_no) => {
+                format!("${}", ns.constants[*var_no].name)
             }
             Expression::Load(_, _, expr) => {
                 format!("(load {})", self.expr_to_string(contract, ns, expr))

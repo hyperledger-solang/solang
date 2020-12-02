@@ -16,7 +16,7 @@ pub fn contract_variables(
         pt::ContractTy::Interface(_) | pt::ContractTy::Library(_));
 
     for parts in &def.parts {
-        if let pt::ContractPart::ContractVariableDefinition(ref s) = parts {
+        if let pt::ContractPart::VariableDefinition(ref s) = parts {
             if !may_have_state {
                 ns.diagnostics.push(Diagnostic::error(
                     s.loc,
@@ -25,7 +25,7 @@ pub fn contract_variables(
                         def.ty, def.name.name, s.name.name
                     ),
                 ));
-            } else if !var_decl(def, s, file_no, contract_no, ns, &mut symtable) {
+            } else if !var_decl(Some(def), s, file_no, Some(contract_no), ns, &mut symtable) {
                 broken = true;
             }
         }
@@ -34,11 +34,11 @@ pub fn contract_variables(
     broken
 }
 
-fn var_decl(
-    contract: &pt::ContractDefinition,
-    s: &pt::ContractVariableDefinition,
+pub fn var_decl(
+    contract: Option<&pt::ContractDefinition>,
+    s: &pt::VariableDefinition,
     file_no: usize,
-    contract_no: usize,
+    contract_no: Option<usize>,
     ns: &mut Namespace,
     symtable: &mut Symtable,
 ) -> bool {
@@ -46,7 +46,7 @@ fn var_decl(
     let mut ty = s.ty.clone();
 
     // For function types, the parser adds the attributes incl visibility to the type,
-    // not the pt::ContractVariableDefinition attrs. We need to chomp off the visibility
+    // not the pt::VariableDefinition attrs. We need to chomp off the visibility
     // from the attributes before resolving the type
     if let pt::Expression::Type(
         _,
@@ -69,7 +69,7 @@ fn var_decl(
         }
     }
 
-    let ty = match ns.resolve_type(file_no, Some(contract_no), false, &ty) {
+    let ty = match ns.resolve_type(file_no, contract_no, false, &ty) {
         Ok(s) => s,
         Err(()) => {
             return false;
@@ -89,6 +89,13 @@ fn var_decl(
                     ));
                 }
                 is_constant = true;
+            }
+            pt::VariableAttribute::Visibility(v) if contract_no.is_none() => {
+                ns.diagnostics.push(Diagnostic::error(
+                    v.loc(),
+                    format!("‘{}’: global variable cannot have visibility specifier", v),
+                ));
+                return false;
             }
             pt::VariableAttribute::Visibility(pt::Visibility::External(loc)) => {
                 ns.diagnostics.push(Diagnostic::error(
@@ -118,7 +125,22 @@ fn var_decl(
         None => pt::Visibility::Internal(s.ty.loc()),
     };
 
-    if ty.contains_internal_function(ns)
+    if contract_no.is_none() {
+        if !is_constant {
+            ns.diagnostics.push(Diagnostic::error(
+                s.ty.loc(),
+                "global variable must be constant".to_string(),
+            ));
+            return false;
+        }
+        if ty.contains_internal_function(ns) {
+            ns.diagnostics.push(Diagnostic::error(
+                s.ty.loc(),
+                "global variable cannot be of type internal function".to_string(),
+            ));
+            return false;
+        }
+    } else if ty.contains_internal_function(ns)
         && matches!(visibility, pt::Visibility::Public(_) | pt::Visibility::External(_))
     {
         ns.diagnostics.push(Diagnostic::error(
@@ -135,7 +157,7 @@ fn var_decl(
         let res = match expression(
             &initializer,
             file_no,
-            Some(contract_no),
+            contract_no,
             ns,
             &symtable,
             is_constant,
@@ -163,15 +185,23 @@ fn var_decl(
         None
     };
 
-    let bases: Vec<&str> = contract
-        .base
-        .iter()
-        .map(|base| -> &str { &base.name.name })
-        .collect();
+    let bases: Vec<&str> = if let Some(contract) = contract {
+        contract
+            .base
+            .iter()
+            .map(|base| -> &str { &base.name.name })
+            .collect()
+    } else {
+        Vec::new()
+    };
 
     let tags = resolve_tags(
         s.name.loc.0,
-        "state variable",
+        if contract_no.is_none() {
+            "global variable"
+        } else {
+            "state variable"
+        },
         &s.doc,
         None,
         None,
@@ -189,13 +219,23 @@ fn var_decl(
         initializer,
     };
 
-    let pos = ns.contracts[contract_no].variables.len();
+    let pos = if let Some(contract_no) = contract_no {
+        let pos = ns.contracts[contract_no].variables.len();
 
-    ns.contracts[contract_no].variables.push(sdecl);
+        ns.contracts[contract_no].variables.push(sdecl);
+
+        pos
+    } else {
+        let pos = ns.constants.len();
+
+        ns.constants.push(sdecl);
+
+        pos
+    };
 
     ns.add_symbol(
         file_no,
-        Some(contract_no),
+        contract_no,
         &s.name,
         Symbol::Variable(s.loc, contract_no, pos),
     )

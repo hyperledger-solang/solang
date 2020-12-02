@@ -142,32 +142,28 @@ mod test {
                             },
                         ],
                     })),
-                    ContractPart::ContractVariableDefinition(Box::new(
-                        ContractVariableDefinition {
-                            doc: vec![],
-                            ty: Expression::Type(Loc(0, 253, 259), Type::String),
-                            attrs: vec![],
-                            name: Identifier {
-                                loc: Loc(0, 260, 268),
-                                name: "__abba_$".to_string(),
-                            },
-                            loc: Loc(0, 253, 268),
-                            initializer: None,
+                    ContractPart::VariableDefinition(Box::new(VariableDefinition {
+                        doc: vec![],
+                        ty: Expression::Type(Loc(0, 253, 259), Type::String),
+                        attrs: vec![],
+                        name: Identifier {
+                            loc: Loc(0, 260, 268),
+                            name: "__abba_$".to_string(),
                         },
-                    )),
-                    ContractPart::ContractVariableDefinition(Box::new(
-                        ContractVariableDefinition {
-                            doc: vec![],
-                            ty: Expression::Type(Loc(0, 290, 295), Type::Int(64)),
-                            attrs: vec![],
-                            name: Identifier {
-                                loc: Loc(0, 296, 306),
-                                name: "$thing_102".to_string(),
-                            },
-                            loc: Loc(0, 290, 306),
-                            initializer: None,
+                        loc: Loc(0, 253, 268),
+                        initializer: None,
+                    })),
+                    ContractPart::VariableDefinition(Box::new(VariableDefinition {
+                        doc: vec![],
+                        ty: Expression::Type(Loc(0, 290, 295), Type::Int(64)),
+                        attrs: vec![],
+                        name: Identifier {
+                            loc: Loc(0, 296, 306),
+                            name: "$thing_102".to_string(),
                         },
-                    )),
+                        loc: Loc(0, 290, 306),
+                        initializer: None,
+                    })),
                 ],
             },
         ))]);

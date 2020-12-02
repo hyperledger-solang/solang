@@ -1029,13 +1029,20 @@ fn destructure(
                 let e = expression(ty, file_no, contract_no, ns, symtable, false)?;
 
                 match &e {
-                    Expression::ConstantVariable(_, _, contract_no, var_no) => {
+                    Expression::ConstantVariable(_, _, Some(contract_no), var_no) => {
                         ns.diagnostics.push(Diagnostic::error(
                             *loc,
                             format!(
                                 "cannot assign to constant ‘{}’",
                                 ns.contracts[*contract_no].variables[*var_no].name
                             ),
+                        ));
+                        return Err(());
+                    }
+                    Expression::ConstantVariable(_, _, None, var_no) => {
+                        ns.diagnostics.push(Diagnostic::error(
+                            *loc,
+                            format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
                         ));
                         return Err(());
                     }

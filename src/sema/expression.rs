@@ -1301,7 +1301,7 @@ pub fn expression(
             }
 
             match ns.resolve_var(file_no, contract_no, id) {
-                Some(Symbol::Variable(_, var_contract_no, var_no)) => {
+                Some(Symbol::Variable(_, Some(var_contract_no), var_no)) => {
                     let var_contract_no = *var_contract_no;
                     let var_no = *var_no;
 
@@ -1311,7 +1311,7 @@ pub fn expression(
                         Ok(Expression::ConstantVariable(
                             id.loc,
                             var.ty.clone(),
-                            var_contract_no,
+                            Some(var_contract_no),
                             var_no,
                         ))
                     } else if is_constant {
@@ -1331,6 +1331,18 @@ pub fn expression(
                             var_no,
                         ))
                     }
+                }
+                Some(Symbol::Variable(_, None, var_no)) => {
+                    let var_no = *var_no;
+
+                    let var = &ns.constants[var_no];
+
+                    Ok(Expression::ConstantVariable(
+                        id.loc,
+                        var.ty.clone(),
+                        None,
+                        var_no,
+                    ))
                 }
                 Some(Symbol::Function(_)) => {
                     let mut name_matches = 0;
@@ -2730,13 +2742,20 @@ pub fn assign_single(
     let val = expression(right, file_no, contract_no, ns, symtable, false)?;
 
     match &var {
-        Expression::ConstantVariable(loc, _, contract_no, var_no) => {
+        Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "cannot assign to constant ‘{}’",
                     ns.contracts[*contract_no].variables[*var_no].name
                 ),
+            ));
+            Err(())
+        }
+        Expression::ConstantVariable(loc, _, None, var_no) => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
             ));
             Err(())
         }
@@ -2848,13 +2867,20 @@ fn assign_expr(
     let var_ty = var.ty();
 
     match &var {
-        Expression::ConstantVariable(loc, _, contract_no, var_no) => {
+        Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "cannot assign to constant ‘{}’",
                     ns.contracts[*contract_no].variables[*var_no].name
                 ),
+            ));
+            Err(())
+        }
+        Expression::ConstantVariable(loc, _, None, var_no) => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
             ));
             Err(())
         }
@@ -2934,13 +2960,20 @@ fn incr_decr(
     let var_ty = var.ty();
 
     match &var {
-        Expression::ConstantVariable(loc, _, contract_no, var_no) => {
+        Expression::ConstantVariable(loc, _, Some(contract_no), var_no) => {
             ns.diagnostics.push(Diagnostic::error(
                 *loc,
                 format!(
                     "cannot assign to constant ‘{}’",
                     ns.contracts[*contract_no].variables[*var_no].name
                 ),
+            ));
+            Err(())
+        }
+        Expression::ConstantVariable(loc, _, None, var_no) => {
+            ns.diagnostics.push(Diagnostic::error(
+                *loc,
+                format!("cannot assign to constant ‘{}’", ns.constants[*var_no].name),
             ));
             Err(())
         }

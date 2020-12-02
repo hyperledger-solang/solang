@@ -1263,16 +1263,18 @@ array itself. Note this can be costly.
 Constants
 ---------
 
-Constants are declared at the contract level just like contract storage variables. However, they
-do not use any contract storage and cannot be modified. Assigning a value to a constant is a
-compiler error. The variable must have an initializer, which must be a constant expression. It is
+Constants can be declared at the global level or at the contract level, just like contract
+storage variables. They do not use any contract storage and cannot be modified.
+The variable must have an initializer, which must be a constant expression. It is
 not allowed to call functions or read variables in the initializer:
 
 .. code-block:: javascript
 
-  contract ethereum {
-      uint constant byzantium_block = 4_370_000;
-  }
+    string constant greeting = "Hello, World!";
+
+    contract ethereum {
+        uint constant byzantium_block = 4_370_000;
+    }
 
 Events
 ------

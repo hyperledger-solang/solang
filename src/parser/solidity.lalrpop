@@ -23,6 +23,7 @@ SourceUnitPart: SourceUnitPart = {
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     EventDefinition => SourceUnitPart::EventDefinition(<>),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
+    VariableDefinition => SourceUnitPart::VariableDefinition(<>),
 }
 
 ImportDirective: Import = {
@@ -144,7 +145,7 @@ ContractPart: ContractPart = {
     StructDefinition => ContractPart::StructDefinition(<>),
     EventDefinition => ContractPart::EventDefinition(<>),
     EnumDefinition => ContractPart::EnumDefinition(<>),
-    ContractVariableDefinition => ContractPart::ContractVariableDefinition(<>),
+    VariableDefinition => ContractPart::VariableDefinition(<>),
     FunctionDefinition => ContractPart::FunctionDefinition(<>),
     ModifierDefinition => ContractPart::FunctionDefinition(<>),
     ConstructorDefinition => ContractPart::FunctionDefinition(<>),
@@ -191,9 +192,9 @@ EnumDefinition: Box<EnumDefinition> = {
     }
 }
 
-ContractVariableDefinition: Box<ContractVariableDefinition> = {
+VariableDefinition: Box<VariableDefinition> = {
     <doc:DocComments> <l:@L> <ty:NoFunctionTyPrecedence0> <attrs:VariableAttribute*> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
-        Box::new(ContractVariableDefinition{
+        Box::new(VariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
@@ -203,7 +204,7 @@ ContractVariableDefinition: Box<ContractVariableDefinition> = {
     //     function() external internal f;
     // }
     <doc:DocComments> <l:@L> <ty:FunctionTyPrecedence0> <name:Identifier> <e:("=" <Expression>)?> <r:@R>";" => {
-        Box::new(ContractVariableDefinition{
+        Box::new(VariableDefinition{
             doc, loc: Loc(file_no, l, r), ty, attrs: Vec::new(), name, initializer: e,
         })
     }
